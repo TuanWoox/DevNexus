@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
+using platform_core_service.Business.v1;
+using platform_core_service.Common.Interfaces.Services;
 
-namespace platform_core_service.Business.Repositoy
+namespace platform_core_service.Business.Repository
 {
     public static class StudyNestServiceConfiguration
     {
@@ -11,6 +13,8 @@ namespace platform_core_service.Business.Repositoy
             services.AddHttpContextAccessor();
             // Allow to use httpclient as a http factory
             services.AddHttpClient();
+            services.AddScoped<IAccountService, AccountService>();
+            services.AddScoped<IIdentityService, IdentityService>();
             return services;
         }
     }

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using platform_core_service.Common.Models.Paging;
 
-namespace platform_core_service.Common.Model.Paging
+namespace platform_core_service.Common.Models.Paging
 {
     public class PagedData<T, TKey>
     {
