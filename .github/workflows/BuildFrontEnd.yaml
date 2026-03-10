@@ -8,5 +8,5 @@ jobs:
         uses: TuanWoox/GithubActionTemplates/.github/workflows/BuildNextJS.yaml@main
         with:
             node_version: "20.x"
-            build_context: "."
+            build_context: "./frontend"
             package_manager: "npm"
