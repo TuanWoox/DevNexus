@@ -1,0 +1,6 @@
+@platform_core_service_HostAddress = http://localhost:5105
+
+GET {{platform_core_service_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
