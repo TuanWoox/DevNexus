@@ -32,5 +32,21 @@ namespace platform_core_service.Controllers
             }
             return Ok(result);
         }
+
+        [HttpPost("login")]
+        public async Task<IActionResult> LoginAccount(LoginAccountDTO loginAccount)
+        {
+            ReturnResult<TokenResponseDTO> result = new ReturnResult<TokenResponseDTO>();
+            try
+            {
+                result = await _accountService.LoginAccount(loginAccount);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = ex.Message;
+            }
+            return Ok(result);
+        }
     }
 }

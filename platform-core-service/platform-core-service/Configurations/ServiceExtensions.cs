@@ -54,7 +54,7 @@ public static class ServiceExtensions
     }
     #endregion
 
-    #region ConfigureCorsDomain
+    #region Configure Cors Domain
     public static IServiceCollection ConfigureCorsDomain(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment env)
     {
         services.AddCors(opt =>
