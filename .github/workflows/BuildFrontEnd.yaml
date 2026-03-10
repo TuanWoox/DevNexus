@@ -1,0 +1,12 @@
+name: Frontend PR Build
+on:
+    pull_request:
+        branches: [main]
+
+jobs:
+    build:
+        uses: TuanWoox/GithubActionTemplates/.github/workflows/BuildNextJS.yaml@main
+        with:
+            node_version: "20.x"
+            build_context: "."
+            package_manager: "npm"
