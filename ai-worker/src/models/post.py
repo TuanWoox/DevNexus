@@ -1,0 +1,1 @@
+# Tham chiếu bảng Post (cho RAG/Vector)

@@ -1,0 +1,1 @@
+# Logic cho F2.1 (Auto-Metadata)

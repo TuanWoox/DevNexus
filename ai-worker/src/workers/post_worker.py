@@ -1,0 +1,1 @@
+# Lắng nghe 'PostCreatedEvent'
