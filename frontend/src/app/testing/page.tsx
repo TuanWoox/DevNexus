@@ -56,7 +56,7 @@ export default function TestingPage() {
         </p>
         <p>
           <strong>2. Điều hướng với &lt;Link&gt;:</strong><br />
-          Khi chuyển trang trong Next.js, chúng ta dùng component <code>&lt;Link href="..."&gt;</code> thay vì thẻ <code>&lt;a&gt;</code> thông thường. Điều này giúp Next.js tải trang mới mà không cần reload (tải lại) toàn bộ website, mang lại tốc độ như một Single Page Application (SPA).
+          Khi chuyển trang trong Next.js, chúng ta dùng component <code>&lt;Link href=&quot;...&quot;&gt;</code> thay vì thẻ <code>&lt;a&gt;</code> thông thường. Điều này giúp Next.js tải trang mới mà không cần reload (tải lại) toàn bộ website, mang lại tốc độ như một Single Page Application (SPA).
         </p>
         <p>
           <strong>3. Shadcn UI Components:</strong><br />

@@ -32,7 +32,7 @@ api.interceptors.request.use(
 
 // Interceptor cho Phản hồi (Response): Chạy khi có response từ server
 api.interceptors.response.use(
-  function onFulfilled(response: AxiosResponse<ReturnResult<any>>) {
+  function onFulfilled<T>(response: AxiosResponse<ReturnResult<T>>) {
     if (response.data.message) {
       toast.error(response.data.message);
     }

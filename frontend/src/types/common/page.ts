@@ -11,8 +11,8 @@ export interface OrderMapping {
 
 export interface FilterMapping {
     prop: string;
-    value: any;
-    filterOperator: any;
+    value: unknown;
+    filterOperator: unknown;
     filterType: FilterType;
     dynamicProperty: string;
     delimiter: string;
