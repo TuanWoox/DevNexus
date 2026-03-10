@@ -1,4 +1,6 @@
-﻿using platform_core_service.Configuration;
+﻿using platform_core_service.Business.Repository;
+using platform_core_service.Configuration;
+using platform_core_service.Data;
 
 namespace platform_core_service
 {
@@ -24,6 +26,7 @@ namespace platform_core_service
             services.ConfigureIdentity();
             services.ConfigureSignalR();
             services.ConfigureAutoMapper();
+            services.RegisterStudyNestService();
 
         }
 
@@ -49,6 +52,8 @@ namespace platform_core_service
             {
                 endpoints.MapControllers();
             });
+
+            PrepDb.SeedData(app).GetAwaiter().GetResult();
         }
     }
 }
