@@ -4,7 +4,6 @@ using platform_core_service.Common.Entities.BaseEntity;
 using platform_core_service.Common.Helper;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
-using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 

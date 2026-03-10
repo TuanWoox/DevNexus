@@ -22,7 +22,7 @@ namespace platform_core_service
             services.ConfigureControllerWithNewtonsoftJson();
             services.ConfigureInvalidModelState();
             services.ConfigureCorsDomain(Configuration, _env);
-            services.AddSwaggerGen();
+            services.ConfigureSwaggerService();
             services.ConfigureAuthService(Configuration);
             services.ConfigurePostgresqlDatabase(Configuration);
             services.ConfigureIdentity();
@@ -50,6 +50,7 @@ namespace platform_core_service
             app.UseCors("CorsPolicy");
             app.UseHttpsRedirection();
             app.UseRouting();
+            app.UseAuthentication();
             app.UseAuthorization();
             app.UseEndpoints(endpoints =>
             {

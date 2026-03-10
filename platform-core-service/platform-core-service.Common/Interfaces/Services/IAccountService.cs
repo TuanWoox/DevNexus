@@ -7,5 +7,7 @@ namespace platform_core_service.Common.Interfaces.Services
     {
         public Task<ReturnResult<bool>> RegisterAccount(RegisterAccountDTO newAccount);
         public Task<ReturnResult<TokenResponseDTO>> LoginAccount(LoginAccountDTO loginAccount);
+        public Task<ReturnResult<TokenResponseDTO>> RefreshToken(RefreshTokenDTO refreshTokenDTO);
+        public Task<ReturnResult<bool>> Logout();
     }
 }

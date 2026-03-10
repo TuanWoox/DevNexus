@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.CoreDTO;
@@ -40,6 +41,39 @@ namespace platform_core_service.Controllers
             try
             {
                 result = await _accountService.LoginAccount(loginAccount);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = ex.Message;
+            }
+            return Ok(result);
+        }
+
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken(RefreshTokenDTO refreshTokenDTO)
+        {
+            ReturnResult<TokenResponseDTO> result = new ReturnResult<TokenResponseDTO>();
+            try
+            {
+                result = await _accountService.RefreshToken(refreshTokenDTO);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = ex.Message;
+            }
+            return Ok(result);
+        }
+
+        [HttpPost("logout")]
+        [Authorize]
+        public async Task<IActionResult> Logout()
+        {
+            ReturnResult<bool> result = new ReturnResult<bool>();
+            try
+            {
+                result = await _accountService.Logout();
             }
             catch (Exception ex)
             {

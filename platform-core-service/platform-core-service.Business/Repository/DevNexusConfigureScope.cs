@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
-using platform_core_service.Business.v1;
+using platform_core_service.Business.Contexts;
+using platform_core_service.Business.Services;
+using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 
 namespace platform_core_service.Business.Repository
@@ -15,6 +17,7 @@ namespace platform_core_service.Business.Repository
             services.AddHttpClient();
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IIdentityService, IdentityService>();
+            services.AddScoped<IUserContext, UserContext>();
             return services;
         }
     }

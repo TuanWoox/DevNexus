@@ -4,6 +4,5 @@ namespace platform_core_service.Common.Models.DTOs.HelperDTO
     {
         public string AccessToken { get; set; }
         public string RefreshToken { get; set; }
-        public DateTime ExpiresAt { get; set; }
     }
 }

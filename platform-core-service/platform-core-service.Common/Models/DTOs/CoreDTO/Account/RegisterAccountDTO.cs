@@ -11,7 +11,7 @@ namespace platform_core_service.Common.Models.DTOs.CoreDTO
         public string UserName { get; set; }
 
         [TrimmedRequired]
-        [MinLength(8)]
+        [MinLength(12)]
         [MaxLength(128)]
         public string Password { get; set; }
     }
