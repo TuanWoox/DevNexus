@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Newtonsoft.Json;
 using platform_core_service.Common.Entities.Identities;
+using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Data;
 
 namespace platform_core_service.Configuration;
@@ -20,7 +22,34 @@ public static class ServiceExtensions
                     options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
                     options.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
                 });
+        return services;
+    }
+    #endregion
 
+    #region Configure Custom Binding
+    public static IServiceCollection ConfigureInvalidModelState(this IServiceCollection services)
+    {
+        // Configure custom model validation response
+        services.Configure<ApiBehaviorOptions>(options =>
+        {
+            options.InvalidModelStateResponseFactory = context =>
+            {
+                var errors = context.ModelState
+                    .Where(e => e.Value != null && e.Value.Errors.Count > 0)
+                    .SelectMany(e => e.Value!.Errors.Select(er => er.ErrorMessage))
+                    .ToList();
+
+                var errorMessage = string.Join(", ", errors);
+
+                var result = new ReturnResult<object>
+                {
+                    Result = default!,
+                    Message = errorMessage
+                };
+
+                return new BadRequestObjectResult(result);
+            };
+        });
         return services;
     }
     #endregion
@@ -166,12 +195,18 @@ public static class ServiceExtensions
     {
         services.AddIdentityCore<ApplicationUser>(opt =>
         {
-            opt.Password.RequiredLength = 6;
+            // Password policy
+            opt.Password.RequiredLength = 12;
             opt.Password.RequireDigit = true;
             opt.Password.RequireNonAlphanumeric = true;
             opt.Password.RequireUppercase = true;
             opt.Password.RequireLowercase = true;
-            opt.SignIn.RequireConfirmedEmail = true;
+            // Sign-in policy
+            opt.SignIn.RequireConfirmedEmail = false;
+            // Account lockout protection (anti brute-force)
+            opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+            opt.Lockout.MaxFailedAccessAttempts = 5;
+            opt.Lockout.AllowedForNewUsers = true;
         })
         .AddRoles<ApplicationRole>()
         .AddEntityFrameworkStores<ApplicationDbContext>()
@@ -180,7 +215,7 @@ public static class ServiceExtensions
         .AddSignInManager<SignInManager<ApplicationUser>>()
         .AddDefaultTokenProviders();
 
-        // Configure password-reset token lifespan to 5 minutes
+        // Token lifespan
         services.Configure<DataProtectionTokenProviderOptions>(opts =>
         {
             opts.TokenLifespan = TimeSpan.FromMinutes(5);

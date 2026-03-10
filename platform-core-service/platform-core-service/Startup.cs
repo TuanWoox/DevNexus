@@ -1,6 +1,7 @@
 ﻿using platform_core_service.Business.Repository;
 using platform_core_service.Configuration;
 using platform_core_service.Data;
+using platform_core_service.Middleware;
 
 namespace platform_core_service
 {
@@ -19,6 +20,7 @@ namespace platform_core_service
         public void ConfigureServices(IServiceCollection services)
         {
             services.ConfigureControllerWithNewtonsoftJson();
+            services.ConfigureInvalidModelState();
             services.ConfigureCorsDomain(Configuration, _env);
             services.AddSwaggerGen();
             services.ConfigureAuthService(Configuration);
@@ -27,11 +29,12 @@ namespace platform_core_service
             services.ConfigureSignalR();
             services.ConfigureAutoMapper();
             services.RegisterStudyNestService();
-
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            // Add global exception middleware
+            app.UseMiddleware<GlobalExceptionMiddleware>();
 
             #region  Development Configuration
             if (env.IsDevelopment())
