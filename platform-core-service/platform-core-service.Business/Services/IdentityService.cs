@@ -5,7 +5,7 @@ using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 
-namespace platform_core_service.Business.v1
+namespace platform_core_service.Business.Services
 {
     public class IdentityService : IIdentityService
     {

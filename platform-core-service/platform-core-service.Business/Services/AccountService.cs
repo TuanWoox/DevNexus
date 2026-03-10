@@ -1,28 +1,40 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using platform_core_service.Common.Entities.Identities;
+using platform_core_service.Common.Helper;
+using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.CoreDTO;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace platform_core_service.Business.v1
+namespace platform_core_service.Business.Services
 {
     public class AccountService : IAccountService
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IConfiguration _configuration;
+        private readonly ApplicationDbContext _context;
+        private readonly IUserContext _userContext;
 
-        public AccountService(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IConfiguration configuration)
+        public AccountService(UserManager<ApplicationUser> userManager,
+         SignInManager<ApplicationUser> signInManager,
+          IConfiguration configuration,
+           ApplicationDbContext context,
+           IUserContext userContext)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
+            _context = context;
+            _userContext = userContext;
         }
 
         public async Task<ReturnResult<bool>> RegisterAccount(RegisterAccountDTO newAccount)
@@ -99,22 +111,24 @@ namespace platform_core_service.Business.v1
                     // Get user roles
                     var roles = await _userManager.GetRolesAsync(user);
 
-                    // Determine expiration time based on RememberMe
-                    var expiresAt = loginAccount.RememberMe
-                        ? DateTime.UtcNow.AddDays(7)
-                        : DateTime.UtcNow.AddHours(1);
-
                     // Generate JWT access token
                     var accessToken = GenerateAccessToken(user, roles, loginAccount.RememberMe);
 
                     // Generate refresh token
                     var refreshToken = GenerateRefreshToken();
 
+                    ApplicationUser? correctUserr = await _context.Users.Where(x => x.UserName == loginAccount.UserName).FirstOrDefaultAsync();
+                    if (correctUserr != null)
+                    {
+                        correctUserr.RefreshToken = refreshToken;
+                        correctUserr.RefreshTokenValidity = DateTime.UtcNow.AddDays(15);
+
+                        await _context.SaveChangesAsync();
+                    }
                     returnResult.Result = new TokenResponseDTO
                     {
                         AccessToken = accessToken,
                         RefreshToken = refreshToken,
-                        ExpiresAt = expiresAt
                     };
                 }
                 else if (result.IsLockedOut)
@@ -177,6 +191,94 @@ namespace platform_core_service.Business.v1
             using var rng = RandomNumberGenerator.Create();
             rng.GetBytes(randomNumber);
             return Convert.ToBase64String(randomNumber);
+        }
+
+        public async Task<ReturnResult<TokenResponseDTO>> RefreshToken(RefreshTokenDTO refreshTokenDTO)
+        {
+            ReturnResult<TokenResponseDTO> returnResult = new ReturnResult<TokenResponseDTO>();
+
+            try
+            {
+                // Find user by refresh token
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(x => x.RefreshToken == refreshTokenDTO.RefreshToken);
+
+                if (user == null)
+                {
+                    returnResult.Result = default!;
+                    returnResult.Message = "Invalid refresh token.";
+                    return returnResult;
+                }
+
+                // Check if refresh token is expired
+                if (user.RefreshTokenValidity == null || user.RefreshTokenValidity < DateTime.UtcNow)
+                {
+                    returnResult.Result = default!;
+                    returnResult.Message = "Refresh token has expired. Please login again.";
+                    return returnResult;
+                }
+
+                // Get user roles
+                var roles = await _userManager.GetRolesAsync(user);
+
+                // Generate new access token
+                var newAccessToken = GenerateAccessToken(user, roles, rememberMe: true);
+
+                // Generate new refresh token
+                var newRefreshToken = GenerateRefreshToken();
+
+                // Update refresh token in database
+                user.RefreshToken = newRefreshToken;
+                user.RefreshTokenValidity = DateTime.UtcNow.AddDays(15);
+                await _context.SaveChangesAsync();
+
+                returnResult.Result = new TokenResponseDTO
+                {
+                    AccessToken = newAccessToken,
+                    RefreshToken = newRefreshToken
+                };
+            }
+            catch (Exception ex)
+            {
+                returnResult.Result = default!;
+                returnResult.Message = $"An error occurred during token refresh: {ex.Message}";
+            }
+
+            return returnResult;
+        }
+
+        public async Task<ReturnResult<bool>> Logout()
+        {
+            ReturnResult<bool> returnResult = new ReturnResult<bool>();
+
+            try
+            {
+                // Find user by refresh token
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(x => x.Id == _userContext.UserId);
+
+                if (user == null)
+                {
+                    returnResult.Result = false;
+                    returnResult.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_FOUND, "User", _userContext.UserId);
+                    return returnResult;
+                }
+
+                // Clear refresh token
+                user.RefreshToken = null;
+                user.RefreshTokenValidity = null;
+                await _context.SaveChangesAsync();
+
+                returnResult.Result = true;
+                returnResult.Message = "Logged out successfully.";
+            }
+            catch (Exception ex)
+            {
+                returnResult.Result = false;
+                returnResult.Message = $"An error occurred during logout: {ex.Message}";
+            }
+
+            return returnResult;
         }
     }
 }
