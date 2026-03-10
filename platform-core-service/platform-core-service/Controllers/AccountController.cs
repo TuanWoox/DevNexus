@@ -82,5 +82,28 @@ namespace platform_core_service.Controllers
             }
             return Ok(result);
         }
+
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword(ChangePasswordDTO changePasswordDTO)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            ReturnResult<bool> result = new ReturnResult<bool>();
+            try
+            {
+                result = await _accountService.ChangePassword(changePasswordDTO);
+            } catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = ex.Message;
+            }
+            return Ok(result);
+
+
+        }
     }
 }

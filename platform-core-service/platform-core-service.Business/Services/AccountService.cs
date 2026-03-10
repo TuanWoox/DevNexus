@@ -280,5 +280,67 @@ namespace platform_core_service.Business.Services
 
             return returnResult;
         }
+
+        public async Task<ReturnResult<bool>> ChangePassword(ChangePasswordDTO changePasswordDTO)
+        {
+            ReturnResult<bool> returnResult = new ReturnResult<bool>();
+
+            try
+            {
+                // Get the current user from JWT, with _userContext.UserId set from JWT claims
+                if (string.IsNullOrEmpty(_userContext.UserId))
+                {
+                    returnResult.Result = false;
+                    returnResult.Message = "User is not authenticated.";
+                    return returnResult;
+                }
+
+                var user = await _userManager.FindByIdAsync(_userContext.UserId);
+                // Validate if user is still in database
+                if (user == null)
+                {
+                    returnResult.Result = false;
+                    returnResult.Message = "User not found.";
+                    return returnResult;
+                }
+
+                var isOldPasswordValid = await _userManager.CheckPasswordAsync(user, changePasswordDTO.OldPassword);
+                // Validate if old password correct
+                if (!isOldPasswordValid)
+                {
+                    returnResult.Result = false;
+                    returnResult.Message = "Old password is incorrect.";
+                    return returnResult;
+                }
+
+                var isSamePassword = changePasswordDTO.OldPassword == changePasswordDTO.NewPassword;
+                // Validate if old password is similar to new password
+                if (isSamePassword)
+                {
+                    returnResult.Result = false;
+                    returnResult.Message = "New password must be different from old password.";
+                    return returnResult;
+                }
+
+                var changeResult = await _userManager.ChangePasswordAsync(user, changePasswordDTO.OldPassword, changePasswordDTO.NewPassword);
+                // Use built-in method ChangePasswordAsync instead of doing it manually 
+                if (!changeResult.Succeeded)
+                {
+                    returnResult.Result = false;
+                    returnResult.Message = "Password change failed: " +
+                          string.Join(",", changeResult.Errors.Select(e => e.Description));
+                    return returnResult;
+                }
+
+                returnResult.Result = true;
+            } 
+            catch (Exception ex)
+            {
+                returnResult.Result = false;
+                returnResult.Message = $"An error occurred during password change: {ex.Message}";
+            }
+
+            return returnResult;
+        }
     }
 }
