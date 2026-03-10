@@ -1,0 +1,1 @@
+# Payload từ C# gọi sang hoặc Client gọi
