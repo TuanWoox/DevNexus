@@ -1,6 +1,7 @@
 ﻿using platform_core_service.Business.Repository;
-using platform_core_service.Configuration;
 using platform_core_service.Data;
+using platform_core_service.Infrastructures.Hangfire;
+using platform_core_service.Infrastructures.Service;
 using platform_core_service.Middleware;
 
 namespace platform_core_service
@@ -28,6 +29,7 @@ namespace platform_core_service
             services.ConfigureIdentity();
             services.ConfigureSignalR();
             services.ConfigureAutoMapper();
+            services.ConfigureHangfireWithPostgreSql(Configuration);
             services.RegisterStudyNestService();
         }
 
