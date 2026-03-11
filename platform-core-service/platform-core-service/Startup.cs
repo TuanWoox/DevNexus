@@ -2,7 +2,7 @@
 using platform_core_service.Data;
 using platform_core_service.Infrastructures.Hangfire;
 using platform_core_service.Infrastructures.Service;
-using platform_core_service.Middleware;
+using platform_core_service.Middlewares;
 
 namespace platform_core_service
 {

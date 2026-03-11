@@ -3,7 +3,7 @@ using platform_core_service.Common.Utils.Extensions;
 using System.Net;
 using System.Text.Json;
 
-namespace platform_core_service.Middleware
+namespace platform_core_service.Middlewares
 {
     public class GlobalExceptionMiddleware
     {
