@@ -9,7 +9,7 @@ using platform_core_service.Common.Entities.Identities;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Data;
 
-namespace platform_core_service.Configuration;
+namespace platform_core_service.Infrastructures.Service;
 
 public static class ServiceExtensions
 {

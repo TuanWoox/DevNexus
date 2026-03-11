@@ -1,3 +1,4 @@
+using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -23,18 +24,22 @@ namespace platform_core_service.Business.Services
         private readonly IConfiguration _configuration;
         private readonly ApplicationDbContext _context;
         private readonly IUserContext _userContext;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
         public AccountService(UserManager<ApplicationUser> userManager,
-         SignInManager<ApplicationUser> signInManager,
-          IConfiguration configuration,
-           ApplicationDbContext context,
-           IUserContext userContext)
+            SignInManager<ApplicationUser> signInManager,
+            IConfiguration configuration,
+            ApplicationDbContext context,
+            IUserContext userContext,
+            IBackgroundJobClient backgroundJobClient
+        )
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
             _context = context;
             _userContext = userContext;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<ReturnResult<bool>> RegisterAccount(RegisterAccountDTO newAccount)
@@ -333,7 +338,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 returnResult.Result = true;
-            } 
+            }
             catch (Exception ex)
             {
                 returnResult.Result = false;
