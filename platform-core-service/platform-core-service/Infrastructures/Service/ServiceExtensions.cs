@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Newtonsoft.Json;
@@ -201,6 +202,7 @@ public static class ServiceExtensions
             opt.Password.RequireNonAlphanumeric = true;
             opt.Password.RequireUppercase = true;
             opt.Password.RequireLowercase = true;
+            opt.User.RequireUniqueEmail = true;
             // Sign-in policy
             opt.SignIn.RequireConfirmedEmail = false;
             // Account lockout protection (anti brute-force)

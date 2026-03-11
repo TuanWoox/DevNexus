@@ -54,6 +54,7 @@ namespace platform_core_service.Business.Services
                     Id = Guid.NewGuid().ToString(),
                     UserName = newAccount.UserName,
                     DateCreated = DateTimeOffset.UtcNow,
+                    Email = newAccount.Email,
                     Deleted = false
                 };
 
@@ -98,8 +99,13 @@ namespace platform_core_service.Business.Services
 
             try
             {
-                // Find user by username
+                // Find user by username or email
                 var user = await _userManager.FindByNameAsync(loginAccount.UserName);
+
+                if( user == null )
+                {
+                    user = await _userManager.FindByEmailAsync(loginAccount.UserName);
+                }
 
                 if (user == null)
                 {
@@ -275,7 +281,6 @@ namespace platform_core_service.Business.Services
                 await _context.SaveChangesAsync();
 
                 returnResult.Result = true;
-                returnResult.Message = "Logged out successfully.";
             }
             catch (Exception ex)
             {
