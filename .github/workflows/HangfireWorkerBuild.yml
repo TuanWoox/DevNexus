@@ -1,0 +1,11 @@
+name: Hangfire Background Job Worker Build
+on:
+    pull_request:
+        branches: [main]
+
+jobs:
+    build:
+        uses: TuanWoox/GithubActionTemplates/.github/workflows/BuildDotnet.yaml@main
+        with:
+            dotnet_version: "9.0.x"
+            build_context: "./background-job-worker"
