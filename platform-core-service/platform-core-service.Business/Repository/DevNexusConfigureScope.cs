@@ -11,6 +11,7 @@ namespace platform_core_service.Business.Repository
     {
         public static IServiceCollection RegisterStudyNestService(this IServiceCollection services)
         {
+            services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
             // Allows access to HttpContext in services via IHttpContextAccessor outside controllers
             services.AddHttpContextAccessor();
             // Allow to use httpclient as a http factory
@@ -18,6 +19,7 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IIdentityService, IdentityService>();
             services.AddScoped<IUserContext, UserContext>();
+            services.AddScoped<IConfigurationService, ConfigurationService>();
             return services;
         }
     }

@@ -31,6 +31,7 @@ namespace platform_core_service
             services.ConfigureAutoMapper();
             services.ConfigureHangfireWithPostgreSql(Configuration);
             services.RegisterStudyNestService();
+            services.AddDistributedMemoryCache();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

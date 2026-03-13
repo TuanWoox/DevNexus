@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Common.Entities.BaseEntity;
+using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Entities.Identities;
 
 
@@ -15,6 +16,7 @@ namespace platform_core_service.Data
 
 
         }
+        public DbSet<Setting> Settings { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -32,6 +34,15 @@ namespace platform_core_service.Data
                     .WithMany(r => r.UserRoles)
                     .HasForeignKey(ur => ur.RoleId)
                     .IsRequired();
+            });
+
+            builder.Entity<Setting>(entity =>
+            {
+                entity.Property(e => e.DataType).HasConversion<string>();
+
+                entity.HasIndex(e => e.Key).IsUnique();
+
+                entity.HasQueryFilter(e => !e.Deleted);
             });
         }
 
