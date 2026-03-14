@@ -1,6 +1,6 @@
 using platform_core_service.Common.Entities.BaseEntity;
 using platform_core_service.Common.Models.Paging;
-using platform_core_service.Common.Models.DTOs.HelperDTO;
+using shared_contracts.Models.DTOs.HelperDTO;
 
 namespace platform_core_service.Business.Repository
 {

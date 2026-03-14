@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\platform-core-service.Common\platform-core-service.Common.csproj" />
     <ProjectReference Include="..\platform-core-service.Data\platform-core-service.Data.csproj" />
+    <ProjectReference Include="..\..\shared-contracts\shared-contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

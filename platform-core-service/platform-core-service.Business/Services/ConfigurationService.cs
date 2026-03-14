@@ -10,12 +10,8 @@ using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using shared_contracts.Models.DTOs.HelperDTO;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace platform_core_service.Business.Services
 {
