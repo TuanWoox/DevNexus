@@ -23,6 +23,6 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Setting
 
         public bool IsSensitive { get; set; } = false;
 
-        public string Description { get; set; }
+        public string? Description { get; set; }
     }
 }

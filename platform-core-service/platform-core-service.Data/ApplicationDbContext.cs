@@ -40,7 +40,9 @@ namespace platform_core_service.Data
             {
                 entity.Property(e => e.DataType).HasConversion<string>();
 
-                entity.HasIndex(e => e.Key).IsUnique();
+                entity.HasIndex(e => e.Key)
+                  .IsUnique()
+                  .HasFilter("\"Deleted\" = false");
 
                 entity.HasQueryFilter(e => !e.Deleted);
             });

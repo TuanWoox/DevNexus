@@ -12,8 +12,8 @@ using platform_core_service.Data;
 namespace platform_core_service.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260313170812_UpdateSettingDataTypeEnum")]
-    partial class UpdateSettingDataTypeEnum
+    [Migration("20260314044309_UpdateSettingIndexAndEnum")]
+    partial class UpdateSettingIndexAndEnum
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -162,7 +162,8 @@ namespace platform_core_service.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Key")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"Deleted\" = false");
 
                     b.ToTable("Settings");
                 });

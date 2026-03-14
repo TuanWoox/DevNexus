@@ -22,6 +22,6 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Setting
         public string Value { get; set; }
         public SettingDataType DataType { get; set; } = SettingDataType.String;
         public bool IsSensitive { get; set; }
-        public string Description { get; set; }
+        public string? Description { get; set; }
     }
 }

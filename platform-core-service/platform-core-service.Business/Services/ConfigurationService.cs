@@ -80,6 +80,10 @@ namespace platform_core_service.Business.Services
                 await _context.Settings.AddAsync(newSetting);
 
                 rs.Result = await _context.SaveChangesAsync() > 0;
+                if (rs.Result)
+                {
+                    await _cache.RemoveAsync(CACHE_KEY);
+                }
             }
             catch (Exception ex)
             {
@@ -149,6 +153,7 @@ namespace platform_core_service.Business.Services
 
                 _context.Settings.RemoveRange(entitiesToDelete);
                 await _context.SaveChangesAsync();
+                await _cache.RemoveAsync("Global_AppConfiguration");
                 rs.Result = true;
             }
             catch (Exception ex)

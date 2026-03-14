@@ -159,7 +159,8 @@ namespace platform_core_service.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Key")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"Deleted\" = false");
 
                     b.ToTable("Settings");
                 });

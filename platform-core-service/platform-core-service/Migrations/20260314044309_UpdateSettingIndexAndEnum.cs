@@ -5,7 +5,7 @@
 namespace platform_core_service.Migrations
 {
     /// <inheritdoc />
-    public partial class UpdateSettingDataTypeEnum : Migration
+    public partial class UpdateSettingIndexAndEnum : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -14,7 +14,8 @@ namespace platform_core_service.Migrations
                 name: "IX_Settings_Key",
                 table: "Settings",
                 column: "Key",
-                unique: true);
+                unique: true,
+                filter: "\"Deleted\" = false");
         }
 
         /// <inheritdoc />
