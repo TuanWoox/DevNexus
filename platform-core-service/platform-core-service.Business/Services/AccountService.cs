@@ -10,6 +10,8 @@ using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.CoreDTO;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Data;
+using shared_contracts.Interfaces;
+using shared_contracts.Models.DTOs.HelperDTO;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -102,7 +104,7 @@ namespace platform_core_service.Business.Services
                 // Find user by username or email
                 var user = await _userManager.FindByNameAsync(loginAccount.UserName);
 
-                if( user == null )
+                if (user == null)
                 {
                     user = await _userManager.FindByEmailAsync(loginAccount.UserName);
                 }

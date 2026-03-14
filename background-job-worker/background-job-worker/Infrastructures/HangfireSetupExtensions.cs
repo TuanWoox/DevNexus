@@ -3,7 +3,7 @@ using Hangfire.PostgreSql;
 using HangfireBasicAuthenticationFilter;
 using Microsoft.AspNetCore.Builder;
 
-namespace background_job_worker.Infrastructures.Hangfire
+namespace background_job_worker.Infrastructures
 {
     public static class HangfireSetupExtension
     {

@@ -1,11 +1,7 @@
 ﻿using platform_core_service.Common.Models.DTOs.EntityDTO.Setting;
-using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using shared_contracts.Models.DTOs.HelperDTO;
+
 
 namespace platform_core_service.Common.Interfaces.Services
 {
