@@ -60,8 +60,6 @@ namespace platform_core_service.Business.Services
 
                 var newSetting = _mapper.Map<Setting>(createDto);
 
-                newSetting.Id = Guid.NewGuid().ToString();
-
                 await _context.Settings.AddAsync(newSetting);
 
                 rs.Result = await _context.SaveChangesAsync() > 0;
@@ -109,7 +107,7 @@ namespace platform_core_service.Business.Services
             return rs;
         }
 
-        public async Task<ReturnResult<SelectSettingDTO>> GetOneByKeyAndGroup(string key, string group, bool fromSystem = false)
+        public async Task<ReturnResult<SelectSettingDTO>> GetOneByKeyAndGroup(string key, string group)
         {
             var result = new ReturnResult<SelectSettingDTO>();
             try

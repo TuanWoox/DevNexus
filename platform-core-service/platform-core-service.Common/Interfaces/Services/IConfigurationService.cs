@@ -2,6 +2,7 @@ using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Setting;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
+using shared_contracts.Models.DTOs.HelperDTO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +15,7 @@ namespace platform_core_service.Common.Interfaces.Services
     public interface IConfigurationService
     {
         Task<Dictionary<string, string>> GetAllSettingsDynamicAsync();
-        Task<ReturnResult<SelectSettingDTO>> GetOneByKeyAndGroup(string key, string group, bool fromSystem = false);
+        Task<ReturnResult<SelectSettingDTO>> GetOneByKeyAndGroup(string key, string group);
         Task<ReturnResult<bool>> CreateSettingAsync(CreateSettingDTO createDto);
         Task<ReturnResult<PagedData<SelectSettingDTO, string>>> GetPaging(Page<string> page);
         Task<ReturnResult<bool>> DeleteSettingsAsync(List<string> ids);
