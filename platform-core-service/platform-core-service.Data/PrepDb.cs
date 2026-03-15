@@ -11,7 +11,9 @@ namespace platform_core_service.Data
             using (var scope = appBuilder.ApplicationServices.CreateScope())
             {
                 var identityService = scope.ServiceProvider.GetRequiredService<IIdentityService>();
+                var configuration = scope.ServiceProvider.GetRequiredService<IConfigurationService>();
                 await identityService.InitRole();
+                await configuration.InitSetting();
             }
             return Task.CompletedTask;
         }
