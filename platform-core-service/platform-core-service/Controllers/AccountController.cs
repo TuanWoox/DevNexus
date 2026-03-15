@@ -107,5 +107,37 @@ namespace platform_core_service.Controllers
 
 
         }
+
+        [HttpPost("request-reset-password")]
+        public async Task<IActionResult> RequestResetPassword(RequestResetPasswordDTO requestResetPasswordDTO)
+        {
+            ReturnResult<bool> result = new ReturnResult<bool>();
+            try
+            {
+                result = await _accountService.RequestResetPassword(requestResetPasswordDTO);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = ex.Message;
+            }
+            return Ok(result);
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword(ResetPasswordDTO resetPasswordDTO)
+        {
+            ReturnResult<bool> result = new ReturnResult<bool>();
+            try
+            {
+                result = await _accountService.ResetPassword(resetPasswordDTO);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = ex.Message;
+            }
+            return Ok(result);
+        }
     }
 }
