@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
-using platform_core_service.Data;
+using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Utils.Extensions;
+using platform_core_service.Data;
 
 namespace platform_core_service
 {
@@ -20,6 +21,9 @@ namespace platform_core_service
                 {
                     var myDbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                     await myDbContext.Database.MigrateAsync();
+                    //First cache for setting
+                    var configService = scope.ServiceProvider.GetRequiredService<IConfigurationService>();
+                    await configService.GetAllSettingsDynamicAsync();
                 }
 
                 await webHost.RunAsync();
