@@ -21,6 +21,14 @@ namespace platform_core_service.Data
         {
             base.OnModelCreating(builder);
 
+            foreach (var entityType in builder.Model.GetEntityTypes())
+            {
+                if (typeof(IDeleted).IsAssignableFrom(entityType.ClrType))
+                {
+                    entityType.AddSoftDeleteQueryFilter();
+                }
+            }
+
             builder.Entity<ApplicationUserRole>(userRole =>
             {
                 userRole.HasKey(ur => new { ur.UserId, ur.RoleId });
@@ -40,11 +48,10 @@ namespace platform_core_service.Data
             {
                 entity.Property(e => e.DataType).HasConversion<string>();
 
+                //Add partial unique index on Key where Deleted is falses
                 entity.HasIndex(e => e.Key)
                   .IsUnique()
                   .HasFilter("\"Deleted\" = false");
-
-                entity.HasQueryFilter(e => !e.Deleted);
             });
         }
 

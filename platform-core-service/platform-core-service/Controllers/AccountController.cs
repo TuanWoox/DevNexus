@@ -4,6 +4,7 @@ using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.CoreDTO;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Utils.Extensions;
+using shared_contracts.Models.DTOs.HelperDTO;
 
 namespace platform_core_service.Controllers
 {
@@ -96,7 +97,8 @@ namespace platform_core_service.Controllers
             try
             {
                 result = await _accountService.ChangePassword(changePasswordDTO);
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 DevNexusLogger.Instance.Debug(ex.Message);
                 result.Message = ex.Message;
