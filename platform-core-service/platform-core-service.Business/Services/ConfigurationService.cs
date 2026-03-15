@@ -37,7 +37,8 @@ namespace platform_core_service.Business.Services
             if (!string.IsNullOrEmpty(cachedJson))
                 return JsonSerializer.Deserialize<Dictionary<string, string>>(cachedJson) ?? new();
 
-            var dict = await _context.Settings.AsNoTracking().ToDictionaryAsync(x => x.Key, x => x.Value);
+            var dict = await _context.Settings.AsNoTracking()
+                .ToDictionaryAsync(x => $"{x.Group}:{x.Key}", x => x.Value);
 
             await _cache.SetStringAsync(CACHE_KEY, JsonSerializer.Serialize(dict),
                 new DistributedCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromDays(7)));
