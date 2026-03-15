@@ -25,7 +25,7 @@ namespace platform_core_service.Business.Services
         private readonly IDistributedCache _cache;
         private readonly IRepository<Setting, string> _repo;
         private readonly IMapper _mapper;
-        private const string CACHE_KEY = "Global_AppConfiguration";
+        private const string CACHE_KEY = "ALL_SETTINGS_CACHE";
 
         public ConfigurationService(ApplicationDbContext context, IDistributedCache cache, IRepository<Setting, string> repository, IMapper mapper)
         {
@@ -35,29 +35,18 @@ namespace platform_core_service.Business.Services
             _mapper = mapper;
         }
 
-        public async Task<AppConfiguration> GetConfigAsync()
+        public async Task<Dictionary<string, string>> GetAllSettingsDynamicAsync()
         {
             var cachedJson = await _cache.GetStringAsync(CACHE_KEY);
             if (!string.IsNullOrEmpty(cachedJson))
-            {
-                return JsonSerializer.Deserialize<AppConfiguration>(cachedJson) ?? new AppConfiguration();
-            }
+                return JsonSerializer.Deserialize<Dictionary<string, string>>(cachedJson) ?? new();
 
-            var dbSettings = await _context.Settings.ToListAsync();
-            var dict = dbSettings.ToDictionary(x => x.Key, x => x.Value);
+            var dict = await _context.Settings.AsNoTracking().ToDictionaryAsync(x => x.Key, x => x.Value);
 
-            var config = new AppConfiguration
-            {
-                GeminiApiKey = dict.GetValueOrDefault("AI:GeminiApiKey") ?? "",
-                BannedKeywords = ParseJsonArray(dict.GetValueOrDefault("Moderation:BannedKeywords")),
-            };
+            await _cache.SetStringAsync(CACHE_KEY, JsonSerializer.Serialize(dict),
+                new DistributedCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromDays(7)));
 
-            var options = new DistributedCacheEntryOptions()
-                .SetAbsoluteExpiration(TimeSpan.FromDays(7));
-
-            await _cache.SetStringAsync(CACHE_KEY, JsonSerializer.Serialize(config), options);
-
-            return config;
+            return dict;
         }
 
         public async Task<ReturnResult<bool>> CreateSettingAsync(CreateSettingDTO createDto)
@@ -87,9 +76,9 @@ namespace platform_core_service.Business.Services
             }
             catch (Exception ex)
             {
-                DevNexusLogger.Instance.Error(ex);
                 rs.Result = false;
                 rs.Message = ResponseMessage.MESSAGE_TECHNICAL_ISSUE;
+                DevNexusLogger.Instance.Error(ex);
             }
             return rs;
         }
@@ -117,10 +106,40 @@ namespace platform_core_service.Business.Services
             catch (Exception ex)
             {
                 rs.Result = false;
+                rs.Message = ResponseMessage.MESSAGE_TECHNICAL_ISSUE;
                 DevNexusLogger.Instance.Error(ex);
             }
 
             return rs;
+        }
+
+        public async Task<ReturnResult<SelectSettingDTO>> GetOneByKeyAndGroup(string key, string group, bool fromSystem = false)
+        {
+            var result = new ReturnResult<SelectSettingDTO>();
+            try
+            {
+                var cleanKey = key?.Trim();
+                var cleanGroup = group?.Trim();
+
+                var existing = await _context.Settings
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.Key == cleanKey && x.Group == cleanGroup);
+
+                if (existing != null)
+                {
+                    result.Result = _mapper.Map<SelectSettingDTO>(existing);
+                }
+                else
+                {
+                    result.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_EXIST, $"The setting with key '{cleanKey}' and group '{cleanGroup}'");
+                }
+            }
+            catch (Exception ex)
+            {
+                rs.Message = ResponseMessage.MESSAGE_TECHNICAL_ISSUE;
+                DevNexusLogger.Instance.Error(ex);
+            }
+            return result;
         }
 
         public async Task<ReturnResult<PagedData<SelectSettingDTO, string>>> GetPaging(Page<string> page)
@@ -133,6 +152,7 @@ namespace platform_core_service.Business.Services
             }
             catch (Exception ex)
             {
+                rs.Message = ResponseMessage.MESSAGE_TECHNICAL_ISSUE;
                 DevNexusLogger.Instance.Error(ex);
             }
             return rs;
@@ -153,12 +173,13 @@ namespace platform_core_service.Business.Services
 
                 _context.Settings.RemoveRange(entitiesToDelete);
                 await _context.SaveChangesAsync();
-                await _cache.RemoveAsync("Global_AppConfiguration");
+                await _cache.RemoveAsync(CACHE_KEY);
                 rs.Result = true;
             }
             catch (Exception ex)
             {
                 rs.Result = false;
+                rs.Message = ResponseMessage.MESSAGE_TECHNICAL_ISSUE;
                 DevNexusLogger.Instance.Error(ex);
             }
             return rs;
