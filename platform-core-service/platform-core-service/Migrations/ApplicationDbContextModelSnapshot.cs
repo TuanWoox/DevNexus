@@ -158,6 +158,8 @@ namespace platform_core_service.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Deleted");
+
                     b.HasIndex("Key")
                         .IsUnique()
                         .HasFilter("\"Deleted\" = false");
@@ -195,6 +197,8 @@ namespace platform_core_service.Migrations
                         .HasColumnType("character varying(256)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
 
                     b.HasIndex("NormalizedName")
                         .IsUnique()
@@ -277,6 +281,8 @@ namespace platform_core_service.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Deleted");
+
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -308,6 +314,8 @@ namespace platform_core_service.Migrations
                         .HasColumnType("boolean");
 
                     b.HasKey("UserId", "RoleId");
+
+                    b.HasIndex("Deleted");
 
                     b.HasIndex("RoleId");
 
