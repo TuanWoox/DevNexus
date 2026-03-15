@@ -186,5 +186,27 @@ namespace platform_core_service.Business.Services
             try { return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>(); }
             catch { return new List<string>(); }
         }
+
+        public async Task InitSetting()
+        {
+            List<Setting> defaultSettings = new List<Setting>
+            {
+            };
+
+            foreach (var setting in defaultSettings)
+            {
+                var exists = await _context.Settings
+                    .Where(s => s.Key == setting.Key && s.Group == setting.Group)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync();
+
+                if (exists == null)
+                {
+                    await _context.Settings.AddAsync(setting);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+        }
     }
 }
