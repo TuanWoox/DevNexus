@@ -27,13 +27,15 @@ namespace platform_core_service.Business.Services
         private readonly ApplicationDbContext _context;
         private readonly IUserContext _userContext;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IConfigurationService _configurationService;
 
         public AccountService(UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             IConfiguration configuration,
             ApplicationDbContext context,
             IUserContext userContext,
-            IBackgroundJobClient backgroundJobClient
+            IBackgroundJobClient backgroundJobClient,
+            IConfigurationService configurationService
         )
         {
             _userManager = userManager;
@@ -42,6 +44,7 @@ namespace platform_core_service.Business.Services
             _context = context;
             _userContext = userContext;
             _backgroundJobClient = backgroundJobClient;
+            _configurationService = configurationService;
         }
 
         public async Task<ReturnResult<bool>> RegisterAccount(RegisterAccountDTO newAccount)
@@ -363,8 +366,6 @@ namespace platform_core_service.Business.Services
             {
                 var user = await _userManager.FindByEmailAsync(requestResetPasswordDTO.Email);
 
-                // var passwordResetURL = it should be get from admin setting table
-
                 // Check if user still in db
                 if (user == null)
                 {
@@ -377,59 +378,14 @@ namespace platform_core_service.Business.Services
                 var token = await _userManager.GeneratePasswordResetTokenAsync(user);
                 var encodedToken = Uri.EscapeDataString(token);
 
-                // Config frontend reset URL (prefer using passwordResetURL from setting table to hardcode)
-                // But now we will hardcode it (http or https)
-                var frontendBase = "http://localhost:3000/reset-password";
+                // Config frontend reset URL (we will get it from setting table in db through it's Key and Group)
+                var frontendBase = (await _configurationService.GetOneByKeyAndGroup("PASSWORD_RESET_URL", "FRONT_END")).Result?.Value;
                 var resetLink = $"{frontendBase}?email={Uri.EscapeDataString(user.Email)}&token={encodedToken}";
 
                 var subject = "DevNexus - Reset your password";
-                var emailTemplate = @"
-                <html>
-                <head>
-                    <style>
-                        body {{ font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f9f9f9; color: #444; margin: 0; padding: 0; }}
-                        .wrapper {{ width: 100%; table-layout: fixed; background-color: #f9f9f9; padding-bottom: 40px; }}
-                        .container {{ max-width: 600px; margin: auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; margin-top: 40px; overflow: hidden; }}
-                        .header {{ background-color: #1a1a1a; padding: 30px; text-align: center; }}
-                        .header h1 {{ color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; letter-spacing: 2px; }}
-                        .header span {{ color: #007bff; }}
-                        .content {{ padding: 40px 30px; line-height: 1.8; }}
-                        .content h2 {{ color: #111; font-size: 22px; margin-top: 0; }}
-                        .button-wrapper {{ text-align: center; margin: 35px 0; }}
-                        .button {{ background-color: #007bff; color: #ffffff !important; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600; display: inline-block; box-shadow: 0 2px 5px rgba(0,123,255,0.3); }}
-                        .footer {{ background-color: #f4f4f4; padding: 25px; text-align: center; color: #888; font-size: 13px; }}
-                        .notice {{ font-size: 13px; color: #999; margin-top: 25px; padding-top: 20px; border-top: 1px solid #eee; }}
-                    </style>
-                </head>
-                <body>
-                    <div class=""wrapper"">
-                        <div class=""container"">
-                            <div class=""header"">
-                                <h1>DEV<span>NEXUS</span></h1>
-                            </div>
-                            <div class=""content"">
-                                <h2>Hi {userName},</h2>
-                                <p>We received a request to reset the password for your <strong>DevNexus</strong> account.</p>
-                                <p>To create a new password, please click the button below. This link will remain active for <strong>5 minutes</strong> only.</p>
                 
-                                <div class=""button-wrapper"">
-                                    <a href=""{resetLink}"" class=""button"">Reset Your Password</a>
-                                </div>
-
-                                <p>If you did not request a password reset, you can safely ignore this email. Your password will not change until you access the link above.</p>
-                
-                                <div class=""notice"">
-                                    <p>For security reasons, this email was sent automatically. Please do not reply to this address.</p>
-                                </div>
-                            </div>
-                            <div class=""footer"">
-                                <p>&copy; {currentYear} DevNexus | The Social Learning Network for Engineers</p>
-                                <p>Innovating the way we learn to code.</p>
-                            </div>
-                        </div>
-                    </div>
-                </body>
-                </html>";
+                // Get the email template from setting table in db through it's Key and Group
+                var emailTemplate = (await _configurationService.GetOneByKeyAndGroup("FORGOT_PASSWORD_EMAIL", "EMAIL_TEMPLATE")).Result?.Value;
 
                 var emailBody = emailTemplate.Replace("{resetLink}", resetLink)
                                                      .Replace("{userName}", user.UserName ?? "User")
