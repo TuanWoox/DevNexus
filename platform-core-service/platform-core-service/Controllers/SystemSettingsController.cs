@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.CoreDTO;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Setting;
@@ -21,64 +22,34 @@ namespace platform_core_service.Controllers
             _configService = configService;
         }
 
-        [HttpPost("GetPaging")]
+        [HttpPost("paging")]
         public async Task<IActionResult> GetSettings(Page<string> page)
         {
-            ReturnResult<PagedData<SelectSettingDTO, string>> rs = new ReturnResult<PagedData<SelectSettingDTO, string>>();
-            try
-            {
-                rs = await _configService.GetPaging(page);
-            }
-            catch (Exception ex)
-            {
-                DevNexusLogger.Instance.Debug(ex.Message);
-                rs.Message = ex.Message;
-            }
+            ReturnResult<PagedData<SelectSettingDTO, string>> rs = await _configService.GetPaging(page);
             return Ok(rs);
+        }
+        [HttpGet("single")]
+        public async Task<IActionResult> GetOneByKeyAndGroup(string key, string group)
+        {
+            ReturnResult<SelectSettingDTO> result =  await _configService.GetOneByKeyAndGroup(key, group);
+            return Ok(result);
         }
         [HttpPost]
         public async Task<IActionResult> CreateSetting(CreateSettingDTO createDto)
         {
-            ReturnResult<bool> rs = new ReturnResult<bool>();
-            try
-            {
-                rs = await _configService.CreateSettingAsync(createDto);
-            }
-            catch (Exception ex)
-            {
-                DevNexusLogger.Instance.Debug(ex.Message);
-                rs.Message = ex.Message;
-            }
+            ReturnResult<bool> rs = await _configService.CreateSettingAsync(createDto);
             return Ok(rs);
         }
         [HttpDelete]
         public async Task<IActionResult> DeleteSettings([FromBody] List<string> ids)
         {
-            ReturnResult<bool> rs = new ReturnResult<bool>();
-            try
-            {
-                rs = await _configService.DeleteSettingsAsync(ids);
-            }
-            catch (Exception ex)
-            {
-                DevNexusLogger.Instance.Debug(ex.Message);
-                rs.Message = ex.Message;
-            }
+            ReturnResult<bool> rs = await _configService.DeleteSettingsAsync(ids);
             return Ok(rs);
         }
         [HttpPut]
         public async Task<IActionResult> UpdateSetting(UpdateSettingDTO updateDto)
         {
-            ReturnResult<bool> rs = new ReturnResult<bool>();
-            try
-            {
-                rs = await _configService.UpdateSettingAsync(updateDto);
-            }
-            catch (Exception ex)
-            {
-                DevNexusLogger.Instance.Debug(ex.Message);
-                rs.Message = ex.Message;
-            }
+            ReturnResult<bool> rs = await _configService.UpdateSettingAsync(updateDto);
             return Ok(rs);
         }
     }
