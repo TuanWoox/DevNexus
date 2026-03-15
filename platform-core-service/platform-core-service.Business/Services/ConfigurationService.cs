@@ -132,7 +132,7 @@ namespace platform_core_service.Business.Services
             }
             catch (Exception ex)
             {
-                rs.Message = ResponseMessage.MESSAGE_TECHNICAL_ISSUE;
+                result.Message = ResponseMessage.MESSAGE_TECHNICAL_ISSUE;
                 DevNexusLogger.Instance.Error(ex);
             }
             return result;
