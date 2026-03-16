@@ -155,12 +155,42 @@ namespace platform_core_service.Controllers
             return Ok(result);
         }
         [HttpPost("email-confirm")]
-        public async Task<IActionResult> ConfirmEmail(ConfirmEmailDTO confirmEmailDTO )
+        public async Task<IActionResult> ConfirmEmail(ConfirmEmailDTO confirmEmailDTO)
         {
             ReturnResult<bool> result = new ReturnResult<bool>();
             try
             {
                 result = await _accountService.ConfirmEmail(confirmEmailDTO);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = ex.Message;
+            }
+            return Ok(result);
+        }
+        [HttpPost("google-login")]
+        public async Task<IActionResult> GoogleLogin(GoogleAuthenticationDTO googleAuthenticationDTO)
+        {
+            ReturnResult<TokenResponseDTO> result = new ReturnResult<TokenResponseDTO>();
+            try
+            {
+                result = await _accountService.GoogleLogin(googleAuthenticationDTO);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = ex.Message;
+            }
+            return Ok(result);
+        }
+        [HttpPost("github-login")]
+        public async Task<IActionResult> GithubLogin(GitHubAuthenticationDTO gitHubAuthenticationDTO)
+        {
+            ReturnResult<TokenResponseDTO> result = new ReturnResult<TokenResponseDTO>();
+            try
+            {
+                result = await _accountService.GithubLogin(gitHubAuthenticationDTO);
             }
             catch (Exception ex)
             {
