@@ -56,7 +56,6 @@ namespace platform_core_service.Business.Services
                 // Create new ApplicationUser
                 var user = new ApplicationUser
                 {
-                    Id = Guid.NewGuid().ToString(),
                     UserName = newAccount.UserName,
                     DateCreated = DateTimeOffset.UtcNow,
                     Email = newAccount.Email,

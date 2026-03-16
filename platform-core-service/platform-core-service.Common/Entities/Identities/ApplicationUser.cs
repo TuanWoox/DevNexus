@@ -1,11 +1,11 @@
-﻿
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using platform_core_service.Common.Entities.BaseEntity;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace platform_core_service.Common.Entities.Identities
 {
-    public class ApplicationUser : IdentityUser<string>, ICreated, IModified, IDeleted
+    // IdentityUser implements IdentityUser<string> => auto-generates a GUID as Id in the constructor
+    public class ApplicationUser : IdentityUser, ICreated, IModified, IDeleted
     {
         [Column("RefreshToken")]
         public string? RefreshToken { get; set; }
