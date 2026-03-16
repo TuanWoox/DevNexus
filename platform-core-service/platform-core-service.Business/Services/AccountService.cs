@@ -404,12 +404,22 @@ namespace platform_core_service.Business.Services
 
                 // Config frontend reset URL (we will get it from setting table in db through it's Key and Group)
                 var frontendBase = (await _configurationService.GetOneByKeyAndGroup("PASSWORD_RESET_URL", "FRONT_END")).Result?.Value;
-                var resetLink = $"{frontendBase}?email={Uri.EscapeDataString(user.Email)}&token={encodedToken}";
+
+                var encodedEmail = Uri.EscapeDataString(user.Email);
+
+                var resetLink = $"{frontendBase}?email={encodedEmail}&token={encodedToken}";
 
                 var subject = "DevNexus - Reset your password";
                 
                 // Get the email template from setting table in db through it's Key and Group
                 var emailTemplate = (await _configurationService.GetOneByKeyAndGroup("FORGOT_PASSWORD_EMAIL", "EMAIL_TEMPLATE")).Result?.Value;
+
+                if (emailTemplate == null)
+                {
+                    returnResult.Result = false;
+                    returnResult.Message = "The reset password email template could not be found. Please contact support.";
+                    return returnResult;
+                }
 
                 var emailBody = emailTemplate.Replace("{resetLink}", resetLink)
                                                      .Replace("{userName}", user.UserName ?? "User")
@@ -442,7 +452,8 @@ namespace platform_core_service.Business.Services
             ReturnResult<bool> returnResult = new ReturnResult<bool>();
             try
             {
-                var user = await _userManager.FindByEmailAsync(resetPasswordDTO.Email);
+                var email = Uri.UnescapeDataString(resetPasswordDTO.Email);
+                var user = await _userManager.FindByEmailAsync(email);
                 // Check if user still exist
                 if ( user == null )
                 {
