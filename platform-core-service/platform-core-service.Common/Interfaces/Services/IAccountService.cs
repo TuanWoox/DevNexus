@@ -16,6 +16,8 @@ namespace platform_core_service.Common.Interfaces.Services
         public Task<ReturnResult<bool>> ResetPassword(ResetPasswordDTO resetPasswordDTO);
         public Task<ReturnResult<bool>> RequestConfirmEmail(RequestConfirmEmailDTO emailConfirmDTO);
         public Task<ReturnResult<bool>> ConfirmEmail(ConfirmEmailDTO confirmEmailDTO);
+        public Task<ReturnResult<TokenResponseDTO>> GoogleLogin(GoogleAuthenticationDTO googleAuthenticationDTO);
+        public Task<ReturnResult<TokenResponseDTO>> GithubLogin(GitHubAuthenticationDTO dto);
         public Task InitUser();
     }
 }

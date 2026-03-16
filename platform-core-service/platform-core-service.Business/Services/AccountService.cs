@@ -1,3 +1,4 @@
+﻿using Google.Apis.Auth;
 using Hangfire;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -12,10 +13,12 @@ using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.CoreDTO;
 using platform_core_service.Common.Models.DTOs.CoreDTO.Account;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using shared_contracts.Interfaces;
 using shared_contracts.Models.DTOs.HelperDTO;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -55,57 +58,43 @@ namespace platform_core_service.Business.Services
 
         public async Task<ReturnResult<bool>> RegisterAccount(RegisterAccountDTO newAccount)
         {
-            ReturnResult<bool> returnResult = new ReturnResult<bool>();
-
+            ReturnResult<bool> returnResult = new();
             try
             {
-                
-                // Create new ApplicationUser
                 var user = new ApplicationUser
                 {
                     UserName = newAccount.UserName,
-                    DateCreated = DateTimeOffset.UtcNow,
                     Email = newAccount.Email,
-                    Deleted = false
+                    DateCreated = DateTimeOffset.UtcNow,
+                    Deleted = false,
+                    EmailConfirmed = _env.IsDevelopment() // Auto-confirm in development
                 };
 
-                if(_env.IsDevelopment())
+                var createResult = await _userManager.CreateAsync(user, newAccount.Password);
+                if (!createResult.Succeeded)
                 {
-                    user.EmailConfirmed = true; // Auto-confirm email in development for easier testing
+                    returnResult.Result = false;
+                    returnResult.Message = "Registration failed: " +
+                        string.Join(", ", createResult.Errors.Select(e => e.Description));
+                    return returnResult;
                 }
 
-                // Create user with password
-                var result = await _userManager.CreateAsync(user, newAccount.Password);
-
-                if (result.Succeeded)
+                var roleResult = await _userManager.AddToRoleAsync(user, "Developer");
+                if (!roleResult.Succeeded)
                 {
-                    // Add Developer role to the new user
-                    var roleResult = await _userManager.AddToRoleAsync(user, "Developer");
+                    returnResult.Result = false;
+                    returnResult.Message = "User created but failed to assign role: " +
+                        string.Join(", ", roleResult.Errors.Select(e => e.Description));
+                    return returnResult;
+                }
 
-                    if (!roleResult.Succeeded)
-                    {
-                        var roleErrors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
-                        returnResult.Result = false;
-                        returnResult.Message = $"User created but failed to assign role: {roleErrors}";
-                    }
-                    else
-                    {
-                        if (_env.IsDevelopment())
-                        {
-                            returnResult.Result = true;
-                        }
-                        else
-                        {
-                            //Send confirmation email
-                            returnResult = await RequestConfirmEmail(new RequestConfirmEmailDTO { Email = user.Email! });
-                        }  
-                    }
+                if (_env.IsDevelopment())
+                {
+                    returnResult.Result = true;
                 }
                 else
                 {
-                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                    returnResult.Result = false;
-                    returnResult.Message = $"Registration failed: {errors}";
+                    returnResult = await RequestConfirmEmail(new RequestConfirmEmailDTO { Email = user.Email! });
                 }
             }
             catch (Exception ex)
@@ -113,69 +102,37 @@ namespace platform_core_service.Business.Services
                 returnResult.Result = false;
                 returnResult.Message = $"An error occurred during registration: {ex.Message}";
             }
-
             return returnResult;
         }
 
         public async Task<ReturnResult<TokenResponseDTO>> LoginAccount(LoginAccountDTO loginAccount)
         {
-            ReturnResult<TokenResponseDTO> returnResult = new ReturnResult<TokenResponseDTO>();
-
+            ReturnResult<TokenResponseDTO> returnResult = new();
             try
             {
-                // Find user by username or email
-                var user = await _userManager.FindByNameAsync(loginAccount.UserName);
+                var user = await _userManager.FindByNameAsync(loginAccount.UserName)
+                           ?? await _userManager.FindByEmailAsync(loginAccount.UserName);
 
                 if (user == null)
                 {
-                    user = await _userManager.FindByEmailAsync(loginAccount.UserName);
-                }
-
-                if (user == null)
-                {
-                    returnResult.Result = default!;
                     returnResult.Message = "Invalid username or password.";
                     return returnResult;
                 }
 
-                // Check password
                 var result = await _signInManager.CheckPasswordSignInAsync(user, loginAccount.Password, lockoutOnFailure: true);
 
                 if (result.Succeeded)
                 {
-                    // Get user roles
-                    var roles = await _userManager.GetRolesAsync(user);
-
-                    // Generate JWT access token
-                    var accessToken = GenerateAccessToken(user, roles, loginAccount.RememberMe);
-
-                    // Generate refresh token
-                    var refreshToken = GenerateRefreshToken();
-
-                    ApplicationUser? correctUserr = await _context.Users.Where(x => x.UserName == loginAccount.UserName).FirstOrDefaultAsync();
-                    if (correctUserr != null)
-                    {
-                        correctUserr.RefreshToken = refreshToken;
-                        correctUserr.RefreshTokenValidity = DateTime.UtcNow.AddDays(15);
-
-                        await _context.SaveChangesAsync();
-                    }
-                    returnResult.Result = new TokenResponseDTO
-                    {
-                        AccessToken = accessToken,
-                        RefreshToken = refreshToken,
-                    };
+                    returnResult.Result = await IssueTokens(user, loginAccount.RememberMe);
                 }
                 else if (result.IsLockedOut)
                 {
                     returnResult.Message = "Account is locked due to multiple failed login attempts. Please try again later.";
                 }
-                //Not confirm the email yet
-                else if(result.IsNotAllowed)
+                else if (result.IsNotAllowed)
                 {
-                    //Send confirmation email
                     await RequestConfirmEmail(new RequestConfirmEmailDTO { Email = user.Email! });
-                    returnResult.Message = "Your account has not been confirmed, please check your email to confirm";
+                    returnResult.Message = "Your account has not been confirmed, please check your email to confirm.";
                 }
                 else
                 {
@@ -187,103 +144,36 @@ namespace platform_core_service.Business.Services
                 returnResult.Result = default!;
                 returnResult.Message = $"An error occurred during login: {ex.Message}";
             }
-
             return returnResult;
-        }
-
-        private string GenerateAccessToken(ApplicationUser user, IList<string> roles, bool rememberMe)
-        {
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
-
-            // Add roles to claims
-            foreach (var role in roles)
-            {
-                claims.Add(new Claim(ClaimTypes.Role, role));
-            }
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured")));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            // Set expiration based on RememberMe: 7 days if true, 1 hour if false
-            var expires = rememberMe
-                ? DateTime.UtcNow.AddDays(7)
-                : DateTime.UtcNow.AddHours(1);
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: claims,
-                expires: expires,
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
-
-        private string GenerateRefreshToken()
-        {
-            var randomNumber = new byte[64];
-            using var rng = RandomNumberGenerator.Create();
-            rng.GetBytes(randomNumber);
-            return Convert.ToBase64String(randomNumber);
         }
 
         public async Task<ReturnResult<TokenResponseDTO>> RefreshToken(RefreshTokenDTO refreshTokenDTO)
         {
-            ReturnResult<TokenResponseDTO> returnResult = new ReturnResult<TokenResponseDTO>();
-
+            ReturnResult<TokenResponseDTO> returnResult = new();
             try
             {
-                // Find user by refresh token
                 var user = await _context.Users
                     .FirstOrDefaultAsync(x => x.RefreshToken == refreshTokenDTO.RefreshToken);
 
                 if (user == null)
                 {
-                    returnResult.Result = default!;
                     returnResult.Message = "Invalid refresh token.";
                     return returnResult;
                 }
 
-                // Check if refresh token is expired
                 if (user.RefreshTokenValidity == null || user.RefreshTokenValidity < DateTime.UtcNow)
                 {
-                    returnResult.Result = default!;
                     returnResult.Message = "Refresh token has expired. Please login again.";
                     return returnResult;
                 }
 
-                // Get user roles
-                var roles = await _userManager.GetRolesAsync(user);
-
-                // Generate new access token
-                var newAccessToken = GenerateAccessToken(user, roles, rememberMe: true);
-
-                // Generate new refresh token
-                var newRefreshToken = GenerateRefreshToken();
-
-                // Update refresh token in database
-                user.RefreshToken = newRefreshToken;
-                user.RefreshTokenValidity = DateTime.UtcNow.AddDays(15);
-                await _context.SaveChangesAsync();
-
-                returnResult.Result = new TokenResponseDTO
-                {
-                    AccessToken = newAccessToken,
-                    RefreshToken = newRefreshToken
-                };
+                returnResult.Result = await IssueTokens(user, rememberMe: true);
             }
             catch (Exception ex)
             {
                 returnResult.Result = default!;
                 returnResult.Message = $"An error occurred during token refresh: {ex.Message}";
             }
-
             return returnResult;
         }
 
@@ -569,6 +459,93 @@ namespace platform_core_service.Business.Services
             }
             return returnResult;
         }
+
+        public async Task<ReturnResult<TokenResponseDTO>> GoogleLogin(GoogleAuthenticationDTO googleAuthenticationDTO)
+        {
+            ReturnResult<TokenResponseDTO> returnResult = new();
+            try
+            {
+                var settings = new GoogleJsonWebSignature.ValidationSettings()
+                {
+                    Audience = new[] { _configuration["Google:ClientId"] }
+                };
+
+                var payload = await GoogleJsonWebSignature.ValidateAsync(googleAuthenticationDTO.IdToken, settings);
+                if (payload == null || string.IsNullOrEmpty(payload.Subject))
+                {
+                    returnResult.Message = "Invalid Google ID token.";
+                    return returnResult;
+                }
+
+                var user = await _userManager.FindByEmailAsync(payload.Email);
+                if (user != null)
+                {
+                    if (!user.EmailConfirmed) user.EmailConfirmed = true;
+                    returnResult.Result = await IssueTokens(user, rememberMe: true);
+                }
+                else
+                {
+                    returnResult = await CreateOAuthUser(payload.Email);
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug($"An error occurred during Google login: {ex.Message}");
+                returnResult.Message = ex.Message;
+            }
+            return returnResult;
+        }
+
+        public async Task<ReturnResult<TokenResponseDTO>> GithubLogin(GitHubAuthenticationDTO dto)
+        {
+            ReturnResult<TokenResponseDTO> returnResult = new();
+            try
+            {
+                using var http = new HttpClient();
+                http.DefaultRequestHeaders.Add("Authorization", $"Bearer {dto.AccessToken}");
+                http.DefaultRequestHeaders.Add("User-Agent", "DevNexus");
+
+                var response = await http.GetAsync("https://api.github.com/user");
+                if (!response.IsSuccessStatusCode)
+                {
+                    returnResult.Message = "Invalid GitHub access token.";
+                    return returnResult;
+                }
+
+                var profile = await response.Content.ReadFromJsonAsync<GitHubProfileDTO>();
+                if (profile == null || profile.Id == 0)
+                {
+                    returnResult.Message = "Failed to retrieve GitHub profile.";
+                    return returnResult;
+                }
+
+                // GitHub email can be null if user set it to private — fallback to emails endpoint
+                var email = profile.Email ?? await GetGitHubPrimaryEmail(http);
+                if (string.IsNullOrEmpty(email))
+                {
+                    returnResult.Message = "Unable to retrieve email from GitHub account.";
+                    return returnResult;
+                }
+
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user != null)
+                {
+                    if (!user.EmailConfirmed) user.EmailConfirmed = true;
+                    returnResult.Result = await IssueTokens(user, rememberMe: true);
+                }
+                else
+                {
+                    returnResult = await CreateOAuthUser(email);
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug($"An error occurred during GitHub login: {ex.Message}");
+                returnResult.Message = ex.Message;
+            }
+            return returnResult;
+        }
+
         public async Task InitUser()
         {
             // Only run in development mode
@@ -603,6 +580,106 @@ namespace platform_core_service.Business.Services
                 // Log error but don't throw to prevent application startup failure
                 Console.WriteLine($"An error occurred during InitUser: {ex.Message}");
             }
+        }
+
+        private async Task<TokenResponseDTO> IssueTokens(ApplicationUser user, bool rememberMe = true)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            var accessToken = GenerateAccessToken(user, roles, rememberMe);
+            var refreshToken = GenerateRefreshToken();
+
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenValidity = DateTime.UtcNow.AddDays(15);
+            await _context.SaveChangesAsync();
+
+            return new TokenResponseDTO
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken
+            };
+        }
+
+        private async Task<ReturnResult<TokenResponseDTO>> CreateOAuthUser(string email)
+        {
+            ReturnResult<TokenResponseDTO> returnResult = new();
+
+            var newUser = new ApplicationUser
+            {
+                UserName = email,
+                Email = email,
+                EmailConfirmed = true,
+                DateCreated = DateTimeOffset.UtcNow,
+                Deleted = false
+            };
+
+            var createResult = await _userManager.CreateAsync(newUser);
+            if (!createResult.Succeeded)
+            {
+                returnResult.Message = "Failed to create account: " +
+                    string.Join(", ", createResult.Errors.Select(e => e.Description));
+                return returnResult;
+            }
+
+            var roleResult = await _userManager.AddToRoleAsync(newUser, "Developer");
+            if (!roleResult.Succeeded)
+            {
+                returnResult.Message = "Account created but failed to assign role: " +
+                    string.Join(", ", roleResult.Errors.Select(e => e.Description));
+                return returnResult;
+            }
+
+            returnResult.Result = await IssueTokens(newUser, rememberMe: true);
+            return returnResult;
+        }
+
+        private async Task<string?> GetGitHubPrimaryEmail(HttpClient http)
+        {
+            var response = await http.GetAsync("https://api.github.com/user/emails");
+            if (!response.IsSuccessStatusCode) return null;
+
+            var emails = await response.Content.ReadFromJsonAsync<List<GitHubEmailDTO>>();
+            return emails?.FirstOrDefault(e => e.Primary && e.Verified)?.Email;
+        }
+        private string GenerateAccessToken(ApplicationUser user, IList<string> roles, bool rememberMe)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            // Add roles to claims
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured")));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            // Set expiration based on RememberMe: 7 days if true, 1 hour if false
+            var expires = rememberMe
+                ? DateTime.UtcNow.AddDays(7)
+                : DateTime.UtcNow.AddHours(1);
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["Jwt:Issuer"],
+                audience: _configuration["Jwt:Audience"],
+                claims: claims,
+                expires: expires,
+                signingCredentials: creds
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        private string GenerateRefreshToken()
+        {
+            var randomNumber = new byte[64];
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(randomNumber);
+            return Convert.ToBase64String(randomNumber);
         }
     }
 }
