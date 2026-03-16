@@ -1,13 +1,16 @@
 using Hangfire;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using platform_core_service.Common.Entities.Identities;
 using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.CoreDTO;
+using platform_core_service.Common.Models.DTOs.CoreDTO.Account;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Data;
 using shared_contracts.Interfaces;
@@ -28,6 +31,7 @@ namespace platform_core_service.Business.Services
         private readonly IUserContext _userContext;
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IConfigurationService _configurationService;
+        private readonly IWebHostEnvironment _env;
 
         public AccountService(UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
@@ -35,7 +39,8 @@ namespace platform_core_service.Business.Services
             ApplicationDbContext context,
             IUserContext userContext,
             IBackgroundJobClient backgroundJobClient,
-            IConfigurationService configurationService
+            IConfigurationService configurationService,
+            IWebHostEnvironment env
         )
         {
             _userManager = userManager;
@@ -45,6 +50,7 @@ namespace platform_core_service.Business.Services
             _userContext = userContext;
             _backgroundJobClient = backgroundJobClient;
             _configurationService = configurationService;
+            _env = env;
         }
 
         public async Task<ReturnResult<bool>> RegisterAccount(RegisterAccountDTO newAccount)
@@ -53,6 +59,7 @@ namespace platform_core_service.Business.Services
 
             try
             {
+                
                 // Create new ApplicationUser
                 var user = new ApplicationUser
                 {
@@ -61,6 +68,11 @@ namespace platform_core_service.Business.Services
                     Email = newAccount.Email,
                     Deleted = false
                 };
+
+                if(_env.IsDevelopment())
+                {
+                    user.EmailConfirmed = true; // Auto-confirm email in development for easier testing
+                }
 
                 // Create user with password
                 var result = await _userManager.CreateAsync(user, newAccount.Password);
@@ -78,7 +90,15 @@ namespace platform_core_service.Business.Services
                     }
                     else
                     {
-                        returnResult.Result = true;
+                        if (_env.IsDevelopment())
+                        {
+                            returnResult.Result = true;
+                        }
+                        else
+                        {
+                            //Send confirmation email
+                            returnResult = await RequestConfirmEmail(new RequestConfirmEmailDTO { Email = user.Email! });
+                        }  
                     }
                 }
                 else
@@ -148,12 +168,17 @@ namespace platform_core_service.Business.Services
                 }
                 else if (result.IsLockedOut)
                 {
-                    returnResult.Result = default!;
                     returnResult.Message = "Account is locked due to multiple failed login attempts. Please try again later.";
+                }
+                //Not confirm the email yet
+                else if(result.IsNotAllowed)
+                {
+                    //Send confirmation email
+                    await RequestConfirmEmail(new RequestConfirmEmailDTO { Email = user.Email! });
+                    returnResult.Message = "Your account has not been confirmed, please check your email to confirm";
                 }
                 else
                 {
-                    returnResult.Result = default!;
                     returnResult.Message = "Invalid username or password.";
                 }
             }
@@ -445,6 +470,139 @@ namespace platform_core_service.Business.Services
                 returnResult.Message = $"An error occurred during reset password: {ex.Message}";
             }
             return returnResult;
+        }
+
+        public async Task<ReturnResult<bool>> RequestConfirmEmail(RequestConfirmEmailDTO requestConfirmEmailDTO)
+        {
+            ReturnResult<bool> returnResult = new ReturnResult<bool>();
+            try
+            {
+                var user = await _userManager.FindByEmailAsync(requestConfirmEmailDTO.Email);
+
+                // Check if user still in db
+                if (user == null)
+                {
+                    returnResult.Result = false;
+                    returnResult.Message = "No account found matching this email address. Please try again.";
+                    return returnResult;
+                }
+
+                if(user.EmailConfirmed)
+                {
+                    returnResult.Result = false;
+                    returnResult.Message = "Email is already confirmed.";
+                    return returnResult;
+                }
+
+                // Generate token and encode it to escape special characters
+                var encodedToken = Uri.EscapeDataString(await _userManager.GenerateEmailConfirmationTokenAsync(user));
+
+                // Config frontend reset URL (we will get it from setting table in db through it's Key and Group)
+                var frontendBase = (await _configurationService.GetOneByKeyAndGroup("REGISTRATION_CONFIRMATION_URL", "FRONT_END")).Result?.Value;
+                var confirmationLink = $"{frontendBase}?userId={Uri.EscapeDataString(user.Id)}&token={encodedToken}";
+
+                var subject = "DevNexus - Registration Confirmation";
+
+                // Get the email template from setting table in db through it's Key and Group
+                var emailTemplate = (await _configurationService.GetOneByKeyAndGroup("REGISTRATION_CONFIRMATION_EMAIL", "EMAIL_TEMPLATE")).Result?.Value;
+
+                if(emailTemplate == null)
+                {
+                    returnResult.Result = false;
+                    returnResult.Message = "The registration confirmation email template could not be found. Please contact support.";
+                    return returnResult;
+                }
+
+                var emailBody = emailTemplate.Replace("{confirmationLink}", confirmationLink)
+                                                     .Replace("{userName}", user.UserName ?? "User")
+                                                     .Replace("{currentYear}", DateTime.UtcNow.Year.ToString());
+
+                // Enqueue background job
+                var jobId = _backgroundJobClient.Enqueue<IEmailService>(x => x.SendAsync(user.Email!, subject, emailBody));
+
+                // Check if job is enqueue (return true if job is enqueue)
+                if (string.IsNullOrEmpty(jobId))
+                {
+                    returnResult.Result = false;
+                    returnResult.Message = "Failed to send email. Please try again later.";
+                    return returnResult;
+                }
+
+                returnResult.Result = true;
+            }
+            catch (Exception ex)
+            {
+                returnResult.Result = false;
+                returnResult.Message = $"An error occurred during request reset password: {ex.Message}";
+            }
+            return returnResult;
+        }
+        
+        public async Task<ReturnResult<bool>> ConfirmEmail(ConfirmEmailDTO confirmEmail)
+        {
+            ReturnResult<bool> returnResult = new ReturnResult<bool>();
+            try
+            {
+                confirmEmail.UserId = Uri.UnescapeDataString(confirmEmail.UserId);
+                confirmEmail.Token = Uri.UnescapeDataString(confirmEmail.Token);
+                var user = await _userManager.FindByIdAsync(confirmEmail.UserId);
+                if (user == null)
+                {
+                    returnResult.Result = false;
+                    returnResult.Message = "Invalid confirmation link. User not found.";
+                    return returnResult;
+                }
+                var confirmResult = await _userManager.ConfirmEmailAsync(user, confirmEmail.Token);
+
+                if (!confirmResult.Succeeded)
+                {
+                    returnResult.Result = false;
+                    returnResult.Message = "Reset failed: " + string.Join(", ", confirmResult.Errors.Select(e => e.Description));
+                    return returnResult;
+                }
+                returnResult.Result = true;
+            }
+            catch(Exception ex)
+            {
+                returnResult.Result = false;
+                returnResult.Message = $"An error occurred during email confirmation: {ex.Message}";
+            }
+            return returnResult;
+        }
+        public async Task InitUser()
+        {
+            // Only run in development mode
+            if (!_env.IsDevelopment())
+            {
+                return;
+            }
+
+            try
+            {
+                // Get all users with unconfirmed emails
+                var unconfirmedUsers = await _context.Users
+                    .Where(u => !u.EmailConfirmed && !u.Deleted)
+                    .ToListAsync();
+
+                if (unconfirmedUsers.Count == 0)
+                {
+                    return;
+                }
+
+                // Auto-confirm all unconfirmed emails
+                foreach (var user in unconfirmedUsers)
+                {
+                    user.EmailConfirmed = true;
+                }
+
+                // Save changes to database
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't throw to prevent application startup failure
+                Console.WriteLine($"An error occurred during InitUser: {ex.Message}");
+            }
         }
     }
 }
