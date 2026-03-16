@@ -12,8 +12,10 @@ namespace platform_core_service.Data
             {
                 var identityService = scope.ServiceProvider.GetRequiredService<IIdentityService>();
                 var configuration = scope.ServiceProvider.GetRequiredService<IConfigurationService>();
+                var accountService = scope.ServiceProvider.GetRequiredService<IAccountService>();
                 await identityService.InitRole();
                 await configuration.InitSetting();
+                await accountService.InitUser();
             }
             return Task.CompletedTask;
         }

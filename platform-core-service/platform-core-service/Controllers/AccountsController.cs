@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.CoreDTO;
+using platform_core_service.Common.Models.DTOs.CoreDTO.Account;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Utils.Extensions;
 using shared_contracts.Models.DTOs.HelperDTO;
@@ -10,11 +11,11 @@ namespace platform_core_service.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AccountController : ControllerBase
+    public class AccountsController : ControllerBase
     {
         private readonly IAccountService _accountService;
 
-        public AccountController(IAccountService accountService)
+        public AccountsController(IAccountService accountService)
         {
             _accountService = accountService;
         }
@@ -104,8 +105,6 @@ namespace platform_core_service.Controllers
                 result.Message = ex.Message;
             }
             return Ok(result);
-
-
         }
 
         [HttpPost("request-reset-password")]
@@ -131,6 +130,37 @@ namespace platform_core_service.Controllers
             try
             {
                 result = await _accountService.ResetPassword(resetPasswordDTO);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = ex.Message;
+            }
+            return Ok(result);
+        }
+
+        [HttpPost("request-confirm-email")]
+        public async Task<IActionResult> RequestConfirmEmail(RequestConfirmEmailDTO requestEmailConfirmDTO)
+        {
+            ReturnResult<bool> result = new ReturnResult<bool>();
+            try
+            {
+                result = await _accountService.RequestConfirmEmail(requestEmailConfirmDTO);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = ex.Message;
+            }
+            return Ok(result);
+        }
+        [HttpPost("email-confirm")]
+        public async Task<IActionResult> ConfirmEmail(ConfirmEmailDTO confirmEmailDTO )
+        {
+            ReturnResult<bool> result = new ReturnResult<bool>();
+            try
+            {
+                result = await _accountService.ConfirmEmail(confirmEmailDTO);
             }
             catch (Exception ex)
             {

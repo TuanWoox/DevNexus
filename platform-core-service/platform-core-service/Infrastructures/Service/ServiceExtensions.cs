@@ -205,7 +205,7 @@ public static class ServiceExtensions
             opt.Password.RequireLowercase = true;
             opt.User.RequireUniqueEmail = true;
             // Sign-in policy
-            opt.SignIn.RequireConfirmedEmail = false;
+            opt.SignIn.RequireConfirmedEmail = true;
             // Account lockout protection (anti brute-force)
             opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             opt.Lockout.MaxFailedAccessAttempts = 5;
