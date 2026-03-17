@@ -13,7 +13,7 @@ namespace platform_core_service.Business.Contexts
         public string UserId => _httpContextAccessor.HttpContext?.User?.GetUserId() ?? "";
         public bool IsAdmin => _httpContextAccessor.HttpContext?.User?.IsInRole(RoleEnum.Admin.ToString()) ?? false;
         public string UserName => _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value ?? "";
-
         public string Email => _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Email)?.Value ?? "";
+        public string ProfileId => _httpContextAccessor.HttpContext?.User?.FindFirst("profileId")?.Value ?? "";
     }
 }

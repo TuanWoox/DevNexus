@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Microsoft.IdentityModel.Tokens;
 using platform_core_service.Common.Entities.Identities;
 using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces.Contexts;
@@ -17,11 +16,7 @@ using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using shared_contracts.Interfaces;
 using shared_contracts.Models.DTOs.HelperDTO;
-using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace platform_core_service.Business.Services
 {
@@ -35,6 +30,7 @@ namespace platform_core_service.Business.Services
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IConfigurationService _configurationService;
         private readonly IWebHostEnvironment _env;
+        private readonly ITokenService _tokenService;
 
         public AccountService(UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
@@ -43,7 +39,8 @@ namespace platform_core_service.Business.Services
             IUserContext userContext,
             IBackgroundJobClient backgroundJobClient,
             IConfigurationService configurationService,
-            IWebHostEnvironment env
+            IWebHostEnvironment env,
+            ITokenService tokenService
         )
         {
             _userManager = userManager;
@@ -54,6 +51,7 @@ namespace platform_core_service.Business.Services
             _backgroundJobClient = backgroundJobClient;
             _configurationService = configurationService;
             _env = env;
+            _tokenService = tokenService;
         }
 
         public async Task<ReturnResult<bool>> RegisterAccount(RegisterAccountDTO newAccount)
@@ -123,7 +121,7 @@ namespace platform_core_service.Business.Services
 
                 if (result.Succeeded)
                 {
-                    returnResult.Result = await IssueTokens(user, loginAccount.RememberMe);
+                    returnResult.Result = await _tokenService.IssueTokens(user, loginAccount.RememberMe);
                 }
                 else if (result.IsLockedOut)
                 {
@@ -167,7 +165,7 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                returnResult.Result = await IssueTokens(user, rememberMe: true);
+                returnResult.Result = await _tokenService.IssueTokens(user, rememberMe: true);
             }
             catch (Exception ex)
             {
@@ -300,7 +298,7 @@ namespace platform_core_service.Business.Services
                 var resetLink = $"{frontendBase}?email={encodedEmail}&token={encodedToken}";
 
                 var subject = "DevNexus - Reset your password";
-                
+
                 // Get the email template from setting table in db through it's Key and Group
                 var emailTemplate = (await _configurationService.GetOneByKeyAndGroup("FORGOT_PASSWORD_EMAIL", "EMAIL_TEMPLATE")).Result?.Value;
 
@@ -314,7 +312,7 @@ namespace platform_core_service.Business.Services
                 var emailBody = emailTemplate.Replace("{resetLink}", resetLink)
                                                      .Replace("{userName}", user.UserName ?? "User")
                                                      .Replace("{currentYear}", DateTime.UtcNow.Year.ToString());
-                
+
                 // Enqueue background job
                 var jobId = _backgroundJobClient.Enqueue<IEmailService>(x => x.SendAsync(user.Email, subject, emailBody));
 
@@ -345,7 +343,7 @@ namespace platform_core_service.Business.Services
                 var email = Uri.UnescapeDataString(resetPasswordDTO.Email);
                 var user = await _userManager.FindByEmailAsync(email);
                 // Check if user still exist
-                if ( user == null )
+                if (user == null)
                 {
                     returnResult.Result = false;
                     returnResult.Message = "No account found matching this email address. Please try again.";
@@ -365,7 +363,8 @@ namespace platform_core_service.Business.Services
 
                 returnResult.Result = true;
 
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 returnResult.Result = false;
                 returnResult.Message = $"An error occurred during reset password: {ex.Message}";
@@ -388,7 +387,7 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                if(user.EmailConfirmed)
+                if (user.EmailConfirmed)
                 {
                     returnResult.Result = false;
                     returnResult.Message = "Email is already confirmed.";
@@ -407,7 +406,7 @@ namespace platform_core_service.Business.Services
                 // Get the email template from setting table in db through it's Key and Group
                 var emailTemplate = (await _configurationService.GetOneByKeyAndGroup("REGISTRATION_CONFIRMATION_EMAIL", "EMAIL_TEMPLATE")).Result?.Value;
 
-                if(emailTemplate == null)
+                if (emailTemplate == null)
                 {
                     returnResult.Result = false;
                     returnResult.Message = "The registration confirmation email template could not be found. Please contact support.";
@@ -438,7 +437,7 @@ namespace platform_core_service.Business.Services
             }
             return returnResult;
         }
-        
+
         public async Task<ReturnResult<bool>> ConfirmEmail(ConfirmEmailDTO confirmEmail)
         {
             ReturnResult<bool> returnResult = new ReturnResult<bool>();
@@ -463,7 +462,7 @@ namespace platform_core_service.Business.Services
                 }
                 returnResult.Result = true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 returnResult.Result = false;
                 returnResult.Message = $"An error occurred during email confirmation: {ex.Message}";
@@ -492,7 +491,7 @@ namespace platform_core_service.Business.Services
                 if (user != null)
                 {
                     if (!user.EmailConfirmed) user.EmailConfirmed = true;
-                    returnResult.Result = await IssueTokens(user, rememberMe: true);
+                    returnResult.Result = await _tokenService.IssueTokens(user, rememberMe: true);
                 }
                 else
                 {
@@ -542,7 +541,7 @@ namespace platform_core_service.Business.Services
                 if (user != null)
                 {
                     if (!user.EmailConfirmed) user.EmailConfirmed = true;
-                    returnResult.Result = await IssueTokens(user, rememberMe: true);
+                    returnResult.Result = await _tokenService.IssueTokens(user, rememberMe: true);
                 }
                 else
                 {
@@ -593,23 +592,6 @@ namespace platform_core_service.Business.Services
             }
         }
 
-        private async Task<TokenResponseDTO> IssueTokens(ApplicationUser user, bool rememberMe = true)
-        {
-            var roles = await _userManager.GetRolesAsync(user);
-            var accessToken = GenerateAccessToken(user, roles, rememberMe);
-            var refreshToken = GenerateRefreshToken();
-
-            user.RefreshToken = refreshToken;
-            user.RefreshTokenValidity = DateTime.UtcNow.AddDays(15);
-            await _context.SaveChangesAsync();
-
-            return new TokenResponseDTO
-            {
-                AccessToken = accessToken,
-                RefreshToken = refreshToken
-            };
-        }
-
         private async Task<ReturnResult<TokenResponseDTO>> CreateOAuthUser(string email)
         {
             ReturnResult<TokenResponseDTO> returnResult = new();
@@ -639,7 +621,7 @@ namespace platform_core_service.Business.Services
                 return returnResult;
             }
 
-            returnResult.Result = await IssueTokens(newUser, rememberMe: true);
+            returnResult.Result = await _tokenService.IssueTokens(newUser, rememberMe: true);
             return returnResult;
         }
 
@@ -650,47 +632,6 @@ namespace platform_core_service.Business.Services
 
             var emails = await response.Content.ReadFromJsonAsync<List<GitHubEmailDTO>>();
             return emails?.FirstOrDefault(e => e.Primary && e.Verified)?.Email;
-        }
-        private string GenerateAccessToken(ApplicationUser user, IList<string> roles, bool rememberMe)
-        {
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
-
-            // Add roles to claims
-            foreach (var role in roles)
-            {
-                claims.Add(new Claim(ClaimTypes.Role, role));
-            }
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured")));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            // Set expiration based on RememberMe: 7 days if true, 1 hour if false
-            var expires = rememberMe
-                ? DateTime.UtcNow.AddDays(7)
-                : DateTime.UtcNow.AddHours(1);
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: claims,
-                expires: expires,
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
-
-        private string GenerateRefreshToken()
-        {
-            var randomNumber = new byte[64];
-            using var rng = RandomNumberGenerator.Create();
-            rng.GetBytes(randomNumber);
-            return Convert.ToBase64String(randomNumber);
         }
     }
 }

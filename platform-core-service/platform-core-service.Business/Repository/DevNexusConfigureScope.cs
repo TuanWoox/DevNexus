@@ -16,10 +16,12 @@ namespace platform_core_service.Business.Repository
             services.AddHttpContextAccessor();
             // Allow to use httpclient as a http factory
             services.AddHttpClient();
+            services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IIdentityService, IdentityService>();
             services.AddScoped<IUserContext, UserContext>();
             services.AddScoped<IConfigurationService, ConfigurationService>();
+            services.AddScoped<IProfileService, ProfileService>();
             return services;
         }
     }

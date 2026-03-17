@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace platform_core_service.Business.Mappings
 {
-    public class SettingProfile : Profile
+    public class SettingProfile : AutoMapper.Profile
     {
         public SettingProfile()
         {

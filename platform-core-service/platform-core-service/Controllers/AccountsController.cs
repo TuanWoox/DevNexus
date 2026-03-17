@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using platform_core_service.Common.Attributes;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.CoreDTO;
 using platform_core_service.Common.Models.DTOs.CoreDTO.Account;
@@ -11,6 +12,7 @@ namespace platform_core_service.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [AllowWithoutProfile]
     public class AccountsController : ControllerBase
     {
         private readonly IAccountService _accountService;
