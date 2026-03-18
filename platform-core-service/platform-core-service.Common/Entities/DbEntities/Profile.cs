@@ -30,5 +30,7 @@ namespace platform_core_service.Common.Entities.DbEntities
 
         [MaxLength(100)]
         public List<string> TechStacks { get; set; }
+
+        public ICollection<Post> Posts { get; set; } = new List<Post>();
     }
 }
