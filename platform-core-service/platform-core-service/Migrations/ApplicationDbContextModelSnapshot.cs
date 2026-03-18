@@ -114,6 +114,84 @@ namespace platform_core_service.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AuthorId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(50000)
+                        .HasColumnType("character varying(50000)");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("PostType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("Deleted");
+
+                    b.ToTable("Posts");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostTag", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PostId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TagId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("PostTags");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Profile", b =>
                 {
                     b.Property<string>("Id")
@@ -220,6 +298,36 @@ namespace platform_core_service.Migrations
                         .HasFilter("\"Deleted\" = false");
 
                     b.ToTable("Settings");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Tag", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.ToTable("Tags");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.Identities.ApplicationRole", b =>
@@ -413,6 +521,36 @@ namespace platform_core_service.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Profile")
+                        .WithMany("Posts")
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Profile");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostTag", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Post", "Post")
+                        .WithMany("PostTags")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Tag", "Tag")
+                        .WithMany("PostTags")
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+
+                    b.Navigation("Tag");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Profile", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.Identities.ApplicationUser", "ApplicationUser")
@@ -441,6 +579,21 @@ namespace platform_core_service.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
+                {
+                    b.Navigation("PostTags");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Profile", b =>
+                {
+                    b.Navigation("Posts");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Tag", b =>
+                {
+                    b.Navigation("PostTags");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.Identities.ApplicationRole", b =>
