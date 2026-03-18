@@ -11,9 +11,9 @@ namespace platform_core_service.Business.Contexts
         private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
 
         public string UserId => _httpContextAccessor.HttpContext?.User?.GetUserId() ?? "";
-        public bool IsAdmin => _httpContextAccessor.HttpContext?.User?.IsInRole(RoleEnum.Admin.ToString()) ?? false;
-        public string UserName => _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value ?? "";
-        public string Email => _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Email)?.Value ?? "";
-        public string ProfileId => _httpContextAccessor.HttpContext?.User?.FindFirst("profileId")?.Value ?? "";
+        public bool IsAdmin => _httpContextAccessor.HttpContext?.User?.IsAdminRole() ?? false;
+        public string UserName => _httpContextAccessor.HttpContext?.User?.GetUserName() ?? "";
+        public string Email => _httpContextAccessor.HttpContext?.User?.GetUserEmail() ?? "";
+        public string ProfileId => _httpContextAccessor.HttpContext?.User?.GetProfileId() ?? "";
     }
 }

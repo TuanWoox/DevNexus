@@ -12,7 +12,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Profile
 
         [MaxLength(500)]
         [Url]
-        public string AvatarUrl { get; set; }
+        public string? AvatarUrl { get; set; }
 
         [MaxLength(500)]
         public string Bio { get; set; }

@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace platform_core_service.Common.Models.DTOs.CoreDTO.Account
+namespace platform_core_service.Common.Models.DTOs.EntityDTO.Account
 {
     public class GitHubAuthenticationDTO
     {

@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using platform_core_service.Common.Entities.Identities;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
-using platform_core_service.Common.Models.DTOs.CoreDTO;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Profile;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;

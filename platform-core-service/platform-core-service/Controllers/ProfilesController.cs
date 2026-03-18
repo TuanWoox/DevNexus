@@ -39,7 +39,7 @@ namespace platform_core_service.Controllers
 
         [HttpPost]
         [AllowWithoutProfile]
-        public async Task<IActionResult> Create([FromBody] CreateProfileDTO createDTO)
+        public async Task<IActionResult> Create(CreateProfileDTO createDTO)
         {
             ReturnResult<TokenResponseDTO> returnResult = new ReturnResult<TokenResponseDTO>();
             try
@@ -55,7 +55,7 @@ namespace platform_core_service.Controllers
         }
 
         [HttpPut]
-        public async Task<IActionResult> Update([FromBody] UpdateProfileDTO updateDTO)
+        public async Task<IActionResult> Update(UpdateProfileDTO updateDTO)
         {
             ReturnResult<SelectProfileDTO> returnResult = new ReturnResult<SelectProfileDTO>();
             try

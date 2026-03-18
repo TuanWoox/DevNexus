@@ -1,5 +1,4 @@
-using platform_core_service.Common.Models.DTOs.CoreDTO;
-using platform_core_service.Common.Models.DTOs.CoreDTO.Account;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Account;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using shared_contracts.Models.DTOs.HelperDTO;
 
