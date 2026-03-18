@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using platform_core_service.Common.Utils.Enums;
 using System.Globalization;
 using System.Reflection;
 using System.Security.Claims;
@@ -52,6 +53,34 @@ namespace platform_core_service.Common.Utils.Extensions
                 throw new ArgumentNullException(nameof(principal));
 
             return principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        }
+        public static string GetProfileId(this ClaimsPrincipal principal)
+        {
+            if (principal == null)
+                throw new ArgumentNullException(nameof(principal));
+
+            return principal.FindFirst("profileId")?.Value;
+        }
+        public static string GetUserName(this ClaimsPrincipal principal)
+        {
+            if (principal == null)
+                throw new ArgumentNullException(nameof(principal));
+
+            return principal.FindFirst(ClaimTypes.Name)?.Value ?? "";
+        }
+        public static string GetUserEmail(this ClaimsPrincipal principal)
+        {
+            if (principal == null)
+                throw new ArgumentNullException(nameof(principal));
+
+            return principal.FindFirst(ClaimTypes.Email)?.Value ?? "";
+        }
+        public static bool IsAdminRole(this ClaimsPrincipal principal)
+        {
+            if (principal == null)
+                throw new ArgumentNullException(nameof(principal));
+
+            return principal.IsInRole(RoleEnum.Admin.ToString());
         }
         public static DateRangeFilter GetDateTimeByQuarter(int quarter)
         {

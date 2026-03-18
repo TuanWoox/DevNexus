@@ -5,12 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace platform_core_service.Common.Models.DTOs.CoreDTO
+namespace platform_core_service.Common.Models.DTOs.EntityDTO.Account
 {
     public class RequestResetPasswordDTO
     {
         [Required]
         [EmailAddress]
-        public string Email {  get; set; }
+        public string Email { get; set; }
     }
 }

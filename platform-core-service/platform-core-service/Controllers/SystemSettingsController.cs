@@ -1,12 +1,7 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.Services;
-using platform_core_service.Common.Models.DTOs.CoreDTO;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Setting;
-using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
-using platform_core_service.Common.Utils.Extensions;
 using shared_contracts.Models.DTOs.HelperDTO;
 
 namespace platform_core_service.Controllers
@@ -31,7 +26,7 @@ namespace platform_core_service.Controllers
         [HttpGet("single")]
         public async Task<IActionResult> GetOneByKeyAndGroup(string key, string group)
         {
-            ReturnResult<SelectSettingDTO> result =  await _configService.GetOneByKeyAndGroup(key, group);
+            ReturnResult<SelectSettingDTO> result = await _configService.GetOneByKeyAndGroup(key, group);
             return Ok(result);
         }
         [HttpPost]

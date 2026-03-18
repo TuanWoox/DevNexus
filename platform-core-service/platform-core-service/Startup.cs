@@ -55,6 +55,7 @@ namespace platform_core_service
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseMiddleware<RequireProfileMiddleware>();
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();

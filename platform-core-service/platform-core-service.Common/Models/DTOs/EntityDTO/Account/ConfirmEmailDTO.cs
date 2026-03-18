@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
 
-namespace platform_core_service.Common.Models.DTOs.CoreDTO.Account
+namespace platform_core_service.Common.Models.DTOs.EntityDTO.Account
 {
     public class ConfirmEmailDTO
     {
