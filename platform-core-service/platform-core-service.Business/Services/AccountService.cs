@@ -30,6 +30,7 @@ namespace platform_core_service.Business.Services
         private readonly IConfigurationService _configurationService;
         private readonly IWebHostEnvironment _env;
         private readonly ITokenService _tokenService;
+        private readonly IProfileService _profileService;
 
         public AccountService(UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
@@ -39,7 +40,8 @@ namespace platform_core_service.Business.Services
             IBackgroundJobClient backgroundJobClient,
             IConfigurationService configurationService,
             IWebHostEnvironment env,
-            ITokenService tokenService
+            ITokenService tokenService,
+            IProfileService profileService
         )
         {
             _userManager = userManager;
@@ -51,6 +53,7 @@ namespace platform_core_service.Business.Services
             _configurationService = configurationService;
             _env = env;
             _tokenService = tokenService;
+            _profileService = profileService;
         }
 
         public async Task<ReturnResult<bool>> RegisterAccount(RegisterAccountDTO newAccount)
@@ -85,6 +88,15 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
+                // Create profile during registration
+                var profileResult = await _profileService.CreateAsync(newAccount.OnboardInformation, user);
+                if (!profileResult.Result)
+                {
+                    returnResult.Result = false;
+                    returnResult.Message = $"User created but failed to create profile: {profileResult.Message}";
+                    return returnResult;
+                }
+
                 if (_env.IsDevelopment())
                 {
                     returnResult.Result = true;
@@ -93,6 +105,8 @@ namespace platform_core_service.Business.Services
                 {
                     returnResult = await RequestConfirmEmail(new RequestConfirmEmailDTO { Email = user.Email! });
                 }
+
+
             }
             catch (Exception ex)
             {

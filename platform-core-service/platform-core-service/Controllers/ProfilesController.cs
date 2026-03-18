@@ -36,15 +36,14 @@ namespace platform_core_service.Controllers
             }
             return Ok(returnResult);
         }
-
         [HttpPost]
         [AllowWithoutProfile]
         public async Task<IActionResult> Create(CreateProfileDTO createDTO)
         {
-            ReturnResult<TokenResponseDTO> returnResult = new ReturnResult<TokenResponseDTO>();
+            ReturnResult<bool> returnResult = new ReturnResult<bool>();
             try
             {
-                returnResult = await _profileService.CreateAsync(createDTO);
+                returnResult = await _profileService.CreateAsync(createDTO, null);
             }
             catch (Exception ex)
             {
@@ -53,7 +52,6 @@ namespace platform_core_service.Controllers
             }
             return Ok(returnResult);
         }
-
         [HttpPut]
         public async Task<IActionResult> Update(UpdateProfileDTO updateDTO)
         {
