@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using platform_core_service.Common.Attributes;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Profile;
 
 namespace platform_core_service.Common.Models.DTOs.EntityDTO.Account
 {
@@ -19,5 +20,8 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Account
         [EmailAddress]
         [MaxLength(256)]
         public string Email { get; set; }
+
+        [Required]
+        public CreateProfileDTO OnboardInformation { get; set; }
     }
 }

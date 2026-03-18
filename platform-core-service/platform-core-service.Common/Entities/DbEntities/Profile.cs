@@ -26,7 +26,7 @@ namespace platform_core_service.Common.Entities.DbEntities
         public string Bio { get; set; }
 
         [Range(0, int.MaxValue)]
-        public int ReputationPoints { get; set; }
+        public int ReputationPoints { get; set; } = 0;
 
         [MaxLength(100)]
         public List<string> TechStacks { get; set; }

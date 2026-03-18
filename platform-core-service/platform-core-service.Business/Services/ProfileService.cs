@@ -30,21 +30,29 @@ namespace platform_core_service.Business.Services
             _userManager = userManager;
         }
 
-        public async Task<ReturnResult<TokenResponseDTO>> CreateAsync(CreateProfileDTO createDTO)
+        public async Task<ReturnResult<bool>> CreateAsync(CreateProfileDTO createDTO, ApplicationUser? user = null)
         {
-            ReturnResult<TokenResponseDTO> returnResult = new ReturnResult<TokenResponseDTO>();
+            ReturnResult<bool> returnResult = new ReturnResult<bool>();
             try
             {
-                // Step 1: Validate authentication
-                if (string.IsNullOrEmpty(_userContext.UserId))
+                // Step 1: Validate input
+                if (createDTO == null)
+                {
+                    returnResult.Message = "Profile data is required";
+                    return returnResult;
+                }
+
+                // Step 2: Get user ID from provided user object or context
+                string userId = user?.Id ?? _userContext.UserId;
+                if (string.IsNullOrEmpty(userId))
                 {
                     returnResult.Message = "User not authenticated";
                     return returnResult;
                 }
 
-                // Step 2: Check if profile already exists for this ApplicationUserId
+                // Step 3: Check if profile already exists for this ApplicationUserId
                 var existingProfile = await _context.Profiles
-                    .FirstOrDefaultAsync(p => p.ApplicationUserId == _userContext.UserId);
+                    .FirstOrDefaultAsync(p => p.ApplicationUserId == userId);
 
                 if (existingProfile != null)
                 {
@@ -52,23 +60,14 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                // Step 3: Create new profile
+                // Step 4: Create new profile
                 var profile = _mapper.Map<ProfileEntity>(createDTO);
-                profile.ApplicationUserId = _userContext.UserId;
+                profile.ApplicationUserId = userId;
 
                 _context.Profiles.Add(profile);
                 await _context.SaveChangesAsync();
 
-                // Step 4: Get the user and issue new token with profileId
-                var user = await _userManager.FindByIdAsync(_userContext.UserId);
-                if (user != null)
-                {
-                    returnResult.Result = await _tokenService.IssueTokens(user, rememberMe: true);
-                }
-                else
-                {
-                    returnResult.Message = "User not found";
-                }
+                returnResult.Result = true;
             }
             catch (Exception ex)
             {
