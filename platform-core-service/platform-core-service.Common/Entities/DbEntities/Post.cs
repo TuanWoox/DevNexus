@@ -29,6 +29,8 @@ namespace platform_core_service.Common.Entities.DbEntities
 
         [Required]
         [EnumDataType(typeof(PostType), ErrorMessage = "PostType must be a valid Post type")]
+        public int UpvoteCount { get; set; } = 0;
+        public int DownvoteCount { get; set; } = 0;
         public PostType PostType { get; set; }
 
         public ICollection<PostTag> PostTags { get; set; } = new List<PostTag>();
