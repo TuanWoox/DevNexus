@@ -111,7 +111,7 @@ namespace platform_core_service.Business.Services
                 var post = await _context.Posts
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
-                    .FirstOrDefaultAsync(p => p.Id == postId && !p.Deleted);
+                    .FirstOrDefaultAsync(p => p.Id == postId || p.Slug == postId);
 
                 if (post == null)
                 {
@@ -144,7 +144,7 @@ namespace platform_core_service.Business.Services
 
                 // Step 2: Build query for current user's posts
                 var query = _context.Posts
-                    .Where(p => p.AuthorId == profileId && !p.Deleted)
+                    .Where(p => p.AuthorId == profileId)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .AsQueryable();
@@ -178,7 +178,7 @@ namespace platform_core_service.Business.Services
                 var post = await _context.Posts
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
-                    .FirstOrDefaultAsync(p => p.Id == postId && !p.Deleted);
+                    .FirstOrDefaultAsync(p => p.Id == postId);
 
                 if (post == null)
                 {
@@ -245,7 +245,8 @@ namespace platform_core_service.Business.Services
                 }
 
                 // Step 2: Load post
-                var post = await _context.Posts.Include(p => p.PostTags).FirstOrDefaultAsync(p => p.Id == postId && !p.Deleted);
+                var post = await _context.Posts.Include(p => p.PostTags)
+                                            .FirstOrDefaultAsync(p => p.Id == postId);
                 if (post == null)
                 {
                     result.Message = $"Post {postId} not found";
@@ -261,7 +262,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 // Step 4: Soft delete
-                _context.Remove(post);
+                _context.Posts.Remove(post);
                 await _context.SaveChangesAsync();
 
                 result.Result = true;
@@ -296,9 +297,8 @@ namespace platform_core_service.Business.Services
                 }
 
                 // Step 3: Validate all IDs belong to current user
-                var ownedCount = await _context.Posts
-                    .Where(p => postIds.Contains(p.Id) && p.AuthorId == profileId && !p.Deleted)
-                    .CountAsync();
+                var ownedCount = await _context.Posts.Where(p => postIds.Contains(p.Id) && p.AuthorId == profileId)
+                                                .CountAsync();
 
                 if (ownedCount != postIds.Count)
                 {
@@ -356,7 +356,6 @@ namespace platform_core_service.Business.Services
                 {
                     tag = new TagEntity
                     {
-                        Id = Guid.NewGuid().ToString(),
                         Name = tagName
                     };
                     _context.Tags.Add(tag);
