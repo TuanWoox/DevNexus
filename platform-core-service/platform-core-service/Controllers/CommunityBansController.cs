@@ -11,20 +11,20 @@ namespace platform_core_service.Controllers
     [ApiController]
     [Route("api/community-members")]
     [Authorize]
-    public class CommunityMembersController(ICommunityMemberService memberService) : ControllerBase
+    public class CommunityBansController(ICommunityBanService banService) : ControllerBase
     {
-        private readonly ICommunityMemberService _memberService = memberService;
+        private readonly ICommunityBanService _banService = banService;
 
         /// <summary>
-        /// Join a community. Public → added directly. Private → pending request created.
+        /// Ban a member. Owner or moderator only. Also removes the member record.
         /// </summary>
-        [HttpPost("{communityId}/join")]
-        public async Task<IActionResult> Join(string communityId)
+        [HttpPost("bans")]
+        public async Task<IActionResult> BanMember([FromBody] CreateCommunityBanDTO createDTO)
         {
-            var returnResult = new ReturnResult<object>();
+            var returnResult = new ReturnResult<SelectCommunityBanDTO>();
             try
             {
-                returnResult = await _memberService.JoinAsync(communityId);
+                returnResult = await _banService.BanMemberAsync(createDTO);
             }
             catch (Exception ex)
             {
@@ -35,15 +35,15 @@ namespace platform_core_service.Controllers
         }
 
         /// <summary>
-        /// Leave a community. The community owner cannot leave.
+        /// Unban a member by ban record ID. Owner or moderator only.
         /// </summary>
-        [HttpDelete("{communityId}/leave")]
-        public async Task<IActionResult> Leave(string communityId)
+        [HttpDelete("bans/{banId}")]
+        public async Task<IActionResult> UnbanMember(string banId)
         {
             var returnResult = new ReturnResult<bool>();
             try
             {
-                returnResult = await _memberService.LeaveAsync(communityId);
+                returnResult = await _banService.UnbanMemberAsync(banId);
             }
             catch (Exception ex)
             {
@@ -54,15 +54,15 @@ namespace platform_core_service.Controllers
         }
 
         /// <summary>
-        /// Get paginated members of a community. Public.
+        /// Get paginated ban records for a community. Owner or moderator only.
         /// </summary>
-        [HttpPost("{communityId}/members/paging")]
-        public async Task<IActionResult> GetMembers(string communityId, [FromBody] Page<string> page)
+        [HttpPost("{communityId}/bans/paging")]
+        public async Task<IActionResult> GetBans(string communityId, [FromBody] Page<string> page)
         {
-            var returnResult = new ReturnResult<PagedData<SelectCommunityMemberDTO, string>>();
+            var returnResult = new ReturnResult<PagedData<SelectCommunityBanDTO, string>>();
             try
             {
-                returnResult = await _memberService.GetMembersAsync(communityId, page);
+                returnResult = await _banService.GetBansAsync(communityId, page);
             }
             catch (Exception ex)
             {
