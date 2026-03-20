@@ -24,6 +24,8 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IProfileService, ProfileService>();
             services.AddScoped<IPostService, PostService>();
             services.AddScoped<IQAPostService, QAPostService>();
+            services.AddScoped<IAnswerService, AnswerService>();
+            services.AddScoped<IVoteService, VoteService>();
             return services;
         }
     }

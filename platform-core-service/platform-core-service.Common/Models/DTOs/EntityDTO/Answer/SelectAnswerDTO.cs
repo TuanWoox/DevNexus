@@ -1,8 +1,9 @@
+using platform_core_service.Common.Entities.BaseEntity;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 
 namespace platform_core_service.Common.Models.DTOs.EntityDTO.Answer
 {
-    public class SelectAnswerDTO
+    public class SelectAnswerDTO : IBaseKey<string>
     {
         public string Id { get; set; } = null!;
         public string Content { get; set; } = null!;
@@ -15,3 +16,4 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Answer
         public DateTimeOffset? DateModified { get; set; }
     }
 }
+

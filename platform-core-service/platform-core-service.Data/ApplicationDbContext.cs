@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Common.Entities.BaseEntity;
@@ -17,6 +17,8 @@ namespace platform_core_service.Data
         public DbSet<Tag> Tags { get; set; }
         public DbSet<PostTag> PostTags { get; set; }
         public DbSet<Answer> Answers { get; set; }
+        public DbSet<Vote> Votes { get; set; }
+        public DbSet<Comment> Comments { get; set; }
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
 
