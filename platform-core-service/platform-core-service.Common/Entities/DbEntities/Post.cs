@@ -8,12 +8,12 @@ namespace platform_core_service.Common.Entities.DbEntities
 {
     public class Post : BaseEntity<string>
     {
-        [ForeignKey(nameof(Profile))]
+        [ForeignKey(nameof(Author))]
         [JsonIgnore]
         public string AuthorId { get; set; }
 
         [JsonIgnore]
-        public Profile Profile { get; set; }
+        public Profile Author { get; set; }
 
         [Required]
         [StringLength(500, MinimumLength = 3, ErrorMessage = "Title must be between 3 and 500 characters")]

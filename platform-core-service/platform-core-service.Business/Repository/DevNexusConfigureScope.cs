@@ -1,15 +1,16 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Http;
 using platform_core_service.Business.Contexts;
 using platform_core_service.Business.Services;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
+using StackExchange.Redis;
 
 namespace platform_core_service.Business.Repository
 {
     public static class StudyNestServiceConfiguration
     {
-        public static IServiceCollection RegisterStudyNestService(this IServiceCollection services)
+        public static IServiceCollection RegisterStudyNestService(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
             // Allows access to HttpContext in services via IHttpContextAccessor outside controllers
@@ -26,6 +27,22 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IQAPostService, QAPostService>();
             services.AddScoped<IAnswerService, AnswerService>();
             services.AddScoped<IVoteService, VoteService>();
+            services.AddScoped<ICommunityService, CommunityService>();
+            services.AddScoped<ICommunityModeratorService, CommunityModeratorService>();
+            services.AddScoped<ICommunityMemberService, CommunityMemberService>();
+            services.AddScoped<ICommunityMembershipRequestService, CommunityMembershipRequestService>();
+            services.AddScoped<ICommunityBanService, CommunityBanService>();
+            services.AddScoped<ICacheService, CacheService>();
+
+            // Register the Redis connection multiplexer as a singleton service
+            // This allows the application to interact directly with Redis for advanced scenarios
+            services.AddSingleton<IConnectionMultiplexer>(sp =>
+            {
+                var redisConfig = configuration.GetSection("RedisCacheOptions").GetValue<string>("Configuration");
+                if (string.IsNullOrEmpty(redisConfig))
+                    throw new InvalidOperationException("Redis configuration is missing in appsettings");
+                return ConnectionMultiplexer.Connect(redisConfig);
+            });
             return services;
         }
     }

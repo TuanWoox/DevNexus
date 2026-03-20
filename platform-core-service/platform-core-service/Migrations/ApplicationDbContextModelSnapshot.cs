@@ -222,6 +222,188 @@ namespace platform_core_service.Migrations
                     b.ToTable("Comments");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Community", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommunityCoverPhotoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)");
+
+                    b.Property<bool>("IsPrivate")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("OwnerId");
+
+                    b.ToTable("Communities");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityBan", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BanReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("BannedById")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BannedProfileId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommunityId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BannedById");
+
+                    b.HasIndex("BannedProfileId");
+
+                    b.HasIndex("CommunityId", "BannedProfileId")
+                        .IsUnique();
+
+                    b.ToTable("CommunityBans");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityMember", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommunityId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ProfileId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProfileId");
+
+                    b.HasIndex("CommunityId", "ProfileId")
+                        .IsUnique();
+
+                    b.ToTable("CommunityMembers");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityMembershipRequest", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommunityId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RequesterId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequesterId");
+
+                    b.HasIndex("CommunityId", "RequesterId")
+                        .IsUnique();
+
+                    b.ToTable("CommunityMembershipRequests");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityModerator", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommunityId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModeratorId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommunityId");
+
+                    b.HasIndex("ModeratorId", "CommunityId")
+                        .IsUnique();
+
+                    b.ToTable("CommunityModerators");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
                 {
                     b.Property<string>("Id")
@@ -747,15 +929,110 @@ namespace platform_core_service.Migrations
                     b.Navigation("ReplyToComment");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Community", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Owner")
+                        .WithMany("Communities")
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityBan", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "BannedBy")
+                        .WithMany("BansIssued")
+                        .HasForeignKey("BannedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "BannedProfile")
+                        .WithMany("BanRecords")
+                        .HasForeignKey("BannedProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
+                        .WithMany("Bans")
+                        .HasForeignKey("CommunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BannedBy");
+
+                    b.Navigation("BannedProfile");
+
+                    b.Navigation("Community");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityMember", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
+                        .WithMany("Members")
+                        .HasForeignKey("CommunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Profile")
+                        .WithMany("CommunityMemberships")
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Community");
+
+                    b.Navigation("Profile");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityMembershipRequest", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
+                        .WithMany("MembershipRequests")
+                        .HasForeignKey("CommunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Requester")
+                        .WithMany("MembershipRequests")
+                        .HasForeignKey("RequesterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Community");
+
+                    b.Navigation("Requester");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityModerator", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
+                        .WithMany("Moderators")
+                        .HasForeignKey("CommunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Moderator")
+                        .WithMany("ModeratedCommunities")
+                        .HasForeignKey("ModeratorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Community");
+
+                    b.Navigation("Moderator");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
                 {
-                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Profile")
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Author")
                         .WithMany("Posts")
                         .HasForeignKey("AuthorId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Profile");
+                    b.Navigation("Author");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostTag", b =>
@@ -843,6 +1120,17 @@ namespace platform_core_service.Migrations
                     b.Navigation("Votes");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Community", b =>
+                {
+                    b.Navigation("Bans");
+
+                    b.Navigation("Members");
+
+                    b.Navigation("MembershipRequests");
+
+                    b.Navigation("Moderators");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
                 {
                     b.Navigation("PostTags");
@@ -850,6 +1138,18 @@ namespace platform_core_service.Migrations
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Profile", b =>
                 {
+                    b.Navigation("BanRecords");
+
+                    b.Navigation("BansIssued");
+
+                    b.Navigation("Communities");
+
+                    b.Navigation("CommunityMemberships");
+
+                    b.Navigation("MembershipRequests");
+
+                    b.Navigation("ModeratedCommunities");
+
                     b.Navigation("Posts");
                 });
 
