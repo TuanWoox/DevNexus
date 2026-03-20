@@ -23,6 +23,7 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IConfigurationService, ConfigurationService>();
             services.AddScoped<IProfileService, ProfileService>();
             services.AddScoped<IPostService, PostService>();
+            services.AddScoped<IQAPostService, QAPostService>();
             return services;
         }
     }

@@ -16,6 +16,9 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Post
         public PostType PostType { get; set; }
 
         public string AuthorId { get; set; } = null!;
+        
+        public int UpvoteCount { get; set; } = 0;
+        public int DownvoteCount { get; set; } = 0;
 
         public List<string> TagNames { get; set; } = new List<string>();
 
