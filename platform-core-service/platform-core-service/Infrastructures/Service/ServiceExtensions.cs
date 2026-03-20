@@ -2,15 +2,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Newtonsoft.Json;
 using platform_core_service.Common.Entities.Identities;
-using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Data;
 using shared_contracts.Models.DTOs.HelperDTO;
-
 namespace platform_core_service.Infrastructures.Service;
 
 public static class ServiceExtensions
@@ -243,6 +240,19 @@ public static class ServiceExtensions
     public static IServiceCollection ConfigureAutoMapper(this IServiceCollection services)
     {
         services.AddAutoMapper(cfg => cfg.ShouldMapMethod = _ => false, AppDomain.CurrentDomain.GetAssemblies());
+        return services;
+    }
+    #endregion
+
+    #region Configure Redis 
+    public static IServiceCollection ConfigureRedis(this IServiceCollection services, IConfiguration configuration)
+    {
+        // Register Redis distributed cache
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = configuration["Redis:ConnectionString"];
+            options.InstanceName = configuration["Redis:InstanceName"];
+        });
         return services;
     }
     #endregion

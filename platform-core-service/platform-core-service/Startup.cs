@@ -30,7 +30,7 @@ namespace platform_core_service
             services.ConfigureSignalR();
             services.ConfigureAutoMapper();
             services.ConfigureHangfireWithPostgreSql(Configuration);
-            services.RegisterStudyNestService();
+            services.RegisterStudyNestService(Configuration);
             services.AddDistributedMemoryCache();
         }
 

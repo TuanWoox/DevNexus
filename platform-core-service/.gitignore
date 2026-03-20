@@ -252,3 +252,6 @@ tramp
 *.rar
 *.tar
 *.zip
+
+
+.agent
