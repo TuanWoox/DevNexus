@@ -32,5 +32,6 @@ namespace platform_core_service.Common.Entities.DbEntities
         public List<string> TechStacks { get; set; }
 
         public ICollection<Post> Posts { get; set; } = new List<Post>();
+        public ICollection<Community> Communities { get; set; } = new List<Community>();
     }
 }
