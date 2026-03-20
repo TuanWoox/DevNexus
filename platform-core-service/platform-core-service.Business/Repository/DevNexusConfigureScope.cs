@@ -25,6 +25,7 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IProfileService, ProfileService>();
             services.AddScoped<IPostService, PostService>();
             services.AddScoped<ICommunityService, CommunityService>();
+            services.AddScoped<ICommunityModeratorService, CommunityModeratorService>();
             services.AddScoped<ICacheService, CacheService>();
 
             // Register the Redis connection multiplexer as a singleton service

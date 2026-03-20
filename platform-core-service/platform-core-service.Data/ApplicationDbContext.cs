@@ -17,6 +17,7 @@ namespace platform_core_service.Data
         public DbSet<Tag> Tags { get; set; }
         public DbSet<PostTag> PostTags { get; set; }
         public DbSet<Community> Communities { get; set; }
+        public DbSet<CommunityModerator> CommunityModerators { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {

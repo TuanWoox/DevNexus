@@ -33,5 +33,6 @@ namespace platform_core_service.Common.Entities.DbEntities
 
         public ICollection<Post> Posts { get; set; } = new List<Post>();
         public ICollection<Community> Communities { get; set; } = new List<Community>();
+        public ICollection<CommunityModerator> CommunityModerators { get; set; } = new List<CommunityModerator>();
     }
 }

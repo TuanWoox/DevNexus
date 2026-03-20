@@ -166,6 +166,36 @@ namespace platform_core_service.Migrations
                     b.ToTable("Communities");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityModerator", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommunityId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModeratorId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommunityId");
+
+                    b.HasIndex("ModeratorId", "CommunityId")
+                        .IsUnique();
+
+                    b.ToTable("CommunityModerators");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
                 {
                     b.Property<string>("Id")
@@ -584,6 +614,25 @@ namespace platform_core_service.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityModerator", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
+                        .WithMany("CommunityModerators")
+                        .HasForeignKey("CommunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Moderator")
+                        .WithMany("CommunityModerators")
+                        .HasForeignKey("ModeratorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Community");
+
+                    b.Navigation("Moderator");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Author")
@@ -644,6 +693,11 @@ namespace platform_core_service.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Community", b =>
+                {
+                    b.Navigation("CommunityModerators");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
                 {
                     b.Navigation("PostTags");
@@ -652,6 +706,8 @@ namespace platform_core_service.Migrations
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Profile", b =>
                 {
                     b.Navigation("Communities");
+
+                    b.Navigation("CommunityModerators");
 
                     b.Navigation("Posts");
                 });
