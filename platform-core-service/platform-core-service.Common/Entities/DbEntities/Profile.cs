@@ -33,6 +33,20 @@ namespace platform_core_service.Common.Entities.DbEntities
 
         public ICollection<Post> Posts { get; set; } = new List<Post>();
         public ICollection<Community> Communities { get; set; } = new List<Community>();
-        public ICollection<CommunityModerator> CommunityModerators { get; set; } = new List<CommunityModerator>();
+
+        [JsonIgnore]
+        public ICollection<CommunityModerator> ModeratedCommunities { get; set; } = [];
+        [JsonIgnore]
+        public ICollection<CommunityMember> CommunityMemberships { get; set; } = [];
+        [JsonIgnore]
+        public ICollection<CommunityMembershipRequest> MembershipRequests { get; set; } = [];
+
+        [JsonIgnore]
+        [InverseProperty(nameof(CommunityBan.BannedProfile))]
+        public ICollection<CommunityBan> BanRecords { get; set; } = [];
+
+        [JsonIgnore]
+        [InverseProperty(nameof(CommunityBan.BannedBy))]
+        public ICollection<CommunityBan> BansIssued { get; set; } = [];
     }
 }

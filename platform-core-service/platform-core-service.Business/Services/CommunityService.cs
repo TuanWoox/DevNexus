@@ -97,6 +97,20 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                // Step 3: Check if the caller is banned from this community
+                var profileId = _userContext.ProfileId;
+                if (!string.IsNullOrEmpty(profileId))
+                {
+                    var isBanned = await _context.CommunityBans
+                        .AnyAsync(b => b.CommunityId == community.Id && b.BannedProfileId == profileId);
+
+                    if (isBanned)
+                    {
+                        result.Message = "You have been banned from this community";
+                        return result;
+                    }
+                }
+
                 result.Result = _mapper.Map<SelectCommunityDTO>(community);
             }
             catch (Exception ex)
@@ -120,9 +134,14 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Step 2: Build query for caller's communities
+                // Step 2: Build query for caller's communities, excluding ones they are banned from
+                var bannedCommunityIds = await _context.CommunityBans
+                    .Where(b => b.BannedProfileId == profileId)
+                    .Select(b => b.CommunityId)
+                    .ToListAsync();
+
                 var query = _context.Communities
-                    .Where(c => c.OwnerId == profileId)
+                    .Where(c => c.OwnerId == profileId && !bannedCommunityIds.Contains(c.Id))
                     .AsQueryable();
 
                 // Step 3: Get paged results

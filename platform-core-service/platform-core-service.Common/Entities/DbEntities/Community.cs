@@ -30,6 +30,14 @@ namespace platform_core_service.Common.Entities.DbEntities
         public string Slug { get; set; } = null!;
 
         public bool IsPrivate { get; set; } = false;
-        public ICollection<CommunityModerator> CommunityModerators { get; set; } = new List<CommunityModerator>();
+
+        [JsonIgnore]
+        public ICollection<CommunityModerator> Moderators { get; set; } = [];
+        [JsonIgnore]
+        public ICollection<CommunityMember> Members { get; set; } = [];
+        [JsonIgnore]
+        public ICollection<CommunityMembershipRequest> MembershipRequests { get; set; } = [];
+        [JsonIgnore]
+        public ICollection<CommunityBan> Bans { get; set; } = [];
     }
 }

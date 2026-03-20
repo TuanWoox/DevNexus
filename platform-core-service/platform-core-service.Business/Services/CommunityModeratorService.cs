@@ -78,7 +78,18 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Step 7: Verify the target profile exists
+                // Step 7: Verify the target profile is a member of the community
+                var isMember = await _context.CommunityMembers
+                    .AnyAsync(m => m.CommunityId == createDTO.CommunityId
+                               && m.ProfileId == createDTO.ModeratorId);
+
+                if (!isMember)
+                {
+                    result.Message = "The user must be a member of the community before being added as a moderator";
+                    return result;
+                }
+
+                // Step 8: Verify the target profile exists
                 var moderatorProfile = await _context.Profiles
                     .FirstOrDefaultAsync(p => p.Id == createDTO.ModeratorId);
 
