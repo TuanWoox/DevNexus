@@ -5,7 +5,7 @@ using platform_core_service.Common.Entities.BaseEntity;
 
 namespace platform_core_service.Common.Entities.DbEntities
 {
-    public class Comment : BaseEntity<string>
+    public class Comment : BaseEntityVoteValue<string>
     {
         [Required]
         [StringLength(5000, MinimumLength = 1, ErrorMessage = "Comment content cannot be empty.")]
@@ -15,9 +15,6 @@ namespace platform_core_service.Common.Entities.DbEntities
         public string AuthorId { get; set; } = null!;
         [JsonIgnore]
         public Profile Author { get; set; } = null!;
-
-        public int UpvoteCount { get; set; } = 0;
-        public int DownvoteCount { get; set; } = 0;
 
         public string? PostId { get; set; }
         [JsonIgnore]
