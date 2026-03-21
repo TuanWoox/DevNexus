@@ -11,6 +11,6 @@ namespace platform_core_service.Common.Interfaces.Services
         Task<ReturnResult<PagedData<SelectAnswerDTO, string>>> GetAnswersByPostIdAsync(string postId, Page<string> page);
         Task<ReturnResult<bool>> UpdateAsync(string answerId, UpdateAnswerDTO answerDTO);
         Task<ReturnResult<bool>> DeleteByIdAsync(string answerId);
-        Task<ReturnResult<bool>> AcceptAnswerAsync(string answerId, string userId);
+        Task<ReturnResult<bool>> AcceptAnswerAsync(string answerId);
     }
 }

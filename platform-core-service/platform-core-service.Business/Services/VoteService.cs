@@ -23,246 +23,200 @@ namespace platform_core_service.Business.Services
         public async Task<ReturnResult<bool>> VotePostAsync(string postId, VoteRequestDTO voteRequest)
         {
             var result = new ReturnResult<bool>();
+            using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
             try
             {
-                // Step 1: Validate
                 if (string.IsNullOrEmpty(postId) || voteRequest == null)
-                {
-                    result.Message = "Post ID and vote data are required";
-                    return result;
-                }
+                    return ReturnError(result, "Post ID and vote data are required");
 
-                // Step 2: Check auth
                 var profileId = _userContext.ProfileId;
                 if (string.IsNullOrEmpty(profileId))
-                {
-                    result.Message = "User profile not found";
-                    return result;
-                }
+                    return ReturnError(result, "User profile not found");
 
-                // Step 3: Load post
-                var post = await _dbContext.Posts.FirstOrDefaultAsync(p => p.Id == postId);
-                if (post == null)
-                {
-                    result.Message = $"Post {postId} not found";
-                    return result;
-                }
+                if (!await _dbContext.Posts.AnyAsync(p => p.Id == postId))
+                    return ReturnError(result, $"Post {postId} not found");
 
-                // Step 4: Toggle vote
                 var existingVote = await _dbContext.Votes
                     .FirstOrDefaultAsync(v => v.AuthorId == profileId && v.PostId == postId);
 
-                if (existingVote == null)
-                {
-                    // Insert new vote
-                    _dbContext.Votes.Add(new Vote
-                    {
-                        AuthorId = profileId,
-                        PostId = postId,
-                        IsUpvote = voteRequest.IsUpvote
-                    });
+                var (upvoteChange, downvoteChange) = CalculateVoteDelta(existingVote, profileId, voteRequest.IsUpvote, postId: postId);
 
-                    if (voteRequest.IsUpvote) post.UpvoteCount++;
-                    else post.DownvoteCount++;
-                }
-                else if (existingVote.IsUpvote == voteRequest.IsUpvote)
-                {
-                    // Same direction — toggle off (remove vote)
-                    _dbContext.Votes.Remove(existingVote);
-
-                    if (voteRequest.IsUpvote) post.UpvoteCount--;
-                    else post.DownvoteCount--;
-                }
-                else
-                {
-                    // Different direction — switch vote
-                    existingVote.IsUpvote = voteRequest.IsUpvote;
-
-                    if (voteRequest.IsUpvote)
-                    {
-                        post.UpvoteCount++;
-                        post.DownvoteCount--;
-                    }
-                    else
-                    {
-                        post.DownvoteCount++;
-                        post.UpvoteCount--;
-                    }
-                }
-
-                _dbContext.Posts.Update(post);
                 await _dbContext.SaveChangesAsync();
 
+                if (upvoteChange != 0 || downvoteChange != 0)
+                {
+                    await _dbContext.Posts
+                        .Where(p => p.Id == postId)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(p => p.UpvoteCount, p => p.UpvoteCount + upvoteChange)
+                            .SetProperty(p => p.DownvoteCount, p => p.DownvoteCount + downvoteChange));
+                }
+
+                await transaction.CommitAsync();
                 result.Result = true;
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 DevNexusLogger.Instance.Debug(ex.Message);
-                result.Message = $"An error occurred while voting on post: {ex.Message}";
-                result.Result = false;
+                return ReturnError(result, $"An error occurred while voting on post: {ex.Message}");
             }
+
             return result;
         }
 
         public async Task<ReturnResult<bool>> VoteAnswerAsync(string answerId, VoteRequestDTO voteRequest)
         {
             var result = new ReturnResult<bool>();
+            using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
             try
             {
-                // Step 1: Validate
                 if (string.IsNullOrEmpty(answerId) || voteRequest == null)
-                {
-                    result.Message = "Answer ID and vote data are required";
-                    return result;
-                }
+                    return ReturnError(result, "Answer ID and vote data are required");
 
-                // Step 2: Check auth
                 var profileId = _userContext.ProfileId;
                 if (string.IsNullOrEmpty(profileId))
-                {
-                    result.Message = "User profile not found";
-                    return result;
-                }
+                    return ReturnError(result, "User profile not found");
 
-                // Step 3: Load answer
-                var answer = await _dbContext.Answers.FirstOrDefaultAsync(a => a.Id == answerId);
-                if (answer == null)
-                {
-                    result.Message = $"Answer {answerId} not found";
-                    return result;
-                }
+                if (!await _dbContext.Answers.AnyAsync(a => a.Id == answerId))
+                    return ReturnError(result, $"Answer {answerId} not found");
 
-                // Step 4: Toggle vote
                 var existingVote = await _dbContext.Votes
                     .FirstOrDefaultAsync(v => v.AuthorId == profileId && v.AnswerId == answerId);
 
-                if (existingVote == null)
-                {
-                    _dbContext.Votes.Add(new Vote
-                    {
-                        AuthorId = profileId,
-                        AnswerId = answerId,
-                        IsUpvote = voteRequest.IsUpvote
-                    });
+                // Tái sử dụng hàm private
+                var (upvoteChange, downvoteChange) = CalculateVoteDelta(existingVote, profileId, voteRequest.IsUpvote, answerId: answerId);
 
-                    if (voteRequest.IsUpvote) answer.UpvoteCount++;
-                    else answer.DownvoteCount++;
-                }
-                else if (existingVote.IsUpvote == voteRequest.IsUpvote)
-                {
-                    _dbContext.Votes.Remove(existingVote);
-
-                    if (voteRequest.IsUpvote) answer.UpvoteCount--;
-                    else answer.DownvoteCount--;
-                }
-                else
-                {
-                    existingVote.IsUpvote = voteRequest.IsUpvote;
-
-                    if (voteRequest.IsUpvote)
-                    {
-                        answer.UpvoteCount++;
-                        answer.DownvoteCount--;
-                    }
-                    else
-                    {
-                        answer.DownvoteCount++;
-                        answer.UpvoteCount--;
-                    }
-                }
-
-                _dbContext.Answers.Update(answer);
                 await _dbContext.SaveChangesAsync();
 
+                if (upvoteChange != 0 || downvoteChange != 0)
+                {
+                    await _dbContext.Answers
+                        .Where(a => a.Id == answerId)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(a => a.UpvoteCount, a => a.UpvoteCount + upvoteChange)
+                            .SetProperty(a => a.DownvoteCount, a => a.DownvoteCount + downvoteChange));
+                }
+
+                await transaction.CommitAsync();
                 result.Result = true;
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 DevNexusLogger.Instance.Debug(ex.Message);
-                result.Message = $"An error occurred while voting on answer: {ex.Message}";
-                result.Result = false;
+                return ReturnError(result, $"An error occurred while voting on answer: {ex.Message}");
             }
+
             return result;
         }
 
         public async Task<ReturnResult<bool>> VoteCommentAsync(string commentId, VoteRequestDTO voteRequest)
         {
             var result = new ReturnResult<bool>();
+            using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
             try
             {
-                // Step 1: Validate
                 if (string.IsNullOrEmpty(commentId) || voteRequest == null)
-                {
-                    result.Message = "Comment ID and vote data are required";
-                    return result;
-                }
+                    return ReturnError(result, "Comment ID and vote data are required");
 
-                // Step 2: Check auth
                 var profileId = _userContext.ProfileId;
                 if (string.IsNullOrEmpty(profileId))
-                {
-                    result.Message = "User profile not found";
-                    return result;
-                }
+                    return ReturnError(result, "User profile not found");
 
-                // Step 3: Load comment
-                var comment = await _dbContext.Comments.FirstOrDefaultAsync(c => c.Id == commentId);
-                if (comment == null)
-                {
-                    result.Message = $"Comment {commentId} not found";
-                    return result;
-                }
+                if (!await _dbContext.Comments.AnyAsync(c => c.Id == commentId))
+                    return ReturnError(result, $"Comment {commentId} not found");
 
-                // Step 4: Toggle vote
                 var existingVote = await _dbContext.Votes
                     .FirstOrDefaultAsync(v => v.AuthorId == profileId && v.CommentId == commentId);
 
-                if (existingVote == null)
-                {
-                    _dbContext.Votes.Add(new Vote
-                    {
-                        AuthorId = profileId,
-                        CommentId = commentId,
-                        IsUpvote = voteRequest.IsUpvote
-                    });
+                // Tái sử dụng hàm private
+                var (upvoteChange, downvoteChange) = CalculateVoteDelta(existingVote, profileId, voteRequest.IsUpvote, commentId: commentId);
 
-                    if (voteRequest.IsUpvote) comment.UpvoteCount++;
-                    else comment.DownvoteCount++;
-                }
-                else if (existingVote.IsUpvote == voteRequest.IsUpvote)
-                {
-                    _dbContext.Votes.Remove(existingVote);
-
-                    if (voteRequest.IsUpvote) comment.UpvoteCount--;
-                    else comment.DownvoteCount--;
-                }
-                else
-                {
-                    existingVote.IsUpvote = voteRequest.IsUpvote;
-
-                    if (voteRequest.IsUpvote)
-                    {
-                        comment.UpvoteCount++;
-                        comment.DownvoteCount--;
-                    }
-                    else
-                    {
-                        comment.DownvoteCount++;
-                        comment.UpvoteCount--;
-                    }
-                }
-
-                _dbContext.Comments.Update(comment);
                 await _dbContext.SaveChangesAsync();
 
+                if (upvoteChange != 0 || downvoteChange != 0)
+                {
+                    await _dbContext.Comments
+                        .Where(c => c.Id == commentId)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(c => c.UpvoteCount, c => c.UpvoteCount + upvoteChange)
+                            .SetProperty(c => c.DownvoteCount, c => c.DownvoteCount + downvoteChange));
+                }
+
+                await transaction.CommitAsync();
                 result.Result = true;
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 DevNexusLogger.Instance.Debug(ex.Message);
-                result.Message = $"An error occurred while voting on comment: {ex.Message}";
-                result.Result = false;
+                return ReturnError(result, $"An error occurred while voting on comment: {ex.Message}");
             }
+
+            return result;
+        }
+
+        private (int upvoteChange, int downvoteChange) CalculateVoteDelta(
+            Vote? existingVote,
+            string profileId,
+            bool isUpvote,
+            string? postId = null,
+            string? answerId = null,
+            string? commentId = null)
+        {
+            int upvoteChange = 0;
+            int downvoteChange = 0;
+
+            if (existingVote == null)
+            {
+                // Insert new vote
+                _dbContext.Votes.Add(new Vote
+                {
+                    AuthorId = profileId,
+                    PostId = postId,
+                    AnswerId = answerId,
+                    CommentId = commentId,
+                    IsUpvote = isUpvote
+                });
+
+                if (isUpvote) upvoteChange = 1;
+                else downvoteChange = 1;
+            }
+            else if (existingVote.IsUpvote == isUpvote)
+            {
+                // Toggle off (Remove vote)
+                _dbContext.Votes.Remove(existingVote);
+
+                if (isUpvote) upvoteChange = -1;
+                else downvoteChange = -1;
+            }
+            else
+            {
+                // Switch direction
+                existingVote.IsUpvote = isUpvote;
+
+                if (isUpvote)
+                {
+                    upvoteChange = 1;
+                    downvoteChange = -1;
+                }
+                else
+                {
+                    downvoteChange = 1;
+                    upvoteChange = -1;
+                }
+            }
+
+            return (upvoteChange, downvoteChange);
+        }
+        private ReturnResult<bool> ReturnError(ReturnResult<bool> result, string message)
+        {
+            result.Message = message;
+            result.Result = false;
             return result;
         }
     }

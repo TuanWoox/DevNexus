@@ -1,6 +1,7 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
+using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Answer;
@@ -8,7 +9,6 @@ using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using shared_contracts.Models.DTOs.HelperDTO;
-using AnswerEntity = global::Answer;
 
 namespace platform_core_service.Business.Services
 {
@@ -17,13 +17,13 @@ namespace platform_core_service.Business.Services
         private readonly ApplicationDbContext _dbContext;
         private readonly IUserContext _userContext;
         private readonly IMapper _mapper;
-        private readonly IRepository<AnswerEntity, string> _answerRepository;
+        private readonly IRepository<Answer, string> _answerRepository;
 
         public AnswerService(
             ApplicationDbContext dbContext,
             IUserContext userContext,
             IMapper mapper,
-            IRepository<AnswerEntity, string> answerRepository)
+            IRepository<Answer, string> answerRepository)
         {
             _dbContext = dbContext;
             _userContext = userContext;
@@ -52,7 +52,9 @@ namespace platform_core_service.Business.Services
                 }
 
                 // Step 3: Verify QAPost exists
-                var postExists = await _dbContext.Posts.AnyAsync(p => p.Id == postId);
+                var postExists = await _dbContext.Posts
+                    .OfType<QAPost>()
+                    .AnyAsync(p => p.Id == postId);
                 if (!postExists)
                 {
                     result.Message = $"QAPost {postId} not found";
@@ -60,7 +62,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 // Step 4: Map and set server-side fields
-                var answer = _mapper.Map<AnswerEntity>(answerDTO);
+                var answer = _mapper.Map<Answer>(answerDTO);
                 answer.Id = Guid.NewGuid().ToString();
                 answer.AuthorId = profileId;
                 answer.QAPostId = postId;
@@ -237,7 +239,7 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
-        public async Task<ReturnResult<bool>> AcceptAnswerAsync(string answerId, string userId)
+        public async Task<ReturnResult<bool>> AcceptAnswerAsync(string answerId)
         {
             var result = new ReturnResult<bool>();
             try

@@ -108,7 +108,7 @@ namespace platform_core_service.Controllers
             var returnResult = new ReturnResult<bool>();
             try
             {
-                returnResult = await _answerService.AcceptAnswerAsync(id, string.Empty);
+                returnResult = await _answerService.AcceptAnswerAsync(id);
             }
             catch (Exception ex)
             {
