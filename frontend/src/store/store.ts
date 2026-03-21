@@ -1,8 +1,13 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, createReducer } from '@reduxjs/toolkit';
 
-// Bạn sẽ thêm các slice quản lý state toàn cục tại đây (ví dụ: Theme, Notifications...)
+// Placeholder reducer — thay thế bằng các slice thực khi build features
+const placeholderReducer = createReducer({}, () => {});
+
+// Bạn sẽ thêm các slice quản lý state toàn cục tại đây (ví dụ: auth, notifications...)
 export const store = configureStore({
-  reducer: {},
+  reducer: {
+    placeholder: placeholderReducer,
+  },
   devTools: process.env.NODE_ENV !== 'production',
 });
 

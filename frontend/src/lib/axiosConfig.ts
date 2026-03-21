@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { ReturnResult } from "../types/common/return-result";
 
 // Định nghĩa instance mặc định cho dự án
-export const api = axios.create({
+const api = axios.create({
   // Sử dụng biến môi trường cho URL, nếu không thì dùng mặc định
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
   headers: {
@@ -44,3 +44,5 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export default api;
