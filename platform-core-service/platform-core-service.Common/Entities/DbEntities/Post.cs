@@ -6,7 +6,7 @@ using platform_core_service.Common.Utils.Enums;
 
 namespace platform_core_service.Common.Entities.DbEntities
 {
-    public class Post : BaseEntity<string>
+    public class Post : BaseEntityVoteValue<string>
     {
         [ForeignKey(nameof(Author))]
         [JsonIgnore]

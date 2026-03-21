@@ -16,6 +16,9 @@ namespace platform_core_service.Data
         public DbSet<Post> Posts { get; set; }
         public DbSet<Tag> Tags { get; set; }
         public DbSet<PostTag> PostTags { get; set; }
+        public DbSet<Answer> Answers { get; set; }
+        public DbSet<Vote> Votes { get; set; }
+        public DbSet<Comment> Comments { get; set; }
         public DbSet<Community> Communities { get; set; }
         public DbSet<CommunityModerator> CommunityModerators { get; set; }
         public DbSet<CommunityMember> CommunityMembers { get; set; }
@@ -33,7 +36,7 @@ namespace platform_core_service.Data
 
             foreach (var entityType in builder.Model.GetEntityTypes())
             {
-                if (typeof(IDeleted).IsAssignableFrom(entityType.ClrType))
+                if (typeof(IDeleted).IsAssignableFrom(entityType.ClrType) && entityType.BaseType == null)
                 {
                     entityType.AddSoftDeleteQueryFilter();
                 }
@@ -63,6 +66,30 @@ namespace platform_core_service.Data
                   .IsUnique()
                   .HasFilter("\"Deleted\" = false");
             });
+
+            builder.Entity<Answer>()
+                .HasOne(a => a.QAPost)
+                .WithMany(q => q.Answers)
+                .HasForeignKey(a => a.QAPostId);
+            builder.Entity<Vote>(entity =>
+            {
+                entity.HasIndex(v => new { v.AuthorId, v.PostId })
+                    .IsUnique()
+                    .HasFilter("\"PostId\" IS NOT NULL");
+
+                entity.HasIndex(v => new { v.AuthorId, v.AnswerId })
+                    .IsUnique()
+                    .HasFilter("\"AnswerId\" IS NOT NULL");
+
+                entity.HasIndex(v => new { v.AuthorId, v.CommentId })
+                    .IsUnique()
+                    .HasFilter("\"CommentId\" IS NOT NULL");
+            });
+            builder.Entity<Comment>()
+                .HasOne(c => c.ReplyToComment)
+                .WithMany(c => c.Replies)
+                .HasForeignKey(c => c.ReplyToCommentId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
 
         public async Task<int> SaveChangesAsync(bool populatedICreated = true, bool populatedIModified = true, CancellationToken cancellationToken = default)
