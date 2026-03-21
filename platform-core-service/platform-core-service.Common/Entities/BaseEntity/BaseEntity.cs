@@ -32,6 +32,12 @@ namespace platform_core_service.Common.Entities.BaseEntity
         [JsonIgnore]
         public DateTimeOffset? DateDeleted { get; set; }
     }
+    public class BaseEntityVoteValue<TKey>: BaseEntity<TKey>, IVoteValue
+    {
+        public int UpvoteCount { get; set; } = 0;
+        public int DownvoteCount { get; set; } = 0;
+    }
+
     public interface IDeleted
     {
         public bool Deleted { get; set; }
@@ -46,6 +52,11 @@ namespace platform_core_service.Common.Entities.BaseEntity
     public interface IModified
     {
         public DateTimeOffset? DateModified { get; set; }
+    }
+    public interface IVoteValue
+    {
+        public int UpvoteCount { get; set; }
+        public int DownvoteCount { get; set; }
     }
 
 }
