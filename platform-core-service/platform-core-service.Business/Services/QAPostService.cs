@@ -360,18 +360,52 @@ namespace platform_core_service.Business.Services
             if (tagNames == null || !tagNames.Any())
                 return postTags;
 
-            foreach (var tagName in tagNames.Where(t => !string.IsNullOrEmpty(t)).Distinct())
+            // Step 1: Clean up the tag list (remove null/empty strings and duplicates)
+            var distinctTagNames = tagNames
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Distinct()
+                .ToList();
+
+            if (!distinctTagNames.Any())
+                return postTags;
+
+            // Step 2: Fetch all existing tags from the database in a single query (Batching)
+            var existingTags = await _dbContext.Tags
+                .Where(t => distinctTagNames.Contains(t.Name))
+                .ToListAsync();
+
+            // Convert to a Dictionary for O(1) lookup performance
+            var tagsByName = existingTags.ToDictionary(t => t.Name, t => t);
+
+            // Step 3: Identify missing tags that need to be created
+            var missingTagNames = distinctTagNames.Except(tagsByName.Keys).ToList();
+
+            if (missingTagNames.Any())
             {
-                var tag = await _dbContext.Tags.FirstOrDefaultAsync(t => t.Name == tagName);
+                // Prepare the list of new tags
+                var newTags = missingTagNames.Select(name => new TagEntity { Name = name }).ToList();
 
-                if (tag == null)
+                // Add all new tags to the DbContext
+                _dbContext.Tags.AddRange(newTags);
+
+                // Execute a single database write for all new tags (Batch Insert)
+                await _dbContext.SaveChangesAsync();
+
+                // EF Core automatically populates the Ids for newTags after SaveChangesAsync.
+                // Add these newly created tags to our lookup dictionary.
+                foreach (var tag in newTags)
                 {
-                    tag = new TagEntity { Name = tagName };
-                    _dbContext.Tags.Add(tag);
-                    await _dbContext.SaveChangesAsync();
+                    tagsByName[tag.Name] = tag;
                 }
+            }
 
-                postTags.Add(new PostTagEntity { PostId = postId, TagId = tag.Id });
+            // Step 4: Create the PostTag junction entities
+            foreach (var tagName in distinctTagNames)
+            {
+                if (tagsByName.TryGetValue(tagName, out var tag))
+                {
+                    postTags.Add(new PostTagEntity { PostId = postId, TagId = tag.Id });
+                }
             }
 
             return postTags;

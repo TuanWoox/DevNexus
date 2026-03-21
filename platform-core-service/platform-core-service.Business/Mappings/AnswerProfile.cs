@@ -11,7 +11,8 @@ namespace platform_core_service.Business.Mappings
         public AnswerProfile()
         {
             CreateMap<CreateAnswerDTO, Answer>();
-            CreateMap<UpdateAnswerDTO, Answer>();
+            CreateMap<UpdateAnswerDTO, Answer>()
+                 .ForMember(dest => dest.Id, opt => opt.Ignore());
             CreateMap<Answer, SelectAnswerDTO>();
         }
     }

@@ -1,8 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
-// Đã gỡ using ...BaseEntity;
 
 namespace platform_core_service.Common.Entities.DbEntities
 {

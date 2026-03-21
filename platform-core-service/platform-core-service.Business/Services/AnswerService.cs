@@ -130,7 +130,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 // Step 2: Verify QAPost exists
-                var postExists = await _dbContext.Posts.AnyAsync(p => p.Id == postId);
+                var postExists = await _dbContext.Posts.OfType<QAPost>().AnyAsync(p => p.Id == postId);
                 if (!postExists)
                 {
                     result.Message = $"QAPost {postId} not found";
