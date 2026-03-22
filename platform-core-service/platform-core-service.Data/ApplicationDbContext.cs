@@ -24,6 +24,7 @@ namespace platform_core_service.Data
         public DbSet<CommunityMember> CommunityMembers { get; set; }
         public DbSet<CommunityMembershipRequest> CommunityMembershipRequests { get; set; }
         public DbSet<CommunityBan> CommunityBans { get; set; }
+        public DbSet<ProfileBlock> ProfileBlocks { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {

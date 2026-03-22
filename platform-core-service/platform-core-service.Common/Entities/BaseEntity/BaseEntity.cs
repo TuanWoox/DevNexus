@@ -32,10 +32,20 @@ namespace platform_core_service.Common.Entities.BaseEntity
         [JsonIgnore]
         public DateTimeOffset? DateDeleted { get; set; }
     }
-    public class BaseEntityVoteValue<TKey>: BaseEntity<TKey>, IVoteValue
+    public class BaseEntityVoteValue<TKey> : BaseEntity<TKey>, IVoteValue
     {
         public int UpvoteCount { get; set; } = 0;
         public int DownvoteCount { get; set; } = 0;
+    }
+
+    public class BaseEntityHardDelete<TKey> : IBaseKey<TKey>, ICreated, IModified
+    {
+        [Key]
+        //[StringLength(36)]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public TKey Id { get; set; }
+        public DateTimeOffset? DateModified { get; set; }
+        public DateTimeOffset? DateCreated { get; set; }
     }
 
     public interface IDeleted
