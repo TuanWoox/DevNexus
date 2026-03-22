@@ -33,6 +33,7 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<ICommunityMembershipRequestService, CommunityMembershipRequestService>();
             services.AddScoped<ICommunityBanService, CommunityBanService>();
             services.AddScoped<ICacheService, CacheService>();
+            services.AddScoped<IProfileBlockService, ProfileBlockService>();
 
             // Register the Redis connection multiplexer as a singleton service
             // This allows the application to interact directly with Redis for advanced scenarios

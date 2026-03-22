@@ -48,5 +48,13 @@ namespace platform_core_service.Common.Entities.DbEntities
         [JsonIgnore]
         [InverseProperty(nameof(CommunityBan.BannedBy))]
         public ICollection<CommunityBan> BansIssued { get; set; } = [];
+
+        [JsonIgnore]
+        [InverseProperty(nameof(ProfileBlock.Owner))]
+        public ICollection<ProfileBlock> BlockRecords { get; set; } = [];
+
+        [JsonIgnore]
+        [InverseProperty(nameof(ProfileBlock.BlockedProfile))]
+        public ICollection<ProfileBlock> BlockedByRecords { get; set; } = [];
     }
 }

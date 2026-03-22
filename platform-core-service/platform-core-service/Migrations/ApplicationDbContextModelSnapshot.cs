@@ -23,57 +23,6 @@ namespace platform_core_service.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Answer", b =>
-                {
-                    b.Property<string>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text");
-
-                    b.Property<string>("AuthorId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasMaxLength(50000)
-                        .HasColumnType("character varying(50000)");
-
-                    b.Property<DateTimeOffset?>("DateCreated")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset?>("DateDeleted")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset?>("DateModified")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("Deleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("DownvoteCount")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("IsAccepted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("QAPostId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("UpvoteCount")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AuthorId");
-
-                    b.HasIndex("Deleted");
-
-                    b.HasIndex("QAPostId");
-
-                    b.ToTable("Answers");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.Property<int>("Id")
@@ -163,6 +112,57 @@ namespace platform_core_service.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Answer", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AuthorId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(50000)
+                        .HasColumnType("character varying(50000)");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("DownvoteCount")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsAccepted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("QAPostId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UpvoteCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("QAPostId");
+
+                    b.ToTable("Answers");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Comment", b =>
@@ -551,6 +551,36 @@ namespace platform_core_service.Migrations
                     b.ToTable("Profiles");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ProfileBlock", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BlockedProfileId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BlockedProfileId");
+
+                    b.HasIndex("OwnerId", "BlockedProfileId")
+                        .IsUnique();
+
+                    b.ToTable("ProfileBlocks");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Setting", b =>
                 {
                     b.Property<string>("Id")
@@ -844,25 +874,6 @@ namespace platform_core_service.Migrations
                     b.HasDiscriminator().HasValue("QAPost");
                 });
 
-            modelBuilder.Entity("Answer", b =>
-                {
-                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Author")
-                        .WithMany()
-                        .HasForeignKey("AuthorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("platform_core_service.Common.Entities.DbEntities.QAPost", "QAPost")
-                        .WithMany("Answers")
-                        .HasForeignKey("QAPostId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Author");
-
-                    b.Navigation("QAPost");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.Identities.ApplicationRole", null)
@@ -899,9 +910,28 @@ namespace platform_core_service.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Answer", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.QAPost", "QAPost")
+                        .WithMany("Answers")
+                        .HasForeignKey("QAPostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("QAPost");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Comment", b =>
                 {
-                    b.HasOne("Answer", "Answer")
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Answer", "Answer")
                         .WithMany()
                         .HasForeignKey("AnswerId");
 
@@ -1065,9 +1095,28 @@ namespace platform_core_service.Migrations
                     b.Navigation("ApplicationUser");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ProfileBlock", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "BlockedProfile")
+                        .WithMany("BlockedByRecords")
+                        .HasForeignKey("BlockedProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Owner")
+                        .WithMany("BlockRecords")
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BlockedProfile");
+
+                    b.Navigation("Owner");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Vote", b =>
                 {
-                    b.HasOne("Answer", "Answer")
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Answer", "Answer")
                         .WithMany()
                         .HasForeignKey("AnswerId");
 
@@ -1141,6 +1190,10 @@ namespace platform_core_service.Migrations
                     b.Navigation("BanRecords");
 
                     b.Navigation("BansIssued");
+
+                    b.Navigation("BlockRecords");
+
+                    b.Navigation("BlockedByRecords");
 
                     b.Navigation("Communities");
 
