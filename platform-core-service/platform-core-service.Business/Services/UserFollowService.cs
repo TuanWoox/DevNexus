@@ -121,6 +121,7 @@ namespace platform_core_service.Business.Services
             {
                 var query = _dbContext.UserFollows.Where(x => x.FollowingProfileId == _userContext.ProfileId)
                                                 .AsNoTracking()
+                                                .Include(x => x.Owner)
                                                 .AsQueryable();
                 returnResult.Result = await _repository.GetPagingAsync<Page<string>, SelectUserFollow>(query, page);
             }
@@ -139,6 +140,7 @@ namespace platform_core_service.Business.Services
             {
                 var query = _dbContext.UserFollows.Where(x => x.OwnerId == _userContext.ProfileId)
                                                 .AsNoTracking()
+                                                .Include(x => x.FollowingProfile)
                                                 .AsQueryable();
                 returnResult.Result = await _repository.GetPagingAsync<Page<string>, SelectUserFollow>(query, page);
             }

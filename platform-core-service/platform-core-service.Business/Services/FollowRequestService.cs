@@ -47,6 +47,8 @@ namespace platform_core_service.Business.Services
 
                     if (alreadyFollowing)
                     {
+                        _dbContext.Remove(existingFollowRequest);
+                        await _dbContext.SaveChangesAsync();
                         returnResult.Message = "Already following this profile.";
                     }
                     else
@@ -141,6 +143,7 @@ namespace platform_core_service.Business.Services
             {
                 var query = _dbContext.FollowRequests.Where(x => x.TargetProfileId == _userContext.ProfileId)
                                                     .AsNoTracking()
+                                                    .Include(x => x.RequesterProfile)
                                                     .AsQueryable();
                 returnResult.Result = await _repository.GetPagingAsync<Page<string>, SelectFollowRequest>(query, page);
 
@@ -160,6 +163,7 @@ namespace platform_core_service.Business.Services
             {
                 var query = _dbContext.FollowRequests.Where(x => x.RequesterProfileId == _userContext.ProfileId)
                                                     .AsNoTracking()
+                                                    .Include(x => x.TargetProfile)
                                                     .AsQueryable();
                 returnResult.Result = await _repository.GetPagingAsync<Page<string>, SelectFollowRequest>(query, page);
 

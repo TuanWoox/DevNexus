@@ -10,6 +10,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.UserFollow
         [StringLength(256)]
         public string OwnerId { get; set; } = null!;
 
+        public SelectProfileDTO Owner { get; set; } = null!;
         [Required]
         [StringLength(256)]
         public string FollowingProfileId { get; set; } = null!;

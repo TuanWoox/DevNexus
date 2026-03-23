@@ -8,6 +8,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.FollowRequest
     {
         [Required]
         public string RequesterProfileId { get; set; } = null!;
+        public SelectProfileDTO RequesterProfile { get; set; } = null!;
 
         [Required]
         public string TargetProfileId { get; set; } = null!;
