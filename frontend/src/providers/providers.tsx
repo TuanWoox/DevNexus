@@ -6,6 +6,7 @@ import { Provider as ReduxProvider } from 'react-redux';
 import { store } from '@/store/store';
 import { useState, ReactNode } from 'react';
 import { ThemeProvider } from '@/components/theme-provider';
+import { Toaster } from 'sonner';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -33,6 +34,7 @@ export function Providers({ children }: ProvidersProps) {
           {children}
           {/* Component hiển thị Devtools ở góc màn hình để debug React Query */}
           <ReactQueryDevtools initialIsOpen={false} position="bottom" />
+          <Toaster richColors expand={false} position="top-right" closeButton />
         </QueryClientProvider>
       </ReduxProvider>
     </ThemeProvider>

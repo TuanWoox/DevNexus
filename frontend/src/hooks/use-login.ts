@@ -19,7 +19,7 @@ const useLogin = () => {
                 dispatch(setToken(data.result));
                 window.localStorage.setItem("accessToken", data.result.accessToken);
                 window.localStorage.setItem("refreshToken", data.result.refreshToken);
-                toast.success("Login successfully");
+                toast.success("Login successfully!");
                 router.push('/feed');
             }
         }

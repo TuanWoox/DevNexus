@@ -5,7 +5,7 @@ import { ReturnResult } from "../types/common/return-result";
 // Định nghĩa instance mặc định cho dự án
 const api = axios.create({
   // Sử dụng biến môi trường cho URL, nếu không thì dùng mặc định
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL_HTTPS || process.env.NEXT_PUBLIC_API_URL_HTTP,
   headers: {
     'Content-Type': 'application/json',
   },

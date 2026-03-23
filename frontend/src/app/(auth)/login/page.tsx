@@ -105,7 +105,7 @@ export default function LoginPage() {
                         />
                     </div>
                     {/* Hiển thị lỗi nếu có */}
-                    {errors.username && <span className="text-xs text-destructive">{errors.username.message}</span>}
+                    {errors.username && <span className="text-xs text-destructive font-medium">{errors.username.message}</span>}
                 </div>
 
                 {/* Password */}
@@ -153,7 +153,7 @@ export default function LoginPage() {
                         </button>
                     </div>
                     {/* Hiển thị lỗi nếu có */}
-                    {errors.password && <span className="text-xs text-destructive">{errors.password.message}</span>}
+                    {errors.password && <span className="text-xs text-destructive font-medium">{errors.password.message}</span>}
                 </div>
 
                 {/* Remember Me */}

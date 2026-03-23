@@ -13,43 +13,47 @@ export const accountService = {
         return data;
     },
     register: async (registerAccountDTO: RegisterAccountDTO) => {
-        const { data } = await api.post<ReturnResult<boolean>>('Accounts/register', registerAccountDTO);
+        const { data } = await api.post<ReturnResult<boolean>>('/Accounts/register', registerAccountDTO);
         return data;
     },
     refreshToken: async (refreshToken: string) => {
-        const { data } = await api.post<ReturnResult<TokenResponseDTO>>('Accounts/refresh-token', refreshToken);
+        const { data } = await api.post<ReturnResult<TokenResponseDTO>>('/Accounts/refresh-token', refreshToken);
         return data;
     },
     logout: async () => {
-        const { data } = await api.post<ReturnResult<boolean>>('Accounts/logout');
+        const { data } = await api.post<ReturnResult<boolean>>('/Accounts/logout');
         return data;
     },
     changePassword: async (changePasswordDTO: ChangePasswordDTO) => {
-        const { data } = await api.post<ReturnResult<boolean>>('Accounts/change-password', changePasswordDTO);
+        const { data } = await api.post<ReturnResult<boolean>>('/Accounts/change-password', changePasswordDTO);
         return data;
     },
     requestResetPassword: async (email: string) => {
-        const { data } = await api.post<ReturnResult<boolean>>('Accounts/request-reset-password', email);
+        const payload = { email }
+        const { data } = await api.post<ReturnResult<boolean>>('/Accounts/request-reset-password', payload);
         return data;
     },
     resetPassword: async (resetPasswordDTO: ResetPasswordDTO) => {
-        const { data } = await api.post<ReturnResult<boolean>>('Accounts/reset-password', resetPasswordDTO);
+        const { data } = await api.post<ReturnResult<boolean>>('/Accounts/reset-password', resetPasswordDTO);
         return data;
     },
     requestConfirmEmail: async (email: string) => {
-        const { data } = await api.post<ReturnResult<boolean>>('Accounts/request-confirm-email', email);
+        const payload = { email };
+        const { data } = await api.post<ReturnResult<boolean>>('/Accounts/request-confirm-email', payload);
         return data;
     },
     confirmEmail: async (confirmEmailDTO: ConfirmEmailDTO) => {
-        const { data } = await api.post<ReturnResult<boolean>>('Accounts/confirm-email', confirmEmailDTO);
+        const { data } = await api.post<ReturnResult<boolean>>('/Accounts/confirm-email', confirmEmailDTO);
         return data;
     },
     googleLogin: async (idToken: string) => {
-        const { data } = await api.post<ReturnResult<TokenResponseDTO>>('Accounts/google-login', idToken);
+        const payload = { idToken }
+        const { data } = await api.post<ReturnResult<TokenResponseDTO>>('/Accounts/google-login', payload);
         return data;
     },
     githubLogin: async (accessToken: string) => {
-        const { data } = await api.post<ReturnResult<TokenResponseDTO>>('Accounts/github-login', accessToken);
+        const payload = { accessToken }
+        const { data } = await api.post<ReturnResult<TokenResponseDTO>>('/Accounts/github-login', payload);
         return data;
     }
 }

@@ -2,18 +2,40 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Navbar } from '@/components/navbar'
-import { Footer } from '@/components/footer'
-import { Key, Sparkles, Mail, ArrowLeft, MailCheck } from 'lucide-react'
+import { Key, Sparkles, Mail, ArrowLeft, MailCheck, Loader2 } from 'lucide-react'
+import useRequestResetPassword from '@/hooks/use-request-reset-password';
+import { useForm } from 'react-hook-form';
+
+// Type cho Form Data
+type ForgotPasswordForm = {
+    email: string;
+}
 
 export default function ForgotPasswordPage() {
-    const [isSubmitted, setIsSubmitted] = useState(false)
+    const [isSubmitted, setIsSubmitted] = useState(false);
+    const { requestResetPassword, isLoading } = useRequestResetPassword();
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault()
-        // Ở đây bạn sẽ gọi API gửi request lên server
-        // Sau khi gọi thành công thì set state để đổi UI
-        setIsSubmitted(true)
+    // Khởi tạo useForm
+    const {
+        register,
+        handleSubmit,
+        reset, // Dùng để clear form nếu cần
+        formState: { errors }
+    } = useForm<ForgotPasswordForm>({
+        defaultValues: {
+            email: ''
+        }
+    });
+
+    // Hàm submit nhận data đã được validate từ useForm
+    const onSubmit = (data: ForgotPasswordForm) => {
+        requestResetPassword(data.email, {
+            onSuccess: (res) => {
+                if (res.result) {
+                    setIsSubmitted(true);
+                }
+            }
+        });
     }
 
     return (
@@ -37,7 +59,7 @@ export default function ForgotPasswordPage() {
                         </p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
                         <div className="flex flex-col gap-1.5">
                             <label htmlFor="email" className="text-sm font-medium text-heading">
                                 Email address
@@ -47,15 +69,42 @@ export default function ForgotPasswordPage() {
                                 <input
                                     type="email"
                                     id="email"
-                                    className="input pl-9"
+                                    className={`input pl-9 disabled:opacity-50 disabled:cursor-not-allowed ${errors.email ? 'border-destructive focus:ring-destructive' : ''
+                                        }`}
                                     placeholder="you@example.com"
-                                    required
+                                    disabled={isLoading}
+
+                                    // Đăng ký input với useForm và thêm rules validation
+                                    {...register("email", {
+                                        required: "Email is required",
+                                        pattern: {
+                                            value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                                            message: "Please enter a valid email address"
+                                        }
+                                    })}
                                 />
                             </div>
+
+                            {errors.email && (
+                                <span className="text-sm text-destructive mt-1">
+                                    {errors.email.message}
+                                </span>
+                            )}
                         </div>
 
-                        <button type="submit" className="btn-ai w-full py-2.5 mt-2 text-base">
-                            Send Reset Link
+                        <button
+                            type="submit"
+                            className="btn-ai w-full py-2.5 mt-2 text-base flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <>
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                    Sending...
+                                </>
+                            ) : (
+                                "Send Reset Link"
+                            )}
                         </button>
                     </form>
                 </>
@@ -74,7 +123,10 @@ export default function ForgotPasswordPage() {
 
                     {/* Nút phụ để phòng trường hợp user gõ sai email và muốn nhập lại */}
                     <button
-                        onClick={() => setIsSubmitted(false)}
+                        onClick={() => {
+                            setIsSubmitted(false);
+                            reset(); // gọi reset() từ useForm để reset data trg input
+                        }}
                         className="btn-ghost w-full py-2.5"
                     >
                         Try another email

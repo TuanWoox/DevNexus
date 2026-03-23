@@ -1,7 +1,7 @@
 import { CreateProfileDTO } from "../profile/create-profile-dto";
 
 export interface RegisterAccountDTO {
-    username: string;
+    userName: string;
     password: string;
     email: string;
     onBoardInformation: CreateProfileDTO;
