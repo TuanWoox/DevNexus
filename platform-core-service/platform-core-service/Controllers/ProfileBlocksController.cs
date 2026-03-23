@@ -46,21 +46,6 @@ namespace platform_core_service.Controllers
             }
             return Ok(returnResult);
         }
-        [HttpDelete("blockprofileid/{blockProfileId}")]
-        public async Task<IActionResult> DeleteByBlockProfileId(string blockProfileId)
-        {
-            ReturnResult<bool> returnResult = new();
-            try
-            {
-                returnResult = await _profileBlockService.DeleteByBlockProfileIdAsync(blockProfileId);
-            }
-            catch (Exception ex)
-            {
-                DevNexusLogger.Instance.Debug(ex.Message);
-                returnResult.Message = ex.Message;
-            }
-            return Ok(returnResult);
-        }
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteById(string id)
         {
@@ -91,5 +76,20 @@ namespace platform_core_service.Controllers
             }
             return Ok(returnResult);
         }
+        // [HttpDelete("blockprofileid/{blockProfileId}")]
+        // public async Task<IActionResult> DeleteByBlockProfileId(string blockProfileId)
+        // {
+        //     ReturnResult<bool> returnResult = new();
+        //     try
+        //     {
+        //         returnResult = await _profileBlockService.DeleteByBlockProfileIdAsync(blockProfileId);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         DevNexusLogger.Instance.Debug(ex.Message);
+        //         returnResult.Message = ex.Message;
+        //     }
+        //     return Ok(returnResult);
+        // }
     }
 }

@@ -2,6 +2,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using platform_core_service.Business.Contexts;
 using platform_core_service.Business.Services;
+using platform_core_service.Common.Entities.DbEntities;
+using platform_core_service.Common.Interfaces;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using StackExchange.Redis;
@@ -34,7 +36,8 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<ICommunityBanService, CommunityBanService>();
             services.AddScoped<ICacheService, CacheService>();
             services.AddScoped<IProfileBlockService, ProfileBlockService>();
-
+            services.AddScoped<IFollowRequestService, FollowRequestService>();
+            services.AddScoped<IUserFollowService, UserFollowService>();
             // Register the Redis connection multiplexer as a singleton service
             // This allows the application to interact directly with Redis for advanced scenarios
             services.AddSingleton<IConnectionMultiplexer>(sp =>

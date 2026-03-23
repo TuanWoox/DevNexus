@@ -76,34 +76,6 @@ namespace platform_core_service.Business.Services
             return returnResult;
         }
 
-        public async Task<ReturnResult<bool>> DeleteByBlockProfileIdAsync(string blockedProfileId)
-        {
-            ReturnResult<bool> returnResult = new ReturnResult<bool>();
-            try
-            {
-                var existingProfileBlock = await _dbContext.ProfileBlocks.Where(x => x.BlockedProfileId == blockedProfileId
-                                                                                && x.OwnerId == _userContext.ProfileId)
-                                                                                .FirstOrDefaultAsync();
-                if (existingProfileBlock == null)
-                {
-                    returnResult.Message = "This profile is not in your block list";
-                    return returnResult;
-                }
-                _dbContext.ProfileBlocks.Remove(existingProfileBlock);
-                if (await _dbContext.SaveChangesAsync() > 0)
-                {
-                    returnResult.Result = true;
-                }
-                else returnResult.Message = "Failed to save changes. Please try again later.";
-            }
-            catch (Exception ex)
-            {
-                DevNexusLogger.Instance.Debug($"Error delete block $${ex.Message}");
-                returnResult.Message = ex.Message;
-            }
-            return returnResult;
-        }
-
         public async Task<ReturnResult<PagedData<SelectProfileBlock, string>>> GetPagingAsync(Page<string> page)
         {
             ReturnResult<PagedData<SelectProfileBlock, string>> returnResult = new();
@@ -178,5 +150,33 @@ namespace platform_core_service.Business.Services
             }
             return returnResult;
         }
+
+        // public async Task<ReturnResult<bool>> DeleteByBlockProfileIdAsync(string blockedProfileId)
+        // {
+        //     ReturnResult<bool> returnResult = new ReturnResult<bool>();
+        //     try
+        //     {
+        //         var existingProfileBlock = await _dbContext.ProfileBlocks.Where(x => x.BlockedProfileId == blockedProfileId
+        //                                                                         && x.OwnerId == _userContext.ProfileId)
+        //                                                                         .FirstOrDefaultAsync();
+        //         if (existingProfileBlock == null)
+        //         {
+        //             returnResult.Message = "This profile is not in your block list";
+        //             return returnResult;
+        //         }
+        //         _dbContext.ProfileBlocks.Remove(existingProfileBlock);
+        //         if (await _dbContext.SaveChangesAsync() > 0)
+        //         {
+        //             returnResult.Result = true;
+        //         }
+        //         else returnResult.Message = "Failed to save changes. Please try again later.";
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         DevNexusLogger.Instance.Debug($"Error delete block $${ex.Message}");
+        //         returnResult.Message = ex.Message;
+        //     }
+        //     return returnResult;
+        // }
     }
 }

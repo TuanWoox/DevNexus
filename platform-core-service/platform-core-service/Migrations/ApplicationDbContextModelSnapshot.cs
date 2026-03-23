@@ -404,6 +404,35 @@ namespace platform_core_service.Migrations
                     b.ToTable("CommunityModerators");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.FollowRequest", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RequesterProfileId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TargetProfileId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequesterProfileId");
+
+                    b.HasIndex("TargetProfileId");
+
+                    b.ToTable("FollowRequests");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
                 {
                     b.Property<string>("Id")
@@ -532,6 +561,9 @@ namespace platform_core_service.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("IsPrivate")
+                        .HasColumnType("boolean");
 
                     b.Property<int>("ReputationPoints")
                         .HasColumnType("integer");
@@ -663,6 +695,35 @@ namespace platform_core_service.Migrations
                     b.HasIndex("Deleted");
 
                     b.ToTable("Tags");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.UserFollow", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FollowingProfileId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FollowingProfileId");
+
+                    b.HasIndex("OwnerId");
+
+                    b.ToTable("UserFollows");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Vote", b =>
@@ -1054,6 +1115,25 @@ namespace platform_core_service.Migrations
                     b.Navigation("Moderator");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.FollowRequest", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "RequesterProfile")
+                        .WithMany("SentFollowRequests")
+                        .HasForeignKey("RequesterProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "TargetProfile")
+                        .WithMany("ReceivedFollowRequests")
+                        .HasForeignKey("TargetProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RequesterProfile");
+
+                    b.Navigation("TargetProfile");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Author")
@@ -1110,6 +1190,25 @@ namespace platform_core_service.Migrations
                         .IsRequired();
 
                     b.Navigation("BlockedProfile");
+
+                    b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.UserFollow", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "FollowingProfile")
+                        .WithMany("Followers")
+                        .HasForeignKey("FollowingProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Owner")
+                        .WithMany("Following")
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FollowingProfile");
 
                     b.Navigation("Owner");
                 });
@@ -1199,11 +1298,19 @@ namespace platform_core_service.Migrations
 
                     b.Navigation("CommunityMemberships");
 
+                    b.Navigation("Followers");
+
+                    b.Navigation("Following");
+
                     b.Navigation("MembershipRequests");
 
                     b.Navigation("ModeratedCommunities");
 
                     b.Navigation("Posts");
+
+                    b.Navigation("ReceivedFollowRequests");
+
+                    b.Navigation("SentFollowRequests");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Tag", b =>

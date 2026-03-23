@@ -18,5 +18,6 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Profile
         public string Bio { get; set; }
 
         public List<string> TechStacks { get; set; }
+        public bool? IsPrivate { get; set; }
     }
 }
