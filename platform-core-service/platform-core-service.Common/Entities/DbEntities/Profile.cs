@@ -56,5 +56,22 @@ namespace platform_core_service.Common.Entities.DbEntities
         [JsonIgnore]
         [InverseProperty(nameof(ProfileBlock.BlockedProfile))]
         public ICollection<ProfileBlock> BlockedByRecords { get; set; } = [];
+
+        public bool IsPrivate { get; set; } = false;
+        [JsonIgnore]
+        [InverseProperty(nameof(UserFollow.Owner))]
+        public ICollection<UserFollow> Following { get; set; } = [];
+
+        [JsonIgnore]
+        [InverseProperty(nameof(UserFollow.FollowingProfile))]
+        public ICollection<UserFollow> Followers { get; set; } = [];
+
+        [JsonIgnore]
+        [InverseProperty(nameof(FollowRequest.RequesterProfile))]
+        public ICollection<FollowRequest> SentFollowRequests { get; set; } = [];
+
+        [JsonIgnore]
+        [InverseProperty(nameof(FollowRequest.TargetProfile))]
+        public ICollection<FollowRequest> ReceivedFollowRequests { get; set; } = [];
     }
 }

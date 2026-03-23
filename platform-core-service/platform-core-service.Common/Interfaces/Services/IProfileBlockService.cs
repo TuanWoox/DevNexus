@@ -8,9 +8,9 @@ namespace platform_core_service.Common.Interfaces.Services
     {
         public Task<ReturnResult<PagedData<SelectProfileBlock, string>>> GetPagingAsync(Page<string> page);
         public Task<ReturnResult<SelectProfileBlock>> CreateAsync(CreateProfileBlock createProfileBlock);
-        public Task<ReturnResult<bool>> DeleteByBlockProfileIdAsync(string blockedProfileId);
         public Task<ReturnResult<bool>> DeleteById(string id);
         public Task<ReturnResult<int>> DeleteByIds(List<string> ids);
+        // public Task<ReturnResult<bool>> DeleteByBlockProfileIdAsync(string blockedProfileId);
 
     }
 }

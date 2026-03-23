@@ -20,5 +20,6 @@ namespace platform_core_service.Common.Helper
         public static string MESSAGE_MULTIPLE_ITEM_EXIST = "Some of the selected {0} may already exist";
         public static string MESSAGE_ALL_ITEM_NOT_FOUND = "All the items not found or have been deleted";
         public static string MESSAGE_FORBIDDEN = "Forbidden";
+        public static string MESSAGE_OPERATION_CANT_BE_DONE = "The operation can't be done at the moment, please try again";
     }
 }
