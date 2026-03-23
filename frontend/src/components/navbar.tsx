@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useTheme } from 'next-themes'
-import { Hexagon, Menu, X, Sun, Moon, Sparkles } from 'lucide-react'
+import { Hexagon, Menu, Sun, Moon, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
     Sheet,

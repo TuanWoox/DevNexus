@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import Link from 'next/link'
 import { Navbar } from '@/components/navbar'
 import { Footer } from '@/components/footer'
 import {
@@ -216,13 +217,13 @@ export default function AboutPage() {
                             </p>
 
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                                <a
-                                    href="/"
+                                <Link
+                                    href="/register"
                                     className="btn-primary text-white"
                                 >
                                     <Sparkles className="h-4 w-4" />
                                     Get Started
-                                </a>
+                                </Link>
                                 <a
                                     href="#"
                                     className="btn-ghost"

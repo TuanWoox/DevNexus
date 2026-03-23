@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Navbar } from '@/components/navbar'
 import { Footer } from '@/components/footer'
-import { Hexagon, Home, ArrowLeft, Search, Sparkles } from 'lucide-react'
+import { Hexagon, Home, Search, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function NotFound() {

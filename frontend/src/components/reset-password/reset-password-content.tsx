@@ -29,7 +29,7 @@ function ResetPasswordContent() {
     const {
         register,
         handleSubmit,
-        watch,
+        getValues,
         formState: { errors }
     } = useForm<ResetPasswordForm>();
 
@@ -113,8 +113,8 @@ function ResetPasswordContent() {
                         {...register("confirmPassword", {
                             required: "Please confirm your password",
                             validate: (val: string) => {
-                                // Watch giá trị của trường password để so sánh
-                                if (watch('password') != val) {
+                                // Lấy giá trị của trường password để so sánh
+                                if (getValues('password') != val) {
                                     return "Your passwords do no match";
                                 }
                             }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import {
     Sparkles,
     UserPlus,
@@ -25,7 +25,7 @@ export default function RegisterPage() {
         register,
         handleSubmit,
         setValue,
-        watch,
+        control,
         formState: { errors } // Lấy object errors để hiển thị lỗi
     } = useForm<RegisterAccountDTO>({
         defaultValues: {
@@ -44,7 +44,7 @@ export default function RegisterPage() {
     const [techInput, setTechInput] = useState('')
 
     // Theo dõi mảng techStacks từ react-hook-form để render UI
-    const techStacks = watch('onBoardInformation.techStacks') || []
+    const techStacks = useWatch({ control, name: 'onBoardInformation.techStacks' }) || []
 
     // Xử lý thêm Tech Stack
     const handleAddTech = (e: React.KeyboardEvent<HTMLInputElement>) => {
