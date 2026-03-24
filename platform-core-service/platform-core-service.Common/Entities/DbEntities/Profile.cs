@@ -73,5 +73,8 @@ namespace platform_core_service.Common.Entities.DbEntities
         [JsonIgnore]
         [InverseProperty(nameof(FollowRequest.TargetProfile))]
         public ICollection<FollowRequest> ReceivedFollowRequests { get; set; } = [];
+
+        [JsonIgnore]
+        public ICollection<BookMark> BookMarks { get; set; } = [];
     }
 }

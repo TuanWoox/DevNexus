@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using platform_core_service.Common.Interfaces.Services;
-using platform_core_service.Common.Models.DTOs.EntityDTO.UserFollow;
+using platform_core_service.Common.Models.DTOs.EntityDTO.BookMark;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
@@ -11,17 +11,17 @@ namespace platform_core_service.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class UserFollowsController(IUserFollowService userFollowService) : ControllerBase
+    public class BookMarksController(IBookMarkService bookMarkService) : ControllerBase
     {
-        private readonly IUserFollowService _userFollowService = userFollowService;
+        private readonly IBookMarkService _bookMarkService = bookMarkService;
 
         [HttpPost]
-        public async Task<IActionResult> CreateAsync(CreateUserFollow createUserFollow)
+        public async Task<IActionResult> CreateAsync(CreateBookMark dto)
         {
-            ReturnResult<object> returnResult = new();
+            ReturnResult<SelectBookMark> returnResult = new();
             try
             {
-                returnResult = await _userFollowService.CreateAsync(createUserFollow);
+                returnResult = await _bookMarkService.CreateAsync(dto);
             }
             catch (Exception ex)
             {
@@ -31,13 +31,13 @@ namespace platform_core_service.Controllers
             return Ok(returnResult);
         }
 
-        [HttpPost("followers/paging")]
-        public async Task<IActionResult> GetFollowers(Page<string> page)
+        [HttpPost("paging")]
+        public async Task<IActionResult> GetMyBookMarksAsync(Page<string> page)
         {
-            ReturnResult<PagedData<SelectUserFollow, string>> returnResult = new();
+            ReturnResult<PagedData<SelectBookMark, string>> returnResult = new();
             try
             {
-                returnResult = await _userFollowService.GetFollowers(page);
+                returnResult = await _bookMarkService.GetMyBookMarksAsync(page);
             }
             catch (Exception ex)
             {
@@ -47,13 +47,13 @@ namespace platform_core_service.Controllers
             return Ok(returnResult);
         }
 
-        [HttpPost("followings/paging")]
-        public async Task<IActionResult> GetFollowings(Page<string> page)
+        [HttpPut]
+        public async Task<IActionResult> UpdateAsync(UpdateBookMark dto)
         {
-            ReturnResult<PagedData<SelectUserFollow, string>> returnResult = new();
+            ReturnResult<SelectBookMark> returnResult = new();
             try
             {
-                returnResult = await _userFollowService.GetFollowings(page);
+                returnResult = await _bookMarkService.UpdateAsync(dto);
             }
             catch (Exception ex)
             {
@@ -63,13 +63,13 @@ namespace platform_core_service.Controllers
             return Ok(returnResult);
         }
 
-        [HttpDelete("{followId}")]
-        public async Task<IActionResult> DeleteById(string followId)
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteById(string id)
         {
             ReturnResult<bool> returnResult = new();
             try
             {
-                returnResult = await _userFollowService.DeleteById(followId);
+                returnResult = await _bookMarkService.DeleteById(id);
             }
             catch (Exception ex)
             {
@@ -85,7 +85,7 @@ namespace platform_core_service.Controllers
             ReturnResult<int> returnResult = new();
             try
             {
-                returnResult = await _userFollowService.BulkDeleteByIds(page.Selected);
+                returnResult = await _bookMarkService.BulkDeleteByIds(page.Selected);
             }
             catch (Exception ex)
             {

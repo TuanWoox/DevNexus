@@ -165,6 +165,79 @@ namespace platform_core_service.Migrations
                     b.ToTable("Answers");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.BookMark", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("OwnerId");
+
+                    b.ToTable("BookMarks");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.BookMarkedItem", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BookMarkId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PostId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("QAPostId")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("QAPostId");
+
+                    b.HasIndex(new[] { "BookMarkId", "PostId" }, "IX_BookMarkedItem_BookMark_Post")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "BookMarkId", "QAPostId" }, "IX_BookMarkedItem_BookMark_QAPost")
+                        .IsUnique();
+
+                    b.ToTable("BookMarkedItems");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Comment", b =>
                 {
                     b.Property<string>("Id")
@@ -990,6 +1063,40 @@ namespace platform_core_service.Migrations
                     b.Navigation("QAPost");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.BookMark", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Owner")
+                        .WithMany("BookMarks")
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.BookMarkedItem", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.BookMark", "BookMark")
+                        .WithMany("BookMarkedStores")
+                        .HasForeignKey("BookMarkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Post", "Post")
+                        .WithMany("BookMarkedStores")
+                        .HasForeignKey("PostId");
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.QAPost", "QAPost")
+                        .WithMany()
+                        .HasForeignKey("QAPostId");
+
+                    b.Navigation("BookMark");
+
+                    b.Navigation("Post");
+
+                    b.Navigation("QAPost");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Comment", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.Answer", "Answer")
@@ -1261,6 +1368,11 @@ namespace platform_core_service.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.BookMark", b =>
+                {
+                    b.Navigation("BookMarkedStores");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Comment", b =>
                 {
                     b.Navigation("Replies");
@@ -1281,6 +1393,8 @@ namespace platform_core_service.Migrations
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
                 {
+                    b.Navigation("BookMarkedStores");
+
                     b.Navigation("PostTags");
                 });
 
@@ -1293,6 +1407,8 @@ namespace platform_core_service.Migrations
                     b.Navigation("BlockRecords");
 
                     b.Navigation("BlockedByRecords");
+
+                    b.Navigation("BookMarks");
 
                     b.Navigation("Communities");
 

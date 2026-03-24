@@ -9,4 +9,4 @@ namespace platform_core_service.Common.Entities.DbEntities
     {
         public ICollection<Answer> Answers { get; set; } = new List<Answer>();
     }
-}
+}

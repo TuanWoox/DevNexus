@@ -27,6 +27,8 @@ namespace platform_core_service.Data
         public DbSet<ProfileBlock> ProfileBlocks { get; set; }
         public DbSet<UserFollow> UserFollows { get; set; }
         public DbSet<FollowRequest> FollowRequests { get; set; }
+        public DbSet<BookMark> BookMarks { get; set; }
+        public DbSet<BookMarkedItem> BookMarkedItems { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
