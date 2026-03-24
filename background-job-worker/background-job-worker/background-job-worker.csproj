@@ -24,7 +24,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\shared-contracts\shared-contracts.csproj" />
+    <ProjectReference Include="..\..\platform-core-service\platform-core-service.Common\platform-core-service.Common.csproj" />
+    <ProjectReference Include="..\..\platform-core-service\platform-core-service.Data\platform-core-service.Data.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,6 @@
 using platform_core_service.Common.Models.DTOs.EntityDTO.UserFollow;
 using platform_core_service.Common.Models.Paging;
-using shared_contracts.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.HelperDTO;
 
 namespace platform_core_service.Common.Interfaces.Services
 {

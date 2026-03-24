@@ -8,7 +8,6 @@ using platform_core_service.Common.Models.DTOs.EntityDTO.Profile;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using ProfileEntity = platform_core_service.Common.Entities.DbEntities.Profile;
-using shared_contracts.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 
 namespace platform_core_service.Business.Services

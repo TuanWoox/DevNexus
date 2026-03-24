@@ -5,7 +5,7 @@ using platform_core_service.Common.Models.DTOs.EntityDTO.FollowRequest;
 using platform_core_service.Common.Models.DTOs.EntityDTO.UserFollow;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
-using shared_contracts.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.HelperDTO;
 
 namespace platform_core_service.Controllers
 {

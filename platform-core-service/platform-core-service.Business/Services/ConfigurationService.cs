@@ -11,7 +11,6 @@ using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
-using shared_contracts.Models.DTOs.HelperDTO;
 using System.Text.Json;
 
 namespace platform_core_service.Business.Services
@@ -160,7 +159,7 @@ namespace platform_core_service.Business.Services
             {
                 var entitiesToDelete = await _context.Settings.Where(s => ids.Contains(s.Id)).ToListAsync();
 
-                if(!entitiesToDelete.Any())
+                if (!entitiesToDelete.Any())
                 {
                     rs.Result = false;
                     rs.Message = ResponseMessage.MESSAGE_ALL_ITEM_NOT_FOUND;

@@ -1,4 +1,4 @@
-namespace shared_contracts.Models.DTOs.HelperDTO
+namespace platform_core_service.Common.Models.DTOs.HelperDTO
 {
     public class ReturnResult<T>
     {

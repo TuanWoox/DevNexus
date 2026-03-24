@@ -1,4 +1,5 @@
 using AutoMapper;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
@@ -9,7 +10,8 @@ using platform_core_service.Common.Models.DTOs.EntityDTO.ProfileBlock;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
-using shared_contracts.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 
 namespace platform_core_service.Business.Services
 {
@@ -18,13 +20,15 @@ namespace platform_core_service.Business.Services
         ApplicationDbContext dbContext,
         IRepository<ProfileBlock, string> repostiory,
         IUserContext userContext,
-        IMapper mapper
+        IMapper mapper,
+        IBackgroundJobClient backgroundJobClient
     ) : IProfileBlockService
     {
         private ApplicationDbContext _dbContext = dbContext;
         private IRepository<ProfileBlock, string> _repository = repostiory;
         private readonly IUserContext _userContext = userContext;
         private readonly IMapper _mapper = mapper;
+        private readonly IBackgroundJobClient _backgroundJobClient = backgroundJobClient;
 
         public async Task<ReturnResult<SelectProfileBlock>> CreateAsync(CreateProfileBlock createProfileBlock)
         {
@@ -57,6 +61,8 @@ namespace platform_core_service.Business.Services
                     returnResult.Message = "This profile is already blocked";
                     return returnResult;
                 }
+
+                _backgroundJobClient.Enqueue<IProfileBlockBackgroundJobs>(x => x.DeleteFollowRequestAndUserFollow(_userContext.ProfileId, createProfileBlock.BlockedProfileId));
 
                 var profileBlock = _mapper.Map<ProfileBlock>(createProfileBlock);
                 profileBlock.OwnerId = _userContext.ProfileId;

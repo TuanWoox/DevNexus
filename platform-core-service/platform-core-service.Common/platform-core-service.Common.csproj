@@ -17,8 +17,4 @@
     <PackageReference Include="System.Linq.Dynamic.Core" Version="1.7.1" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\shared-contracts\shared-contracts.csproj" />
-  </ItemGroup>
-
 </Project>

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Vote;
 using platform_core_service.Common.Utils.Extensions;
-using shared_contracts.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.HelperDTO;
 
 namespace platform_core_service.Controllers
 {
