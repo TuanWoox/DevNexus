@@ -62,7 +62,7 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                _backgroundJobClient.Enqueue<IProfileBlockBackgroundJobs>(x => x.DeleteFollowRequestAndUserFollow(_userContext.ProfileId, createProfileBlock.BlockedProfileId));
+           
 
                 var profileBlock = _mapper.Map<ProfileBlock>(createProfileBlock);
                 profileBlock.OwnerId = _userContext.ProfileId;
@@ -71,6 +71,9 @@ namespace platform_core_service.Business.Services
                 if (savedResult > 0)
                 {
                     returnResult.Result = _mapper.Map<SelectProfileBlock>(profileBlock);
+                    //After that run background job to delete userfollow and follow request
+                    _backgroundJobClient.Enqueue<IProfileBlockBackgroundJobs>(x => x.DeleteFollowRequestAndUserFollow(_userContext.ProfileId, 
+                                                                                createProfileBlock.BlockedProfileId));
                 }
                 else returnResult.Message = "Failed to save changes. Please try again later.";
             }
