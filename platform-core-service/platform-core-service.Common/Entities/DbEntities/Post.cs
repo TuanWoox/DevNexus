@@ -32,5 +32,7 @@ namespace platform_core_service.Common.Entities.DbEntities
         public PostType PostType { get; set; }
 
         public ICollection<PostTag> PostTags { get; set; } = new List<PostTag>();
+
+        public ICollection<BookMarkedItem> BookMarkedStores { get; set; } = [];
     }
 }
