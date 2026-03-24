@@ -7,7 +7,7 @@ using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityModerator;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
-using shared_contracts.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.HelperDTO;
 using CommunityModeratorEntity = platform_core_service.Common.Entities.DbEntities.CommunityModerator;
 
 namespace platform_core_service.Business.Services

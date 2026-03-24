@@ -13,9 +13,8 @@ using platform_core_service.Common.Models.DTOs.EntityDTO.Account;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
-using shared_contracts.Interfaces;
-using shared_contracts.Models.DTOs.HelperDTO;
 using System.Net.Http.Json;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 
 namespace platform_core_service.Business.Services
 {
@@ -327,7 +326,7 @@ namespace platform_core_service.Business.Services
                                                      .Replace("{currentYear}", DateTime.UtcNow.Year.ToString());
 
                 // Enqueue background job
-                var jobId = _backgroundJobClient.Enqueue<IEmailService>(x => x.SendAsync(user.Email, subject, emailBody));
+                var jobId = _backgroundJobClient.Enqueue<IEmailBackgroundJobs>(x => x.SendAsync(user.Email, subject, emailBody));
 
                 // Check if job is enqueue (return true if job is enqueue)
                 if (string.IsNullOrEmpty(jobId))
@@ -431,7 +430,7 @@ namespace platform_core_service.Business.Services
                                                      .Replace("{currentYear}", DateTime.UtcNow.Year.ToString());
 
                 // Enqueue background job
-                var jobId = _backgroundJobClient.Enqueue<IEmailService>(x => x.SendAsync(user.Email!, subject, emailBody));
+                var jobId = _backgroundJobClient.Enqueue<IEmailBackgroundJobs>(x => x.SendAsync(user.Email!, subject, emailBody));
 
                 // Check if job is enqueue (return true if job is enqueue)
                 if (string.IsNullOrEmpty(jobId))

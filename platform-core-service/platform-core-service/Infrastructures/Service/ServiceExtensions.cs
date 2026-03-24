@@ -7,7 +7,7 @@ using Microsoft.OpenApi;
 using Newtonsoft.Json;
 using platform_core_service.Common.Entities.Identities;
 using platform_core_service.Data;
-using shared_contracts.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.HelperDTO;
 namespace platform_core_service.Infrastructures.Service;
 
 public static class ServiceExtensions

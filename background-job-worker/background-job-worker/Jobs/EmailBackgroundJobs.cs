@@ -1,18 +1,18 @@
 
-using shared_contracts.Interfaces;
-using shared_contracts.Models.DTOs.HelperDTO;
 using background_job_worker.DTOs;
 using MimeKit;
 using MailKit.Net.Smtp;
 using MailKit.Security;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
+using platform_core_service.Common.Models.DTOs.HelperDTO;
 
 namespace background_job_worker.Jobs
 {
-    public class EmailService : IEmailService
+    public class EmailBackgroundJobs : IEmailBackgroundJobs
     {
         private readonly IConfiguration _config;
 
-        public EmailService(IConfiguration config)
+        public EmailBackgroundJobs(IConfiguration config)
         {
             _config = config;
         }

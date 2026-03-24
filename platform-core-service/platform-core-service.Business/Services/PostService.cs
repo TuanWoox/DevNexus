@@ -11,7 +11,6 @@ using platform_core_service.Data;
 using PostEntity = platform_core_service.Common.Entities.DbEntities.Post;
 using TagEntity = platform_core_service.Common.Entities.DbEntities.Tag;
 using PostTagEntity = platform_core_service.Common.Entities.DbEntities.PostTag;
-using shared_contracts.Models.DTOs.HelperDTO;
 
 namespace platform_core_service.Business.Services
 {

@@ -8,7 +8,7 @@ using platform_core_service.Common.Models.DTOs.EntityDTO.QAPost;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
-using shared_contracts.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.HelperDTO;
 using PostTagEntity = platform_core_service.Common.Entities.DbEntities.PostTag;
 using TagEntity = platform_core_service.Common.Entities.DbEntities.Tag;
 

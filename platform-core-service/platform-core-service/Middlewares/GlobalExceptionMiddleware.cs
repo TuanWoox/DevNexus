@@ -1,6 +1,5 @@
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Utils.Extensions;
-using shared_contracts.Models.DTOs.HelperDTO;
 using System.Net;
 using System.Text.Json;
 
