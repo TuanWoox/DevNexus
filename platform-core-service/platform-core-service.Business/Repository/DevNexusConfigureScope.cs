@@ -29,6 +29,7 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IQAPostService, QAPostService>();
             services.AddScoped<IAnswerService, AnswerService>();
             services.AddScoped<IVoteService, VoteService>();
+            services.AddScoped<ICommentService, CommentService>();
             services.AddScoped<ICommunityService, CommunityService>();
             services.AddScoped<ICommunityModeratorService, CommunityModeratorService>();
             services.AddScoped<ICommunityMemberService, CommunityMemberService>();
