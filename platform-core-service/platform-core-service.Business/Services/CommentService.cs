@@ -44,9 +44,20 @@ namespace platform_core_service.Business.Services
                 }
 
                 // Step 2: Validate at least one parent is provided
-                if (string.IsNullOrEmpty(createDTO.PostId) && string.IsNullOrEmpty(createDTO.AnswerId))
+
+                var hasPost = !string.IsNullOrEmpty(createDTO.PostId);
+                var hasAnswer = !string.IsNullOrEmpty(createDTO.AnswerId);
+                var hasReply = !string.IsNullOrEmpty(createDTO.ReplyToCommentId);
+                
+                if (hasPost && hasAnswer)
                 {
-                    result.Message = "Comment must be associated with a Post or Answer";
+                    result.Message = "Comment cannot be associated with both a Post and an Answer";
+                    return result;
+                }
+                // If this is not a reply, it must be associated with exactly one parent (Post or Answer)
+                if (!hasReply && !hasPost && !hasAnswer)
+                {
+                    result.Message = "Comment must be associated with a Post or Answer, or reply to another comment";
                     return result;
                 }
 
@@ -121,8 +132,8 @@ namespace platform_core_service.Business.Services
 
                 // Step 2: Load comment with author and replies (public read - no ownership check)
                 var comment = await _context.Comments
-                    .Include(c => c.Author)
                     .Include(c => c.Replies)
+                        .ThenInclude(r => r.Author)
                     .FirstOrDefaultAsync(c => c.Id == commentId);
 
                 if (comment == null)
@@ -315,9 +326,16 @@ namespace platform_core_service.Business.Services
                     result.Message = "You do not have permission to delete this comment";
                     return result;
                 }
-
+                comment.Deleted = true;
+                if (comment.Replies != null && comment.Replies.Any())
+                {
+                    foreach (var reply in comment.Replies)
+                    {
+                        reply.Deleted = true;
+                    }
+                }
                 // Step 4: Delete comment (cascades to replies via soft delete)
-                _context.Comments.Remove(comment);
+                _context.Comments.Update(comment);
                 await _context.SaveChangesAsync();
 
                 result.Result = true;
