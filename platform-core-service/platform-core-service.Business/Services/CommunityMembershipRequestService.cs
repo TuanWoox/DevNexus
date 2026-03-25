@@ -238,5 +238,84 @@ namespace platform_core_service.Business.Services
             }
             return result;
         }
+
+        public async Task<ReturnResult<int>> BulkApproveRequestByIds(string communityId, List<string> ids)
+        {
+            ReturnResult<int> returnResult = new();
+            try
+            {
+                var hasAuthorization = await IsOwnerOrModeratorAsync(communityId, _userContext.ProfileId);
+                if (hasAuthorization)
+                {
+                    returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
+                    return returnResult;
+                }
+                var existingRequest = await _context.CommunityMembershipRequests.Where(x => x.CommunityId == communityId
+                                                                                    && ids.Contains(x.Id))
+                                                                                    .ToListAsync();
+
+                if (existingRequest.Count == 0)
+                {
+                    returnResult.Message = ResponseMessage.MESSAGE_ALL_ITEM_NOT_FOUND;
+                    return returnResult;
+                }
+                //Select => IEnumarable => List
+                var newMembers = existingRequest.Select(x => new CommunityMember
+                {
+                    CommunityId = x.CommunityId,
+                    ProfileId = x.RequesterId
+                }).ToList();
+
+                _context.CommunityMembershipRequests.RemoveRange(existingRequest);
+                _context.CommunityMembers.AddRange(newMembers);
+                if (await _context.SaveChangesAsync() > 0)
+                {
+                    returnResult.Result = newMembers.Count;
+                }
+                else returnResult.Message = ResponseMessage.MESSAGE_OPERATION_CANT_BE_DONE;
+
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug($"Error bulk approve request {ex.Message}");
+                returnResult.Message = ex.Message;
+            }
+            return returnResult;
+        }
+
+        public async Task<ReturnResult<int>> BulkApproveRejectByIds(string communityId, List<string> ids)
+        {
+            ReturnResult<int> returnResult = new();
+            try
+            {
+                var hasAuthorization = await IsOwnerOrModeratorAsync(communityId, _userContext.ProfileId);
+                if (hasAuthorization)
+                {
+                    returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
+                    return returnResult;
+                }
+                var existingRequest = await _context.CommunityMembershipRequests.Where(x => x.CommunityId == communityId
+                                                                                    && ids.Contains(x.Id))
+                                                                                    .ToListAsync();
+
+                if(existingRequest.Count == 0 )
+                {
+                    returnResult.Message = ResponseMessage.MESSAGE_ALL_ITEM_NOT_FOUND;
+                    return returnResult;
+                }
+                _context.CommunityMembershipRequests.RemoveRange(existingRequest);
+                if (await _context.SaveChangesAsync() > 0)
+                {
+                    returnResult.Result = existingRequest.Count;
+                }
+                else returnResult.Message = ResponseMessage.MESSAGE_OPERATION_CANT_BE_DONE;
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug($"Error bulk approve request {ex.Message}");
+                returnResult.Message = ex.Message;
+            }
+            return returnResult;
+        }
     }
 }

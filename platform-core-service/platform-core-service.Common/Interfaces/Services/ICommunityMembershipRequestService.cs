@@ -10,5 +10,7 @@ namespace platform_core_service.Common.Interfaces.Services
         Task<ReturnResult<SelectCommunityMemberDTO>> ApproveRequestAsync(string requestId);
         Task<ReturnResult<bool>> RejectRequestAsync(string requestId);
         Task<ReturnResult<PagedData<SelectCommunityMembershipRequestDTO, string>>> GetPendingRequestsAsync(string communityId, Page<string> page);
+        Task<ReturnResult<int>> BulkApproveRequestByIds(string communityId,List<string> ids);
+        Task<ReturnResult<int>> BulkApproveRejectByIds(string communityId,List<string> ids);
     }
 }
