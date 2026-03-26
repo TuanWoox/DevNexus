@@ -516,6 +516,9 @@ namespace platform_core_service.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("CommunityId")
+                        .HasColumnType("text");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasMaxLength(50000)
@@ -560,6 +563,8 @@ namespace platform_core_service.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AuthorId");
+
+                    b.HasIndex("CommunityId");
 
                     b.HasIndex("Deleted");
 
@@ -1249,7 +1254,13 @@ namespace platform_core_service.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
+                        .WithMany("Posts")
+                        .HasForeignKey("CommunityId");
+
                     b.Navigation("Author");
+
+                    b.Navigation("Community");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostTag", b =>
@@ -1389,6 +1400,8 @@ namespace platform_core_service.Migrations
                     b.Navigation("MembershipRequests");
 
                     b.Navigation("Moderators");
+
+                    b.Navigation("Posts");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>

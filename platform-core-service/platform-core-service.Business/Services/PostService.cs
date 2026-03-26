@@ -11,6 +11,8 @@ using platform_core_service.Data;
 using PostEntity = platform_core_service.Common.Entities.DbEntities.Post;
 using TagEntity = platform_core_service.Common.Entities.DbEntities.Tag;
 using PostTagEntity = platform_core_service.Common.Entities.DbEntities.PostTag;
+using platform_core_service.Common.Interfaces.Helper;
+using System.Text.RegularExpressions;
 
 namespace platform_core_service.Business.Services
 {
@@ -20,17 +22,21 @@ namespace platform_core_service.Business.Services
         private readonly IMapper _mapper;
         private readonly IUserContext _userContext;
         private readonly IRepository<PostEntity, string> _postRepository;
+        private readonly ISocialGuardService _socialGuardService;
 
         public PostService(
             ApplicationDbContext context,
             IMapper mapper,
             IUserContext userContext,
-            IRepository<PostEntity, string> postRepository)
+            IRepository<PostEntity, string> postRepository,
+            ISocialGuardService socialGuardService
+        )
         {
             _context = context;
             _mapper = mapper;
             _userContext = userContext;
             _postRepository = postRepository;
+            _socialGuardService = socialGuardService;
         }
 
         public async Task<ReturnResult<SelectPostDTO>> CreateAsync(CreatePostDTO createDTO)
@@ -38,24 +44,16 @@ namespace platform_core_service.Business.Services
             var result = new ReturnResult<SelectPostDTO>();
             try
             {
-                // Step 1: Validate input
-                if (createDTO == null)
+                var businessLogicResult = await _socialGuardService.CheckAddingPost(createDTO);
+                if (businessLogicResult.Message != null)
                 {
-                    result.Message = "Post data is required";
-                    return result;
-                }
-
-                // Step 2: Check authentication
-                var profileId = _userContext.ProfileId;
-                if (string.IsNullOrEmpty(profileId))
-                {
-                    result.Message = "User profile not found";
+                    result.Message = businessLogicResult.Message;
                     return result;
                 }
 
                 // Step 3: Map DTO to entity
                 var post = _mapper.Map<PostEntity>(createDTO);
-                post.AuthorId = profileId;
+                post.AuthorId = _userContext.ProfileId;
                 post.Id = Guid.NewGuid().ToString();
 
                 // Step 4: Auto-generate slug if not provided, append post ID for uniqueness
@@ -332,10 +330,9 @@ namespace platform_core_service.Business.Services
             var slug = title
                 .ToLower()
                 .Trim()
-                .Replace(" ", "-")
-                .Replace("--", "-");
+                .Replace(" ", "-");
 
-            return slug;
+            return Regex.Replace(slug, "-+", "-");
         }
 
         // Helper method to create or get tags

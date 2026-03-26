@@ -31,8 +31,8 @@ namespace platform_core_service.Middlewares
 
                 if (isDeveloper)
                 {
-                    var hasProfile = context.User.Claims.Any(c => c.Type == "profileId");
-                    if (!hasProfile)
+                    var profileClaim = context.User.Claims.FirstOrDefault(c => c.Type == "profileId");
+                    if (profileClaim == null || string.IsNullOrEmpty(profileClaim.Value))
                     {
                         context.Response.StatusCode = 200;
                         await context.Response.WriteAsJsonAsync(new
