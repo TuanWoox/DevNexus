@@ -22,5 +22,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Post
         public string? Slug { get; set; }
 
         public List<string> TagNames { get; set; } = new List<string>();
+
+        public string? CommunityId { get; set; }
     }
 }

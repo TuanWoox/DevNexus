@@ -34,5 +34,10 @@ namespace platform_core_service.Common.Entities.DbEntities
         public ICollection<PostTag> PostTags { get; set; } = new List<PostTag>();
 
         public ICollection<BookMarkedItem> BookMarkedStores { get; set; } = [];
+
+        [ForeignKey(nameof(Community))]
+        public string? CommunityId { get; set; } = null;
+        [JsonIgnore]
+        public Community? Community { get; set; }
     }
 }
