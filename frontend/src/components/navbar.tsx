@@ -3,8 +3,11 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useTheme } from 'next-themes'
-import { Hexagon, Menu, Sun, Moon, Sparkles } from 'lucide-react'
+import { Hexagon, Menu, Sun, Moon, Sparkles, LogOut, User, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useSelector } from 'react-redux'
+import { RootState } from '@/store/store'
+import useLogout from '@/hooks/use-logout'
 import {
     Sheet,
     SheetContent,
@@ -23,6 +26,8 @@ const navLinks = [
 export function Navbar() {
     const { theme, setTheme } = useTheme()
     const [isOpen, setIsOpen] = useState(false)
+    const { isAuthenticated, user } = useSelector((state: RootState) => state.auth)
+    const { logout, isLoggingOut } = useLogout()
 
     return (
         <header className="sticky top-0 z-50 h-14 backdrop-blur-md border-b">
@@ -61,27 +66,54 @@ export function Navbar() {
                             variant="ghost"
                             size="icon"
                             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                            className="dark:text-slate-300 text-slate-700 "
+                            className="btn-ghost "
                         >
                             <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                             <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                             <span className="sr-only">Toggle theme</span>
                         </Button>
 
-                        <Button
-                            variant="ghost"
-                            asChild
-                            className="border dark:border-slate-700 border-gray-200 dark:text-slate-300 text-slate-700 dark:hover:bg-slate-800 hover:bg-gray-100 rounded-lg"
-                        >
-                            <Link href="/login">Sign In</Link>
-                        </Button>
+                        {isAuthenticated ? (
+                            <div className="flex items-center gap-4 border-l">
+                                {/* Giao diện User Name */}
+                                <div className="flex items-center cursor-pointer">
+                                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <User className="h-4 w-4 text-primary" />
+                                    </div>
+                                    <span className="text-sm font-semibold whitespace-nowrap">
+                                        @{user?.userName || 'Developer'}
+                                    </span>
+                                </div>
 
-                        <Button asChild className="text-white rounded-lg gap-2">
-                            <Link href="/register">
-                                <Sparkles className="h-4 w-4" />
-                                Get Started
-                            </Link>
-                        </Button>
+                                {/* Nút Logout Desktop */}
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => logout()}
+                                    disabled={isLoggingOut}
+                                    className="text-destructive transition-colors gap-2 btn-ghost"
+                                >
+                                    {isLoggingOut ? <Loader2 className="h-4 w-4 my-auto animate-spin" /> : <LogOut className="h-4 w-4 my-auto" />}
+                                    Log out
+                                </Button>
+                            </div>
+                        ) : (
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    asChild
+                                    className="border dark:border-slate-700 border-gray-200 dark:text-slate-300 text-slate-700 dark:hover:bg-slate-800 hover:bg-gray-100 rounded-lg"
+                                >
+                                    <Link href="/login">Sign In</Link>
+                                </Button>
+
+                                <Button asChild className="text-white rounded-lg gap-2">
+                                    <Link href="/register">
+                                        <Sparkles className="h-4 w-4" />
+                                        Get Started
+                                    </Link>
+                                </Button>
+                            </>
+                        )}
                     </div>
 
                     {/* Mobile Menu */}
@@ -110,7 +142,7 @@ export function Navbar() {
                             </SheetTrigger>
                             <SheetContent
                                 side="right"
-                                className="w-[300px] sm:w-[400px] bg-card border-l border-default p-6"
+                                className="w-75 sm:w-100 bg-card border-l border-default p-6"
                             >
                                 <div className="flex flex-col h-full">
                                     <SheetHeader className="mb-8 text-left">
@@ -154,15 +186,46 @@ export function Navbar() {
                                     <div className="divider my-6" />
 
                                     <div className="flex flex-col gap-3">
-                                        <Button asChild className="w-full btn-ghost justify-center py-6 text-white">
-                                            <Link href="/login">Sign In</Link>
-                                        </Button>
-                                        <Button asChild className="w-full btn-ai justify-center gap-2 py-6 text-white">
-                                            <Link href="/register">
-                                                <Sparkles className="h-5 w-5" />
-                                                Get Started Free
-                                            </Link>
-                                        </Button>
+                                        {isAuthenticated ? (
+                                            <>
+                                                {/* Giao diện tên user ở Mobile */}
+                                                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl mb-2">
+                                                    <div className="h-10 w-10 rounded-full bg-primary/20 flex shrink-0 items-center justify-center">
+                                                        <User className="h-5 w-5 text-primary" />
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-semibold text-heading">
+                                                            @{user?.userName || 'Developer'}
+                                                        </span>
+                                                        <span className="text-xs text-muted-foreground uppercase py-0.5">
+                                                            {user?.roles?.[0] || 'Member'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <Button
+                                                    variant="ghost"
+                                                    className="w-full text-destructive border border-destructive/20 hover:bg-destructive/10 hover:text-destructive justify-center py-6"
+                                                    onClick={() => logout()}
+                                                    disabled={isLoggingOut}
+                                                >
+                                                    {isLoggingOut ? <Loader2 className="h-5 w-5 my-auto animate-spin mr-2" /> : <LogOut className="h-5 w-5 mr-2" />}
+                                                    Log out
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Button asChild className="w-full btn-ghost justify-center py-6 text-white">
+                                                    <Link href="/login">Sign In</Link>
+                                                </Button>
+                                                <Button asChild className="w-full btn-ai justify-center gap-2 py-6 text-white">
+                                                    <Link href="/register">
+                                                        <Sparkles className="h-5 w-5" />
+                                                        Get Started Free
+                                                    </Link>
+                                                </Button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </SheetContent>
