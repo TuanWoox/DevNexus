@@ -35,7 +35,7 @@ export function Providers({ children }: ProvidersProps) {
           <QueryClientProvider client={queryClient}>
             {children}
             {/* Component hiển thị Devtools ở góc màn hình để debug React Query */}
-            {/* <ReactQueryDevtools initialIsOpen={false} position="bottom" /> */}
+            <ReactQueryDevtools initialIsOpen={false} position="bottom" />
             <Toaster richColors expand={false} position="top-right" closeButton />
           </QueryClientProvider>
         </AuthProvider>

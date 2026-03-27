@@ -1,5 +1,4 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { TokenResponseDTO } from "@/types/helper/token-response-dto";
 import { jwtDecode } from "jwt-decode";
 
 /* =========================

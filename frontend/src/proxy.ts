@@ -106,7 +106,7 @@ export function proxy(request: NextRequest) {
         // Hợp lệ, cho qua
         return NextResponse.next();
 
-    } catch (error) {
+    } catch {
         // Token bị lỗi định dạng hoặc bị giả mạo sửa đổi payload -> Xóa token và bắt đăng nhập lại
         const response = NextResponse.redirect(new URL('/login', request.url));
         response.cookies.delete('accessToken');

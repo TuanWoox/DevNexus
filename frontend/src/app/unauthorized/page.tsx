@@ -61,10 +61,10 @@ export default function UnauthorizedPage() {
                                 <pre>
                                     <code>
                                         {`{\n  `}
-                                        <span className="syntax-keyword">"status"</span>: <span className="syntax-number">403</span>{`,\n  `}
-                                        <span className="syntax-keyword">"error"</span>: <span className="syntax-string">"Forbidden"</span>{`,\n  `}
-                                        <span className="syntax-keyword">"message"</span>: <span className="syntax-string">"Insufficient permissions to execute this action."</span>{`,\n  `}
-                                        <span className="syntax-keyword">"roleRequired"</span>: [<span className="syntax-string">"ADMIN"</span>, <span className="syntax-string">"PRO_MEMBER"</span>]{`\n}`}
+                                        <span className="syntax-keyword">&quot;status&quot;</span>: <span className="syntax-number">403</span>{`,\n  `}
+                                        <span className="syntax-keyword">&quot;error&quot;</span>: <span className="syntax-string">&quot;Forbidden&quot;</span>{`,\n  `}
+                                        <span className="syntax-keyword">&quot;message&quot;</span>: <span className="syntax-string">&quot;Insufficient permissions to execute this action.&quot;</span>{`,\n  `}
+                                        <span className="syntax-keyword">&quot;roleRequired&quot;</span>: [<span className="syntax-string">&quot;ADMIN&quot;</span>, <span className="syntax-string">&quot;PRO_MEMBER&quot;</span>]{`\n}`}
                                     </code>
                                 </pre>
                             </div>
