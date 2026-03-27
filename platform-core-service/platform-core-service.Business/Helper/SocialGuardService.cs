@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Common.Attributes;
@@ -9,15 +14,10 @@ using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace platform_core_service.Business.Helper
 {
-    public class SocialGuardService 
+    public class SocialGuardService
     (
         ApplicationDbContext applicationDbContext,
         IUserContext userContext
@@ -38,7 +38,7 @@ namespace platform_core_service.Business.Helper
                     return returnResult;
                 }
 
-                if(!string.IsNullOrEmpty(createPostDTO.CommunityId))
+                if (!string.IsNullOrEmpty(createPostDTO.CommunityId))
                 {
                     returnResult = await CheckBelongToCommunity(createPostDTO.CommunityId);
                     if (returnResult.Message != null) return returnResult;
@@ -52,7 +52,7 @@ namespace platform_core_service.Business.Helper
             }
             return returnResult;
         }
-        public async Task<ReturnResult<bool>> CheckCanInteractWithContent([TrimmedRequired] string authorId, string? communityId = null)
+        public async Task<ReturnResult<bool>> CheckVisibleContent([TrimmedRequired] string authorId, string? communityId = null)
         {
             ReturnResult<bool> returnResult = new();
             try
@@ -63,9 +63,13 @@ namespace platform_core_service.Business.Helper
                     if (returnResult.Message != null) return returnResult;
                 }
 
-                // Run block and follow checks in parallel — they hit different tables
                 var blockTask = CheckProfileBlocking(authorId);
-                var followTask = CheckFollowProfile(authorId);
+
+                // Only check follow when not in a community
+                var followTask = string.IsNullOrEmpty(communityId)
+                    ? CheckFollowProfile(authorId)
+                    : Task.FromResult(new ReturnResult<bool>());
+
                 await Task.WhenAll(blockTask, followTask);
 
                 if (blockTask.Result.Message != null)
@@ -73,7 +77,8 @@ namespace platform_core_service.Business.Helper
                     returnResult.Message = blockTask.Result.Message;
                     return returnResult;
                 }
-                if (followTask.Result.Message != null)
+
+                if (string.IsNullOrEmpty(communityId) && followTask.Result.Message != null)
                 {
                     returnResult.Message = followTask.Result.Message;
                     return returnResult;
@@ -142,7 +147,7 @@ namespace platform_core_service.Business.Helper
                 }
                 returnResult.Result = true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 DevNexusLogger.Instance.Debug(ex.Message);
             }
