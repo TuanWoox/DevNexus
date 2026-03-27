@@ -52,7 +52,7 @@ namespace platform_core_service.Business.Helper
             }
             return returnResult;
         }
-        public async Task<ReturnResult<bool>> CheckCanInteractWithContent([TrimmedRequired] string authorId, string? communityId = null)
+        public async Task<ReturnResult<bool>> CheckVisibleContent([TrimmedRequired] string authorId, string? communityId = null)
         {
             ReturnResult<bool> returnResult = new();
             try

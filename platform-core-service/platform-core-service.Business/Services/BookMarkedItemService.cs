@@ -78,7 +78,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 // 5. Check access rights
-                var accessCheck = await _socialGuardService.CheckCanInteractWithContent(post.AuthorId, post.CommunityId);
+                var accessCheck = await _socialGuardService.CheckVisibleContent(post.AuthorId, post.CommunityId);
                 if (accessCheck.Message != null)
                 {
                     returnResult.Message = accessCheck.Message;
