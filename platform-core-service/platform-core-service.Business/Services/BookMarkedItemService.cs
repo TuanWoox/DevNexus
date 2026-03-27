@@ -4,6 +4,7 @@ using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces.Contexts;
+using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.BookMarkedItem;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
@@ -17,13 +18,15 @@ namespace platform_core_service.Business.Services
         ApplicationDbContext dbContext,
         IMapper mapper,
         IRepository<BookMarkedItem, string> repository,
-        IUserContext userContext
+        IUserContext userContext,
+        ISocialGuardService socialGuardService
     ) : IBookMarkItemService
     {
         private readonly ApplicationDbContext _dbContext = dbContext;
         private readonly IMapper _mapper = mapper;
         private readonly IRepository<BookMarkedItem, string> _repository = repository;
         private readonly IUserContext _userContext = userContext;
+        private readonly ISocialGuardService _socialGuardService = socialGuardService;
 
         public async Task<ReturnResult<SelectBookMarkedItem>> CreateAsync(CreateBookMarkedItem dto)
         {
@@ -33,7 +36,6 @@ namespace platform_core_service.Business.Services
                 // 1. Validate exactly one target ID is provided
                 var hasPost = !string.IsNullOrEmpty(dto.PostId);
                 var hasQAPost = !string.IsNullOrEmpty(dto.QAPostId);
-
                 if (hasPost == hasQAPost) // both true or both false
                 {
                     returnResult.Message = "Provide exactly one target ID: either PostId or QAPostId.";
@@ -44,7 +46,6 @@ namespace platform_core_service.Business.Services
                 var bookMark = await _dbContext.BookMarks.Where(x => x.Id == dto.BookMarkId && x.OwnerId == _userContext.ProfileId)
                                                         .AsNoTracking()
                                                         .FirstOrDefaultAsync();
-
                 if (bookMark == null)
                 {
                     returnResult.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_FOUND, "bookmark", dto.BookMarkId);
@@ -54,68 +55,37 @@ namespace platform_core_service.Business.Services
                 // 3. Load the target post (Post or QAPost both inherit Post)
                 string targetPostId = hasPost ? dto.PostId! : dto.QAPostId!;
 
-                var post = await _dbContext.Posts
-                    .Where(x => x.Id == targetPostId)
-                    .Include(x => x.Author)
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync();
-
+                var post = await _dbContext.Posts.Where(x => x.Id == targetPostId)
+                                                .Include(x => x.Author)
+                                                .AsNoTracking()
+                                                .FirstOrDefaultAsync();
                 if (post == null)
                 {
                     returnResult.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_FOUND, "post", targetPostId);
                     return returnResult;
                 }
 
-                string authorId = post.AuthorId;
-
-                // 4. Block guard — reject if any block exists between caller and post author
-                var blockExists = await _dbContext.ProfileBlocks
-                    .Where(x =>
-                        (x.OwnerId == _userContext.ProfileId && x.BlockedProfileId == authorId) ||
-                        (x.OwnerId == authorId && x.BlockedProfileId == _userContext.ProfileId))
-                    .AsNoTracking()
-                    .AnyAsync();
-
-                if (blockExists)
-                {
-                    returnResult.Message = "You cannot bookmark this post.";
-                    return returnResult;
-                }
-
-                // 5. Private profile guard — if author is private, caller must follow them
-                if (post.Author.IsPrivate && authorId != _userContext.ProfileId)
-                {
-                    var isFollowing = await _dbContext.UserFollows
-                        .Where(x => x.OwnerId == _userContext.ProfileId && x.FollowingProfileId == authorId)
-                        .AsNoTracking()
-                        .AnyAsync();
-
-                    if (!isFollowing)
-                    {
-                        returnResult.Message = "This profile is private.";
-                        return returnResult;
-                    }
-                }
-
-                // TODO: PostGroup guard — when a post belongs to a group (PostGroup/Community),
-                // the current user must be a member of that group to bookmark it.
-                // This check is not yet implemented pending the PostGroup feature.
-
-                // 6. Duplicate check
+                // 4. Duplicate check — scoped to user's own bookmark, safe to run before access guard
                 var duplicate = await _dbContext.BookMarkedItems
-                    .Where(x =>
-                        x.BookMarkId == dto.BookMarkId &&
-                        (hasPost ? x.PostId == dto.PostId : x.QAPostId == dto.QAPostId))
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync();
-
-                if (duplicate != null)
+                                                .Where(x => x.BookMarkId == dto.BookMarkId &&
+                                                            (hasPost ? x.PostId == dto.PostId : x.QAPostId == dto.QAPostId))
+                                                .AsNoTracking()
+                                                .AnyAsync();
+                if (duplicate)
                 {
                     returnResult.Message = "This item is already in the bookmark.";
                     return returnResult;
                 }
 
-                // 7. Save
+                // 5. Check access rights
+                var accessCheck = await _socialGuardService.CheckCanInteractWithContent(post.AuthorId, post.CommunityId);
+                if (accessCheck.Message != null)
+                {
+                    returnResult.Message = accessCheck.Message;
+                    return returnResult;
+                }
+
+                // 5. Save
                 var item = _mapper.Map<BookMarkedItem>(dto);
                 await _dbContext.BookMarkedItems.AddAsync(item);
 
@@ -143,10 +113,9 @@ namespace platform_core_service.Business.Services
             try
             {
                 // Ensure the caller owns this bookmark
-                var bookMarkExists = await _dbContext.BookMarks
-                    .Where(x => x.Id == bookMarkId && x.OwnerId == _userContext.ProfileId)
-                    .AsNoTracking()
-                    .AnyAsync();
+                var bookMarkExists = await _dbContext.BookMarks.Where(x => x.Id == bookMarkId && x.OwnerId == _userContext.ProfileId)
+                                                            .AsNoTracking()
+                                                            .AnyAsync();
 
                 if (!bookMarkExists)
                 {
@@ -154,12 +123,11 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                var query = _dbContext.BookMarkedItems
-                    .Where(x => x.BookMarkId == bookMarkId)
-                    .Include(x => x.Post)
-                    .Include(x => x.QAPost)
-                    .AsNoTracking()
-                    .AsQueryable();
+                var query = _dbContext.BookMarkedItems.Where(x => x.BookMarkId == bookMarkId)
+                                                    .Include(x => x.Post)
+                                                    .Include(x => x.QAPost)
+                                                    .AsNoTracking()
+                                                    .AsQueryable();
 
                 returnResult.Result = await _repository.GetPagingAsync<Page<string>, SelectBookMarkedItem>(query, page);
             }

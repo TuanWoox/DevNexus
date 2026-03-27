@@ -23,6 +23,8 @@ namespace platform_core_service.Business.Mappings
             CreateMap<PostEntity, SelectPostDTO>()
                 .ForMember(dest => dest.TagNames,
                     opt => opt.MapFrom(src => src.PostTags.Select(pt => pt.Tag.Name).ToList()));
+
+            CreateMap<PostEntity, SelectPartialPost>();
         }
     }
 }

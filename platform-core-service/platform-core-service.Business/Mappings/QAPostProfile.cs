@@ -15,8 +15,10 @@ namespace platform_core_service.Business.Mappings
                 .IncludeBase<UpdatePostDTO, Post>();
             CreateMap<QAPost, SelectQAPostDTO>()
                 .IncludeBase<Post, SelectPostDTO>()
-                .ForMember(dest => dest.AnswerCount, 
+                .ForMember(dest => dest.AnswerCount,
                     opt => opt.MapFrom(src => src.Answers != null ? src.Answers.Count : 0));
+            CreateMap<QAPost, SelectPartialQA>()
+                .IncludeBase<Post, SelectPartialPost>();
         }
     }
 }
