@@ -1,4 +1,5 @@
 import { configureStore, createReducer } from '@reduxjs/toolkit';
+import authReducer from './slices/auth-slice';
 
 // Placeholder reducer — thay thế bằng các slice thực khi build features
 const placeholderReducer = createReducer({}, () => {});
@@ -7,6 +8,7 @@ const placeholderReducer = createReducer({}, () => {});
 export const store = configureStore({
   reducer: {
     placeholder: placeholderReducer,
+    auth: authReducer,
   },
   devTools: process.env.NODE_ENV !== 'production',
 });

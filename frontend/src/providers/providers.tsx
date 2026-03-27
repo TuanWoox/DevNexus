@@ -7,6 +7,7 @@ import { store } from '@/store/store';
 import { useState, ReactNode } from 'react';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from 'sonner';
+import { AuthProvider } from './auth-provider';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -30,12 +31,14 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <ThemeProvider>
       <ReduxProvider store={store}>
-        <QueryClientProvider client={queryClient}>
-          {children}
-          {/* Component hiển thị Devtools ở góc màn hình để debug React Query */}
-          <ReactQueryDevtools initialIsOpen={false} position="bottom" />
-          <Toaster richColors expand={false} position="top-right" closeButton />
-        </QueryClientProvider>
+        <AuthProvider>
+          <QueryClientProvider client={queryClient}>
+            {children}
+            {/* Component hiển thị Devtools ở góc màn hình để debug React Query */}
+            <ReactQueryDevtools initialIsOpen={false} position="bottom" />
+            <Toaster richColors expand={false} position="top-right" closeButton />
+          </QueryClientProvider>
+        </AuthProvider>
       </ReduxProvider>
     </ThemeProvider>
   );
