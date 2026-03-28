@@ -9,6 +9,11 @@ using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using ProfileEntity = platform_core_service.Common.Entities.DbEntities.Profile;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Interfaces.MessageBus;
+using Hangfire;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
+using platform_core_service.Common.Utils.Enums;
+using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 
 namespace platform_core_service.Business.Services
 {
@@ -17,16 +22,20 @@ namespace platform_core_service.Business.Services
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
         private readonly IUserContext _userContext;
-        private readonly ITokenService _tokenService;
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
-        public ProfileService(ApplicationDbContext context, IMapper mapper, IUserContext userContext, ITokenService tokenService, UserManager<ApplicationUser> userManager)
+        public ProfileService
+        (
+            ApplicationDbContext context, 
+            IMapper mapper,
+            IUserContext userContext,
+            IBackgroundJobClient backgroundJobClient 
+         )
         {
             _context = context;
             _mapper = mapper;
             _userContext = userContext;
-            _tokenService = tokenService;
-            _userManager = userManager;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<ReturnResult<bool>> CreateAsync(CreateProfileDTO createDTO, ApplicationUser? user = null)
@@ -67,6 +76,11 @@ namespace platform_core_service.Business.Services
                 await _context.SaveChangesAsync();
 
                 returnResult.Result = true;
+
+                //Publsih To Other Source
+                _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                    x => x.PublishEntity(_mapper.Map<ProfilePublishDTO>(profile), MessageBusEnum.Create, MessageBusEntityEnum.Profile)
+                );
             }
             catch (Exception ex)
             {

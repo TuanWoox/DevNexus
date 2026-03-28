@@ -24,6 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\platform-core-service\platform-core-service.Business\platform-core-service.Business.csproj" />
     <ProjectReference Include="..\..\platform-core-service\platform-core-service.Common\platform-core-service.Common.csproj" />
     <ProjectReference Include="..\..\platform-core-service\platform-core-service.Data\platform-core-service.Data.csproj" />
   </ItemGroup>

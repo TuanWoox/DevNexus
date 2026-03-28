@@ -2,11 +2,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using platform_core_service.Business.Contexts;
 using platform_core_service.Business.Helper;
+using platform_core_service.Business.MessageBus;
 using platform_core_service.Business.Services;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Helper;
+using platform_core_service.Common.Interfaces.MessageBus;
 using platform_core_service.Common.Interfaces.Services;
 using StackExchange.Redis;
 
@@ -53,6 +55,7 @@ namespace platform_core_service.Business.Repository
                     throw new InvalidOperationException("Redis configuration is missing in appsettings");
                 return ConnectionMultiplexer.Connect(redisConfig);
             });
+
             return services;
         }
     }
