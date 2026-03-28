@@ -6,8 +6,12 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Newtonsoft.Json;
 using platform_core_service.Common.Entities.Identities;
-using platform_core_service.Data;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Data;
+using System;
+using System.Security.Claims;
+using System.Threading;
+using System.Threading.RateLimiting;
 namespace platform_core_service.Infrastructures.Service;
 
 public static class ServiceExtensions
@@ -253,6 +257,70 @@ public static class ServiceExtensions
             options.Configuration = configuration["Redis:ConnectionString"];
             options.InstanceName = configuration["Redis:InstanceName"];
         });
+        return services;
+    }
+    #endregion
+
+    #region Configure Rate Limiter
+    public static IServiceCollection ConfigureRateLimiter(this IServiceCollection services)
+    {
+        services.AddRateLimiter(options =>
+        {
+            options.OnRejected = async (onRejectedContext, cancellationToken) =>
+            {
+                onRejectedContext.HttpContext.Response.ContentType = "application/json";
+                onRejectedContext.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+
+                var result = new ReturnResult<dynamic>();
+
+                if (onRejectedContext.Lease.TryGetMetadata("RETRY_AFTER", out var retryAfter))
+                {
+                    result.Message = $"Too many requests, please retry after {retryAfter}";
+                }
+                else
+                {
+                    result.Message = "Too many requests, please retry again later";
+                }
+
+                await onRejectedContext.HttpContext.Response
+                    .WriteAsJsonAsync(result, cancellationToken); // ← actually write the response
+            };
+
+            options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+            {
+                // Try to get user ID from the access token claims
+                var userId = httpContext.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                // Authenticated → limit by user ID
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    return RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey: $"user_{userId}",
+                        factory: _ => new FixedWindowRateLimiterOptions
+                        {
+                            AutoReplenishment = true,
+                            PermitLimit = 100,        // authenticated users get more
+                            //QueueLimit = 5,
+                            //QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                            Window = TimeSpan.FromMinutes(1)
+                        });
+                }
+
+                // Anonymous → limit by IP (stricter)
+                var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: $"anon_{ip}",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        AutoReplenishment = true,
+                        PermitLimit = 20,             // anonymous gets less
+                        //QueueLimit = 2,
+                        //QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        Window = TimeSpan.FromMinutes(1)
+                    });
+            });
+        });
+
         return services;
     }
     #endregion
