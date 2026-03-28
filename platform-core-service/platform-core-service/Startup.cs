@@ -32,6 +32,7 @@ namespace platform_core_service
             services.ConfigureHangfireWithPostgreSql(Configuration);
             services.RegisterStudyNestService(Configuration);
             services.AddDistributedMemoryCache();
+            services.ConfigureRateLimiter();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -53,6 +54,7 @@ namespace platform_core_service
             app.UseCors("CorsPolicy");
             app.UseHttpsRedirection();
             app.UseRouting();
+            app.UseRateLimiter();
             app.UseAuthentication();
             app.UseAuthorization();
             app.UseMiddleware<RequireProfileMiddleware>();
