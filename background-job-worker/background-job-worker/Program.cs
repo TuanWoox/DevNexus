@@ -4,7 +4,9 @@ using background_job_worker.Jobs;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using platform_core_service.Business.MessageBus;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
+using platform_core_service.Common.Interfaces.MessageBus;
 using platform_core_service.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,6 +15,8 @@ HangfireConfiguration.ConfigureGlobalFilters();
 builder.Services.ConfigureHangfireWithPostgreSql(builder.Configuration);
 builder.Services.TryAddScoped<IEmailBackgroundJobs, EmailBackgroundJobs>();
 builder.Services.TryAddScoped<IProfileBlockBackgroundJobs, ProfileBackgroundJobs>();
+builder.Services.TryAddScoped<IPublishMessageBackgroundJobs, PublishMessageBackgroundJobs>();
+builder.Services.AddSingleton<IMessageBusClient, MessageBusClient>();
 builder.Services.AddDbContext<ApplicationDbContext>(opts =>
 {
     var dbConnect = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -24,6 +28,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(opts =>
             errorCodesToAdd: null);
     });
 });
+
 
 var app = builder.Build();
 
