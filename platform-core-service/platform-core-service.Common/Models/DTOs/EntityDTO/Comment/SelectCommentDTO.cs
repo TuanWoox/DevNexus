@@ -35,8 +35,8 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Comment
     {
         public string Id { get; set; } = null!;
 
-        public string FirstName { get; set; } = null!;
+        public string FullName { get; set; } = null!;
 
-        public string LastName { get; set; } = null!;
+        public string AvatarUrl { get; set; } = null!;
     }
 }
