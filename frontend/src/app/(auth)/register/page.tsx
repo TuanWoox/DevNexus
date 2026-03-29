@@ -14,7 +14,7 @@ import {
     X
 } from 'lucide-react'
 import { RegisterAccountDTO } from '@/types/account/register-account-dto'
-import useRegister from '@/hooks/use-register'
+import useRegister from '@/hooks/auth-hooks/use-register'
 
 export default function RegisterPage() {
 
