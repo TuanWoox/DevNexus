@@ -3,14 +3,18 @@ import amqp, { Channel, ConsumeMessage } from 'amqplib';
 import { PublishMessageBusDTO } from '../dtos/PublishMessageBusDTO'
 import { ProfilesyncService } from './profilesync.service';
 import { MessageBusEntityEnum } from 'src/utils/enums/MessageBusEnum';
-import { ProfileCreateInput } from 'src/generated/prisma/models';
+import { ProfileblocksyncService } from './profileblocksync.service';
+import { UserfollowsyncService } from './userfollowsync.service';
+
 
 @Injectable()
 export class RabbitMQService implements OnModuleInit {
     private channel: Channel;
 
     constructor(
-        private readonly profileSyncService: ProfilesyncService
+        private readonly profileSyncService: ProfilesyncService,
+        private readonly profileBlockSyncService: ProfileblocksyncService,
+        private readonly userfollowBlockSyncService: UserfollowsyncService
     ) { }
 
     async onModuleInit() {
@@ -38,7 +42,15 @@ export class RabbitMQService implements OnModuleInit {
 
             switch (data.MessageBusEntityEnum) {
                 case MessageBusEntityEnum.Profile: {
-                    await this.profileSyncService.eventDrive(data as PublishMessageBusDTO<ProfileCreateInput>);
+                    await this.profileSyncService.eventDrive(data);
+                    break;
+                }
+                case MessageBusEntityEnum.ProfileBlock: {
+                    await this.profileBlockSyncService.eventDrive(data);
+                    break;
+                }
+                case MessageBusEntityEnum.UserFollow: {
+                    await this.userfollowBlockSyncService.eventDrive(data);
                     break;
                 }
                 default:

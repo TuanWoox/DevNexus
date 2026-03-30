@@ -1,6 +1,7 @@
 using AutoMapper;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Models.DTOs.EntityDTO.ProfileBlock;
+using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 
 namespace platform_core_service.Business.Mappings
 {
@@ -13,6 +14,7 @@ namespace platform_core_service.Business.Mappings
                     opt => opt.MapFrom(src => src.BlockedProfile));
 
             CreateMap<CreateProfileBlock, ProfileBlock>();
+            CreateMap<ProfileBlock, ProfileBlockPublishDTO>();
         }
     }
 }

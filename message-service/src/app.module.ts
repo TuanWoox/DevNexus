@@ -1,19 +1,11 @@
-import { ProfilesyncService } from './shared/services/profilesync.service';
-import { PrismaService } from "./shared/services/prisma.service";
+import { ShareServiceModule } from './shared/services/shareservice.module';
 import { Module } from "@nestjs/common";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
-import { RabbitMQService } from "./shared/services/rabbitmq.service";
 
 @Module({
-  imports: [],
+  imports: [ShareServiceModule],
   controllers: [AppController],
-  providers: 
-  [
-        ProfilesyncService, 
-        RabbitMQService,
-        PrismaService, 
-        AppService
-  ],
+  providers: [AppService]
 })
-export class AppModule {}
+export class AppModule { }
