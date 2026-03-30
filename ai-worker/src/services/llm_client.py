@@ -1,1 +1,0 @@
-# Base class gọi OpenAI/Gemini API

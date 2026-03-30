@@ -1,1 +1,0 @@
-# Lắng nghe 'CommentCreatedEvent'

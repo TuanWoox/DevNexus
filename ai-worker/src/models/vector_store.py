@@ -1,1 +1,0 @@
-# pgvector schema cho F2.2 & F3.3
