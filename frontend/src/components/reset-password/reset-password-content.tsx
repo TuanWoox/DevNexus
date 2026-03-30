@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { Eye, EyeOff, KeyRound, Loader2 } from 'lucide-react'
-import useResetPassword from '@/hooks/use-reset-password'
+import useResetPassword from '@/hooks/auth-hooks/use-reset-password'
 import { ResetPasswordDTO } from '@/types/account/reset-password-dto'
 
 type ResetPasswordForm = {

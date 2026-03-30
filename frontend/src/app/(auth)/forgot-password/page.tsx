@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Key, Sparkles, Mail, ArrowLeft, MailCheck, Loader2 } from 'lucide-react'
-import useRequestResetPassword from '@/hooks/use-request-reset-password';
+import useRequestResetPassword from '@/hooks/auth-hooks/use-request-reset-password';
 import { useForm } from 'react-hook-form';
 
 // Type cho Form Data

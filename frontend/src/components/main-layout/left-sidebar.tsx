@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useTheme } from 'next-themes'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -22,7 +23,7 @@ import {
 } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
-import useLogout from '@/hooks/use-logout'
+import useLogout from '@/hooks/auth-hooks/use-logout'
 
 const menuItems = [
     { name: 'Home', href: '/feed', icon: Home },
@@ -35,7 +36,7 @@ const menuItems = [
 export function LeftSidebar() {
     const pathname = usePathname()
     const [isProfileOpen, setIsProfileOpen] = useState(false)
-    const [isDark, setIsDark] = useState(true)
+    const { theme, setTheme } = useTheme()
     const dropdownRef = useRef<HTMLDivElement>(null)
 
     const { user } = useSelector((state: RootState) => state.auth)
@@ -52,8 +53,7 @@ export function LeftSidebar() {
     }, [])
 
     const toggleTheme = () => {
-        setIsDark(!isDark)
-        document.documentElement.classList.toggle('dark')
+        setTheme(theme === 'dark' ? 'light' : 'dark')
     }
 
     return (
@@ -77,7 +77,7 @@ export function LeftSidebar() {
                         <Link
                             key={item.name}
                             href={item.href}
-                            className={`flex items-center gap-4 p-3 rounded-xl transition-colors group
+                            className={`flex sm:justify-center lg:justify-start items-center gap-4 p-3 rounded-xl transition-colors group
                                 ${isActive
                                     ? 'bg-primary/10 text-primary font-medium'
                                     : 'text-muted-foreground hover:bg-subtle hover:text-primary'
@@ -111,39 +111,39 @@ export function LeftSidebar() {
                     <div className="absolute bottom-full left-0 mb-3 w-full lg:w-56 bg-card border border-default rounded-xl shadow-elevated p-2 flex flex-col gap-1 z-50 animate-in fade-in slide-in-from-bottom-2">
                         <Link
                             href="/profile"
-                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors"
+                            className="flex sm:justify-center lg:justify-start items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors"
                             onClick={() => setIsProfileOpen(false)}
                         >
                             <User className="w-5 h-5" />
-                            <span className="text-sm font-medium">View Profile</span>
+                            <span className="text-sm font-medium hidden lg:block">View Profile</span>
                         </Link>
 
                         <Link
                             href="/settings"
-                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors"
+                            className="flex sm:justify-center lg:justify-start items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors"
                             onClick={() => setIsProfileOpen(false)}
                         >
                             <Settings className="w-5 h-5" />
-                            <span className="text-sm font-medium">Settings</span>
+                            <span className="text-sm font-medium hidden lg:block">Settings</span>
                         </Link>
 
                         <button
                             onClick={toggleTheme}
-                            className="flex items-center justify-between p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors w-full"
+                            className="flex sm:justify-center lg:justify-start items-center p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors w-full"
                         >
                             <div className="flex items-center gap-3">
-                                {isDark ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-                                <span className="text-sm font-medium">Display Mode</span>
-                            </div>
-                            <div className={`w-8 h-4 rounded-full flex items-center px-0.5 transition-colors ${isDark ? 'bg-primary' : 'bg-muted'}`}>
-                                <div className={`w-3 h-3 rounded-full bg-white transform transition-transform ${isDark ? 'translate-x-4' : 'translate-x-0'}`} />
+                                {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                                <span className="text-sm font-medium hidden lg:block">Display Mode</span>
+                                <div className={`w-8 h-4 hidden lg:flex rounded-full items-center px-0.5 transition-colors ${theme === 'dark' ? 'bg-primary' : 'bg-muted'}`}>
+                                    <div className={`w-3 h-3 rounded-full bg-white transform transition-transform ${theme === 'dark' ? 'translate-x-4' : 'translate-x-0'}`} />
+                                </div>
                             </div>
                         </button>
 
                         <div className="h-px bg-default my-1 w-full" />
 
                         <button
-                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors w-full disabled:opacity-50"
+                            className="flex sm:justify-center lg:justify-start items-center gap-3 p-2.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors w-full disabled:opacity-50"
                             onClick={() => { setIsProfileOpen(false); logout(); }}
                             disabled={isLoggingOut}
                         >
@@ -152,7 +152,7 @@ export function LeftSidebar() {
                             ) : (
                                 <LogOut className="w-5 h-5" />
                             )}
-                            <span className="text-sm font-medium">
+                            <span className="text-sm font-medium hidden lg:block">
                                 {isLoggingOut ? "Logging out..." : "Log Out"}
                             </span>
                         </button>
@@ -176,3 +176,4 @@ export function LeftSidebar() {
         </aside>
     )
 }
+
