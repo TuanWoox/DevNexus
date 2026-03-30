@@ -27,9 +27,13 @@ const useLogin = () => {
                         user: parsedData.user
                     }));
                     console.log(parsedData.user)
-                    const expiresDate = new Date(parsedData.exp * 1000);
+                    // const expiresDate = new Date(parsedData.exp * 1000);
 
-                    Cookies.set("accessToken", data.result.accessToken, { expires: expiresDate });
+                    Cookies.set("accessToken", data.result.accessToken, { expires: 15 }); // 15 days 
+                    // (Cookie lưu accessToken có thể còn tồn tại dù accessToken đã hết hạn 
+                    // vì việc check accessToken hết hạn chưa sẽ do server check. 
+                    // Nếu cookie hết hạn cùng lúc với accessToken luôn thì middleware sẽ redirect user về login luôn (vì check ko thấy cookie lưu accessToken) 
+                    // mà sẽ ko trigger đc axios interceptor để refetch lại token bằng refreshToken)
                     Cookies.set("refreshToken", data.result.refreshToken, { expires: 15 });  // 15 days
                     toast.success("Login successfully!");
 

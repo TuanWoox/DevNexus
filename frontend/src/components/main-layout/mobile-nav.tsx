@@ -1,15 +1,16 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useTheme } from 'next-themes'
 import Link from 'next/link'
 import { Home, HelpCircle, Plus, Bell, User, Settings, Moon, Sun, LogOut, Loader2 } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
-import useLogout from '@/hooks/use-logout'
+import useLogout from '@/hooks/auth-hooks/use-logout'
 
 export function MobileNav() {
     const [isMobileProfileOpen, setIsMobileProfileOpen] = useState(false)
-    const [isDark, setIsDark] = useState(true)
+    const { theme, setTheme } = useTheme()
     const mobileDropdownRef = useRef<HTMLDivElement>(null)
 
     const { user } = useSelector((state: RootState) => state.auth)
@@ -26,8 +27,7 @@ export function MobileNav() {
     }, [])
 
     const toggleTheme = () => {
-        setIsDark(!isDark)
-        document.documentElement.classList.toggle('dark')
+        setTheme(theme === 'dark' ? 'light' : 'dark')
     }
 
     return (
@@ -89,11 +89,11 @@ export function MobileNav() {
                             className="flex items-center justify-between p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors w-full"
                         >
                             <div className="flex items-center gap-3">
-                                {isDark ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                                {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                                 <span className="text-sm font-medium">Display Mode</span>
                             </div>
-                            <div className={`w-8 h-4 rounded-full flex items-center px-0.5 transition-colors ${isDark ? 'bg-primary' : 'bg-muted'}`}>
-                                <div className={`w-3 h-3 rounded-full bg-white transform transition-transform ${isDark ? 'translate-x-4' : 'translate-x-0'}`} />
+                            <div className={`w-8 h-4 rounded-full flex items-center px-0.5 transition-colors ${theme === 'dark' ? 'bg-primary' : 'bg-muted'}`}>
+                                <div className={`w-3 h-3 rounded-full bg-white transform transition-transform ${theme === 'dark' ? 'translate-x-4' : 'translate-x-0'}`} />
                             </div>
                         </button>
 

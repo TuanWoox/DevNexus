@@ -7,7 +7,7 @@ import { Hexagon, Menu, Sun, Moon, Sparkles, LogOut, User, Loader2 } from 'lucid
 import { Button } from '@/components/ui/button'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
-import useLogout from '@/hooks/use-logout'
+import useLogout from '@/hooks/auth-hooks/use-logout'
 import {
     Sheet,
     SheetContent,

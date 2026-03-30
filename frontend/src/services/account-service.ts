@@ -17,7 +17,8 @@ export const accountService = {
         return data;
     },
     refreshToken: async (refreshToken: string) => {
-        const { data } = await api.post<ReturnResult<TokenResponseDTO>>('/Accounts/refresh-token', refreshToken);
+        const payload = { refreshToken };
+        const { data } = await api.post<ReturnResult<TokenResponseDTO>>('/Accounts/refresh-token', payload);
         return data;
     },
     logout: async () => {
@@ -29,7 +30,7 @@ export const accountService = {
         return data;
     },
     requestResetPassword: async (email: string) => {
-        const payload = { email }
+        const payload = { email };
         const { data } = await api.post<ReturnResult<boolean>>('/Accounts/request-reset-password', payload);
         return data;
     },
@@ -47,12 +48,12 @@ export const accountService = {
         return data;
     },
     googleLogin: async (idToken: string) => {
-        const payload = { idToken }
+        const payload = { idToken };
         const { data } = await api.post<ReturnResult<TokenResponseDTO>>('/Accounts/google-login', payload);
         return data;
     },
     githubLogin: async (accessToken: string) => {
-        const payload = { accessToken }
+        const payload = { accessToken };
         const { data } = await api.post<ReturnResult<TokenResponseDTO>>('/Accounts/github-login', payload);
         return data;
     }
