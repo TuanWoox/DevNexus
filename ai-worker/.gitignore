@@ -1,1 +1,17 @@
 .agent
+
+# Poetry
+.venv/
+dist/
+build/
+
+# Python rác
+**/__pycache__/
+*.py[cod]
+
+# Môi trường
+.env*
+
+# (Tùy chọn) Nếu bạn dùng VS Code hoặc PyCharm
+.vscode/
+.idea/
