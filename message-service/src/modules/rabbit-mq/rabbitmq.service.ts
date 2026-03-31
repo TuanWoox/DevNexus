@@ -1,10 +1,10 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import amqp, { Channel, ConsumeMessage } from 'amqplib';
-import { PublishMessageBusDTO } from '../dtos/PublishMessageBusDTO'
-import { ProfilesyncService } from './profilesync.service';
+import { PublishMessageBusDTO } from '../../shared/dtos/PublishMessageBusDTO'
+import { ProfilesyncService } from '../sync-data-from-platform/profilesync.service';
 import { MessageBusEntityEnum } from 'src/utils/enums/MessageBusEnum';
-import { ProfileblocksyncService } from './profileblocksync.service';
-import { UserfollowsyncService } from './userfollowsync.service';
+import { ProfileblocksyncService } from '../sync-data-from-platform/profileblocksync.service';
+import { UserfollowsyncService } from '../sync-data-from-platform/userfollowsync.service';
 
 
 @Injectable()

@@ -3,8 +3,8 @@ https://docs.nestjs.com/providers#services
 */
 
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from './prisma.service';
-import { PublishMessageBusDTO } from '../dtos/PublishMessageBusDTO';
+import { PrismaService } from '../prisma-database/prisma.service';
+import { PublishMessageBusDTO } from '../../shared/dtos/PublishMessageBusDTO';
 import { MessageBusEnum } from 'src/utils/enums/MessageBusEnum';
 import { UserFollowCreateInput } from 'src/generated/prisma/models';
 import { UserFollow } from 'src/generated/prisma/client';
