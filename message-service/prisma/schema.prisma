@@ -23,19 +23,22 @@ model Profile {
   IsPrivate          Boolean  @default(false)
   ApplicationUserId  String   @db.VarChar(200)
 
-  // ✅ Matching C# naming
   DateCreated        DateTime? @default(now())
   DateModified       DateTime? @updatedAt
   Deleted            Boolean   @default(false)
   DateDeleted        DateTime?
+
+  // ✅ back-relations
+  ChatSettings       ChatSetting[] @relation("ChatSettings")
+  SentMessages       Message[]     @relation("MessageSender")
 }
+
 
 model ProfileBlock {
   Id                 String   @id @default(uuid())
   OwnerId            String   @db.VarChar(200)
   BlockedProfileId   String   @db.VarChar(200)
 
-  // ✅ Only dates
   DateCreated        DateTime? @default(now())
   DateModified       DateTime? @updatedAt
 }
@@ -45,7 +48,66 @@ model UserFollow {
   OwnerId              String   @db.VarChar(200)
   FollowingProfileId   String   @db.VarChar(200)
 
-  // ✅ Only dates
   DateCreated          DateTime? @default(now())
   DateModified         DateTime? @updatedAt
+}
+
+
+model Chat {
+  Id           Int       @id @default(autoincrement())
+  Name         String?   @db.VarChar(200)
+  IsGroup      Boolean   @default(false)
+  Members      String[]  @db.Text  
+  ChatPictureUrl String? @db.Text
+
+  DateCreated  DateTime? @default(now())
+  DateModified DateTime? @updatedAt
+
+  // ✅ back-relations
+  Messages     Message[]
+  ChatSettings ChatSetting[]
+}
+
+model ChatSetting {
+  Id          String    @id @default(uuid())
+  NickName    String?   @db.VarChar(200)
+  MuteUntil   DateTime?
+  IsMuted     Boolean   @default(false)
+  IsPinned    Boolean   @default(false)
+  IsArchived  Boolean   @default(false)
+  IsRequested Boolean   @default(false)
+  Role        ChatRole  @default(MEMBER)
+
+  ProfileId   String  @db.VarChar(200)
+  Profile     Profile @relation("ChatSettings", fields: [ProfileId], references: [Id])
+
+  // ✅ Int to match Chat.Id
+  ChatId      Int
+  Chat        Chat    @relation(fields: [ChatId], references: [Id])
+
+  DateCreated  DateTime? @default(now())
+  DateModified DateTime? @updatedAt
+}
+
+model Message {
+  Id        Int      @id @default(autoincrement())
+  Content   String   @db.Text
+  ReadBy    String[] @db.Text
+  VisibleTo String[] @db.Text
+
+  SenderId  String   @db.VarChar(200)
+  Sender    Profile  @relation("MessageSender", fields: [SenderId], references: [Id])
+
+  ChatId    Int
+  Chat      Chat     @relation(fields: [ChatId], references: [Id])
+
+  DateCreated  DateTime? @default(now())
+  DateModified DateTime? @updatedAt
+
+  @@index([ChatId, Id])
+}
+
+enum ChatRole {
+  ADMIN
+  MEMBER
 }

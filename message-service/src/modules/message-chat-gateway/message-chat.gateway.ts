@@ -1,12 +1,13 @@
 import { Logger, UseGuards } from '@nestjs/common';
 import {
+    ConnectedSocket,
     OnGatewayConnection,
     OnGatewayDisconnect,
     OnGatewayInit,
     WebSocketGateway,
     WebSocketServer,
 } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
+import { Namespace, Socket } from 'socket.io';
 import { AuthService } from '../auth/auth.service';
 import { AuthGuard } from '../auth/auth.guard';
 
@@ -16,7 +17,10 @@ export class MessageChatGateway
     implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     private readonly logger = new Logger(MessageChatGateway.name);
 
-    @WebSocketServer() io: Server;
+    private connections: Map<string, string[]> = new Map();
+
+    @WebSocketServer()
+    io!: Namespace;
 
     constructor(private readonly authService: AuthService) { }
 
@@ -24,7 +28,7 @@ export class MessageChatGateway
         this.logger.log('Initialized');
     }
 
-    handleConnection(client: Socket): void {
+    handleConnection(@ConnectedSocket() client: Socket): void {
         try {
             const token =
                 (client.handshake.auth?.token as string) ||
@@ -40,8 +44,8 @@ export class MessageChatGateway
             const payload = this.authService.validateToken(token);
 
             if (payload) {
-                console.log(payload);
                 this.logger.log(`Client connected: ${client.id}`);
+                this.clientConnect(payload?.profileId as string, client.id);
             } else {
                 client.disconnect();
             }
@@ -51,7 +55,54 @@ export class MessageChatGateway
         }
     }
 
-    handleDisconnect(client: Socket): void {
+    handleDisconnect(@ConnectedSocket() client: Socket): void {
         this.logger.log(`Client disconnected: ${client.id}`);
+        this.clientLeave(client.id);
+
+    }
+
+    private clientConnect(profileId: string | undefined, connectionId: string) {
+        try {
+            if (!profileId) return;
+            const existingConnections = this.connections.get(profileId);
+            if (existingConnections && existingConnections.length) {
+                this.connections.set(profileId, [...existingConnections, connectionId]);
+            }
+            else {
+                this.connections.set(profileId, [connectionId]);
+            }
+        }
+        catch (ex) {
+            this.logger.warn(ex)
+        }
+    }
+
+    private clientLeave(connectionId: string) {
+        try {
+            const result = this.getArrayByValue(connectionId);
+            if (!result) return;
+
+            const { profileId, profileConnections } = result;
+            const updatedConnections = profileConnections.filter(
+                (id) => id !== connectionId,
+            );
+
+            if (updatedConnections.length) {
+                this.connections.set(profileId, updatedConnections);
+            } else {
+                this.connections.delete(profileId);
+            }
+        }
+        catch (ex) {
+            this.logger.warn(ex)
+        }
+    }
+    getArrayByValue(target: string): { profileId: string; profileConnections: string[] } | undefined {
+        for (const [key, values] of this.connections) {
+            if (values.includes(target)) {
+                return { profileId: key, profileConnections: values };
+            }
+        }
+        return undefined;
     }
 }
