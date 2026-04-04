@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { UserContextService } from '../auth/userContext.service';
 import { PrismaService } from '../prisma-database/prisma.service';
 import { UserfollowsService } from '../userfollows/userfollows.service';
-import { ReturnResult } from 'src/shared/dtos/ReturnResult';
+import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
 import { Chat, ChatRole, ChatSetting } from 'src/generated/prisma/client';
 
 @Injectable()

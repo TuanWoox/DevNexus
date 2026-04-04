@@ -1,6 +1,6 @@
 import { Inject, Injectable, Scope } from "@nestjs/common";
 import { REQUEST } from "@nestjs/core";
-import { JWTPayloadDTO } from "src/shared/dtos/JWTPayloadDTO";
+import { JWTPayloadDTO } from "src/shared/dtos/helper/JWTPayloadDTO";
 
 @Injectable({ scope: Scope.REQUEST })
 export class UserContextService {

@@ -1,5 +1,5 @@
 export class JWTPayloadDTO {
-    profileId: string;
+    profileId!: string;
     username?: string;
     role?: string;
 }

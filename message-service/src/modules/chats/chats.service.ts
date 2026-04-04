@@ -1,14 +1,15 @@
 import { Injectable, Scope } from '@nestjs/common';
 import { CreateChatDto } from './dto/create-chat.dto';
-import { ReturnResult } from 'src/shared/dtos/ReturnResult';
-import { Profile } from 'src/generated/prisma/client';
+import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
+import { Chat, Message, Profile } from 'src/generated/prisma/client';
 import { PrismaService } from '../prisma-database/prisma.service';
 import { UserContextService } from '../auth/userContext.service';
 import { ProfilesService } from '../profiles/profiles.service';
 import { ProfileblocksService } from '../profileblocks/profileblocks.service';
 import { ChatsettingsService } from '../chatsettings/chatsettings.service'
 import { ReturnChat } from './dto/return-chat.dto';
-
+import { Page } from 'src/shared/dtos/paging/page';
+import { PagedData } from 'src/shared/dtos/paging/pagedData';
 @Injectable({ scope: Scope.REQUEST })
 export class ChatsService {
   constructor(
@@ -69,6 +70,109 @@ export class ChatsService {
       } else {
         returnResult.Message = String(ex);
       }
+    }
+    return returnResult;
+  }
+
+  async getPaging(page: Page<string>) {
+    const returnResult = new ReturnResult<PagedData<string, Chat>>();
+    try {
+      const profileId = this.userContext.getProfileId();
+
+      const chats = await this.prismaService.chat.findMany({
+        where: {
+          Members: { has: profileId }
+        },
+        skip: page.size * (page.pageNumber - 1),
+        take: page.size,
+        orderBy: [
+          { DateModified: 'desc' },
+          { DateCreated: 'desc' }
+        ]
+      });
+
+      if (chats.length > 0) {
+        // Deduplicate profile IDs before fetching — avoids redundant network calls
+        const profileIds = [
+          ...new Set(
+            chats
+              .filter(chat => !chat.IsGroup)
+              .flatMap(chat => chat.Members.filter(x => x !== profileId))
+          )
+        ];
+
+        if (profileIds.length > 0) {
+          const profiles = (await this.profileService.findProfiles(profileIds)).Result;
+
+          if (profiles?.length) {
+            // O(1) lookup map instead of O(n) Array.find() per chat
+            const profileMap = new Map(profiles.map(p => [p.Id, p]));
+
+            for (const chat of chats) {
+              if (!chat.IsGroup) {
+                const otherMemberId = chat.Members.find(x => x !== profileId);
+                const profile = otherMemberId ? profileMap.get(otherMemberId) : undefined;
+                if (profile) {
+                  chat.Name = profile.FullName;
+                  chat.ChatPictureUrl = profile.AvatarUrl;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      returnResult.Result = { page, data: chats };
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+    }
+    return returnResult;
+  }
+
+  async getMessagePaging(id: string, page: Page<number>) {
+    const returnResult = new ReturnResult<PagedData<number, Message>>();
+    try {
+      const chat = await this.prismaService.chat.findFirst({
+        where: {
+          Id: id,
+          Members: { has: this.userContext.getProfileId() }
+        }
+      });
+
+      if (!chat) {
+        returnResult.Message = "Can't find the chat";
+        return returnResult;
+      }
+
+      const pageSize = page.size || 30;
+
+      const messages = await this.prismaService.message.findMany({
+        where: {
+          ChatId: id,
+          // If cursor exists, fetch messages OLDER than it
+          ...(page.indexPaging && {
+            Id: { lt: page.indexPaging }
+          })
+        },
+        include: {
+          Sender: {
+            select: {
+              FullName: true,
+              AvatarUrl: true
+            }
+          }
+        },
+        take: pageSize,
+        orderBy: { DateCreated: 'desc', Id: 'desc' } // latest first
+      });
+
+      returnResult.Result = {
+        page: { ...page },
+        data: messages // ordered latest→oldest, reverse on frontend if needed
+      };
+    }
+    catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
     }
     return returnResult;
   }

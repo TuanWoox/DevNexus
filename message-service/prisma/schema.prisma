@@ -54,7 +54,7 @@ model UserFollow {
 
 
 model Chat {
-  Id           Int       @id @default(autoincrement())
+  Id           String    @id @default(uuid())
   Name         String?   @db.VarChar(200)
   IsGroup      Boolean   @default(false)
   Members      String[]  @db.Text  
@@ -81,8 +81,7 @@ model ChatSetting {
   ProfileId   String  @db.VarChar(200)
   Profile     Profile @relation("ChatSettings", fields: [ProfileId], references: [Id])
 
-  // ✅ Int to match Chat.Id
-  ChatId      Int
+  ChatId      String
   Chat        Chat    @relation(fields: [ChatId], references: [Id])
 
   DateCreated  DateTime? @default(now())
@@ -98,7 +97,7 @@ model Message {
   SenderId  String   @db.VarChar(200)
   Sender    Profile  @relation("MessageSender", fields: [SenderId], references: [Id])
 
-  ChatId    Int
+  ChatId    String
   Chat      Chat     @relation(fields: [ChatId], references: [Id])
 
   DateCreated  DateTime? @default(now())

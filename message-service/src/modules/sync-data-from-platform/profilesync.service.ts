@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma-database/prisma.service';
-import { PublishMessageBusDTO } from '../../shared/dtos/PublishMessageBusDTO'
+import { PublishMessageBusDTO } from '../../shared/dtos/helper/PublishMessageBusDTO'
 import { MessageBusEnum } from 'src/utils/enums/MessageBusEnum';
 import { ProfileCreateInput, ProfileUpdateInput } from 'src/generated/prisma/models';
 

@@ -1,6 +1,6 @@
 import { Injectable, Scope } from '@nestjs/common';
 import { Profile } from 'src/generated/prisma/client';
-import { ReturnResult } from 'src/shared/dtos/ReturnResult';
+import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
 import { PrismaService } from '../prisma-database/prisma.service';
 
 @Injectable({ scope: Scope.REQUEST })

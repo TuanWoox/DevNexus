@@ -4,7 +4,7 @@ https://docs.nestjs.com/providers#services
 
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma-database/prisma.service';
-import { PublishMessageBusDTO } from '../../shared/dtos/PublishMessageBusDTO';
+import { PublishMessageBusDTO } from '../../shared/dtos/helper/PublishMessageBusDTO';
 import { MessageBusEnum } from 'src/utils/enums/MessageBusEnum';
 import { ProfileBlockCreateInput } from 'src/generated/prisma/models';
 import { ProfileBlock } from 'src/generated/prisma/client';
