@@ -92,7 +92,7 @@ export default function PostArticle({ postId }: Props) {
         return <div className="p-6 text-center text-muted-foreground">Post doesn&apos;t exist.</div>;
     }
 
-    const formattedDate = new Date(post.dateCreated).toLocaleDateString('vi-VN', {
+    const formattedDate = new Date(post.dateCreated).toLocaleDateString('en-US', {
         day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 
