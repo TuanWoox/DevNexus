@@ -4,16 +4,19 @@ import { PrismaService } from '../prisma-database/prisma.service';
 import { UserfollowsService } from '../userfollows/userfollows.service';
 import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
 import { Chat, ChatRole, ChatSetting } from 'src/generated/prisma/client';
-
+import { UpdateChatSettingDTO } from './dto/update-chatsetting-dto';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 @Injectable()
 export class ChatsettingsService {
   constructor(
     private readonly userContext: UserContextService,
     private readonly prismaService: PrismaService,
-    private readonly userfollowsService: UserfollowsService
+    private readonly userfollowsService: UserfollowsService,
+    @InjectQueue('chatsetting') private chatSettingQueue: Queue
   ) { }
 
-  async initialChatSetting(chat: Chat, profileIds: string[] | string): Promise<ReturnResult<ChatSetting>> {
+  async initialChatSettings(chat: Chat, profileIds: string[] | string): Promise<ReturnResult<ChatSetting>> {
     const returnResult: ReturnResult<ChatSetting> = new ReturnResult<ChatSetting>();
 
     try {
@@ -50,5 +53,78 @@ export class ChatsettingsService {
       }
     }
     return returnResult;
+  }
+
+  async updateChatSetting(updateInfo: UpdateChatSettingDTO) {
+    const returnResult = new ReturnResult<ChatSetting>();
+    try {
+      const chatSetting = await this.prismaService.chatSetting.findFirst({
+        where: {
+          ProfileId: this.userContext.getProfileId(),
+          Id: updateInfo.Id,
+        },
+        include: {
+          Chat: true
+        }
+      })
+      if (!chatSetting) {
+        returnResult.Message = "Chat setting cant be found or does not exist";
+        return returnResult;
+      }
+
+      // Convert null to undefined so Prisma ignores those fields
+      const updatedData = Object.fromEntries(
+        Object.entries(updateInfo).map(([key, value]) => [key, value ?? undefined])
+      );
+
+      const updatedEntity = await this.prismaService.chatSetting.update({
+        where: {
+          Id: updateInfo.Id,
+          ProfileId: this.userContext.getProfileId()
+        },
+        data: { ...updatedData },
+        include: {
+          Chat: true
+        }
+      })
+
+      //If it pinned => 
+      if (updateInfo.IsPinned) {
+        await this.unpinOtherChatSettings(updateInfo.Id);
+      }
+
+      if (updateInfo.MuteUntil) {
+        const delay = updateInfo.MuteUntil.getTime() - Date.now();
+
+        if (delay > 0) {
+          await this.chatSettingQueue.add(
+            'unMute',
+            { chatSettingId: updateInfo.Id },
+            { delay }
+          );
+        }
+      }
+
+      returnResult.Result = updatedEntity;
+
+    }
+    catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+    }
+    return returnResult;
+  }
+
+  private async unpinOtherChatSettings(chatSettingId: string): Promise<void> {
+    await this.prismaService.chatSetting.updateMany({
+      where: {
+        ProfileId: this.userContext.getProfileId(),
+        Id: {
+          not: chatSettingId,
+        },
+      },
+      data: {
+        IsPinned: false
+      },
+    });
   }
 }

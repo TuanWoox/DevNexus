@@ -52,7 +52,7 @@ export class ChatsService {
         }
       })
 
-      const initialChatSettingResult = await this.chatsSettingService.initialChatSetting(newChat, createChatDto.profileIds);
+      const initialChatSettingResult = await this.chatsSettingService.initialChatSettings(newChat, createChatDto.profileIds);
 
       if (!initialChatSettingResult.Result) {
         returnResult.Message = initialChatSettingResult.Message ?? 'Failed to initialize chat setting';

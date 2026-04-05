@@ -9,7 +9,9 @@ import { ProfilesModule } from './modules/profiles/profiles.module';
 import { ProfileblocksModule } from './modules/profileblocks/profileblocks.module';
 import { UserfollowsModule } from './modules/userfollows/userfollows.module';
 import { ChatsettingsModule } from './modules/chatsettings/chatsettings.module';
-
+import { ScheduleModule } from '@nestjs/schedule';
+import { BullModule } from '@nestjs/bullmq';
+import { MessagesModule } from './modules/messages/messages.module';
 @Module({
   imports: [
     MessageChatGatewayModule,
@@ -22,7 +24,15 @@ import { ChatsettingsModule } from './modules/chatsettings/chatsettings.module';
     ProfilesModule,
     ProfileblocksModule,
     UserfollowsModule,
-    ChatsettingsModule
+    ChatsettingsModule,
+    ScheduleModule.forRoot(),
+    BullModule.forRoot({
+      connection: {
+        host: 'localhost',
+        port: 6379,
+      },
+    }),
+    MessagesModule,
   ],
   controllers: [],
   providers: []

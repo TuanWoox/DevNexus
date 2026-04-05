@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/jwt": "^11.0.2",
@@ -27,6 +28,7 @@
     "@nestjs/microservices": "^11.1.17",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/platform-socket.io": "^11.1.17",
+    "@nestjs/schedule": "^6.1.1",
     "@nestjs/websockets": "^11.1.17",
     "@prisma/adapter-pg": "^7.6.0",
     "@prisma/client": "^7.6.0",
