@@ -5,6 +5,8 @@ from google import genai
 from src.app.schemas.roadmaps import GenerateRoadmapRequest, GenerateRoadmapResponse
 from src.app.services.roadmap_service import RoadmapService
 from src.app.infrastructure.gemini import get_gemini_client
+from src.app.core.security import get_current_user, CurrentUser
+
 
 # 2. Instantiate the router
 router = APIRouter(prefix="/roadmaps", tags=["AI Features"])
@@ -19,6 +21,7 @@ def get_roadmap_service(
 @router.post("/generate", response_model=GenerateRoadmapResponse)
 async def generate_roadmap(
     request: GenerateRoadmapRequest,
-    service: RoadmapService = Depends(get_roadmap_service)
+    service: RoadmapService = Depends(get_roadmap_service),
+    current_user: CurrentUser = Depends(get_current_user)
 ) -> GenerateRoadmapResponse:
     return await service.generate_roadmap(request)
