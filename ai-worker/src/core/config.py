@@ -1,1 +1,0 @@
-# Pydantic BaseSettings (load .env)

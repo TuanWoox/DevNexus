@@ -1,1 +1,0 @@
-# Truy xuất pgvector cho bài viết liên quan
