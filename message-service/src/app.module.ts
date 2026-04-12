@@ -9,9 +9,15 @@ import { ProfilesModule } from './modules/profiles/profiles.module';
 import { ProfileblocksModule } from './modules/profileblocks/profileblocks.module';
 import { UserfollowsModule } from './modules/userfollows/userfollows.module';
 import { ChatsettingsModule } from './modules/chatsettings/chatsettings.module';
+import { ProfilechatsModule } from './modules/profilechats/profilechats.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bullmq';
 import { MessagesModule } from './modules/messages/messages.module';
+import { MediasModule } from './modules/medias/medias.module';
+import { MulterModule } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+
+
 @Module({
   imports: [
     MessageChatGatewayModule,
@@ -25,6 +31,12 @@ import { MessagesModule } from './modules/messages/messages.module';
     ProfileblocksModule,
     UserfollowsModule,
     ChatsettingsModule,
+    ProfilechatsModule,
+    MessagesModule,
+    MediasModule,
+    MulterModule.register({
+      storage: memoryStorage()
+    }),
     ScheduleModule.forRoot(),
     BullModule.forRoot({
       connection: {
@@ -32,7 +44,6 @@ import { MessagesModule } from './modules/messages/messages.module';
         port: 6379,
       },
     }),
-    MessagesModule,
   ],
   controllers: [],
   providers: []

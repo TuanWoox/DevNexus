@@ -8,7 +8,7 @@ export class AuthService {
     constructor(private readonly jwtService: JwtService) { }
 
     validateToken(token: string) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        //  @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         const payload = this.jwtService.verify(token);
 
         return {

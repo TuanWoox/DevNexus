@@ -16,22 +16,22 @@ export class ChatsettingsService {
     @InjectQueue('chatsetting') private chatSettingQueue: Queue
   ) { }
 
-  async initialChatSettings(chat: Chat, profileIds: string[] | string): Promise<ReturnResult<ChatSetting>> {
+  async initialChatSettings(chat: Chat, profileIds: string[]): Promise<ReturnResult<ChatSetting>> {
     const returnResult: ReturnResult<ChatSetting> = new ReturnResult<ChatSetting>();
 
     try {
 
       const currentProfileId = this.userContext.getProfileId();
-      const allProfileIds = Array.isArray(profileIds) ? [...profileIds, currentProfileId] : [profileIds, currentProfileId];
+
 
       //Fetch all followers of current profileId
-      const follows = await this.userfollowsService.getFollowersByProfiles(allProfileIds);
+      const follows = await this.userfollowsService.getFollowersByProfiles(profileIds);
 
       // Create a set of profiles that follow the current user
       const followersSet = new Set(follows.map(f => f.OwnerId));
 
       // Build ChatSetting records for all participants
-      const chatSettingData = allProfileIds.map(profileId => ({
+      const chatSettingData = profileIds.map(profileId => ({
         ChatId: chat.Id,
         ProfileId: profileId,
         IsRequested: profileId === currentProfileId ? false : !followersSet.has(profileId),

@@ -1,12 +1,12 @@
-import { Controller, Post, Body, HttpCode, UseGuards, Param, } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, UseGuards, Param, UseInterceptors, UploadedFile, } from '@nestjs/common';
 import { ChatsService } from './chats.service';
-import { CreateChatDto } from './dto/create-chat.dto';
+import type { CreateChatDto } from './dto/create-chat.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
-import { ReturnChat } from './dto/return-chat.dto';
 import type { Page } from 'src/shared/dtos/paging/page';
 import type { PagedData } from 'src/shared/dtos/paging/pagedData';
 import { Chat, Message } from 'src/generated/prisma/client';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('chats')
 @UseGuards(AuthGuard)
@@ -14,11 +14,16 @@ export class ChatsController {
   constructor(private readonly chatsService: ChatsService) { }
 
   @Post()
+  @UseInterceptors(FileInterceptor('file'))
   @HttpCode(200)
-  async create(@Body() createChatDto: CreateChatDto) {
-    let returnResult: ReturnResult<ReturnChat> = new ReturnResult<ReturnChat>();
+  async create(
+    @Body('createChatDto') data: string,
+    @UploadedFile() file?: Express.Multer.File
+  ) {
+    let returnResult: ReturnResult<Chat> = new ReturnResult<Chat>();
     try {
-      returnResult = await this.chatsService.create(createChatDto);
+      const createChatDto: CreateChatDto = JSON.parse(data);
+      returnResult = await this.chatsService.create(createChatDto, file);
     }
     catch (ex) {
       if (ex instanceof Error) {

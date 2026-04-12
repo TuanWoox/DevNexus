@@ -29,8 +29,9 @@ model Profile {
   DateDeleted        DateTime?
 
   // ✅ back-relations
-  ChatSettings       ChatSetting[] @relation("ChatSettings")
-  SentMessages       Message[]     @relation("MessageSender")
+  ChatSettings       ChatSetting[]
+  SentMessages       Message[] 
+  ProfileChats       ProfileChat[]
 }
 
 
@@ -52,12 +53,20 @@ model UserFollow {
   DateModified         DateTime? @updatedAt
 }
 
+model ProfileChat {
+  Id                   String   @id @default(uuid())
+  
+  ChatId    String
+  Chat      Chat     @relation(fields: [ChatId], references: [Id])
+
+  MemberId  String   @db.VarChar(200)
+  Member    Profile  @relation(fields: [MemberId], references: [Id])
+}
 
 model Chat {
   Id           String    @id @default(uuid())
   Name         String?   @db.VarChar(200)
   IsGroup      Boolean   @default(false)
-  Members      String[]  @db.Text  
   ChatPictureUrl String? @db.Text
 
   DateCreated  DateTime? @default(now())
@@ -66,6 +75,7 @@ model Chat {
   // ✅ back-relations
   Messages     Message[]
   ChatSettings ChatSetting[]
+  Members       ProfileChat[]
 }
 
 model ChatSetting {
@@ -79,7 +89,7 @@ model ChatSetting {
   Role        ChatRole  @default(MEMBER)
 
   ProfileId   String  @db.VarChar(200)
-  Profile     Profile @relation("ChatSettings", fields: [ProfileId], references: [Id])
+  Profile     Profile @relation(fields: [ProfileId], references: [Id])
 
   ChatId      String
   Chat        Chat    @relation(fields: [ChatId], references: [Id])
@@ -95,7 +105,7 @@ model Message {
   VisibleTo String[] @db.Text
 
   SenderId  String   @db.VarChar(200)
-  Sender    Profile  @relation("MessageSender", fields: [SenderId], references: [Id])
+  Sender    Profile  @relation(fields: [SenderId], references: [Id])
 
   ChatId    String
   Chat      Chat     @relation(fields: [ChatId], references: [Id])

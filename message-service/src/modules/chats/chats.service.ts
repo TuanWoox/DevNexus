@@ -7,9 +7,11 @@ import { UserContextService } from '../auth/userContext.service';
 import { ProfilesService } from '../profiles/profiles.service';
 import { ProfileblocksService } from '../profileblocks/profileblocks.service';
 import { ChatsettingsService } from '../chatsettings/chatsettings.service'
-import { ReturnChat } from './dto/return-chat.dto';
 import { Page } from 'src/shared/dtos/paging/page';
 import { PagedData } from 'src/shared/dtos/paging/pagedData';
+import { ProfilechatsService } from '../profilechats/profilechats.service';
+import { MessagesService } from '../messages/messages.service';
+
 @Injectable({ scope: Scope.REQUEST })
 export class ChatsService {
   constructor(
@@ -17,59 +19,109 @@ export class ChatsService {
     private readonly userContext: UserContextService,
     private readonly profileBlocksService: ProfileblocksService,
     private readonly profileService: ProfilesService,
-    private readonly chatsSettingService: ChatsettingsService
+    private readonly chatsSettingService: ChatsettingsService,
+    private readonly profileChatsService: ProfilechatsService,
+    private readonly messagesService: MessagesService
   ) { }
 
-  async create(createChatDto: CreateChatDto) {
-    const returnResult: ReturnResult<ReturnChat> = new ReturnResult<ReturnChat>();
+  async create(createChatDto: CreateChatDto, file?: Express.Multer.File) {
+    const returnResult: ReturnResult<Chat> = new ReturnResult<Chat>();
     try {
       const currentProfileId = this.userContext.getProfileId();
-      const findResult = await this.profileService.findProfiles(createChatDto.profileIds);
+
+      if (createChatDto.profileIds === currentProfileId) {
+        returnResult.Message = "You cant create chat with yourself"
+        return returnResult
+      }
+
+      const profileIds = Array.isArray(createChatDto.profileIds) ? [currentProfileId, ...createChatDto.profileIds] : [currentProfileId, createChatDto.profileIds];
+
+      // Check if 1-on-1 chat already exists or if they make 1-1 chat => they must have message
+      if (profileIds.length === 2) {
+        if (!createChatDto.message || !createChatDto.message.Content) {
+          returnResult.Message = "Forbidden"
+          return returnResult
+        }
+
+        const existingChat = await this.prismaService.chat.findFirst({
+          where: {
+            IsGroup: false,
+            Members: {
+              every: {
+                MemberId: {
+                  in: profileIds
+                }
+              }
+            }
+          }
+        });
+
+        if (existingChat) {
+          returnResult.Message = "Chat already exists with this user";
+          return returnResult;
+        }
+      }
+
+      // Fetch all profiles
+      const findResult = await this.profileService.findProfiles(profileIds);
       if (findResult.Message) {
         returnResult.Message = findResult.Message;
         return returnResult;
       }
-
-      const profileBlock = await this.profileBlocksService.checkBlocks(createChatDto.profileIds);
+      // Check for blocks between profiles
+      const profileBlock = await this.profileBlocksService.checkBlocks(profileIds);
       if (profileBlock) {
         returnResult.Message = "Forbidden";
         return returnResult;
       }
 
-      // Get current user's profile
-      const currentUserProfile = await this.prismaService.profile.findUnique({
-        where: { Id: currentProfileId }
-      });
-
-      // Build profiles list with current user first
-      const profilesForName = currentUserProfile && findResult.Result ? [currentUserProfile, ...findResult.Result] : findResult.Result || [];
-
+      // Create chat
       const newChat = await this.prismaService.chat.create({
         data: {
-          Members: [...createChatDto.profileIds, currentProfileId],
-          IsGroup: createChatDto.profileIds.length > 1 ? true : false,
-          Name: createChatDto.profileIds.length > 1 ? createChatDto.name?.length ? createChatDto.name : this.getGroupName(profilesForName) : null,
+          IsGroup: profileIds.length > 2,
+          Name: profileIds.length > 2
+            ? createChatDto.name?.length
+              ? createChatDto.name
+              : this.getGroupName(findResult.Result || [])
+            : null,
         }
-      })
+      });
 
-      const initialChatSettingResult = await this.chatsSettingService.initialChatSettings(newChat, createChatDto.profileIds);
+      // Initialize profile chats
+      await this.profileChatsService.initializeProfileChats(profileIds, newChat.Id);
+      // Initialize chat settings
+      await this.chatsSettingService.initialChatSettings(newChat, profileIds);
+      //Send Message
+      if (createChatDto.message) {
+        createChatDto.message.ChatId = newChat.Id
+        await this.messagesService.createMessage(createChatDto.message, file);
+      }
 
-      if (!initialChatSettingResult.Result) {
-        returnResult.Message = initialChatSettingResult.Message ?? 'Failed to initialize chat setting';
+      const chatReturned = await this.prismaService.chat.findFirst({
+        where: {
+          Id: newChat.Id
+        },
+        include: {
+          ChatSettings: {
+            where: {
+              ProfileId: currentProfileId
+            }
+          },
+          Messages: {
+            take: 5,
+            orderBy: { DateCreated: 'desc' }
+          }
+        }
+      });
+
+      if (!chatReturned) {
+        returnResult.Message = 'Failed to retrieve created chat';
         return returnResult;
       }
 
-      returnResult.Result = {
-        chat: newChat,
-        chatSetting: initialChatSettingResult.Result
-      };
-
+      returnResult.Result = chatReturned
     } catch (ex) {
-      if (ex instanceof Error) {
-        returnResult.Message = ex.message;
-      } else {
-        returnResult.Message = String(ex);
-      }
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
     }
     return returnResult;
   }
@@ -81,7 +133,14 @@ export class ChatsService {
 
       const chats = await this.prismaService.chat.findMany({
         where: {
-          Members: { has: profileId }
+          Members: {
+            some: {
+              MemberId: profileId
+            }
+          }
+        },
+        include: {
+          Members: true
         },
         skip: page.size * (page.pageNumber - 1),
         take: page.size,
@@ -92,12 +151,11 @@ export class ChatsService {
       });
 
       if (chats.length > 0) {
-        // Deduplicate profile IDs before fetching — avoids redundant network calls
         const profileIds = [
           ...new Set(
             chats
               .filter(chat => !chat.IsGroup)
-              .flatMap(chat => chat.Members.filter(x => x !== profileId))
+              .flatMap(chat => chat.Members.map(x => x.MemberId).filter(x => x !== profileId))
           )
         ];
 
@@ -105,12 +163,11 @@ export class ChatsService {
           const profiles = (await this.profileService.findProfiles(profileIds)).Result;
 
           if (profiles?.length) {
-            // O(1) lookup map instead of O(n) Array.find() per chat
             const profileMap = new Map(profiles.map(p => [p.Id, p]));
 
             for (const chat of chats) {
               if (!chat.IsGroup) {
-                const otherMemberId = chat.Members.find(x => x !== profileId);
+                const otherMemberId = chat.Members.find(x => x.MemberId !== profileId)?.MemberId;
                 const profile = otherMemberId ? profileMap.get(otherMemberId) : undefined;
                 if (profile) {
                   chat.Name = profile.FullName;
@@ -135,7 +192,14 @@ export class ChatsService {
       const chat = await this.prismaService.chat.findFirst({
         where: {
           Id: id,
-          Members: { has: this.userContext.getProfileId() }
+          Members: {
+            some: {
+              MemberId: this.userContext.getProfileId()
+            }
+          }
+        },
+        include: {
+          Members: true
         }
       });
 

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using platform_core_service.Common.Attributes;
+using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
@@ -43,6 +45,22 @@ namespace platform_core_service.Controllers
             try
             {
                 returnResult = await _postService.GetByIdAsync(id);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
+
+        [HttpGet("community/{communityId}/post/{id}")]
+        public async Task<IActionResult> GetByIdAndCommunityId([TrimmedRequired] string id, [TrimmedRequired] string communityId)
+        {
+            var returnResult = new ReturnResult<SelectPostDTO>();
+            try
+            {
+                returnResult = await _postService.GetByIdAndCommunityId(id, communityId);
             }
             catch (Exception ex)
             {
