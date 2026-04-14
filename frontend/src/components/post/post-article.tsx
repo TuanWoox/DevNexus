@@ -6,31 +6,69 @@ import {
     ArrowBigDown,
     MessageSquare,
     Bookmark,
-    Share2
+    Share2,
+    UserPlus,
+    Flag
 } from 'lucide-react';
 import { useGetPostById } from '@/hooks/post-hooks';
 import { useGetProfileById } from '@/hooks/profile-hooks/use-get-profile-by-id';
 import { useGetCommentsByPostId } from '@/hooks/comment-hooks/use-get-comments-by-post-id';
 import { SortOrderType } from '@/constants/sortOrderType';
+import { useUpdateVoteByPostId } from '@/hooks/vote-hooks/use-update-vote-by-post-id';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useGetQAPostById } from '@/hooks/qa-post-hooks/use-get-qa-post-by-id';
+import { useGetAnswersByPostId } from '@/hooks/answer-hooks/use-get-answers-by-post-id';
 
 interface Props {
     postId: string;
+    isQAPost: boolean;
 }
 
-export default function PostArticle({ postId }: Props) {
-    const { data: post, isLoading: isPostLoading } = useGetPostById(postId);
+export default function PostArticle({ postId, isQAPost }: Props) {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    const { data: post, isLoading: isPostLoading } = isQAPost ? useGetQAPostById(postId) : useGetPostById(postId);
     const { data: author, isLoading: isAuthorLoading } = useGetProfileById(post?.authorId || '');
 
+    const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(postId);
+
+    const handleVote = (e: React.MouseEvent, isUpvote: boolean) => {
+        e.preventDefault();
+        updateVote({ isUpvote });
+    };
+
     // Minimal fetch just to get total elements if it's not in post DTO
-    const { data: commentsData } = useGetCommentsByPostId(postId, {
-        size: -1,
-        pageNumber: 0,
-        totalElements: 0,
-        orders: [{ sort: 'dateCreated', sortDir: SortOrderType.DESC, dynamicProperty: '', delimiter: '', dataType: '' }],
-        filter: [],
-        selected: []
-    });
+    const { data: commentsData } = isQAPost ?
+        useGetAnswersByPostId(postId, {
+            size: -1,
+            pageNumber: 0,
+            totalElements: 0,
+            orders: [{ sort: 'dateCreated', sortDir: SortOrderType.DESC, dynamicProperty: '', delimiter: '', dataType: '' }],
+            filter: [],
+            selected: []
+        })
+        : useGetCommentsByPostId(postId, {
+            size: -1,
+            pageNumber: 0,
+            totalElements: 0,
+            orders: [{ sort: 'dateCreated', sortDir: SortOrderType.DESC, dynamicProperty: '', delimiter: '', dataType: '' }],
+            filter: [],
+            selected: []
+        });
+
+    // Xử lý sự kiện click ngoài dropdown
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsMenuOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const isLoading = isPostLoading || isAuthorLoading;
 
@@ -124,9 +162,9 @@ export default function PostArticle({ postId }: Props) {
                             )}
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-heading font-semibold text-sm sm:text-base">
-                                {author?.fullName || 'Unknown User'}
-                            </span>
+                            <Link href={`/profile/${post.authorId}`} className="text-sm sm:text-base font-semibold text-heading hover:text-primary transition-colors">
+                                {author?.fullName || 'Unknown'}
+                            </Link>
                             <span className="text-xs text-muted-foreground flex items-center gap-2">
                                 {formattedDate}
                                 {author?.techStacks && author.techStacks.length > 0 && (
@@ -140,9 +178,28 @@ export default function PostArticle({ postId }: Props) {
                             </span>
                         </div>
                     </div>
-                    <button className="text-muted-foreground hover:text-heading p-2 rounded-full hover:bg-subtle transition-colors">
-                        <MoreHorizontal className="w-5 h-5" />
-                    </button>
+                    {/* Dropdown Menu Options */}
+                    <div className="relative" ref={menuRef}>
+                        <button
+                            onClick={(e) => { e.preventDefault(); setIsMenuOpen(!isMenuOpen); }}
+                            className="p-2 text-muted-foreground hover:text-primary hover:bg-subtle rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            aria-label="More options"
+                        >
+                            <MoreHorizontal className="w-5 h-5" />
+                        </button>
+                        {isMenuOpen && (
+                            <div className="absolute right-0 w-34 mt-1 bg-card border rounded-xl shadow-elevated p-1 z-10 animate-in fade-in zoom-in-95">
+                                <button className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading rounded-lg transition-colors text-left font-medium">
+                                    <UserPlus className="w-4 h-4" />
+                                    Follow User
+                                </button>
+                                <button className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive hover:bg-destructive/10 rounded-lg transition-colors text-left font-medium">
+                                    <Flag className="w-4 h-4" />
+                                    Report Post
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Content */}
@@ -155,19 +212,28 @@ export default function PostArticle({ postId }: Props) {
             <div className="px-4 sm:px-6 py-3 border-t border-default flex items-center justify-between bg-subtle/30">
                 <div className="flex items-center gap-1 sm:gap-2">
                     <div className="flex items-center bg-subtle rounded-full border border-default p-0.5">
-                        <button className="p-1.5 sm:p-2 text-muted-foreground hover:text-emerald-500 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group">
+                        <button
+                            onClick={(e) => handleVote(e, true)}
+                            disabled={isVotePending}
+                            className="p-1.5 sm:p-2 text-muted-foreground hover:text-emerald-500 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group"
+                        >
                             <ArrowBigUp className="w-5 h-5 group-hover:fill-emerald-500/20" />
                             <span className="text-sm font-medium pr-1">{post.upvoteCount}</span>
                         </button>
                         <div className="w-px h-5 bg-default mx-0.5"></div>
-                        <button className="p-1.5 sm:p-2 text-muted-foreground hover:text-rose-500 rounded-full hover:bg-page transition-colors group">
+                        <button
+                            onClick={(e) => handleVote(e, false)}
+                            disabled={isVotePending}
+                            className="p-1.5 sm:p-2 text-muted-foreground hover:text-rose-500 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group"
+                        >
+                            <span className="text-sm font-medium pr-1">{post.downvoteCount}</span>
                             <ArrowBigDown className="w-5 h-5 group-hover:fill-rose-500/20" />
                         </button>
                     </div>
 
                     <button className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg transition-colors">
                         <MessageSquare className="w-5 h-5" />
-                        <span className="text-sm font-medium hidden sm:block">{commentsData?.page?.totalElements || 0} Comments</span>
+                        <span className="text-sm font-medium hidden sm:block">{commentsData?.page?.totalElements || 0} {isQAPost ? 'Answers' : 'Comments'}</span>
                     </button>
                 </div>
 

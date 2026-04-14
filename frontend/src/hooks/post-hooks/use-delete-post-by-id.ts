@@ -8,9 +8,10 @@ export const useDeletePostById = () => {
 
     return useMutation({
         mutationFn: (postId: string) => postService.deletePostById(postId),
-        onSuccess: (data) => {
+        onSuccess: (data, postId) => {
             if (data) {
                 queryClient.invalidateQueries({ queryKey: postQueryKeys.lists() });
+                queryClient.removeQueries({ queryKey: postQueryKeys.detail(postId) });
                 toast.success("Post deleted successfully!");
             }
         }

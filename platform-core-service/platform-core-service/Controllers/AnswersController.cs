@@ -20,13 +20,13 @@ namespace platform_core_service.Controllers
             _answerService = answerService;
         }
 
-        [HttpPost("{postId}/create")]
-        public async Task<IActionResult> Create(string postId, [FromBody] CreateAnswerDTO dto)
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] CreateAnswerDTO dto)
         {
             var returnResult = new ReturnResult<SelectAnswerDTO>();
             try
             {
-                returnResult = await _answerService.CreateAsync(postId, dto);
+                returnResult = await _answerService.CreateAsync(dto);
             }
             catch (Exception ex)
             {
@@ -70,13 +70,13 @@ namespace platform_core_service.Controllers
             return Ok(returnResult);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(string id, [FromBody] UpdateAnswerDTO dto)
+        [HttpPut]
+        public async Task<IActionResult> Update([FromBody] UpdateAnswerDTO dto)
         {
-            var returnResult = new ReturnResult<bool>();
+            var returnResult = new ReturnResult<SelectAnswerDTO>();
             try
             {
-                returnResult = await _answerService.UpdateAsync(id, dto);
+                returnResult = await _answerService.UpdateAsync(dto);
             }
             catch (Exception ex)
             {
