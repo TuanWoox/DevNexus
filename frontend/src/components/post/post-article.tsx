@@ -30,7 +30,13 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const { data: post, isLoading: isPostLoading } = isQAPost ? useGetQAPostById(postId) : useGetPostById(postId);
+    // Luôn luôn gọi cả 2, nhưng tùy isQAPost mà bật cái nào, tắt cái nào
+    const { data: qaPost, isLoading: isQALoading } = useGetQAPostById(postId, isQAPost);
+    const { data: normalPost, isLoading: isNormalLoading } = useGetPostById(postId, !isQAPost);
+    // Sau đó quyết định lấy data từ biến nào
+    const post = isQAPost ? qaPost : normalPost;
+    const isPostLoading = isQAPost ? isQALoading : isNormalLoading;
+
     const { data: author, isLoading: isAuthorLoading } = useGetProfileById(post?.authorId || '');
 
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(postId);
@@ -41,23 +47,24 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     };
 
     // Minimal fetch just to get total elements if it's not in post DTO
-    const { data: commentsData } = isQAPost ?
-        useGetAnswersByPostId(postId, {
-            size: -1,
-            pageNumber: 0,
-            totalElements: 0,
-            orders: [{ sort: 'dateCreated', sortDir: SortOrderType.DESC, dynamicProperty: '', delimiter: '', dataType: '' }],
-            filter: [],
-            selected: []
-        })
-        : useGetCommentsByPostId(postId, {
-            size: -1,
-            pageNumber: 0,
-            totalElements: 0,
-            orders: [{ sort: 'dateCreated', sortDir: SortOrderType.DESC, dynamicProperty: '', delimiter: '', dataType: '' }],
-            filter: [],
-            selected: []
-        });
+    const { data: answerData } = useGetAnswersByPostId(postId, isQAPost, {
+        size: -1,
+        pageNumber: 0,
+        totalElements: 0,
+        orders: [{ sort: 'dateCreated', sortDir: SortOrderType.DESC, dynamicProperty: '', delimiter: '', dataType: '' }],
+        filter: [],
+        selected: []
+    });
+    const { data: commentData } = useGetCommentsByPostId(postId, !isQAPost, {
+        size: -1,
+        pageNumber: 0,
+        totalElements: 0,
+        orders: [{ sort: 'dateCreated', sortDir: SortOrderType.DESC, dynamicProperty: '', delimiter: '', dataType: '' }],
+        filter: [],
+        selected: []
+    });
+
+    const commentsData = isQAPost ? answerData : commentData;
 
     // Xử lý sự kiện click ngoài dropdown
     useEffect(() => {

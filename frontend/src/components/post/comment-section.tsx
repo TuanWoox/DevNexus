@@ -37,8 +37,11 @@ export default function CommentSection({ postId, isQAPost }: Props) {
         selected: []
     });
 
-    const { data: commentsData, isLoading } = isQAPost ? useGetAnswersByPostId(postId, commentConfig)
-        : useGetCommentsByPostId(postId, commentConfig);
+    const { data: answerData, isPending: isAnswerLoading } = useGetAnswersByPostId(postId, isQAPost, commentConfig)
+    const { data: commentData, isPending: isCommentLoading } = useGetCommentsByPostId(postId, !isQAPost, commentConfig);
+
+    const commentsData = isQAPost ? answerData : commentData;
+    const isLoading = isQAPost ? isAnswerLoading : isCommentLoading;
 
     // TODO: Bỏ phần mock này khi đã có Auth
     const MOCK_CURRENT_USER_AVATAR = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTfE8XWOVe86hLGi8m9mgPTsva_KWjTHbT9iQ&s";
@@ -160,7 +163,7 @@ function CommentItem({ comment }: { comment: SelectCommentDTO }) {
 
 function AnswerItem({ answer }: { answer: SelectAnswerDTO }) {
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByAnswerId(answer.id);
-    const { data: author, isPending: isAuthorLoading } = useGetProfileById(answer.authorId);
+    const { data: author } = useGetProfileById(answer.authorId);
 
     const handleVote = (isUpvote: boolean) => {
         updateVote({ isUpvote });

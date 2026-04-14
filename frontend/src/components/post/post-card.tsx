@@ -18,7 +18,7 @@ export function PostCard({ post }: PostCardProps) {
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-    const { data: author, isLoading: isAuthorLoading } = useGetProfileById(post?.authorId || '');
+    const { data: author } = useGetProfileById(post?.authorId || '');
 
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(post.id);
 
