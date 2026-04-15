@@ -19,8 +19,8 @@ export default async function PostDetailPage({
     return (
         <div className="w-full mx-auto pb-24 sm:pb-8">
             <PostHeader />
-            <PostArticle postId={postId} />
-            <CommentSection postId={postId} />
+            <PostArticle postId={postId} isQAPost={false} />
+            <CommentSection postId={postId} isQAPost={false} />
         </div>
     );
 }

@@ -3,11 +3,11 @@ import { Page } from "@/types/common/page";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { commentQueryKeys } from "./use-comment-query-keys";
 
-export const useGetCommentsByPostId = (postId: string, isEnabled: boolean = true, payload: Page<string>) => {
+export const useGetRepliesByCommentId = (commentId: string, payload: Page<string>) => {
     return useQuery({
-        queryKey: commentQueryKeys.byPost(postId, payload),
-        queryFn: () => commentService.getCommentsByPostId(postId, payload),
-        enabled: !!postId && isEnabled,
+        queryKey: commentQueryKeys.replies(commentId, payload),
+        queryFn: () => commentService.getRepliesByCommentId(commentId, payload),
+        enabled: !!commentId,
         placeholderData: keepPreviousData,
     });
 };
