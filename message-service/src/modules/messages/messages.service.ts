@@ -2,7 +2,7 @@ import { Injectable, Scope } from '@nestjs/common';
 import { PrismaService } from '../prisma-database/prisma.service';
 import { UserContextService } from '../auth/userContext.service';
 import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
-import { Message } from 'src/generated/prisma/client';
+import { Message, MessageReadReceipt } from 'src/generated/prisma/client';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { ProfileblocksService } from '../profileblocks/profileblocks.service';
 import { MediasService } from '../medias/medias.service';
@@ -68,7 +68,7 @@ export class MessagesService {
       })
 
       if (file) {
-        await this.mediasService.handleUpload(file)
+        await this.mediasService.handleUpload(file, createMessage.Id)
       }
 
       //After create use some websocket to notify the other person
@@ -80,4 +80,55 @@ export class MessagesService {
     }
     return returnResult;
   }
+
+  async markAsRead(messageId: number): Promise<ReturnResult<MessageReadReceipt>> {
+    const returnResult = new ReturnResult<MessageReadReceipt>();
+    try {
+      const profileId = this.userContext.getProfileId();
+
+      // Verify the message exists and the caller is a member of its chat
+      const message = await this.prismaService.message.findFirst({
+        where: {
+          Id: messageId,
+          Chat: {
+            Members: {
+              some: { MemberId: profileId },
+            },
+          },
+        },
+        select: { Id: true, SenderId: true },
+      });
+
+      if (!message) {
+        returnResult.Message = 'Message not found or you are not a member of this chat';
+        return returnResult;
+      }
+
+      // Sender marking their own message as read is a no-op — skip silently
+      if (message.SenderId === profileId) {
+        returnResult.Message = 'Sender cannot mark their own message as read';
+        return returnResult;
+      }
+
+      const receipt = await this.prismaService.messageReadReceipt.upsert({
+        where: {
+          MessageId_ReaderId: {
+            MessageId: messageId,
+            ReaderId: profileId,
+          },
+        },
+        create: {
+          MessageId: messageId,
+          ReaderId: profileId,
+        },
+        update: {}, // already read — nothing to change
+      });
+
+      returnResult.Result = receipt;
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+    }
+    return returnResult;
+  }
+
 }
