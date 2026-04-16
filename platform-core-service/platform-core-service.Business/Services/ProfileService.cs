@@ -116,6 +116,11 @@ namespace platform_core_service.Business.Services
                 await _context.SaveChangesAsync();
 
                 returnResult.Result = _mapper.Map<SelectProfileDTO>(profile);
+
+                //Publsih To Other Source Too
+                _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                    x => x.PublishEntity(_mapper.Map<ProfilePublishDTO>(profile), MessageBusEnum.Update, MessageBusEntityEnum.Profile)
+                );
             }
             catch (Exception ex)
             {

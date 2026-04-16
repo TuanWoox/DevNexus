@@ -1,0 +1,13 @@
+-- AlterTable
+ALTER TABLE "Profile" ADD COLUMN     "DateCreated" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "DateDeleted" TIMESTAMP(3),
+ADD COLUMN     "DateModified" TIMESTAMP(3),
+ADD COLUMN     "Deleted" BOOLEAN NOT NULL DEFAULT false;
+
+-- AlterTable
+ALTER TABLE "ProfileBlock" ADD COLUMN     "DateCreated" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "DateModified" TIMESTAMP(3);
+
+-- AlterTable
+ALTER TABLE "UserFollow" ADD COLUMN     "DateCreated" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "DateModified" TIMESTAMP(3);

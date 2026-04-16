@@ -11,6 +11,7 @@ namespace platform_core_service.Common.Utils.Enums
         Create,
         Update,
         Delete,
+        BulkDelete,
     }
 
     public enum MessageBusEntityEnum

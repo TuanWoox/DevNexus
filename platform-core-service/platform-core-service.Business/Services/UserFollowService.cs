@@ -1,18 +1,22 @@
 using AutoMapper;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.FollowRequest;
 using platform_core_service.Common.Models.DTOs.EntityDTO.UserFollow;
+using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Models.Paging;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
-using platform_core_service.Common.Models.DTOs.HelperDTO;
 
 namespace platform_core_service.Business.Services
 {
@@ -21,13 +25,15 @@ namespace platform_core_service.Business.Services
         ApplicationDbContext dbContext,
         IMapper mapper,
         IRepository<UserFollow, string> repository,
-        IUserContext userContext
+        IUserContext userContext,
+        IBackgroundJobClient backgroundJobClient
     ) : IUserFollowService
     {
         private readonly ApplicationDbContext _dbContext = dbContext;
         private readonly IMapper _mapper = mapper;
         private readonly IRepository<UserFollow, string> _repository = repository;
         private readonly IUserContext _userContext = userContext;
+        private readonly IBackgroundJobClient _backgroundJobClient = backgroundJobClient;
 
         public async Task<ReturnResult<object>> CreateAsync(CreateUserFollow createUserFollow)
         {
@@ -102,6 +108,10 @@ namespace platform_core_service.Business.Services
                     if (await _dbContext.SaveChangesAsync() > 0)
                     {
                         returnResult.Result = _mapper.Map<SelectUserFollow>(userFollow);
+
+                        //Send this over to rabbitmq 
+                        _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                                x => x.PublishEntity(_mapper.Map<UserFollowPublishDTO>(userFollow), MessageBusEnum.Create, MessageBusEntityEnum.UserFollow));
                     }
                     else returnResult.Message = ResponseMessage.MESSAGE_OPERATION_CANT_BE_DONE;
                 }
@@ -170,6 +180,10 @@ namespace platform_core_service.Business.Services
                 if (await _dbContext.SaveChangesAsync() > 0)
                 {
                     returnResult.Result = true;
+
+                    //Send this over to rabbitmq 
+                    _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                            x => x.PublishEntity(_mapper.Map<UserFollowPublishDTO>(existingFollow), MessageBusEnum.Delete, MessageBusEntityEnum.UserFollow));
                 }
                 else returnResult.Message = ResponseMessage.MESSAGE_OPERATION_CANT_BE_DONE;
             }
@@ -202,6 +216,10 @@ namespace platform_core_service.Business.Services
                 if (await _dbContext.SaveChangesAsync() > 0)
                 {
                     returnResult.Result = follows.Count;
+
+                    //Send this over to rabbitmq 
+                    _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                            x => x.PublishEntity(_mapper.Map<List<UserFollowPublishDTO>>(follows), MessageBusEnum.BulkDelete, MessageBusEntityEnum.UserFollow));
                 }
                 else returnResult.Message = ResponseMessage.MESSAGE_OPERATION_CANT_BE_DONE;
             }

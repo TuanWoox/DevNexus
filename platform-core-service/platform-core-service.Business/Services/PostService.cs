@@ -13,6 +13,7 @@ using TagEntity = platform_core_service.Common.Entities.DbEntities.Tag;
 using PostTagEntity = platform_core_service.Common.Entities.DbEntities.PostTag;
 using platform_core_service.Common.Interfaces.Helper;
 using System.Text.RegularExpressions;
+using platform_core_service.Common.Helper;
 
 namespace platform_core_service.Business.Services
 {
@@ -94,14 +95,14 @@ namespace platform_core_service.Business.Services
 
         public async Task<ReturnResult<SelectPostDTO>> GetByIdAsync(string postId)
         {
-            var result = new ReturnResult<SelectPostDTO>();
+            var returnResult = new ReturnResult<SelectPostDTO>();
             try
             {
                 // Step 1: Validate ID
                 if (string.IsNullOrEmpty(postId))
                 {
-                    result.Message = "Post ID is required";
-                    return result;
+                    returnResult.Message = "Post ID is required";
+                    return returnResult;
                 }
 
                 // Step 2: Load post with tags (public read - no ownership check)
@@ -112,18 +113,59 @@ namespace platform_core_service.Business.Services
 
                 if (post == null)
                 {
-                    result.Message = $"Post {postId} not found";
-                    return result;
+                    returnResult.Message = $"Post {postId} not found";
+                    return returnResult;
                 }
 
-                result.Result = _mapper.Map<SelectPostDTO>(post);
+                var accessCheck = await _socialGuardService.CheckVisibleContent(post.AuthorId, post.CommunityId);
+
+                if (!accessCheck.Result)
+                {
+                    returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
+                    return returnResult;
+                }
+
+
+                returnResult.Result = _mapper.Map<SelectPostDTO>(post);
             }
             catch (Exception ex)
             {
                 DevNexusLogger.Instance.Debug(ex.Message);
-                result.Message = $"An error occurred while retrieving post: {ex.Message}";
+                returnResult.Message = $"An error occurred while retrieving post: {ex.Message}";
             }
-            return result;
+            return returnResult;
+        }
+
+        public async Task<ReturnResult<SelectPostDTO>> GetByIdAndCommunityId(string postId, string communityId)
+        {
+            ReturnResult<SelectPostDTO> returnResult = new ReturnResult<SelectPostDTO>();
+            try
+            {
+                var post = await _context.Posts.Include(p => p.PostTags)
+                                            .ThenInclude(pt => pt.Tag)
+                                            .FirstOrDefaultAsync(p => p.Id == postId || p.Slug == postId && p.CommunityId == communityId);
+                if(post == null)
+                {
+                    returnResult.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_FOUND, "post", postId);
+                    return returnResult;
+                }
+
+                var accessCheck = await _socialGuardService.CheckVisibleContent(post.AuthorId, post.CommunityId);
+
+                if (!accessCheck.Result)
+                {
+                    returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
+                    return returnResult;
+                }
+
+                returnResult.Result = _mapper.Map<SelectPostDTO>(post);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = $"An error occurred while retrieving post: {ex.Message}";
+            }
+            return returnResult;
         }
 
         public async Task<ReturnResult<PagedData<SelectPostDTO, string>>> GetPageAsync(Page<string> page)

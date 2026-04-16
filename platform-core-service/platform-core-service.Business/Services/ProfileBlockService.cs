@@ -4,14 +4,17 @@ using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.ProfileBlock;
+using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Models.Paging;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
-using platform_core_service.Common.Models.DTOs.HelperDTO;
-using platform_core_service.Common.Interfaces.BackgroundJobs;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace platform_core_service.Business.Services
 {
@@ -74,6 +77,11 @@ namespace platform_core_service.Business.Services
                     //After that run background job to delete userfollow and follow request
                     _backgroundJobClient.Enqueue<IProfileBlockBackgroundJobs>(x => x.DeleteFollowRequestAndUserFollow(_userContext.ProfileId, 
                                                                                 createProfileBlock.BlockedProfileId));
+
+                    //Send this over to rabbitmq 
+                    _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                            x => x.PublishEntity(_mapper.Map<ProfileBlockPublishDTO>(profileBlock), MessageBusEnum.Create, MessageBusEntityEnum.ProfileBlock)
+               );
                 }
                 else returnResult.Message = "Failed to save changes. Please try again later.";
             }
@@ -121,6 +129,10 @@ namespace platform_core_service.Business.Services
                 if (await _dbContext.SaveChangesAsync() > 0)
                 {
                     returnResult.Result = true;
+
+                    //Send this over to rabbitmq 
+                    _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                            x => x.PublishEntity(_mapper.Map<ProfileBlockPublishDTO>(existingProfileBlock), MessageBusEnum.Delete, MessageBusEntityEnum.ProfileBlock));
                 }
                 else returnResult.Message = "Failed to save changes. Please try again later.";
             }
@@ -149,6 +161,10 @@ namespace platform_core_service.Business.Services
                 if (await _dbContext.SaveChangesAsync() > 0)
                 {
                     returnResult.Result = existingProfileBlocks.Count;
+
+                    //Send this over to rabbitmq
+                    _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                            x => x.PublishEntity(_mapper.Map<List<ProfileBlock>>(existingProfileBlocks), MessageBusEnum.BulkDelete, MessageBusEntityEnum.ProfileBlock));
                 }
                 else returnResult.Message = "Failed to save changes. Please try again later.";
             }
