@@ -1,7 +1,7 @@
 import { Injectable, Scope } from '@nestjs/common';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
-import { Chat, Message, Profile } from 'src/generated/prisma/client';
+import { Chat, Profile } from 'src/generated/prisma/client';
 import { PrismaService } from '../prisma-database/prisma.service';
 import { UserContextService } from '../auth/userContext.service';
 import { ProfilesService } from '../profiles/profiles.service';
@@ -181,61 +181,6 @@ export class ChatsService {
 
       returnResult.Result = { page, data: chats };
     } catch (ex) {
-      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
-    }
-    return returnResult;
-  }
-
-  async getMessagePaging(id: string, page: Page<number>) {
-    const returnResult = new ReturnResult<PagedData<number, Message>>();
-    try {
-      const chat = await this.prismaService.chat.findFirst({
-        where: {
-          Id: id,
-          Members: {
-            some: {
-              MemberId: this.userContext.getProfileId()
-            }
-          }
-        },
-        include: {
-          Members: true
-        }
-      });
-
-      if (!chat) {
-        returnResult.Message = "Can't find the chat";
-        return returnResult;
-      }
-
-      const pageSize = page.size || 30;
-
-      const messages = await this.prismaService.message.findMany({
-        where: {
-          ChatId: id,
-          // If cursor exists, fetch messages OLDER than it
-          ...(page.indexPaging && {
-            Id: { lt: page.indexPaging }
-          })
-        },
-        include: {
-          Sender: {
-            select: {
-              FullName: true,
-              AvatarUrl: true
-            }
-          }
-        },
-        take: pageSize,
-        orderBy: { DateCreated: 'desc', Id: 'desc' } // latest first
-      });
-
-      returnResult.Result = {
-        page: { ...page },
-        data: messages // ordered latest→oldest, reverse on frontend if needed
-      };
-    }
-    catch (ex) {
       returnResult.Message = ex instanceof Error ? ex.message : String(ex);
     }
     return returnResult;

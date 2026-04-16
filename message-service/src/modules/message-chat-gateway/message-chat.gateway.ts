@@ -1,4 +1,4 @@
-import { Logger, UseGuards } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import {
     ConnectedSocket,
     OnGatewayConnection,
@@ -9,10 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { Namespace, Socket } from 'socket.io';
 import { AuthService } from '../auth/auth.service';
-import { AuthGuard } from '../auth/auth.guard';
-
 @WebSocketGateway({ namespace: 'message-chat' })
-@UseGuards(AuthGuard)
 export class MessageChatGateway
     implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     private readonly logger = new Logger(MessageChatGateway.name);
@@ -104,5 +101,15 @@ export class MessageChatGateway
             }
         }
         return undefined;
+    }
+
+    emitToUsers(profileIds: string[], event: string, data: unknown): void {
+        for (const profileId of profileIds) {
+            const socketIds = this.connections.get(profileId);
+            if (!socketIds?.length) continue;
+            for (const socketId of socketIds) {
+                this.io.to(socketId).emit(event, data);
+            }
+        }
     }
 }

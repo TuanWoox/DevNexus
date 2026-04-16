@@ -1,10 +1,12 @@
-import { Controller, Post, Param, ParseIntPipe, UploadedFile, UseGuards, UseInterceptors, Body } from '@nestjs/common';
+import { Controller, Post, Param, ParseIntPipe, UploadedFile, UseGuards, UseInterceptors, Body, HttpCode } from '@nestjs/common';
 import { MessagesService } from './messages.service';
 import { AuthGuard } from '../auth/auth.guard';
 import type { CreateMessageDto } from './dto/create-message.dto';
 import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
 import { Message, MessageReadReceipt } from 'src/generated/prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { Page } from 'src/shared/dtos/paging/page';
+import type { PagedData } from 'src/shared/dtos/paging/pagedData';
 
 
 @Controller('messages')
@@ -29,10 +31,6 @@ export class MessagesController {
     }
   }
 
-  /**
-   * Mark a message as read by the currently authenticated profile.
-   * POST /messages/:id/read
-   */
   @Post(':id/read')
   async markAsRead(
     @Param('id', ParseIntPipe) id: number,
@@ -40,4 +38,19 @@ export class MessagesController {
     return this.messagesService.markAsRead(id);
   }
 
+  @Post('paging/:chatId')
+  @HttpCode(200)
+  async messagePaging(
+    @Param('chatId') chatId: string,
+    @Body() page: Page<number>,
+  ): Promise<ReturnResult<PagedData<number, Message>>> {
+    const returnResult = new ReturnResult<PagedData<number, Message>>();
+    try {
+      return await this.messagesService.getMessagePaging(chatId, page);
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+      return returnResult;
+    }
+  }
 }
+
