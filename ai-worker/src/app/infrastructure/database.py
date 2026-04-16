@@ -9,14 +9,25 @@ engine = create_async_engine(
     future=True,
     pool_pre_ping=True,
     pool_size=5,
-    max_overflow=10
+    max_overflow=10,
 )
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
-    expire_on_commit=False
+    expire_on_commit=False,
 )
+
+
+async def create_tables() -> None:
+    """Create all ORM-defined tables if they do not already exist."""
+    # Import here to avoid circular deps at module load time
+    from src.app.models.base import Base
+    import src.app.models  # noqa: F401 — registers all mappers
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
 
 async def get_db_session() -> AsyncSession:
     async with AsyncSessionLocal() as session:
