@@ -46,10 +46,55 @@ export class UserfollowsyncService {
                 data: userFollow,
             });
             console.log(`[UserFollowSync] User follow created successfully`);
+
+            // Mutual follow check — if both sides follow each other,
+            // accept any pending requested 1-on-1 chat between them
+            await this.acceptRequestedChatIfMutual(
+                userFollow.OwnerId as string,
+                userFollow.FollowingProfileId as string,
+            );
         } catch (e) {
             console.error(`[UserFollowSync] Failed to create user follow:`, e);
         }
     }
+
+    private async acceptRequestedChatIfMutual(ownerAId: string, ownerBId: string) {
+        // Check that B also follows A (making it mutual)
+        const reverseFollow = await this.prismaService.userFollow.findFirst({
+            where: { OwnerId: ownerBId, FollowingProfileId: ownerAId },
+        });
+
+        if (!reverseFollow) return;
+
+        // Find their shared 1-on-1 chat
+        const sharedChat = await this.prismaService.chat.findFirst({
+            where: {
+                IsGroup: false,
+                Members: {
+                    every: { MemberId: { in: [ownerAId, ownerBId] } },
+                },
+            },
+            select: { Id: true },
+        });
+
+        if (!sharedChat) return;
+
+        // Clear IsRequested for any members of that chat who still have it set
+        const updated = await this.prismaService.chatSetting.updateMany({
+            where: {
+                ChatId: sharedChat.Id,
+                IsRequested: true,
+            },
+            data: { IsRequested: false },
+        });
+
+        if (updated.count > 0) {
+            console.log(
+                `[UserFollowSync] Cleared IsRequested for ${updated.count} ChatSetting(s) in chat ${sharedChat.Id}`,
+            );
+        }
+    }
+
 
     async syncDeleteUserFollow(userFollow: UserFollow) {
         try {
