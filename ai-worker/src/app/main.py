@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from src.app.api.routers import health, moderation, roadmaps
+from src.app.api.routers import health, moderation, roadmaps, content, taxonomy
 from src.app.core.config import get_settings
 from src.app.core.exceptions import AIWorkerException
 from src.app.infrastructure.database import create_tables, engine
@@ -53,10 +53,10 @@ origins = [origin.strip() for origin in settings.cors_origins.split(",")] if set
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,        
-    allow_credentials=True,       
-    allow_methods=["*"],          
-    allow_headers=["*"],          
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.exception_handler(AIWorkerException)
@@ -73,3 +73,5 @@ async def ai_worker_exception_handler(request: Request, exc: AIWorkerException):
 app.include_router(health.router)
 app.include_router(moderation.router)
 app.include_router(roadmaps.router)
+app.include_router(content.router)
+app.include_router(taxonomy.router)

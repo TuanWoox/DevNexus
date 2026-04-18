@@ -1,17 +1,19 @@
 import logging
 from google import genai
 from google.genai import types
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # 1. Import our strict Pydantic DTOs
 from src.app.schemas.roadmaps import GenerateRoadmapRequest, GenerateRoadmapResponse
 from src.app.core.exceptions import AIWorkerException
 logger = logging.getLogger(__name__)
 class RoadmapService:
-    
-    def __init__(self, client: genai.Client):
+
+    def __init__(self, client: genai.Client, db: AsyncSession):
         self._client = client
-        
-    async def generate_roadmap(self, request: GenerateRoadmapRequest) -> GenerateRoadmapResponse:
+        self._db = db
+
+    async def generate_roadmap(self, request: GenerateRoadmapRequest, user_id: str) -> GenerateRoadmapResponse:
         logger.info(f"Generating roadmap for topic: {request.topic}")
         
         prompt = (
