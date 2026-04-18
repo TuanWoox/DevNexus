@@ -11,8 +11,9 @@ class Settings(BaseSettings):
     jwt_issuer: str
     jwt_audience: str
     cors_origins: str = ""
+    platform_core_service_url: str = "http://localhost:5105"
 
-    model_config =  SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config =  SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 @lru_cache
 def get_settings() -> Settings:

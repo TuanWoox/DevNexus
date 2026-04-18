@@ -1,32 +1,268 @@
+import logging
+
 from google import genai
 from google.genai import types
 from sqlalchemy.ext.asyncio import AsyncSession
+import asyncio
+from src.app.infrastructure.model_manager import AIModelManager
+from src.app.schemas.moderation import (
+    ModerationDecision,
+    ModerationStatus,
+    ModerationTaskResult,
+    TierOneResult,
+    TierThreeResult,
+    TierTwoResult,
+)
+from src.app.services.ai_usage_service import AiUsageService
 
-from src.app.core.exceptions import AIWorkerException
-from src.app.schemas.moderation import ContentModerationResponse
+logger = logging.getLogger(__name__)
+
+# -----------------------------------------------------------------------
+# Tier boundaries
+# -----------------------------------------------------------------------
+_SAFE_THRESHOLD = 0.3
+_TOXIC_THRESHOLD = 0.7
+_T2_CONFIDENCE_THRESHOLD = 0.8
+
+# Pydantic schema sent to Gemini for Tier 2 structured output
+_T2_RESPONSE_SCHEMA = TierTwoResult
 
 
 class ModerationService:
-    def __init__(self, client: genai.Client, db: AsyncSession):
-        self._client = client
-        self._db = db
+    """
+    Orchestrates the 3-tier async moderation pipeline.
 
-    async def analyze_text(self, text_content: str, user_id: str) -> ContentModerationResponse:
-        print(f"Sending to Gemini: {text_content}")
-        if text_content.lower() == "crash test":
-            raise AIWorkerException("Simulated AI Provider failure.", status_code=503)
-        prompt = (
-            f"Analyze the following user-submitted content for toxicity, harassment, "
-            f"or inappropriate material in a professional software engineering learning network. "
-            f"Content to analyze: '{text_content}'"
+    Tier 1 — Local models (XLM-RoBERTa + CLIP): coarse filter, early exit.
+    Tier 2 — Gemini 2.5 Flash: fine-grained LLM judgment for gray zone.
+    Tier 3 — Human review queue: escalation via C# backend callback.
+    """
+
+    def __init__(
+        self,
+        gemini_client: genai.Client,
+        db: AsyncSession,
+        platform_core_url: str,
+    ) -> None:
+        self._gemini = gemini_client
+        self._db = db
+        self._platform_core_url = platform_core_url
+        self._usage_service = AiUsageService(db=db)
+
+    # ------------------------------------------------------------------
+    # Public entry point
+    # ------------------------------------------------------------------
+
+    async def process_post(
+        self,
+        *,
+        post_id: str,
+        text_content: str,
+        image_bytes: bytes | None = None,
+        image_mime_type: str | None = None,
+    ) -> ModerationTaskResult:
+        """Full 3-tier pipeline. Called from BackgroundTask."""
+        logger.info("[Moderation] Starting pipeline for post_id=%s", post_id)
+
+        # ------- Tier 1 -------
+        t1 = await self._run_tier_one(text_content, image_bytes)
+        logger.info(
+            "[Moderation][T1] post=%s text=%.3f image=%.3f combined=%.3f",
+            post_id, t1.text_score, t1.image_score, t1.combined_score,
         )
-        response = await self._client.aio.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
+
+        if t1.combined_score < _SAFE_THRESHOLD:
+            logger.info("[Moderation][T1] AUTO SAFE — post=%s", post_id)
+            await self._notify_platform(post_id, ModerationDecision.APPROVE)
+            return ModerationTaskResult(
+                post_id=post_id,
+                final_status=ModerationStatus.SAFE,
+                decision=ModerationDecision.APPROVE,
+                tier_reached=1,
+                tier_one=t1,
+            )
+
+        if t1.combined_score > _TOXIC_THRESHOLD:
+            logger.info("[Moderation][T1] AUTO TOXIC — post=%s", post_id)
+            await self._notify_platform(post_id, ModerationDecision.FLAG)
+            return ModerationTaskResult(
+                post_id=post_id,
+                final_status=ModerationStatus.PENDING,
+                decision=ModerationDecision.FLAG,
+                tier_reached=1,
+                tier_one=t1,
+            )
+
+        # ------- Tier 2 (gray zone) -------
+        logger.info(
+            "[Moderation][T2] Gray zone — escalating to Gemini. post=%s has_image=%s",
+            post_id, image_bytes is not None,
+        )
+        t2 = await self._run_tier_two(text_content, post_id, image_bytes, image_mime_type)
+        logger.info(
+            "[Moderation][T2] decision=%s confidence=%.3f post=%s",
+            t2.decision, t2.confidence, post_id,
+        )
+
+        if t2.confidence > _T2_CONFIDENCE_THRESHOLD:
+            status = (
+                ModerationStatus.SAFE if t2.decision == ModerationDecision.APPROVE
+                else ModerationStatus.PENDING
+            )
+            await self._notify_platform(post_id, t2.decision)
+            return ModerationTaskResult(
+                post_id=post_id,
+                final_status=status,
+                decision=t2.decision,
+                tier_reached=2,
+                tier_one=t1,
+                tier_two=t2,
+            )
+
+        # ------- Tier 3 (still uncertain) -------
+        logger.info("[Moderation][T3] Low confidence — escalating to human queue. post=%s", post_id)
+        t3 = await self._run_tier_three(post_id, t1, t2)
+        await self._notify_platform(post_id, ModerationDecision.ESCALATE)
+        return ModerationTaskResult(
+            post_id=post_id,
+            final_status=ModerationStatus.IN_REVIEW,
+            decision=ModerationDecision.ESCALATE,
+            tier_reached=3,
+            tier_one=t1,
+            tier_two=t2,
+            tier_three=t3,
+        )
+
+    # ------------------------------------------------------------------
+    # Tier 1 — Local Models
+    # ------------------------------------------------------------------
+
+    async def _run_tier_one(
+        self, text_content: str, image_bytes: bytes | None
+    ) -> TierOneResult:
+        model_manager = AIModelManager.get_instance()
+
+        text_result = await asyncio.to_thread(model_manager.analyze_text, text_content)
+        text_score = text_result.score
+
+        image_score = 0.0
+        flagged_concepts: list[str] = []
+        if image_bytes:
+            image_result = await asyncio.to_thread(model_manager.analyze_image, image_bytes)
+            image_score = image_result.score
+            flagged_concepts = image_result.flagged_concepts
+
+        combined_score = max(text_score, image_score)
+        return TierOneResult(
+            text_score=round(text_score, 4),
+            image_score=round(image_score, 4),
+            combined_score=round(combined_score, 4),
+            flagged_concepts=flagged_concepts,
+        )
+
+    # ------------------------------------------------------------------
+    # Tier 2 — Gemini LLM
+    # ------------------------------------------------------------------
+
+    async def _run_tier_two(
+        self,
+        text_content: str,
+        post_id: str,
+        image_bytes: bytes | None,
+        image_mime_type: str | None = None,
+    ) -> TierTwoResult:
+        """
+        Send a multimodal request to Gemini when image is present.
+        This prevents the gray-zone bypass where clean text hides an
+        inappropriate image: Gemini evaluates BOTH signals independently.
+        """
+        system_prompt = (
+            "You are a content moderation AI for a professional software engineering "
+            "learning platform. Analyze ALL submitted content (text AND image if provided). "
+            "Flag content that violates community standards: toxicity, harassment, "
+            "hate speech, spam, nudity, graphic violence, or otherwise inappropriate material. "
+            "A post passes only if BOTH text AND image are acceptable. "
+            "Return your decision, your confidence score (0.0–1.0), and a one-sentence reasoning."
+        )
+        text_part = (
+            f"Text content to evaluate:\n```\n{text_content}\n```"
+        )
+
+        if image_bytes:
+            # Multimodal: include the raw image bytes inline so Gemini can see the image
+            mime = image_mime_type or "image/jpeg"
+            contents = [
+                system_prompt,
+                text_part,
+                "Attached image to evaluate:",
+                types.Part.from_bytes(data=image_bytes, mime_type=mime),
+            ]
+            logger.info("[Moderation][T2] Sending multimodal request (text+image) for post=%s", post_id)
+        else:
+            contents = [system_prompt, text_part]
+            logger.info("[Moderation][T2] Sending text-only request for post=%s", post_id)
+
+        response = await self._gemini.aio.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=contents,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                response_schema=ContentModerationResponse,
+                response_schema=TierTwoResult,
                 temperature=0.1,
             ),
         )
-        return ContentModerationResponse.model_validate_json(response.text)
+
+        await self._usage_service.log_from_response(
+            response=response,
+            feature_name="moderation_tier2",
+            model_used="gemini-2.5-flash",
+        )
+
+        return TierTwoResult.model_validate_json(response.text)
+
+    # ------------------------------------------------------------------
+    # Tier 3 — Human Queue via C# backend
+    # ------------------------------------------------------------------
+
+    async def _run_tier_three(
+        self, post_id: str, t1: TierOneResult, t2: TierTwoResult
+    ) -> TierThreeResult:
+        import httpx
+
+        payload = {
+            "postId": post_id,
+            "reason": "AI inconclusive — requires human review",
+            "tier1Score": t1.combined_score,
+            "tier2Reasoning": t2.reasoning,
+        }
+
+        queue_entry_id = f"manual-{post_id}"
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.post(
+                    f"{self._platform_core_url}/internal/moderation/queue",
+                    json=payload,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                queue_entry_id = data.get("id", queue_entry_id)
+                logger.info("[Moderation][T3] Queue entry created: %s", queue_entry_id)
+        except Exception as exc:
+            logger.error("[Moderation][T3] Failed to notify C# backend: %s", exc)
+
+        return TierThreeResult(queue_entry_id=queue_entry_id)
+
+    # ------------------------------------------------------------------
+    # Helper — notify platform on auto-flag
+    # ------------------------------------------------------------------
+
+    async def _notify_platform(self, post_id: str, decision: ModerationDecision) -> None:
+        import httpx
+
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                await client.post(
+                    f"{self._platform_core_url}/internal/moderation/callback",
+                    json={"postId": post_id, "decision": decision.value},
+                )
+        except Exception as exc:
+            logger.warning("[Moderation] Platform notify failed (non-fatal): %s", exc)
