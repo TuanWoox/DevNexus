@@ -691,6 +691,51 @@ namespace platform_core_service.Migrations
                     b.ToTable("ProfileBlocks");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ProfileMedia", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ProfileId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("ProfileMediaType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SHA256Hash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StoreDestination")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("ProfileId");
+
+                    b.ToTable("ProfileMedias");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Setting", b =>
                 {
                     b.Property<string>("Id")
@@ -1312,6 +1357,17 @@ namespace platform_core_service.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ProfileMedia", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Profile")
+                        .WithMany("ProfileMedias")
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Profile");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.UserFollow", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "FollowingProfile")
@@ -1436,6 +1492,8 @@ namespace platform_core_service.Migrations
                     b.Navigation("ModeratedCommunities");
 
                     b.Navigation("Posts");
+
+                    b.Navigation("ProfileMedias");
 
                     b.Navigation("ReceivedFollowRequests");
 

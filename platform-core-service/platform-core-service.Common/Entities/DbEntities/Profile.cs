@@ -76,5 +76,8 @@ namespace platform_core_service.Common.Entities.DbEntities
 
         [JsonIgnore]
         public ICollection<BookMark> BookMarks { get; set; } = [];
+
+        [JsonIgnore]
+        public ICollection<ProfileMedia> ProfileMedias { get; set; } = [];
     }
 }

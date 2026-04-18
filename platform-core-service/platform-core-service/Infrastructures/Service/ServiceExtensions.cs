@@ -1,3 +1,4 @@
+using CloudinaryDotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +10,9 @@ using platform_core_service.Common.Entities.Identities;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Data;
 using System;
+using System.Configuration;
 using System.Security.Claims;
+using System.Security.Principal;
 using System.Threading;
 using System.Threading.RateLimiting;
 namespace platform_core_service.Infrastructures.Service;
@@ -322,6 +325,22 @@ public static class ServiceExtensions
         });
 
         return services;
+    }
+    #endregion
+
+    #region Configure Cloudinary
+    public static void ConfigureCloudinary(this IServiceCollection services, IConfiguration configuration)
+    {
+        var cloudName = configuration.GetValue<string>("CloudinarySettings:CloudName");
+        var apiKey = configuration.GetValue<string>("CloudinarySettings:ApiKey");
+        var apiSecret = configuration.GetValue<string>("CloudinarySettings:ApiSecret");
+        // Ensure none of them are null/empty
+        if (!new[] { cloudName, apiKey, apiSecret }.Any(string.IsNullOrEmpty))
+        {
+            var account = new Account(cloudName, apiKey, apiSecret);
+            var cloudinary = new Cloudinary(account);
+            services.AddSingleton<ICloudinary>(cloudinary);
+        }
     }
     #endregion
 }

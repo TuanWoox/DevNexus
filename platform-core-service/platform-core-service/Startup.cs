@@ -3,6 +3,7 @@ using platform_core_service.Data;
 using platform_core_service.Infrastructures.Hangfire;
 using platform_core_service.Infrastructures.Service;
 using platform_core_service.Middlewares;
+using System.Configuration;
 
 namespace platform_core_service
 {
@@ -30,6 +31,7 @@ namespace platform_core_service
             services.ConfigureSignalR();
             services.ConfigureAutoMapper();
             services.ConfigureHangfireWithPostgreSql(Configuration);
+            services.ConfigureCloudinary(Configuration);
             services.RegisterStudyNestService(Configuration);
             services.AddDistributedMemoryCache();
             services.ConfigureRateLimiter();
