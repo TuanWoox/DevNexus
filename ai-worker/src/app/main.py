@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from src.app.api.routers import health, moderation, roadmaps, content, taxonomy
+from src.app.api.routers import health, moderation, roadmaps, content, taxonomy, code_tools
 from src.app.core.config import get_settings
 from src.app.core.exceptions import AIWorkerException
 from src.app.infrastructure.database import create_tables, engine
@@ -75,3 +75,4 @@ app.include_router(moderation.router)
 app.include_router(roadmaps.router)
 app.include_router(content.router)
 app.include_router(taxonomy.router)
+app.include_router(code_tools.router)
