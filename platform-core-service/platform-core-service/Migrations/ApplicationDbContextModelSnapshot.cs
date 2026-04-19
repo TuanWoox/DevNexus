@@ -387,6 +387,48 @@ namespace platform_core_service.Migrations
                     b.ToTable("CommunityBans");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityMedia", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommunityId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SHA256Hash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StoreDestination")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommunityId");
+
+                    b.HasIndex("Deleted");
+
+                    b.ToTable("CommunityMedias");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityMember", b =>
                 {
                     b.Property<string>("Id")
@@ -1215,6 +1257,17 @@ namespace platform_core_service.Migrations
                     b.Navigation("Community");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityMedia", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
+                        .WithMany("CommunityMedias")
+                        .HasForeignKey("CommunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Community");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityMember", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
@@ -1450,6 +1503,8 @@ namespace platform_core_service.Migrations
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Community", b =>
                 {
                     b.Navigation("Bans");
+
+                    b.Navigation("CommunityMedias");
 
                     b.Navigation("Members");
 

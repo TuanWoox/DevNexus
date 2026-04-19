@@ -30,6 +30,7 @@ namespace platform_core_service.Data
         public DbSet<BookMark> BookMarks { get; set; }
         public DbSet<BookMarkedItem> BookMarkedItems { get; set; }
         public DbSet<ProfileMedia> ProfileMedias { get; set; }
+        public DbSet<CommunityMedia> CommunityMedias { get;set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {

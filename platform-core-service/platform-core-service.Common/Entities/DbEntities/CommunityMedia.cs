@@ -10,13 +10,11 @@ using System.Threading.Tasks;
 
 namespace platform_core_service.Common.Entities.DbEntities
 {
-    public class ProfileMedia: BaseMediaEntity<string>
+    public class CommunityMedia: BaseMediaEntity<string>
     {
-        [ForeignKey(nameof(Profile))]
-        public string ProfileId { get; set; } = null!;
+        [ForeignKey(nameof(Community))]
+        public string CommunityId { get; set; } = null!;
         [JsonIgnore]
-        public Profile Profile { get; set; } = null!;
-        // Default to avatar
-        public ProfileMediaType ProfileMediaType { get; set; } = ProfileMediaType.Avatar;
+        public Community Community { get; set; } = null!;
     }
 }

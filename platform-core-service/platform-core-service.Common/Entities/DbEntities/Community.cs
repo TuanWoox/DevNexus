@@ -41,5 +41,7 @@ namespace platform_core_service.Common.Entities.DbEntities
         public ICollection<CommunityBan> Bans { get; set; } = [];
         [JsonIgnore]
         public ICollection<Post> Posts { get; set; } = [];
+        [JsonIgnore]
+        public ICollection<CommunityMedia> CommunityMedias { get; set; } = [];
     }
 }
