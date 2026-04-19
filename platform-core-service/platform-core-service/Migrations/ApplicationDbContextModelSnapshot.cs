@@ -819,6 +819,47 @@ namespace platform_core_service.Migrations
                     b.ToTable("ProfileMedias");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.QAMedia", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("QAMediaType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("QAPostId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SHA256Hash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StoreDestination")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("QAPostId");
+
+                    b.ToTable("QAMedias");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Setting", b =>
                 {
                     b.Property<string>("Id")
@@ -1471,6 +1512,15 @@ namespace platform_core_service.Migrations
                     b.Navigation("Profile");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.QAMedia", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.QAPost", "QAPost")
+                        .WithMany("QAMedias")
+                        .HasForeignKey("QAPostId");
+
+                    b.Navigation("QAPost");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.UserFollow", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "FollowingProfile")
@@ -1628,6 +1678,8 @@ namespace platform_core_service.Migrations
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.QAPost", b =>
                 {
                     b.Navigation("Answers");
+
+                    b.Navigation("QAMedias");
                 });
 #pragma warning restore 612, 618
         }

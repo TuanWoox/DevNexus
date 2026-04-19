@@ -32,6 +32,7 @@ namespace platform_core_service.Data
         public DbSet<ProfileMedia> ProfileMedias { get; set; }
         public DbSet<CommunityMedia> CommunityMedias { get;set; }
         public DbSet<PostMedia> PostMedias { get; set; }
+        public DbSet<QAMedia> QAMedias { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
