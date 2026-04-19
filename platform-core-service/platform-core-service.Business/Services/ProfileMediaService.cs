@@ -2,9 +2,8 @@
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Attributes;
 using platform_core_service.Common.Entities.DbEntities;
@@ -14,7 +13,6 @@ using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.ProfileMedia;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
-using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using System.Runtime.InteropServices;
@@ -28,7 +26,8 @@ namespace platform_core_service.Business.Services
         IRepository<ProfileMedia, string> repostiory,
         IConfigurationService configurationService,
         IUserContext userContext,
-        ICloudinary cloudinary
+        ICloudinary cloudinary,
+        ICacheService cacheService
     ) : IProfileMediaService
     {
         private readonly ApplicationDbContext _context = context;
@@ -38,15 +37,29 @@ namespace platform_core_service.Business.Services
         private readonly bool isWindow = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? true : false;
         private readonly IUserContext _userContext = userContext;
         private readonly ICloudinary _cloudinary = cloudinary;
+        private readonly ICacheService _cacheService = cacheService;
+
         public async Task<string> GetById([TrimmedRequired] string Id)
         {
             string fileDestination = "";
+            string? cacheFileDestination = "";
             try
             {
-                ProfileMedia? profileMedia = await _context.ProfileMedias.FirstOrDefaultAsync(x => x.Id == Id);
-                if(profileMedia != null)
+                cacheFileDestination = await _cacheService.GetCacheAsync<string>($"profile-media-{Id}");
+                if (!string.IsNullOrEmpty(cacheFileDestination))
                 {
-                    fileDestination = profileMedia.StoreDestination;
+                    return cacheFileDestination;
+                }
+                else
+                {
+                    ProfileMedia? profileMedia = await _context.ProfileMedias.FirstOrDefaultAsync(x => x.Id == Id
+                                                                                                 && x.IsPrimary == true);
+                    if (profileMedia != null)
+                    {
+                        fileDestination = profileMedia.StoreDestination;
+                        // Only cache for 30 minutes from current time
+                        await _cacheService.SetCacheAsync($"profile-media-{Id}", profileMedia.StoreDestination, new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(30) });
+                    }
                 }
             }
             catch (Exception ex)
@@ -64,7 +77,7 @@ namespace platform_core_service.Business.Services
                 var pagingResult = await _repository.GetPagingAsync<Page<string>, SelectProfileMediaDTO>(query, page);
                 returnResult.Result = pagingResult;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 DevNexusLogger.Instance.Error(ex);
                 returnResult.Message = ex.Message;
@@ -105,9 +118,12 @@ namespace platform_core_service.Business.Services
                     {
                         sameHashProfileMedia.Deleted = false;
                         sameHashProfileMedia.DateDeleted = null;
-                    } else if (sameHashProfileMedia.IsPrimary)
+                    }
+                    else if (sameHashProfileMedia.IsPrimary)
                     {
                         returnResult.Result = _mapper.Map<SelectProfileMediaDTO>(sameHashProfileMedia);
+                        await _cacheService.SetCacheAsync($"profile-media-{sameHashProfileMedia.Id}", sameHashProfileMedia.StoreDestination,
+                            new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(30) });
                         return returnResult;
                     }
                     else sameHashProfileMedia.IsPrimary = true;
@@ -126,9 +142,10 @@ namespace platform_core_service.Business.Services
                                                                                         && x.IsPrimary
                                                                                         && x.ProfileMediaType == createProfileMedia.ProfileMediaType)
                                                                                     .FirstOrDefaultAsync();
+
                 // The profile media is different than the inserted new one and the newhashprofile
                 if (primaryProfileMedia != null) primaryProfileMedia.IsPrimary = false;
-  
+
                 //Only add new if same hash media does not exist
                 if (sameHashProfileMedia == null)
                 {
@@ -144,7 +161,11 @@ namespace platform_core_service.Business.Services
                 }
 
                 //Save change everything
-                if (await _context.SaveChangesAsync() > 0) returnResult.Result = _mapper.Map<SelectProfileMediaDTO>(newProfileMedia ?? sameHashProfileMedia);
+                if (await _context.SaveChangesAsync() > 0)
+                {
+                    returnResult.Result = _mapper.Map<SelectProfileMediaDTO>(newProfileMedia ?? sameHashProfileMedia);
+                    if (!string.IsNullOrEmpty(primaryProfileMedia?.Id)) await _cacheService.RemoveCacheAsync($"profile-media-{primaryProfileMedia.Id}");
+                }
                 else
                 {
                     //If datbase fail => then we delete the file we newly created
@@ -171,7 +192,7 @@ namespace platform_core_service.Business.Services
                                                                                         && x.ProfileMediaType == updatePrimaryProfileMedia.ProfileMediaType)
                                                                                     .FirstOrDefaultAsync();
 
-                if(primaryProfileMedia != null)
+                if (primaryProfileMedia != null)
                 {
                     if (primaryProfileMedia.Id == updatePrimaryProfileMedia.Id)
                     {
@@ -193,31 +214,43 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                if(await _context.SaveChangesAsync() > 0 ) returnResult.Result = _mapper.Map<SelectProfileMediaDTO>(updatedPrimaryProfileMedia);
+                if (await _context.SaveChangesAsync() > 0)
+                {
+                    returnResult.Result = _mapper.Map<SelectProfileMediaDTO>(updatedPrimaryProfileMedia);
+                    await _cacheService.SetCacheAsync($"profile-media-{updatedPrimaryProfileMedia.Id}", updatedPrimaryProfileMedia.StoreDestination, new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(30) });
+                    if (primaryProfileMedia != null)
+                    {
+                        await _cacheService.RemoveCacheAsync($"profile-media-{primaryProfileMedia.Id}");
+                    }
+                }
                 else
                 {
                     returnResult.Message = ResponseMessage.MESSAGE_TECHNICAL_ISSUE;
                     return returnResult;
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 DevNexusLogger.Instance.Error(ex);
                 returnResult.Message = ex.Message;
             }
             return returnResult;
         }
-        public async  Task<ReturnResult<bool>> Delete([TrimmedRequired] string id)
+        public async Task<ReturnResult<bool>> Delete([TrimmedRequired] string id)
         {
             ReturnResult<bool> returnResult = new ReturnResult<bool>();
             try
             {
                 var deleteProfileMedia = await _context.ProfileMedias.FirstOrDefaultAsync(x => x.Id == id
-                                                                                        &&  x.ProfileId == _userContext.ProfileId);
+                                                                                        && x.ProfileId == _userContext.ProfileId);
                 if (deleteProfileMedia != null)
                 {
                     _context.Remove(deleteProfileMedia);
-                    if (await this._context.SaveChangesAsync() > 0) returnResult.Result = true;
+                    if (await this._context.SaveChangesAsync() > 0)
+                    {
+                        returnResult.Result = true;
+                        await _cacheService.RemoveCacheAsync($"profile-media-{deleteProfileMedia.Id}");
+                    }
                     else
                     {
                         returnResult.Message = ResponseMessage.MESSAGE_TECHNICAL_ISSUE;
@@ -230,7 +263,7 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 DevNexusLogger.Instance.Error(ex);
                 returnResult.Message = ex.Message;
@@ -241,18 +274,22 @@ namespace platform_core_service.Business.Services
         {
             ReturnResult<int> returnResult = new();
             try
-            { 
+            {
                 var deleteProfileMedias = await _context.ProfileMedias.Where(x => x.ProfileId == _userContext.ProfileId && ids.Contains(x.Id)).ToListAsync();
-                if(deleteProfileMedias.Count > 0)
+                if (deleteProfileMedias.Count > 0)
                 {
                     _context.RemoveRange(deleteProfileMedias);
-                    if (await _context.SaveChangesAsync() > 0) returnResult.Result = deleteProfileMedias.Count;
+                    if (await _context.SaveChangesAsync() > 0)
+                    {
+                        returnResult.Result = deleteProfileMedias.Count;
+                        await Task.WhenAll(deleteProfileMedias.Select(x => _cacheService.RemoveCacheAsync($"profile-media-{x.Id}")));
+                    }
                     else
                     {
                         returnResult.Message = ResponseMessage.MESSAGE_TECHNICAL_ISSUE;
                         return returnResult;
                     }
-                } 
+                }
                 else
                 {
                     returnResult.Message = string.Format(ResponseMessage.MESSAGE_ALL_ITEM_NOT_FOUND);
@@ -272,7 +309,7 @@ namespace platform_core_service.Business.Services
             using var stream = file.OpenReadStream();
 
             var hashBytes = await sha256.ComputeHashAsync(stream);
-            return Convert.ToHexString(hashBytes); 
+            return Convert.ToHexString(hashBytes);
         }
         private async Task<string> UploadToCloundinary(IFormFile File, string fileGuidName)
         {
@@ -292,7 +329,7 @@ namespace platform_core_service.Business.Services
                 }
                 else fileCDNUrl = uploadResult.SecureUrl.ToString();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 DevNexusLogger.Instance.Error(ex.Message);
             }

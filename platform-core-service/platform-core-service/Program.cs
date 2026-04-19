@@ -44,6 +44,11 @@ namespace platform_core_service
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
+                    webBuilder.UseKestrel(options =>
+                    {
+                        //Only allow 20MB to be upload at one time
+                        options.Limits.MaxRequestBodySize = 20 * 1024 * 1024;
+                    });
                 });
     }
 }

@@ -41,7 +41,7 @@ namespace platform_core_service
         {
             // Add global exception middleware
             app.UseMiddleware<GlobalExceptionMiddleware>();
-
+            
             #region  Development Configuration
             if (env.IsDevelopment())
             {

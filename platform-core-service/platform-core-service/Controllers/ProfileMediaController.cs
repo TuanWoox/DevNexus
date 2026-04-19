@@ -45,7 +45,7 @@ namespace platform_core_service.Controllers
         }
 
         [HttpPost("paging/{profileId}")]
-        public async Task<IActionResult> GetPaging([TrimmedRequired] string profileId, [FromQuery] Page<string> page)
+        public async Task<IActionResult> GetPaging([TrimmedRequired] string profileId,Page<string> page)
         {
             ReturnResult<PagedData<SelectProfileMediaDTO, string>> returnResult = new();
             try
