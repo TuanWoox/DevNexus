@@ -1,9 +1,5 @@
-const CreatePostPage = () => {
-    return (
-        <div>
-            <h1>Create Post</h1>
-        </div>
-    )
-}
+import { PostForm } from '@/components/post/post-form'
 
-export default CreatePostPage
+export default function CreatePostPage() {
+    return <PostForm />
+}

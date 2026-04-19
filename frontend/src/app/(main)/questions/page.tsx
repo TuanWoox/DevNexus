@@ -20,7 +20,7 @@ export default function QuestionsPage() {
         <div className="w-full mx-auto py-4 sm:p-6">
             <div className="mb-6 px-4 sm:px-0">
                 <h1 className="text-2xl font-bold text-heading">Questions</h1>
-                <p className="text-sm text-muted-foreground mt-1">Discover the latest Q&As.</p>
+                <p className="text-base text-muted-foreground mt-1">Discover the latest Q&As.</p>
             </div>
 
             <div className="flex flex-col gap-4 px-4 sm:px-0">

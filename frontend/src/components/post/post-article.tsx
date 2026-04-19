@@ -8,18 +8,41 @@ import {
     Bookmark,
     Share2,
     UserPlus,
-    Flag
+    Flag,
+    Edit,
+    Trash
 } from 'lucide-react';
-import { useGetPostById } from '@/hooks/post-hooks';
+import { useDeletePostById, useGetPostById } from '@/hooks/post-hooks';
 import { useGetProfileById } from '@/hooks/profile-hooks/use-get-profile-by-id';
 import { useGetCommentsByPostId } from '@/hooks/comment-hooks/use-get-comments-by-post-id';
 import { SortOrderType } from '@/constants/sortOrderType';
 import { useUpdateVoteByPostId } from '@/hooks/vote-hooks/use-update-vote-by-post-id';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useGetQAPostById } from '@/hooks/qa-post-hooks/use-get-qa-post-by-id';
 import { useGetAnswersByPostId } from '@/hooks/answer-hooks/use-get-answers-by-post-id';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { MarkdownViewer } from '../editor/markdown-viewer';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store/store';
+import { useDeleteQAPostById } from '@/hooks/qa-post-hooks/use-delete-qa-post-by-id';
+import { useState } from 'react';
+import { useRouter } from "next/navigation";
 
 interface Props {
     postId: string;
@@ -27,17 +50,22 @@ interface Props {
 }
 
 export default function PostArticle({ postId, isQAPost }: Props) {
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const menuRef = useRef<HTMLDivElement>(null);
+    const router = useRouter();
+    const [showDeleteAlert, setShowDeleteAlert] = useState(false);
 
+    const { user } = useSelector((state: RootState) => state.auth);
     // Luôn luôn gọi cả 2, nhưng tùy isQAPost mà bật cái nào, tắt cái nào
     const { data: qaPost, isLoading: isQALoading } = useGetQAPostById(postId, isQAPost);
     const { data: normalPost, isLoading: isNormalLoading } = useGetPostById(postId, !isQAPost);
     // Sau đó quyết định lấy data từ biến nào
     const post = isQAPost ? qaPost : normalPost;
     const isPostLoading = isQAPost ? isQALoading : isNormalLoading;
+    const isAuthor = user?.profileId === post?.authorId;
 
     const { data: author, isLoading: isAuthorLoading } = useGetProfileById(post?.authorId || '');
+
+    const { mutate: deletePost, isPending: isDeletingPost } = useDeletePostById();
+    const { mutate: deleteQAPost, isPending: isDeletingQAPost } = useDeleteQAPostById();
 
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(postId);
 
@@ -45,6 +73,24 @@ export default function PostArticle({ postId, isQAPost }: Props) {
         e.preventDefault();
         updateVote({ isUpvote });
     };
+
+    const handleDeletePost = () => {
+        const mutationOptions = {
+            onSuccess: () => {
+                setShowDeleteAlert(false);
+                router.push('/feed'); // Redirect user về trang chủ / feed
+            },
+            onError: () => {
+                setShowDeleteAlert(false);
+            }
+        };
+
+        if (isQAPost) {
+            deleteQAPost(postId, mutationOptions);
+        } else {
+            deletePost(postId, mutationOptions);
+        }
+    }
 
     // Minimal fetch just to get total elements if it's not in post DTO
     const { data: answerData } = useGetAnswersByPostId(postId, isQAPost, {
@@ -65,17 +111,6 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     });
 
     const commentsData = isQAPost ? answerData : commentData;
-
-    // Xử lý sự kiện click ngoài dropdown
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setIsMenuOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
 
     const isLoading = isPostLoading || isAuthorLoading;
 
@@ -145,21 +180,24 @@ export default function PostArticle({ postId, isQAPost }: Props) {
         <article className="bg-card sm:rounded-xl sm:border border-default sm:shadow-sm sm:mx-6 overflow-hidden">
             <div className="p-4 sm:p-6">
                 {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                    {post.tagNames?.map((tag) => (
-                        <span key={tag} className="badge-default px-2.5 py-1 text-xs rounded-md">
-                            {tag}
-                        </span>
-                    ))}
-                </div>
+                {post.tagNames.length !== 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                        {post.tagNames?.map((tag) => (
+                            <span key={tag} className="badge-emerald px-2.5 py-1 text-xs rounded-md">
+                                {tag}
+                            </span>
+                        ))}
+                    </div>
+                )}
+
 
                 {/* Title */}
-                <h1 className="text-2xl sm:text-3xl font-bold text-heading leading-tight mb-6">
+                <h1 className="text-2xl sm:text-3xl font-bold text-heading leading-tight mb-3">
                     {post.title}
                 </h1>
 
                 {/* Author Info */}
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default">
                             {author?.avatarUrl ? (
@@ -186,32 +224,59 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                         </div>
                     </div>
                     {/* Dropdown Menu Options */}
-                    <div className="relative" ref={menuRef}>
-                        <button
-                            onClick={(e) => { e.preventDefault(); setIsMenuOpen(!isMenuOpen); }}
-                            className="p-2 text-muted-foreground hover:text-primary hover:bg-subtle rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            aria-label="More options"
-                        >
-                            <MoreHorizontal className="w-5 h-5" />
-                        </button>
-                        {isMenuOpen && (
-                            <div className="absolute right-0 w-34 mt-1 bg-card border rounded-xl shadow-elevated p-1 z-10 animate-in fade-in zoom-in-95">
-                                <button className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading rounded-lg transition-colors text-left font-medium">
-                                    <UserPlus className="w-4 h-4" />
-                                    Follow User
-                                </button>
-                                <button className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive hover:bg-destructive/10 rounded-lg transition-colors text-left font-medium">
-                                    <Flag className="w-4 h-4" />
-                                    Report Post
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                    <DropdownMenu modal={false}>
+                        <DropdownMenuTrigger asChild>
+                            <button
+                                className="p-2 text-muted-foreground hover:text-primary hover:bg-subtle rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                aria-label="More options"
+                            >
+                                <MoreHorizontal className="w-5 h-5" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-42 bg-card border rounded-xl shadow-elevated p-1 z-10">
+                            {isAuthor ? (
+                                <>
+                                    <DropdownMenuItem
+                                        onClick={() => router.push(`/${isQAPost ? 'questions' : 'post'}/edit/${post.id}`)}
+                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium"
+                                    >
+                                        <Edit className="w-4 h-4" />
+                                        <span>Edit Post</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={() => setShowDeleteAlert(true)}
+                                        disabled={isDeletingPost || isDeletingQAPost}
+                                        variant='destructive'
+                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
+                                    >
+                                        <Trash className="w-4 h-4" />
+                                        <span>Delete Post</span>
+                                    </DropdownMenuItem>
+                                </>
+                            ) : (
+                                <>
+                                    <DropdownMenuItem
+                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium"
+                                    >
+                                        <UserPlus className="w-4 h-4" />
+                                        <span>Follow User</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        variant='destructive'
+                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
+                                    >
+                                        <Flag className="w-4 h-4" />
+                                        <span>Report Comment</span>
+                                    </DropdownMenuItem>
+                                </>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
 
                 {/* Content */}
                 <div className="text-body text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
-                    {post.content}
+                    <MarkdownViewer source={post.content} />
                 </div>
             </div>
 
@@ -255,6 +320,38 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                     </button>
                 </div>
             </div>
+            {/* Delete Confirmation Alert */}
+            <AlertDialog
+                open={showDeleteAlert}
+                onOpenChange={(open) => {
+                    if (!isDeletingPost && !isDeletingQAPost) {
+                        setShowDeleteAlert(open);
+                    }
+                }}
+            >
+                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete post?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {`Once you delete this post, it can't be restored.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeletingPost || isDeletingQAPost} variant="custom" size="lg" className="btn-secondary">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault(); // Giữ modal mở để hiển thị trạng thái loading
+                                handleDeletePost();
+                            }}
+                            variant="destructive"
+                            disabled={isDeletingPost || isDeletingQAPost}
+                            size="lg"
+                        >
+                            {isDeletingPost || isDeletingQAPost ? "Deleting..." : "Delete"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </article>
     );
 }
