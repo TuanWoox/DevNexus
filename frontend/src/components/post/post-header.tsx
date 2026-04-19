@@ -12,21 +12,21 @@ export default function PostHeader() {
             <div className="sm:hidden sticky top-14 z-40 bg-page/90 backdrop-blur border-b border-default px-4 py-3 flex items-center gap-3">
                 <button
                     onClick={() => router.back()}
-                    className="p-1 text-muted-foreground hover:text-heading transition-colors"
+                    className="flex items-center gap-2 text-muted-foreground hover:text-heading transition-colors text-lg font-medium truncate"
                 >
                     <ArrowLeft className="w-5 h-5" />
+                    Post
                 </button>
-                <span className="font-semibold text-heading truncate">Post</span>
             </div>
 
             {/* Nút Back Desktop */}
             <div className="hidden sm:block px-6 pt-6 pb-2">
                 <button
                     onClick={() => router.back()}
-                    className="flex items-center gap-2 text-muted-foreground hover:text-heading transition-colors w-fit font-medium text-base"
+                    className="flex items-center gap-2 text-muted-foreground hover:text-heading transition-colors w-fit text-lg font-medium"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    Back to Feed
+                    Back to Posts
                 </button>
             </div>
         </>

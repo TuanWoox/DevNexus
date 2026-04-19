@@ -17,7 +17,7 @@ export default async function QuestionDetailPage({
     }
 
     return (
-        <div className="w-full mx-auto pb-24 sm:pb-8">
+        <div className="w-full mx-auto pb-8">
             <PostHeader />
             <PostArticle postId={qaPostId} isQAPost={true} />
             <CommentSection postId={qaPostId} isQAPost={true} />
