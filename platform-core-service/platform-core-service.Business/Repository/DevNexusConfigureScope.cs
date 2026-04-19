@@ -46,6 +46,10 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IBookMarkService, BookMarkService>();
             services.AddScoped<IBookMarkItemService, BookMarkedItemService>();
             services.AddScoped<ISocialGuardService, SocialGuardService>();
+            services.AddScoped<IProfileMediaService, ProfileMediaService>();
+            services.AddScoped<ICommunityMediaService, CommunityMediaService>();
+            services.AddScoped<IPostMediaService, PostMediaService>();
+            services.AddScoped<IQAMediaService, QAMediaService>();
             // Register the Redis connection multiplexer as a singleton service
             // This allows the application to interact directly with Redis for advanced scenarios
             services.AddSingleton<IConnectionMultiplexer>(sp =>

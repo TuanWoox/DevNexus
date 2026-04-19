@@ -12,6 +12,7 @@ using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using System.Text.Json;
+using System.Runtime.InteropServices;
 
 namespace platform_core_service.Business.Services
 {
@@ -532,6 +533,12 @@ namespace platform_core_service.Business.Services
                     IsSensitive = false,
                     Description = "Template for registration confirmation email"
                 },
+                new Setting
+                {
+                    Key = "UPLOAD_FOLDER",
+                    Group = "UPLOAD",
+                    Value = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)  ? @"D:\Uploads" : "/var/www/uploads"
+                }
             };
 
             foreach (var setting in defaultSettings)

@@ -38,6 +38,8 @@ namespace platform_core_service.Common.Entities.DbEntities
         [ForeignKey(nameof(Community))]
         public string? CommunityId { get; set; } = null;
         [JsonIgnore]
-        public Community? Community { get; set; }
+        public virtual Community? Community { get; set; }
+        [JsonIgnore]
+        public List<PostMedia> PostMedias { get; set; } = [];
     }
 }

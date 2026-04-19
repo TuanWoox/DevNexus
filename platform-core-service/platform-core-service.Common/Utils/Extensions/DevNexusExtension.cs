@@ -150,6 +150,23 @@ namespace platform_core_service.Common.Utils.Extensions
             var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
             return _allowedExtensions.Contains(extension);
         }
+        public static bool HasValidVideoExtension(this IFormFile file)
+        {
+            string[] _allowedExtensions = { ".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv", ".wmv" };
+            if (file == null || string.IsNullOrWhiteSpace(file.FileName) || file.Length == 0)
+                return false;
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            return _allowedExtensions.Contains(extension);
+        }
+        public static bool HasValidVideoExtension(this string fileName)
+        {
+            string[] _allowedExtensions = { ".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv", ".wmv" };
+            if (fileName == null || string.IsNullOrWhiteSpace(fileName) || fileName.Length == 0)
+                return false;
+            var extension = Path.GetExtension(fileName).ToLowerInvariant();
+            return _allowedExtensions.Contains(extension);
+        }
+
     }
     public class DateRangeFilter
     {

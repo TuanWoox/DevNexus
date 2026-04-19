@@ -13,5 +13,6 @@ namespace platform_core_service.Common.Interfaces.Services
         Task<ReturnResult<SelectCommunityDTO>> UpdateAsync(UpdateCommunityDTO updateDTO);
         Task<ReturnResult<bool>> DeleteByIdAsync(string communityId);
         Task<ReturnResult<int>> DeleteByIdsAsync(List<string> communityIds);
+        Task<ReturnResult<SelectCommunityDTO>> UpdateCommunityCoverPhotoUrl(string communityId, string mediaId);
     }
 }
