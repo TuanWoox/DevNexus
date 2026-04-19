@@ -19,7 +19,6 @@ namespace platform_core_service.Common.Entities.DbEntities
         public string FullName { get; set; }
 
         [MaxLength(500)]
-        [Url(ErrorMessage = "AvatarUrl must be a valid URL")]
         public string? AvatarUrl { get; set; }
 
         [MaxLength(500)]
@@ -78,6 +77,7 @@ namespace platform_core_service.Common.Entities.DbEntities
         public ICollection<BookMark> BookMarks { get; set; } = [];
 
         [JsonIgnore]
-        public ICollection<ProfileMedia> ProfileMedias { get; set; } = [];
+        //Make it virtual so when later we access => EF core will automatically load for us
+        public virtual ICollection<ProfileMedia> ProfileMedias { get; set; } = [];
     }
 }

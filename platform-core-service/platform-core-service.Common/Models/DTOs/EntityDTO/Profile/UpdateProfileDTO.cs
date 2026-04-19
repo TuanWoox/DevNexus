@@ -11,10 +11,6 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Profile
         public string FullName { get; set; }
 
         [MaxLength(500)]
-        [Url]
-        public string? AvatarUrl { get; set; }
-
-        [MaxLength(500)]
         public string Bio { get; set; }
 
         public List<string> TechStacks { get; set; }

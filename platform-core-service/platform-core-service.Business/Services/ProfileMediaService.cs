@@ -27,7 +27,8 @@ namespace platform_core_service.Business.Services
         IConfigurationService configurationService,
         IUserContext userContext,
         ICloudinary cloudinary,
-        ICacheService cacheService
+        ICacheService cacheService,
+        IProfileService profileService
     ) : IProfileMediaService
     {
         private readonly ApplicationDbContext _context = context;
@@ -38,6 +39,8 @@ namespace platform_core_service.Business.Services
         private readonly IUserContext _userContext = userContext;
         private readonly ICloudinary _cloudinary = cloudinary;
         private readonly ICacheService _cacheService = cacheService;
+        private readonly IProfileService _profileService = profileService;
+        private readonly DistributedCacheEntryOptions cacheEntryOptions = new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(30) };
 
         public async Task<string> GetById([TrimmedRequired] string Id)
         {
@@ -52,8 +55,7 @@ namespace platform_core_service.Business.Services
                 }
                 else
                 {
-                    ProfileMedia? profileMedia = await _context.ProfileMedias.FirstOrDefaultAsync(x => x.Id == Id
-                                                                                                 && x.IsPrimary == true);
+                    ProfileMedia? profileMedia = await _context.ProfileMedias.FirstOrDefaultAsync(x => x.Id == Id);
                     if (profileMedia != null)
                     {
                         fileDestination = profileMedia.StoreDestination;
@@ -105,7 +107,7 @@ namespace platform_core_service.Business.Services
                 string fileGuidName = $"{Guid.NewGuid()}{Path.GetExtension(createProfileMedia.File.FileName)}";
                 fileDestination = Path.Combine(profileMediaFolder, fileGuidName);
                 //Check see if we have the same hash file
-                string sha256HashProfileMedia = await this.HashFileAsync(createProfileMedia.File);
+                string sha256HashProfileMedia = await HashFileAsync(createProfileMedia.File);
                 //Find the samehashProfileMedia althought it is delete or exist => just have the same shahash => then we take
                 var sameHashProfileMedia = await _context.ProfileMedias.Where(x => x.SHA256Hash == sha256HashProfileMedia
                                                                         && x.ProfileId == _userContext.ProfileId
@@ -117,16 +119,20 @@ namespace platform_core_service.Business.Services
                     if (sameHashProfileMedia.Deleted)
                     {
                         sameHashProfileMedia.Deleted = false;
+                        sameHashProfileMedia.IsPrimary = true;
                         sameHashProfileMedia.DateDeleted = null;
                     }
                     else if (sameHashProfileMedia.IsPrimary)
                     {
                         returnResult.Result = _mapper.Map<SelectProfileMediaDTO>(sameHashProfileMedia);
-                        await _cacheService.SetCacheAsync($"profile-media-{sameHashProfileMedia.Id}", sameHashProfileMedia.StoreDestination,
-                            new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(30) });
+                        await _cacheService.SetCacheAsync($"profile-media-{sameHashProfileMedia.Id}", sameHashProfileMedia.StoreDestination, cacheEntryOptions);
+                        await _profileService.UpdateProfileAvatarUrl(sameHashProfileMedia.ProfileId, sameHashProfileMedia.Id);
                         return returnResult;
                     }
-                    else sameHashProfileMedia.IsPrimary = true;
+                    else
+                    {
+                        sameHashProfileMedia.IsPrimary = true;
+                    }
                 }
                 else
                 {
@@ -164,7 +170,10 @@ namespace platform_core_service.Business.Services
                 if (await _context.SaveChangesAsync() > 0)
                 {
                     returnResult.Result = _mapper.Map<SelectProfileMediaDTO>(newProfileMedia ?? sameHashProfileMedia);
+                    var media = newProfileMedia ?? sameHashProfileMedia;
+                    if (!string.IsNullOrEmpty(media?.Id) && !string.IsNullOrEmpty(media?.ProfileId)) await _profileService.UpdateProfileAvatarUrl(media.ProfileId, media.Id);
                     if (!string.IsNullOrEmpty(primaryProfileMedia?.Id)) await _cacheService.RemoveCacheAsync($"profile-media-{primaryProfileMedia.Id}");
+
                 }
                 else
                 {
@@ -217,11 +226,9 @@ namespace platform_core_service.Business.Services
                 if (await _context.SaveChangesAsync() > 0)
                 {
                     returnResult.Result = _mapper.Map<SelectProfileMediaDTO>(updatedPrimaryProfileMedia);
-                    await _cacheService.SetCacheAsync($"profile-media-{updatedPrimaryProfileMedia.Id}", updatedPrimaryProfileMedia.StoreDestination, new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(30) });
-                    if (primaryProfileMedia != null)
-                    {
-                        await _cacheService.RemoveCacheAsync($"profile-media-{primaryProfileMedia.Id}");
-                    }
+                    await _profileService.UpdateProfileAvatarUrl(updatedPrimaryProfileMedia.ProfileId, updatedPrimaryProfileMedia.Id);
+                    await _cacheService.SetCacheAsync($"profile-media-{updatedPrimaryProfileMedia.Id}", updatedPrimaryProfileMedia.StoreDestination, cacheEntryOptions);
+                    if (primaryProfileMedia != null) await _cacheService.RemoveCacheAsync($"profile-media-{primaryProfileMedia.Id}");
                 }
                 else
                 {
@@ -250,6 +257,7 @@ namespace platform_core_service.Business.Services
                     {
                         returnResult.Result = true;
                         await _cacheService.RemoveCacheAsync($"profile-media-{deleteProfileMedia.Id}");
+                        if (deleteProfileMedia.IsPrimary) await _profileService.UpdateProfileAvatarUrl(deleteProfileMedia.ProfileId, "");
                     }
                     else
                     {
@@ -282,6 +290,8 @@ namespace platform_core_service.Business.Services
                     if (await _context.SaveChangesAsync() > 0)
                     {
                         returnResult.Result = deleteProfileMedias.Count;
+                        var primaryMediaProfile = deleteProfileMedias.Where(x => x.IsPrimary).FirstOrDefault();
+                        if (primaryMediaProfile != null) await _profileService.UpdateProfileAvatarUrl(primaryMediaProfile.ProfileId, "");
                         await Task.WhenAll(deleteProfileMedias.Select(x => _cacheService.RemoveCacheAsync($"profile-media-{x.Id}")));
                     }
                     else
