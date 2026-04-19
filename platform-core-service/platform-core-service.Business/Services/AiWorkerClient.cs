@@ -43,7 +43,7 @@ namespace platform_core_service.Business.Services
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        DevNexusLogger.Instance.Warning(
+                        DevNexusLogger.Instance.Warn(
                             $"[AiWorkerClient] Moderation submit returned {(int)response.StatusCode} for post {postId}.");
                     }
                     else

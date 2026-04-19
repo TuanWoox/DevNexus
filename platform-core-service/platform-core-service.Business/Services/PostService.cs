@@ -112,11 +112,13 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Step 2: Load post with tags (public read - no ownership check)
+                // Step 2: Load post with tags (public read — only show approved posts)
                 var post = await _context.Posts
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
-                    .FirstOrDefaultAsync(p => p.Id == postId || p.Slug == postId);
+                    .FirstOrDefaultAsync(p =>
+                        (p.Id == postId || p.Slug == postId) &&
+                        p.ModerationStatus == ModerationStatus.Approved);
 
                 if (post == null)
                 {
@@ -147,9 +149,9 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Step 2: Build query for current user's posts
+                // Step 2: Build query — news feed shows only approved posts for all users
                 var query = _context.Posts
-                    .Where(p => p.AuthorId == profileId)
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .AsQueryable();
