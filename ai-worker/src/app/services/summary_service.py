@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.core.exceptions import AIWorkerException
 from src.app.schemas.content import SummarizeRequest, SummarizeResponse
+from src.app.services.ai_helpers import handle_genai_error, truncate_input
 from src.app.services.ai_usage_service import AiUsageService
 
 logger = logging.getLogger(__name__)
@@ -47,11 +48,12 @@ class SummaryService:
             else f"in {request.language}"
         )
 
+        safe_content = truncate_input(request.content)
         prompt = (
             f"You are a senior technical writer. Read the following post and produce exactly 3 to 5 "
             f"concise bullet-point takeaways {lang_instruction}. "
             "Each point must start with an action verb and be at most 20 words.\n\n"
-            f"Post content:\n{request.content}"
+            f"Post content:\n{safe_content}"
         )
 
         try:
@@ -81,5 +83,7 @@ class SummaryService:
 
             return result
 
+        except AIWorkerException:
+            raise
         except Exception as exc:
-            raise AIWorkerException(f"SummaryService failed: {exc}", status_code=502) from exc
+            raise handle_genai_error("SummaryService.summarize", exc) from exc

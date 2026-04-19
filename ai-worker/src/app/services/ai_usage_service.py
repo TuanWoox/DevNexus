@@ -1,5 +1,4 @@
 import logging
-from typing import Any
 
 from google.genai.types import GenerateContentResponse
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -5,6 +5,7 @@ from fastapi import status as http_status
 from google import genai
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.app.core.config import get_settings
 from src.app.core.security import CurrentUser, get_current_user
 from src.app.infrastructure.database import get_db_session
 from src.app.infrastructure.gemini import get_gemini_client
@@ -12,6 +13,8 @@ from src.app.schemas.moderation import ModerationSubmitResponse
 from src.app.workers.moderation_worker import run_moderation
 
 router = APIRouter(prefix="/ai/moderation", tags=["Moderation AI"])
+
+
 @router.post(
     "/submit",
     response_model=ModerationSubmitResponse,
@@ -45,6 +48,7 @@ async def submit_content(
         image_bytes = await image.read()
         image_mime_type = image.content_type  # e.g. "image/jpeg", "image/png"
 
+    settings = get_settings()
     task_id = str(uuid.uuid4())
 
     background_tasks.add_task(
@@ -55,6 +59,7 @@ async def submit_content(
         image_mime_type=image_mime_type,
         db=db,
         gemini_client=gemini_client,
+        platform_core_url=settings.platform_core_service_url,
     )
 
     return ModerationSubmitResponse(

@@ -1,7 +1,6 @@
 import logging
 
 from google import genai
-from google.genai import errors as genai_errors
 from google.genai import types
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,61 +13,12 @@ from src.app.schemas.code_tools import (
     FirstResponderRequest,
     FirstResponderResponse,
 )
+from src.app.services.ai_helpers import handle_genai_error, truncate_input
 from src.app.services.ai_usage_service import AiUsageService
 
 logger = logging.getLogger(__name__)
 
 _MODEL = "gemini-2.5-flash"
-_MAX_INPUT_CHARS = 15_000
-
-
-def _truncate_input(text: str, max_chars: int = _MAX_INPUT_CHARS) -> str:
-    """Keep the head and tail of large inputs, drop the middle to protect RAM and token quota."""
-    if len(text) <= max_chars:
-        return text
-    half = max_chars // 2
-    return text[:half] + "\n\n...[TRUNCATED FOR LENGTH]...\n\n" + text[-half:]
-
-
-def _strip_mermaid_fences(text: str) -> str:
-    """Remove markdown code fences that Gemini occasionally injects inside JSON string fields."""
-    return (
-        text.replace("```mermaid\n", "")
-            .replace("```mermaid", "")
-            .replace("```\n", "")
-            .replace("```", "")
-            .strip()
-    )
-
-
-def _handle_genai_error(context: str, exc: Exception) -> AIWorkerException:
-    """
-    Map google.genai SDK errors to meaningful HTTP status codes.
-
-    - ClientError (4xx): surface the upstream code directly.
-    - ServerError (5xx): treat as 503 – upstream is down, not our fault.
-    - Anything else:     generic 500.
-    """
-    if isinstance(exc, genai_errors.ClientError):
-        upstream_code = getattr(exc, "code", 400)
-        logger.warning("%s – Gemini ClientError %s: %s", context, upstream_code, exc)
-        return AIWorkerException(
-            f"{context}: Gemini rejected the request (code={upstream_code}): {exc}",
-            status_code=upstream_code,
-        )
-
-    if isinstance(exc, genai_errors.ServerError):
-        logger.error("%s – Gemini ServerError: %s", context, exc)
-        return AIWorkerException(
-            f"{context}: Gemini API is temporarily unavailable: {exc}",
-            status_code=503,
-        )
-
-    logger.exception("%s – unexpected error: %s", context, exc)
-    return AIWorkerException(
-        f"{context}: unexpected error: {exc}",
-        status_code=500,
-    )
 
 
 class CodeToolsService:
@@ -88,7 +38,7 @@ class CodeToolsService:
     ) -> CodeExplainResponse:
         logger.info("CodeToolsService: explain_code for language %s", request.language)
 
-        safe_code = _truncate_input(request.code)
+        safe_code = truncate_input(request.code)
 
         prompt = (
             f"You are an expert Senior Software Engineer and technical mentor. "
@@ -121,7 +71,7 @@ class CodeToolsService:
         except AIWorkerException:
             raise
         except Exception as exc:
-            raise _handle_genai_error("CodeToolsService.explain_code", exc) from exc
+            raise handle_genai_error("CodeToolsService.explain_code", exc) from exc
 
     async def generate_diagram(
         self,
@@ -130,7 +80,7 @@ class CodeToolsService:
     ) -> DiagramResponse:
         logger.info("CodeToolsService: generate_diagram format %s", request.diagram_type)
 
-        safe_code = _truncate_input(request.code)
+        safe_code = truncate_input(request.code)
 
         prompt = (
             f"You are an expert software architect. Analyze the the provided code and generate a {request.diagram_type} "
@@ -153,7 +103,13 @@ class CodeToolsService:
             result = DiagramResponse.model_validate_json(response.text)
 
             # Sanitize: Gemini occasionally wraps the syntax in markdown fences even when asked not to.
-            result.mermaid_syntax = _strip_mermaid_fences(result.mermaid_syntax)
+            result.mermaid_syntax = (
+                result.mermaid_syntax.replace("```mermaid\n", "")
+                .replace("```mermaid", "")
+                .replace("```\n", "")
+                .replace("```", "")
+                .strip()
+            )
 
             await self._usage.log_from_response(
                 response=response,
@@ -167,7 +123,7 @@ class CodeToolsService:
         except AIWorkerException:
             raise
         except Exception as exc:
-            raise _handle_genai_error("CodeToolsService.generate_diagram", exc) from exc
+            raise handle_genai_error("CodeToolsService.generate_diagram", exc) from exc
 
     async def analyze_error(
         self,
@@ -176,7 +132,7 @@ class CodeToolsService:
     ) -> FirstResponderResponse:
         logger.info("CodeToolsService: analyze_error for language %s", request.language)
 
-        safe_stacktrace = _truncate_input(request.stacktrace)
+        safe_stacktrace = truncate_input(request.stacktrace)
 
         prompt = (
             f"You are an expert DevOps and Senior Backend Engineer. Analyze the following {request.language} stacktrace.\n"
@@ -210,4 +166,4 @@ class CodeToolsService:
         except AIWorkerException:
             raise
         except Exception as exc:
-            raise _handle_genai_error("CodeToolsService.analyze_error", exc) from exc
+            raise handle_genai_error("CodeToolsService.analyze_error", exc) from exc

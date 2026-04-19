@@ -1,9 +1,11 @@
+import asyncio
 import logging
 
+import httpx
 from google import genai
 from google.genai import types
 from sqlalchemy.ext.asyncio import AsyncSession
-import asyncio
+
 from src.app.infrastructure.model_manager import AIModelManager
 from src.app.schemas.moderation import (
     ModerationDecision,
@@ -24,8 +26,19 @@ _SAFE_THRESHOLD = 0.3
 _TOXIC_THRESHOLD = 0.7
 _T2_CONFIDENCE_THRESHOLD = 0.8
 
+_MODEL = "gemini-2.5-flash"
+_MAX_INPUT_CHARS = 15_000
+
 # Pydantic schema sent to Gemini for Tier 2 structured output
 _T2_RESPONSE_SCHEMA = TierTwoResult
+
+
+def _truncate_input(text: str, max_chars: int = _MAX_INPUT_CHARS) -> str:
+    """Keep head and tail, drop the middle for oversized inputs."""
+    if len(text) <= max_chars:
+        return text
+    half = max_chars // 2
+    return text[:half] + "\n\n...[TRUNCATED FOR LENGTH]...\n\n" + text[-half:]
 
 
 class ModerationService:
@@ -183,8 +196,9 @@ class ModerationService:
             "A post passes only if BOTH text AND image are acceptable. "
             "Return your decision, your confidence score (0.0–1.0), and a one-sentence reasoning."
         )
+        safe_text = _truncate_input(text_content)
         text_part = (
-            f"Text content to evaluate:\n```\n{text_content}\n```"
+            f"Text content to evaluate:\n```\n{safe_text}\n```"
         )
 
         if image_bytes:
@@ -202,11 +216,11 @@ class ModerationService:
             logger.info("[Moderation][T2] Sending text-only request for post=%s", post_id)
 
         response = await self._gemini.aio.models.generate_content(
-            model="gemini-2.5-flash",
+            model=_MODEL,
             contents=contents,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                response_schema=TierTwoResult,
+                response_schema=_T2_RESPONSE_SCHEMA,
                 temperature=0.1,
             ),
         )
@@ -214,7 +228,7 @@ class ModerationService:
         await self._usage_service.log_from_response(
             response=response,
             feature_name="moderation_tier2",
-            model_used="gemini-2.5-flash",
+            model_used=_MODEL,
         )
 
         return TierTwoResult.model_validate_json(response.text)
@@ -226,8 +240,6 @@ class ModerationService:
     async def _run_tier_three(
         self, post_id: str, t1: TierOneResult, t2: TierTwoResult
     ) -> TierThreeResult:
-        import httpx
-
         payload = {
             "postId": post_id,
             "reason": "AI inconclusive — requires human review",
@@ -256,8 +268,6 @@ class ModerationService:
     # ------------------------------------------------------------------
 
     async def _notify_platform(self, post_id: str, decision: ModerationDecision) -> None:
-        import httpx
-
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 await client.post(

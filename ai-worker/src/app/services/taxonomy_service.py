@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.core.exceptions import AIWorkerException
 from src.app.schemas.taxonomy import TaxonomySuggestRequest, TaxonomySuggestResponse
+from src.app.services.ai_helpers import handle_genai_error
 from src.app.services.ai_usage_service import AiUsageService
 
 logger = logging.getLogger(__name__)
@@ -62,5 +63,7 @@ class TaxonomyService:
 
             return result
 
+        except AIWorkerException:
+            raise
         except Exception as exc:
-            raise AIWorkerException(f"TaxonomyService failed: {exc}", status_code=502) from exc
+            raise handle_genai_error("TaxonomyService.suggest_merges", exc) from exc
