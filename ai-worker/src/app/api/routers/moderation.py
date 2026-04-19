@@ -60,6 +60,7 @@ async def submit_content(
         db=db,
         gemini_client=gemini_client,
         platform_core_url=settings.platform_core_service_url,
+        internal_api_key=settings.internal_api_key,
     )
 
     return ModerationSubmitResponse(

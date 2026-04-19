@@ -55,6 +55,7 @@ namespace platform_core_service
             app.UseHttpsRedirection();
             app.UseRouting();
             app.UseRateLimiter();
+            app.UseMiddleware<InternalApiKeyMiddleware>();
             app.UseAuthentication();
             app.UseAuthorization();
             app.UseMiddleware<RequireProfileMiddleware>();

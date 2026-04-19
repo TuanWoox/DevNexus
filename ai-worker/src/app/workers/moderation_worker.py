@@ -10,6 +10,7 @@ Usage (from router):
         image_bytes=..., image_mime_type=...,
         db=..., gemini_client=...,
         platform_core_url=settings.platform_core_service_url,
+        internal_api_key=settings.internal_api_key,
     )
 """
 
@@ -33,6 +34,7 @@ async def run_moderation(
     db: AsyncSession,
     gemini_client: genai.Client,
     platform_core_url: str,
+    internal_api_key: str = "",
 ) -> None:
     """
     Primary BackgroundTask function. Called by the router after returning 202.
@@ -45,6 +47,7 @@ async def run_moderation(
         gemini_client=gemini_client,
         db=db,
         platform_core_url=platform_core_url,
+        internal_api_key=internal_api_key,
     )
 
     try:

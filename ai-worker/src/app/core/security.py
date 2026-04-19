@@ -25,8 +25,8 @@ async def get_current_user(
             audience=settings.jwt_audience
         )
 
-        user_id: str = payload.get("sub")
-        email: str = payload.get("email")
+        user_id: str = payload.get("sub") # type: ignore
+        email: str = payload.get("email") # type: ignore
         role: str = payload.get("role", "Developer")
 
         if user_id is None:

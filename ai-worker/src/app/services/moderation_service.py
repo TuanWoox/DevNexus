@@ -6,6 +6,7 @@ from google import genai
 from google.genai import types
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.app.core.exceptions import AIWorkerException
 from src.app.infrastructure.model_manager import AIModelManager
 from src.app.schemas.moderation import (
     ModerationDecision,
@@ -55,10 +56,12 @@ class ModerationService:
         gemini_client: genai.Client,
         db: AsyncSession,
         platform_core_url: str,
+        internal_api_key: str = "",
     ) -> None:
         self._gemini = gemini_client
         self._db = db
         self._platform_core_url = platform_core_url
+        self._internal_api_key = internal_api_key
         self._usage_service = AiUsageService(db=db)
 
     # ------------------------------------------------------------------
@@ -197,31 +200,31 @@ class ModerationService:
             "Return your decision, your confidence score (0.0–1.0), and a one-sentence reasoning."
         )
         safe_text = _truncate_input(text_content)
-        text_part = (
-            f"Text content to evaluate:\n```\n{safe_text}\n```"
-        )
+        user_parts = [
+            types.Part.from_text(text=f"Text content to evaluate:\n```\n{safe_text}\n```")
+        ]
 
         if image_bytes:
             # Multimodal: include the raw image bytes inline so Gemini can see the image
             mime = image_mime_type or "image/jpeg"
-            contents = [
-                system_prompt,
-                text_part,
-                "Attached image to evaluate:",
-                types.Part.from_bytes(data=image_bytes, mime_type=mime),
-            ]
+            user_parts.append(types.Part.from_text(text="Attached image to evaluate:"))
+            user_parts.append(types.Part.from_bytes(data=image_bytes, mime_type=mime))
             logger.info("[Moderation][T2] Sending multimodal request (text+image) for post=%s", post_id)
         else:
-            contents = [system_prompt, text_part]
             logger.info("[Moderation][T2] Sending text-only request for post=%s", post_id)
-
+        user_content = types.Content(
+            role="user",
+            parts=user_parts
+        )
+        
         response = await self._gemini.aio.models.generate_content(
             model=_MODEL,
-            contents=contents,
+            contents=user_content,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=_T2_RESPONSE_SCHEMA,
                 temperature=0.1,
+                system_instruction=system_prompt,
             ),
         )
 
@@ -230,6 +233,13 @@ class ModerationService:
             feature_name="moderation_tier2",
             model_used=_MODEL,
         )
+
+        if not response.text:
+            logger.error(
+                "[Moderation][T2] Gemini returned empty response for post=%s — possibly blocked by safety filters.",
+                post_id,
+            )
+            raise AIWorkerException("Gemini returned empty response text.", status_code=502)
 
         return TierTwoResult.model_validate_json(response.text)
 
@@ -249,10 +259,12 @@ class ModerationService:
 
         queue_entry_id = f"manual-{post_id}"
         try:
+            headers = {"X-Internal-Api-Key": self._internal_api_key}
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.post(
                     f"{self._platform_core_url}/internal/moderation/queue",
                     json=payload,
+                    headers=headers,
                 )
                 resp.raise_for_status()
                 data = resp.json()
@@ -269,10 +281,12 @@ class ModerationService:
 
     async def _notify_platform(self, post_id: str, decision: ModerationDecision) -> None:
         try:
+            headers = {"X-Internal-Api-Key": self._internal_api_key}
             async with httpx.AsyncClient(timeout=5.0) as client:
                 await client.post(
                     f"{self._platform_core_url}/internal/moderation/callback",
                     json={"postId": post_id, "decision": decision.value},
+                    headers=headers,
                 )
         except Exception as exc:
             logger.warning("[Moderation] Platform notify failed (non-fatal): %s", exc)
