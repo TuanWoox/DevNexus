@@ -8,6 +8,7 @@ using platform_core_service.Business.Repository;
 using platform_core_service.Common.Attributes;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
+using platform_core_service.Common.Helpers;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.ProfileMedia;
@@ -35,12 +36,10 @@ namespace platform_core_service.Business.Services
         private readonly IMapper _mapper = mapper;
         private readonly IRepository<ProfileMedia, string> _repository = repostiory;
         private readonly IConfigurationService _configurationService = configurationService;
-        private readonly bool isWindow = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? true : false;
         private readonly IUserContext _userContext = userContext;
         private readonly ICloudinary _cloudinary = cloudinary;
         private readonly ICacheService _cacheService = cacheService;
         private readonly IProfileService _profileService = profileService;
-        private readonly DistributedCacheEntryOptions cacheEntryOptions = new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(30) };
 
         public async Task<string> GetById([TrimmedRequired] string Id)
         {
@@ -60,7 +59,7 @@ namespace platform_core_service.Business.Services
                     {
                         fileDestination = profileMedia.StoreDestination;
                         // Only cache for 30 minutes from current time
-                        await _cacheService.SetCacheAsync($"profile-media-{Id}", profileMedia.StoreDestination, new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(30) });
+                        await _cacheService.SetCacheAsync($"profile-media-{Id}", profileMedia.StoreDestination, HelperUtils.CacheEntryOptions); 
                     }
                 }
             }
@@ -101,13 +100,13 @@ namespace platform_core_service.Business.Services
                 }
                 var rootUploadFolder = (await this._configurationService.GetOneByKeyAndGroup("UPLOAD_FOLDER", "UPLOAD")).Result.Value;
                 //If you read this code later => just know that i assign this one more time be sure
-                if (string.IsNullOrEmpty(rootUploadFolder)) rootUploadFolder = isWindow ? @"D:\Uploads" : "/var/www/uploads";
+                if (string.IsNullOrEmpty(rootUploadFolder)) rootUploadFolder = HelperUtils.IsWindow ? @"D:\Uploads" : "/var/www/uploads";
                 string profileMediaFolder = Path.Combine(rootUploadFolder, "profile-media", _userContext.UserId);
                 if (!Directory.Exists(profileMediaFolder)) Directory.CreateDirectory(profileMediaFolder);
                 string fileGuidName = $"{Guid.NewGuid()}{Path.GetExtension(createProfileMedia.File.FileName)}";
                 fileDestination = Path.Combine(profileMediaFolder, fileGuidName);
                 //Check see if we have the same hash file
-                string sha256HashProfileMedia = await HashFileAsync(createProfileMedia.File);
+                string sha256HashProfileMedia = await HelperUtils.HashFileAsync(createProfileMedia.File);
                 //Find the samehashProfileMedia althought it is delete or exist => just have the same shahash => then we take
                 var sameHashProfileMedia = await _context.ProfileMedias.Where(x => x.SHA256Hash == sha256HashProfileMedia
                                                                         && x.ProfileId == _userContext.ProfileId
@@ -125,7 +124,7 @@ namespace platform_core_service.Business.Services
                     else if (sameHashProfileMedia.IsPrimary)
                     {
                         returnResult.Result = _mapper.Map<SelectProfileMediaDTO>(sameHashProfileMedia);
-                        await _cacheService.SetCacheAsync($"profile-media-{sameHashProfileMedia.Id}", sameHashProfileMedia.StoreDestination, cacheEntryOptions);
+                        await _cacheService.SetCacheAsync($"profile-media-{sameHashProfileMedia.Id}", sameHashProfileMedia.StoreDestination, HelperUtils.CacheEntryOptions);
                         await _profileService.UpdateProfileAvatarUrl(sameHashProfileMedia.ProfileId, sameHashProfileMedia.Id);
                         return returnResult;
                     }
@@ -227,7 +226,7 @@ namespace platform_core_service.Business.Services
                 {
                     returnResult.Result = _mapper.Map<SelectProfileMediaDTO>(updatedPrimaryProfileMedia);
                     await _profileService.UpdateProfileAvatarUrl(updatedPrimaryProfileMedia.ProfileId, updatedPrimaryProfileMedia.Id);
-                    await _cacheService.SetCacheAsync($"profile-media-{updatedPrimaryProfileMedia.Id}", updatedPrimaryProfileMedia.StoreDestination, cacheEntryOptions);
+                    await _cacheService.SetCacheAsync($"profile-media-{updatedPrimaryProfileMedia.Id}", updatedPrimaryProfileMedia.StoreDestination, HelperUtils.CacheEntryOptions);
                     if (primaryProfileMedia != null) await _cacheService.RemoveCacheAsync($"profile-media-{primaryProfileMedia.Id}");
                 }
                 else
@@ -312,14 +311,6 @@ namespace platform_core_service.Business.Services
                 returnResult.Message = ex.Message;
             }
             return returnResult;
-        }
-        private async Task<string> HashFileAsync(IFormFile file)
-        {
-            using var sha256 = SHA256.Create();
-            using var stream = file.OpenReadStream();
-
-            var hashBytes = await sha256.ComputeHashAsync(stream);
-            return Convert.ToHexString(hashBytes);
         }
         private async Task<string> UploadToCloundinary(IFormFile File, string fileGuidName)
         {

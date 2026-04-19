@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace platform_core_service.Common.Entities.DbEntities
 {
-    public class ProfileMedia: BaseMediaEntity<string>
+    public class ProfileMedia: BasePrimaryMediaEntity<string>
     {
         [ForeignKey(nameof(Profile))]
         public string ProfileId { get; set; } = null!;
