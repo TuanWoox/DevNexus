@@ -29,6 +29,8 @@ namespace platform_core_service.Data
         public DbSet<FollowRequest> FollowRequests { get; set; }
         public DbSet<BookMark> BookMarks { get; set; }
         public DbSet<BookMarkedItem> BookMarkedItems { get; set; }
+        public DbSet<PostModerationResult> PostModerationResults { get; set; }
+        public DbSet<ModerationQueueEntry> ModerationQueueEntries { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
@@ -95,6 +97,11 @@ namespace platform_core_service.Data
                 .WithMany(c => c.Replies)
                 .HasForeignKey(c => c.ReplyToCommentId)
                 .OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<Post>()
+                .HasOne(p => p.ModerationResult)
+                .WithOne(m => m.Post)
+                .HasForeignKey<PostModerationResult>(m => m.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
 
         public async Task<int> SaveChangesAsync(bool populatedICreated = true, bool populatedIModified = true, CancellationToken cancellationToken = default)
