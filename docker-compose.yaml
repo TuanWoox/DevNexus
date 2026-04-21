@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  platform-core-service:
+    container_name: platform-core-service
+    build:
+      context: .
+      dockerfile: ./platform-core-service/Dockerfile
+    ports: 
+      - "80:8080"
+    # Chờ postgres healthy mới start platform-core-service
+    # service_healthy = tự động từ healthcheck của postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      background_job_worker:
+        condition: service_started
+  
+  background_job_worker:
+    container_name: background_job_worker
+    build:
+      context: .
+      dockerfile: ./background-job-worker/Dockerfile
+    # Background worker depends on these services
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    container_name: postgres
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: niko1234
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Chạy init-db.sql khi container start (tạo database devnexus_background_job)
+      - ./script/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    # Healthcheck = kiểm tra postgres ready chưa?
+    # Nếu ready → status = healthy → platform-core-service mới được phép start
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:management
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    # ports:
+    #   - "5672:5672"
+    #   - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_log:/var/log/rabbitmq
+    # Healthcheck - kiểm tra RabbitMQ sẵn sàng
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    container_name: redis-server
+    image: redis
+    restart: always
+    # ports:
+    #   - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    # Healthcheck - kiểm tra Redis sẵn sàng
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  rabbitmq_log:
+  redis_data:

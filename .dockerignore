@@ -1,0 +1,23 @@
+# Ignore common .NET and build folders
+bin/
+obj/
+.vs/
+.git/
+.vscode/
+
+# Ignore node modules and frontend stuff just in case
+node_modules/
+dist/
+out/
+build/
+
+# Ignore local config files
+*.user
+appsettings.Development.json
+
+# Ignore test results
+TestResults/
+*.trx
+
+# Ignore any local nuget packages cache
+packages/
