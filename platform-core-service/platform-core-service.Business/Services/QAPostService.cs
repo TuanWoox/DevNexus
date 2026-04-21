@@ -11,6 +11,8 @@ using platform_core_service.Data;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using PostTagEntity = platform_core_service.Common.Entities.DbEntities.PostTag;
 using TagEntity = platform_core_service.Common.Entities.DbEntities.Tag;
+using Hangfire;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 
 namespace platform_core_service.Business.Services
 {
@@ -20,17 +22,21 @@ namespace platform_core_service.Business.Services
         private readonly IUserContext _userContext;
         private readonly IMapper _mapper;
         private readonly IRepository<QAPost, string> _qaPostRepository;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
         public QAPostService(
             ApplicationDbContext dbContext,
             IUserContext userContext,
             IMapper mapper,
-            IRepository<QAPost, string> qaPostRepository)
+            IRepository<QAPost, string> qaPostRepository, 
+            IBackgroundJobClient backgroundJobClient
+            )
         {
             _dbContext = dbContext;
             _userContext = userContext;
             _mapper = mapper;
             _qaPostRepository = qaPostRepository;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<ReturnResult<SelectQAPostDTO>> CreateAsync(CreateQAPostDTO createDTO)
@@ -77,7 +83,10 @@ namespace platform_core_service.Business.Services
                 _dbContext.Posts.Add(qaPost);
                 await _dbContext.SaveChangesAsync();
 
-                // Step 7: Reload with relations and return mapped DTO
+                // Step 7: Link pre-uploaded QA media (upload-first flow)
+                if(createDTO.MediaIds.Count > 0 ) _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x => x.UpdateQAPostMediaQAPostId(_userContext.UserId, qaPost.Id, createDTO.MediaIds));
+
+                // Step 8: Reload with relations and return mapped DTO
                 var savedPost = await _dbContext.Posts
                     .OfType<QAPost>()
                     .Include(q => q.Answers)
@@ -223,7 +232,10 @@ namespace platform_core_service.Business.Services
                 _dbContext.Posts.Update(qaPost);
                 await _dbContext.SaveChangesAsync();
 
-                // Step 8: Reload and return
+                // Step 8: Link any newly provided pre-uploaded QA media
+                if (updateDTO.MediaIds?.Count > 0) _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x => x.UpdateQAPostMediaQAPostId(_userContext.UserId, postId, updateDTO.MediaIds));
+
+                // Step 9: Reload and return
                 var updatedPost = await _dbContext.Posts
                     .OfType<QAPost>()
                     .Include(q => q.Answers)

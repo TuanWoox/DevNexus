@@ -162,7 +162,7 @@ namespace platform_core_service.Business.Services
         }
 
         //Only used when we update a primary image on profileMedia
-        public async Task<ReturnResult<SelectProfileDTO>> UpdateProfileAvatarUrl([TrimmedRequired] string profileId, string urlId)
+        public async Task<ReturnResult<SelectProfileDTO>> UpdateProfileImageUrl([TrimmedRequired] string profileId, string urlId, ProfileMediaType type)
         {
             ReturnResult<SelectProfileDTO> returnResult = new ReturnResult<SelectProfileDTO>();
             try
@@ -175,12 +175,16 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                // Step 2: Perform update
-                profile.AvatarUrl = urlId;
+                // Step 2: Branch on media type — Avatar vs Background
+                if (type == ProfileMediaType.Avatar)
+                    profile.AvatarUrl = urlId;
+                else
+                    profile.BackgroundUrl = urlId;
+
                 _context.Profiles.Update(profile);
                 await _context.SaveChangesAsync();
                 returnResult.Result = _mapper.Map<SelectProfileDTO>(profile);
-                //Publsih To Other Source Too
+                //Publish To Other Source Too
                 _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
                     x => x.PublishEntity(_mapper.Map<ProfilePublishDTO>(profile), MessageBusEnum.Update, MessageBusEntityEnum.Profile)
                 );

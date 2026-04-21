@@ -6,6 +6,7 @@ using platform_core_service.Business.Repository;
 using platform_core_service.Common.Attributes;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
+using platform_core_service.Common.Helpers;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityMedia;
@@ -118,7 +119,7 @@ namespace platform_core_service.Business.Services
                 fileDestination = Path.Combine(communityMediaFolder, fileGuidName);
 
                 //Check for duplicate hash
-                string sha256Hash = await HashFileAsync(createCommunityMedia.File);
+                string sha256Hash = await HelperUtils.HashFileAsync(createCommunityMedia.File);
                 var sameHashMedia = await _context.CommunityMedias.Where(x => x.SHA256Hash == sha256Hash
                                                                         && x.CommunityId == createCommunityMedia.CommunityId)
                                                                         .IgnoreQueryFilters()
@@ -343,14 +344,6 @@ namespace platform_core_service.Business.Services
                 returnResult.Message = ex.Message;
             }
             return returnResult;
-        }
-
-        private async Task<string> HashFileAsync(IFormFile file)
-        {
-            using var sha256 = SHA256.Create();
-            using var stream = file.OpenReadStream();
-            var hashBytes = await sha256.ComputeHashAsync(stream);
-            return Convert.ToHexString(hashBytes);
         }
     }
 }

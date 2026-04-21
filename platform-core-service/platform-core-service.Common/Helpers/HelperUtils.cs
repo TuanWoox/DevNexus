@@ -27,6 +27,13 @@ namespace platform_core_service.Common.Helpers
             var hashBytes = await sha256.ComputeHashAsync(stream);
             return Convert.ToHexString(hashBytes);
         }
+        public static bool BelongsToUser(string storeDestination, string userId)
+        {
+            var segments = storeDestination.Split(
+                new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                StringSplitOptions.RemoveEmptyEntries);
+            return segments.Contains(userId);
+        }
     }
 }
 

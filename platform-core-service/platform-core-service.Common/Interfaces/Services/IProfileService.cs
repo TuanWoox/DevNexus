@@ -2,6 +2,7 @@ using platform_core_service.Common.Attributes;
 using platform_core_service.Common.Entities.Identities;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Profile;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Utils.Enums;
 
 namespace platform_core_service.Common.Interfaces.Services
 {
@@ -11,6 +12,6 @@ namespace platform_core_service.Common.Interfaces.Services
         Task<ReturnResult<SelectProfileDTO>> UpdateAsync(UpdateProfileDTO updateDTO);
         Task<ReturnResult<SelectProfileDTO>> GetAsync(string profileId);
         //Only used when we update a primary image on profileMedia
-        Task<ReturnResult<SelectProfileDTO>> UpdateProfileAvatarUrl([TrimmedRequired] string profileId, string urlId);
+        Task<ReturnResult<SelectProfileDTO>> UpdateProfileImageUrl([TrimmedRequired] string profileId, string urlId, ProfileMediaType type);
     }
 }

@@ -24,5 +24,8 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Post
         public List<string> TagNames { get; set; } = new List<string>();
 
         public string? CommunityId { get; set; }
+
+        // IDs of pre-uploaded PostMedia records to link after the post is created
+        public List<string> MediaIds { get; set; } = new();
     }
 }

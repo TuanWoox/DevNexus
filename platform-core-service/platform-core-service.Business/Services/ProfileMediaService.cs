@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Http;
@@ -125,7 +125,7 @@ namespace platform_core_service.Business.Services
                     {
                         returnResult.Result = _mapper.Map<SelectProfileMediaDTO>(sameHashProfileMedia);
                         await _cacheService.SetCacheAsync($"profile-media-{sameHashProfileMedia.Id}", sameHashProfileMedia.StoreDestination, HelperUtils.CacheEntryOptions);
-                        await _profileService.UpdateProfileAvatarUrl(sameHashProfileMedia.ProfileId, sameHashProfileMedia.Id);
+                        await _profileService.UpdateProfileImageUrl(sameHashProfileMedia.ProfileId, sameHashProfileMedia.Id, sameHashProfileMedia.ProfileMediaType);
                         return returnResult;
                     }
                     else
@@ -170,7 +170,7 @@ namespace platform_core_service.Business.Services
                 {
                     returnResult.Result = _mapper.Map<SelectProfileMediaDTO>(newProfileMedia ?? sameHashProfileMedia);
                     var media = newProfileMedia ?? sameHashProfileMedia;
-                    if (!string.IsNullOrEmpty(media?.Id) && !string.IsNullOrEmpty(media?.ProfileId)) await _profileService.UpdateProfileAvatarUrl(media.ProfileId, media.Id);
+                    if (!string.IsNullOrEmpty(media?.Id) && !string.IsNullOrEmpty(media?.ProfileId)) await _profileService.UpdateProfileImageUrl(media.ProfileId, media.Id, media.ProfileMediaType);
                     if (!string.IsNullOrEmpty(primaryProfileMedia?.Id)) await _cacheService.RemoveCacheAsync($"profile-media-{primaryProfileMedia.Id}");
 
                 }
@@ -225,7 +225,7 @@ namespace platform_core_service.Business.Services
                 if (await _context.SaveChangesAsync() > 0)
                 {
                     returnResult.Result = _mapper.Map<SelectProfileMediaDTO>(updatedPrimaryProfileMedia);
-                    await _profileService.UpdateProfileAvatarUrl(updatedPrimaryProfileMedia.ProfileId, updatedPrimaryProfileMedia.Id);
+                    await _profileService.UpdateProfileImageUrl(updatedPrimaryProfileMedia.ProfileId, updatedPrimaryProfileMedia.Id, updatedPrimaryProfileMedia.ProfileMediaType);
                     await _cacheService.SetCacheAsync($"profile-media-{updatedPrimaryProfileMedia.Id}", updatedPrimaryProfileMedia.StoreDestination, HelperUtils.CacheEntryOptions);
                     if (primaryProfileMedia != null) await _cacheService.RemoveCacheAsync($"profile-media-{primaryProfileMedia.Id}");
                 }
@@ -256,7 +256,7 @@ namespace platform_core_service.Business.Services
                     {
                         returnResult.Result = true;
                         await _cacheService.RemoveCacheAsync($"profile-media-{deleteProfileMedia.Id}");
-                        if (deleteProfileMedia.IsPrimary) await _profileService.UpdateProfileAvatarUrl(deleteProfileMedia.ProfileId, "");
+                        if (deleteProfileMedia.IsPrimary) await _profileService.UpdateProfileImageUrl(deleteProfileMedia.ProfileId, "", deleteProfileMedia.ProfileMediaType);
                     }
                     else
                     {
@@ -289,8 +289,8 @@ namespace platform_core_service.Business.Services
                     if (await _context.SaveChangesAsync() > 0)
                     {
                         returnResult.Result = deleteProfileMedias.Count;
-                        var primaryMediaProfile = deleteProfileMedias.Where(x => x.IsPrimary).FirstOrDefault();
-                        if (primaryMediaProfile != null) await _profileService.UpdateProfileAvatarUrl(primaryMediaProfile.ProfileId, "");
+                        var primaryMediaProfiles = deleteProfileMedias.Where(x => x.IsPrimary).ToList();
+                        await Task.WhenAll(primaryMediaProfiles.Select(x => _profileService.UpdateProfileImageUrl(x.ProfileId, "", x.ProfileMediaType)));
                         await Task.WhenAll(deleteProfileMedias.Select(x => _cacheService.RemoveCacheAsync($"profile-media-{x.Id}")));
                     }
                     else
