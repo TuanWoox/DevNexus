@@ -29,6 +29,24 @@ cp .env.example .env
 
 Open the newly created `.env` file and update the values to match your local setup (e.g., provide your actual `GEMINI_API_KEY`, `JWT_SECRET_KEY`, and update `DATABASE_URL` if necessary).
 
+### 3. AI Model Configuration
+
+1. **Download Local Model**:
+   Download the fine-tuned text model from [this Google Drive link](https://drive.google.com/file/d/1sh3e9qQFyR_1Y51wW_7HzbcZ1aAlTajp/view?usp=sharing).
+2. **Extract Model**:
+   Extract the downloaded file into a folder on your machine.
+3. **Configure Model Paths**:
+   Open `src/app/infrastructure/model_manager.py` and update `_TEXT_MODEL_ID` to point to the extracted folder:
+   ```python
+   _TEXT_MODEL_ID = r"D:\Learning\Fouth_Year\fine-tunning\my-final-toxic-model"
+   ```
+4. **Configure Hugging Face Cache** (Optional):
+   If you want to customize the location where Hugging Face caches other models (like `openai/clip-vit-base-patch32`), you can set the `HF_HOME` environment variable inside `src/app/infrastructure/model_manager.py`:
+   ```python
+   import os
+   os.environ["HF_HOME"] = "D:/AI_Cache"
+   ```
+
 ## Running the Application
 
 Once your `.env` is configured and dependencies are installed, you can start the FastAPI application using Poetry:
