@@ -3,12 +3,18 @@ import { NestExpressApplication } from "@nestjs/platform-express";
 import { AppModule } from "./app.module";
 import { mkdirSync } from "fs";
 import { join } from "path";
+import { ConfigService } from "@nestjs/config";
+import { platform } from "os";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const configService = app.get(ConfigService);
 
-  // Create upload folder structure at startup (at parent directory level)
-  const uploadDir = join(__dirname, '..', 'upload');
+  // Create upload folder structure at startup
+  const isWindows = platform() === 'win32';
+  const configuredUploadDir = configService.get<string>(isWindows ? 'UPLOAD_FOLDER_WINDOWS' : 'UPLOAD_FOLDER_LINUX');
+  const uploadDir = configuredUploadDir || join(__dirname, '..', 'upload');
+
   const uploadImagesDir = join(uploadDir, 'images');
   const uploadVideosDir = join(uploadDir, 'videos');
   const uploadFilesDir = join(uploadDir, 'files');

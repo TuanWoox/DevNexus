@@ -22,6 +22,8 @@ services:
       dockerfile: ./platform-core-service/Dockerfile
     ports: 
       - "8080:8080"
+    volumes:
+      - platform_core_upload:/var/www/uploads
     # Chờ postgres healthy mới start platform-core-service
     # service_healthy = tự động từ healthcheck của postgres
     depends_on:
@@ -33,6 +35,23 @@ services:
         condition: service_healthy
       background_job_worker:
         condition: service_started
+
+  message-service: 
+    container_name: message-service
+    build:
+      context: ./message-service
+      dockerfile: Dockerfile
+    env_file:
+      - ./message-service/.env.production
+    volumes:
+      - message_service_upload:/var/www/Message-Upload
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
   
   background_job_worker:
     container_name: background_job_worker
@@ -106,3 +125,5 @@ volumes:
   rabbitmq_data:
   rabbitmq_log:
   redis_data:
+  platform_core_upload:
+  message_service_upload:
