@@ -1,0 +1,159 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Profile {
+  Id                 String   @id @default(uuid())
+  FullName           String   @db.VarChar(200)
+  AvatarUrl          String?  @db.VarChar(500)
+  Bio                String?  @db.VarChar(500)
+  ReputationPoints   Int      @default(0) 
+  TechStacks         String[] @db.Text
+  IsPrivate          Boolean  @default(false)
+  ApplicationUserId  String   @db.VarChar(200)
+
+  DateCreated        DateTime? @default(now())
+  DateModified       DateTime? @updatedAt
+  Deleted            Boolean   @default(false)
+  DateDeleted        DateTime?
+
+  // ✅ back-relations
+  ChatSettings       ChatSetting[]
+  SentMessages       Message[] 
+  ProfileChats       ProfileChat[]
+  ReadReceipts       MessageReadReceipt[]
+}
+
+
+model ProfileBlock {
+  Id                 String   @id @default(uuid())
+  OwnerId            String   @db.VarChar(200)
+  BlockedProfileId   String   @db.VarChar(200)
+
+  DateCreated        DateTime? @default(now())
+  DateModified       DateTime? @updatedAt
+}
+
+model UserFollow {
+  Id                   String   @id @default(uuid())
+  OwnerId              String   @db.VarChar(200)
+  FollowingProfileId   String   @db.VarChar(200)
+
+  DateCreated          DateTime? @default(now())
+  DateModified         DateTime? @updatedAt
+}
+
+model ProfileChat {
+  Id                   String   @id @default(uuid())
+  
+  ChatId    String
+  Chat      Chat     @relation(fields: [ChatId], references: [Id])
+
+  MemberId  String   @db.VarChar(200)
+  Member    Profile  @relation(fields: [MemberId], references: [Id])
+}
+
+model Chat {
+  Id           String    @id @default(uuid())
+  Name         String?   @db.VarChar(200)
+  IsGroup      Boolean   @default(false)
+  ChatPictureUrl String? @db.Text
+
+  DateCreated  DateTime? @default(now())
+  DateModified DateTime? @updatedAt
+
+  // ✅ back-relations
+  Messages     Message[]
+  ChatSettings ChatSetting[]
+  Members       ProfileChat[]
+}
+
+model ChatSetting {
+  Id          String    @id @default(uuid())
+  NickName    String?   @db.VarChar(200)
+  MuteUntil   DateTime?
+  IsMuted     Boolean   @default(false)
+  IsPinned    Boolean   @default(false)
+  IsArchived  Boolean   @default(false)
+  IsRequested Boolean   @default(false)
+  Role        ChatRole  @default(MEMBER)
+  DeleteUpToMessageId   Int?
+
+  ProfileId   String  @db.VarChar(200)
+  Profile     Profile @relation(fields: [ProfileId], references: [Id])
+
+  ChatId      String
+  Chat        Chat    @relation(fields: [ChatId], references: [Id])
+
+  DateCreated  DateTime? @default(now())
+  DateModified DateTime? @updatedAt
+}
+
+enum ChatRole {
+  ADMIN
+  MEMBER
+}
+
+model Message {
+  Id        Int      @id @default(autoincrement())
+  Content   String   @db.Text
+
+  SenderId  String   @db.VarChar(200)
+  Sender    Profile  @relation(fields: [SenderId], references: [Id])
+
+  ChatId    String
+  Chat      Chat     @relation(fields: [ChatId], references: [Id])
+
+  DateCreated  DateTime? @default(now())
+  DateModified DateTime? @updatedAt
+
+  @@index([ChatId, Id])
+
+  Medias       Media[]
+  ReadReceipts MessageReadReceipt[]
+}
+
+// Many-to-many: one message can be read by many profiles,
+// and one profile can read many messages.
+model MessageReadReceipt {
+  MessageId   Int
+  Message     Message  @relation(fields: [MessageId], references: [Id])
+
+  ReaderId    String   @db.VarChar(200)
+  Reader      Profile  @relation(fields: [ReaderId], references: [Id])
+
+  ReadAt      DateTime @default(now())
+
+  @@id([MessageId, ReaderId])
+  @@index([ReaderId])
+}
+
+model Media {
+  Id          String    @id @default(uuid())
+  MediaName   String    @db.Text
+  Type        MediaType @default(Image)
+  MessageId   Int   
+  Message     Message   @relation(fields: [MessageId], references: [Id])
+
+  DateCreated        DateTime? @default(now())
+  DateModified       DateTime? @updatedAt
+  Deleted            Boolean   @default(false)
+  DateDeleted        DateTime?
+}
+
+enum MediaType {
+  Video
+  Image
+  File
+}

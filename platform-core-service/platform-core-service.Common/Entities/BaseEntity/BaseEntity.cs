@@ -68,5 +68,15 @@ namespace platform_core_service.Common.Entities.BaseEntity
         public int UpvoteCount { get; set; }
         public int DownvoteCount { get; set; }
     }
+    public class BaseMediaEntity<TKey>: BaseEntity<TKey>
+    {
+        [JsonIgnore]
+        public string StoreDestination { get; set; } = null!;
+        public string SHA256Hash { get; set; } = null!;
+    }
+    public class BasePrimaryMediaEntity<TKey> : BaseMediaEntity<TKey>
+    {
+        public bool IsPrimary { get; set; } = true;
+    }
 
 }

@@ -1,18 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowBigUp, ArrowBigDown, MoreHorizontal } from 'lucide-react';
 import { useGetCommentsByPostId } from '@/hooks/comment-hooks/use-get-comments-by-post-id';
 import { Page } from '@/types/common/page';
 import { SortOrderType } from '@/constants/sortOrderType';
 import { CommentInput } from './comment-input';
 import { Skeleton } from '../ui/skeleton';
+import { SelectCommentDTO } from '@/types/comment/select-comment-dto';
+import { useGetAnswersByPostId } from '@/hooks/answer-hooks/use-get-answers-by-post-id';
+import { SelectAnswerDTO } from '@/types/answer/select-answer-dto';
+import { useGetProfileById } from '@/hooks/profile-hooks/use-get-profile-by-id';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store/store';
+import { AnswerItem } from './answer-item';
+import { CommentItem } from './comment-item';
 
 interface Props {
     postId: string;
+    isQAPost: boolean;
 }
 
-export default function CommentSection({ postId }: Props) {
+export default function CommentSection({ postId, isQAPost }: Props) {
     const [commentConfig] = useState<Page<string>>({
         size: -1,
         pageNumber: 0,
@@ -30,19 +38,23 @@ export default function CommentSection({ postId }: Props) {
         selected: []
     });
 
-    const { data: commentsData, isLoading } = useGetCommentsByPostId(postId, commentConfig);
+    const { user } = useSelector((state: RootState) => state.auth)
+    const { data: userProfile } = useGetProfileById(user?.profileId as string);
 
-    // TODO: Bỏ phần mock này khi đã có Auth
-    const MOCK_CURRENT_USER_AVATAR = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTfE8XWOVe86hLGi8m9mgPTsva_KWjTHbT9iQ&s";
+    const { data: answerData, isPending: isAnswerLoading } = useGetAnswersByPostId(postId, isQAPost, commentConfig)
+    const { data: commentData, isPending: isCommentLoading } = useGetCommentsByPostId(postId, !isQAPost, commentConfig);
+
+    const commentsData = isQAPost ? answerData : commentData;
+    const isLoading = isQAPost ? isAnswerLoading : isCommentLoading;
 
     return (
         <div className="mt-4 sm:mt-6 sm:mx-6 px-4 sm:px-0">
             <h3 className="text-lg font-bold text-heading mb-4">
-                Comments ({commentsData?.page?.totalElements || 0})
+                {isQAPost ? 'Answers' : 'Comments'} ({commentsData?.page?.totalElements || 0})
             </h3>
 
             {/* Create Comment Input */}
-            <CommentInput postId={postId} currentUserAvatar={MOCK_CURRENT_USER_AVATAR} />
+            <CommentInput postId={postId} currentUserAvatar={userProfile?.avatarUrl} isQAPost={isQAPost} />
 
             {/* Comment List */}
             {isLoading ? (
@@ -55,7 +67,7 @@ export default function CommentSection({ postId }: Props) {
 
                             <div className="flex-1">
                                 {/* Comment Content Box Skeleton */}
-                                <div className="bg-subtle border border-default rounded-2xl rounded-tl-none p-3 sm:p-4 inline-block w-full sm:w-3/4 lg:w-2/3">
+                                <div className="bg-card border border-default rounded-2xl rounded-tl-none p-3 sm:p-4 inline-block w-full sm:w-3/4 lg:w-2/3">
                                     <div className="flex items-center gap-2 mb-3">
                                         <Skeleton className="h-4 w-24 sm:w-32" />
                                         <Skeleton className="h-3 w-16 sm:w-20" />
@@ -79,52 +91,13 @@ export default function CommentSection({ postId }: Props) {
             ) : (
                 <div className="space-y-6">
                     {commentsData?.data?.map((comment) => (
-                        <div key={comment.id} className="flex gap-3 sm:gap-4 group">
-                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-secondary shrink-0 overflow-hidden border border-default">
-                                {comment.author?.avatarUrl ? (
-                                    <img src={comment.author.avatarUrl} alt={comment.author.fullName} className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-xs font-bold text-heading">
-                                        {comment.author?.fullName?.charAt(0) || 'U'}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex-1">
-                                <div className="bg-subtle border border-default rounded-2xl rounded-tl-none p-3 sm:p-4 inline-block max-w-full">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="font-semibold text-heading text-sm">
-                                            {comment.author?.fullName || 'Anonymous'}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                            {new Date(comment.dateCreated).toLocaleDateString('vi-VN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                    </div>
-                                    <p className="text-body text-sm sm:text-base whitespace-pre-wrap">
-                                        {comment.content}
-                                    </p>
-                                </div>
-
-                                <div className="flex items-center gap-4 mt-1.5 ml-2">
-                                    <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-emerald-500 font-medium transition-colors">
-                                        <ArrowBigUp className="w-4 h-4" />
-                                        {comment.upvoteCount}
-                                    </button>
-                                    <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-rose-500 font-medium transition-colors">
-                                        <ArrowBigDown className="w-4 h-4" />
-                                    </button>
-                                    <button className="text-xs text-muted-foreground hover:text-heading font-medium transition-colors">
-                                        Reply
-                                    </button>
-                                    <button className="text-xs text-muted-foreground hover:text-heading opacity-0 group-hover:opacity-100 transition-opacity p-1">
-                                        <MoreHorizontal className="w-3 h-3" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                        isQAPost ? <AnswerItem key={comment.id} answer={comment as SelectAnswerDTO} currentUserId={user?.profileId as string} /> : <CommentItem key={comment.id} comment={comment as SelectCommentDTO} currentUserId={user?.profileId as string} />
                     ))}
                 </div>
             )}
         </div>
     );
 }
+
+
+

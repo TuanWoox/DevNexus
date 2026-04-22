@@ -387,6 +387,48 @@ namespace platform_core_service.Migrations
                     b.ToTable("CommunityBans");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityMedia", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommunityId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SHA256Hash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StoreDestination")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommunityId");
+
+                    b.HasIndex("Deleted");
+
+                    b.ToTable("CommunityMedias");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityMember", b =>
                 {
                     b.Property<string>("Id")
@@ -632,6 +674,47 @@ namespace platform_core_service.Migrations
                     b.UseTphMappingStrategy();
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostMedia", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PostId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("PostMediaType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SHA256Hash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StoreDestination")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("PostId");
+
+                    b.ToTable("PostMedias");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostModerationResult", b =>
                 {
                     b.Property<string>("Id")
@@ -798,6 +881,92 @@ namespace platform_core_service.Migrations
                         .IsUnique();
 
                     b.ToTable("ProfileBlocks");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ProfileMedia", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ProfileId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("ProfileMediaType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SHA256Hash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StoreDestination")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("ProfileId");
+
+                    b.ToTable("ProfileMedias");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.QAMedia", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("QAMediaType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("QAPostId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SHA256Hash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StoreDestination")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("QAPostId");
+
+                    b.ToTable("QAMedias");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Setting", b =>
@@ -1279,6 +1448,17 @@ namespace platform_core_service.Migrations
                     b.Navigation("Community");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityMedia", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
+                        .WithMany("CommunityMedias")
+                        .HasForeignKey("CommunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Community");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityMember", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
@@ -1383,6 +1563,15 @@ namespace platform_core_service.Migrations
                     b.Navigation("Community");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostMedia", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Post", "Post")
+                        .WithMany("PostMedias")
+                        .HasForeignKey("PostId");
+
+                    b.Navigation("Post");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostModerationResult", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.Post", "Post")
@@ -1441,6 +1630,26 @@ namespace platform_core_service.Migrations
                     b.Navigation("BlockedProfile");
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ProfileMedia", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Profile")
+                        .WithMany("ProfileMedias")
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Profile");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.QAMedia", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.QAPost", "QAPost")
+                        .WithMany("QAMedias")
+                        .HasForeignKey("QAPostId");
+
+                    b.Navigation("QAPost");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.UserFollow", b =>
@@ -1526,6 +1735,8 @@ namespace platform_core_service.Migrations
                 {
                     b.Navigation("Bans");
 
+                    b.Navigation("CommunityMedias");
+
                     b.Navigation("Members");
 
                     b.Navigation("MembershipRequests");
@@ -1540,6 +1751,8 @@ namespace platform_core_service.Migrations
                     b.Navigation("BookMarkedStores");
 
                     b.Navigation("ModerationResult");
+
+                    b.Navigation("PostMedias");
 
                     b.Navigation("PostTags");
                 });
@@ -1570,6 +1783,8 @@ namespace platform_core_service.Migrations
 
                     b.Navigation("Posts");
 
+                    b.Navigation("ProfileMedias");
+
                     b.Navigation("ReceivedFollowRequests");
 
                     b.Navigation("SentFollowRequests");
@@ -1596,6 +1811,8 @@ namespace platform_core_service.Migrations
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.QAPost", b =>
                 {
                     b.Navigation("Answers");
+
+                    b.Navigation("QAMedias");
                 });
 #pragma warning restore 612, 618
         }

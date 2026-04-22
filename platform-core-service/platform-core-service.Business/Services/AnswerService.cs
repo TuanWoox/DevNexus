@@ -31,13 +31,13 @@ namespace platform_core_service.Business.Services
             _answerRepository = answerRepository;
         }
 
-        public async Task<ReturnResult<SelectAnswerDTO>> CreateAsync(string postId, CreateAnswerDTO answerDTO)
+        public async Task<ReturnResult<SelectAnswerDTO>> CreateAsync(CreateAnswerDTO answerDTO)
         {
             var result = new ReturnResult<SelectAnswerDTO>();
             try
             {
                 // Step 1: Validate input
-                if (string.IsNullOrEmpty(postId) || answerDTO == null)
+                if (answerDTO == null || string.IsNullOrEmpty(answerDTO.QAPostId))
                 {
                     result.Message = "Post ID and answer data are required";
                     return result;
@@ -54,10 +54,10 @@ namespace platform_core_service.Business.Services
                 // Step 3: Verify QAPost exists
                 var postExists = await _dbContext.Posts
                     .OfType<QAPost>()
-                    .AnyAsync(p => p.Id == postId);
+                    .AnyAsync(p => p.Id == answerDTO.QAPostId);
                 if (!postExists)
                 {
-                    result.Message = $"QAPost {postId} not found";
+                    result.Message = $"QAPost {answerDTO.QAPostId} not found";
                     return result;
                 }
 
@@ -65,7 +65,7 @@ namespace platform_core_service.Business.Services
                 var answer = _mapper.Map<Answer>(answerDTO);
                 answer.Id = Guid.NewGuid().ToString();
                 answer.AuthorId = profileId;
-                answer.QAPostId = postId;
+                answer.QAPostId = answerDTO.QAPostId;
 
                 // Step 5: Save
                 _dbContext.Answers.Add(answer);
@@ -152,23 +152,23 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
-        public async Task<ReturnResult<bool>> UpdateAsync(string answerId, UpdateAnswerDTO answerDTO)
+        public async Task<ReturnResult<SelectAnswerDTO>> UpdateAsync(UpdateAnswerDTO answerDTO)
         {
-            var result = new ReturnResult<bool>();
+            var result = new ReturnResult<SelectAnswerDTO>();
             try
             {
                 // Step 1: Validate
-                if (string.IsNullOrEmpty(answerId) || answerDTO == null)
+                if (answerDTO == null || string.IsNullOrEmpty(answerDTO.Id))
                 {
                     result.Message = "Answer ID and update data are required";
                     return result;
                 }
 
                 // Step 2: Load entity
-                var answer = await _dbContext.Answers.FirstOrDefaultAsync(a => a.Id == answerId);
+                var answer = await _dbContext.Answers.FirstOrDefaultAsync(a => a.Id == answerDTO.Id);
                 if (answer == null)
                 {
-                    result.Message = $"Answer {answerId} not found";
+                    result.Message = $"Answer {answerDTO.Id} not found";
                     return result;
                 }
 
@@ -185,13 +185,15 @@ namespace platform_core_service.Business.Services
                 _dbContext.Answers.Update(answer);
                 await _dbContext.SaveChangesAsync();
 
-                result.Result = true;
+                var saved = await _dbContext.Answers
+                    .FirstOrDefaultAsync(a => a.Id == answer.Id);
+
+                result.Result = _mapper.Map<SelectAnswerDTO>(saved);
             }
             catch (Exception ex)
             {
                 DevNexusLogger.Instance.Debug(ex.Message);
                 result.Message = $"An error occurred while updating answer: {ex.Message}";
-                result.Result = false;
             }
             return result;
         }

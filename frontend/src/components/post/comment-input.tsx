@@ -1,32 +1,55 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import {
-    Bold,
-    Italic,
-    Link,
-    MoreHorizontal,
-    Type
-} from 'lucide-react';
+import { useState } from 'react';
+import { MarkdownEditor } from '../editor/markdown-editor';
+import { useCreateComment } from '@/hooks/comment-hooks/use-create-comment';
+import { CreateCommentDTO } from '@/types/comment/create-comment-dto';
+import { useCreateAnswer } from '@/hooks/answer-hooks/use-create-answer';
+import { CreateAnswerDTO } from '@/types/answer/create-answer-dto';
 
 interface CommentInputProps {
     postId: string;
     currentUserAvatar?: string;
+    isQAPost: boolean;
 }
 
-export function CommentInput({ postId, currentUserAvatar }: CommentInputProps) {
+export function CommentInput({ postId, currentUserAvatar, isQAPost }: CommentInputProps) {
     const [content, setContent] = useState('');
+    const { mutate: createComment, isPending: isCreatingComment } = useCreateComment();
+    const { mutate: createAnswer, isPending: isCreatingAnswer } = useCreateAnswer();
     const [isExpanded, setIsExpanded] = useState(false);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // loading state for submit button
+    const isSubmitting = isQAPost ? isCreatingAnswer : isCreatingComment;
 
     const handleSubmit = () => {
-        if (!content.trim()) return;
-        // Thực hiện logic gọi API submit comment ở đây
-        console.log('Submitting to postId:', postId, 'Content:', content);
+        if (!content.trim() || content === '\\n') return;
 
-        // Reset sau khi gửi
-        setContent('');
-        setIsExpanded(false);
+        if (isQAPost) {
+            const payload: CreateAnswerDTO = {
+                content: content,
+                qaPostId: postId
+            }
+            createAnswer(payload, {
+                onSuccess: () => {
+                    // Reset sau khi gửi
+                    setContent('');
+                    setIsExpanded(false);
+                }
+            });
+        } else {
+            const payload: CreateCommentDTO = {
+                content: content,
+                postId: postId
+            }
+            createComment(payload, {
+                onSuccess: () => {
+                    // Reset sau khi gửi
+                    setContent('');
+                    setIsExpanded(false);
+                }
+            });
+        }
     };
 
     const handleCancel = () => {
@@ -47,54 +70,27 @@ export function CommentInput({ postId, currentUserAvatar }: CommentInputProps) {
 
             {/* Input Container */}
             <div className="flex-1">
-                {/* Bọc toàn bộ trong 1 div có viền (border) để tạo cảm giác nguyên khối.
-                    Dùng focus-within để khi bấm vào textarea, toàn bộ khung này sẽ sáng lên (ring-primary)
+                {/* 
+                    Lắng nghe khối div này để biết khi nào được focus.
                 */}
                 <div
-                    className={`bg-subtle border rounded-xl overflow-hidden transition-all focus-within:ring-1 focus-within:ring-primary focus-within:border-primary flex flex-col ${isExpanded ? 'border-primary' : 'border-default'
+                    onFocusCapture={() => setIsExpanded(true)}
+                    className={`bg-subtle border rounded-xl overflow-hidden transition-all flex flex-col ${isExpanded ? 'border-primary ring-1 ring-primary' : 'border-default'
                         }`}
                 >
-                    <textarea
-                        ref={textareaRef}
+                    <div className={isExpanded ? 'block' : 'hidden md:block opacity-50 pointer-events-none blur-[1px] transition-all'}>
+                        {/* Nếu chưa expand, làm mờ đi dạng demo, click vào mới rõ lên */}
+                    </div>
+
+                    {/* Render MarkdownEditor (UIW Editor) */}
+                    <MarkdownEditor
                         value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        onFocus={() => setIsExpanded(true)}
-                        placeholder="What are your thoughts?"
-                        /* Loại bỏ bg và outline của textarea mặc định.
-                           Cho phép resize dọc, và thay đổi min-height dựa vào state
-                        */
-                        className={`w-full bg-transparent p-3 sm:p-4 text-sm sm:text-base text-heading placeholder:text-muted-foreground focus:outline-none resize-y transition-all duration-200 ${isExpanded ? 'min-h-30' : 'min-h-12.5 overflow-hidden'
-                            }`}
+                        onChange={(val?: string) => setContent(val || '')}
                     />
 
-                    {/* Bottom Action Bar (Giống Reddit) - Chỉ hiện khi Focus hoặc đang có chữ */}
+                    {/* Bottom Action Bar */}
                     {(isExpanded || content.trim().length > 0) && (
-                        <div className="flex items-center justify-between px-2 py-2 sm:px-3 bg-subtle mt-auto">
-
-                            {/* Toolbar (Bên trái) */}
-                            <div className="flex items-center gap-1">
-                                <button className="p-1.5 sm:p-2 text-muted-foreground hover:bg-secondary hover:text-heading rounded-lg transition-colors" title="Formatting options">
-                                    <Type className="w-4 h-4 sm:w-5 sm:h-5" />
-                                </button>
-
-                                {/* Một số icon giả lập Markdown Editor như ảnh của bạn */}
-                                <div className="hidden sm:flex items-center gap-1 border-l border-default pl-1 ml-1">
-                                    <button className="p-1.5 text-muted-foreground hover:bg-secondary hover:text-heading rounded-lg transition-colors">
-                                        <Bold className="w-4 h-4" />
-                                    </button>
-                                    <button className="p-1.5 text-muted-foreground hover:bg-secondary hover:text-heading rounded-lg transition-colors">
-                                        <Italic className="w-4 h-4" />
-                                    </button>
-                                    <button className="p-1.5 text-muted-foreground hover:bg-secondary hover:text-heading rounded-lg transition-colors">
-                                        <Link className="w-4 h-4" />
-                                    </button>
-                                </div>
-
-                                <button className="p-1.5 text-muted-foreground hover:bg-secondary hover:text-heading rounded-lg transition-colors sm:hidden">
-                                    <MoreHorizontal className="w-4 h-4" />
-                                </button>
-                            </div>
-
+                        <div className="flex items-center justify-end px-2 py-2 sm:px-3 bg-subtle/50 mt-auto border-t border-default/50">
                             {/* Buttons (Bên phải) */}
                             <div className="flex items-center gap-2">
                                 <button
@@ -105,11 +101,10 @@ export function CommentInput({ postId, currentUserAvatar }: CommentInputProps) {
                                 </button>
                                 <button
                                     onClick={handleSubmit}
-                                    disabled={!content.trim()}
-                                    /* Bo tròn mạnh (rounded-full) theo UI của Reddit */
-                                    className="btn-ai disabled:opacity-50 disabled:cursor-not-allowed px-4 py-1.5  text-sm font-semibold "
+                                    disabled={!content.trim() || isSubmitting}
+                                    className="btn-ai disabled:opacity-50 disabled:cursor-not-allowed px-4 py-1.5 text-sm font-semibold "
                                 >
-                                    Comment
+                                    {isSubmitting ? 'Posting...' : 'Post'}
                                 </button>
                             </div>
                         </div>

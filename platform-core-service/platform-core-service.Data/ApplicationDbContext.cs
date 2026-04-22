@@ -29,6 +29,10 @@ namespace platform_core_service.Data
         public DbSet<FollowRequest> FollowRequests { get; set; }
         public DbSet<BookMark> BookMarks { get; set; }
         public DbSet<BookMarkedItem> BookMarkedItems { get; set; }
+        public DbSet<ProfileMedia> ProfileMedias { get; set; }
+        public DbSet<CommunityMedia> CommunityMedias { get;set; }
+        public DbSet<PostMedia> PostMedias { get; set; }
+        public DbSet<QAMedia> QAMedias { get; set; }
         public DbSet<PostModerationResult> PostModerationResults { get; set; }
         public DbSet<ModerationQueueEntry> ModerationQueueEntries { get; set; }
 

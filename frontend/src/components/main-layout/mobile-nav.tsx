@@ -7,6 +7,7 @@ import { Home, HelpCircle, Plus, Bell, User, Settings, Moon, Sun, LogOut, Loader
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import useLogout from '@/hooks/auth-hooks/use-logout'
+import { useGetProfileById } from '@/hooks/profile-hooks/use-get-profile-by-id'
 
 export function MobileNav() {
     const [isMobileProfileOpen, setIsMobileProfileOpen] = useState(false)
@@ -14,6 +15,7 @@ export function MobileNav() {
     const mobileDropdownRef = useRef<HTMLDivElement>(null)
 
     const { user } = useSelector((state: RootState) => state.auth)
+    const { data: userProfile } = useGetProfileById(user?.profileId as string);
     const { logout, isLoggingOut } = useLogout()
 
     useEffect(() => {
@@ -62,7 +64,7 @@ export function MobileNav() {
                 {isMobileProfileOpen && (
                     <div className="absolute bottom-full right-0 mb-4 w-56 bg-card border border-default rounded-xl shadow-elevated p-2 flex flex-col gap-1 animate-in fade-in slide-in-from-bottom-2">
                         <div className="px-3 py-2 mb-1 border-b border-default">
-                            <span className="text-sm font-bold text-heading block truncate">@{user?.userName || 'username'}</span>
+                            <span className="text-sm font-bold text-heading block truncate">{userProfile?.fullName || 'username'}</span>
                             <span className="text-xs text-muted-foreground block truncate">{user?.roles || 'Role'}</span>
                         </div>
 

@@ -308,5 +308,31 @@ namespace platform_core_service.Business.Services
             }
             return result;
         }
+
+        //Only used when we update a primary image on communityMedia
+        public async Task<ReturnResult<SelectCommunityDTO>> UpdateCommunityCoverPhotoUrl(string communityId, string mediaId)
+        {
+            var result = new ReturnResult<SelectCommunityDTO>();
+            try
+            {
+                var community = await _context.Communities.FirstOrDefaultAsync(c => c.Id == communityId);
+                if (community == null)
+                {
+                    result.Message = $"Community {communityId} not found";
+                    return result;
+                }
+
+                community.CommunityCoverPhotoUrl = mediaId;
+                _context.Communities.Update(community);
+                await _context.SaveChangesAsync();
+                result.Result = _mapper.Map<SelectCommunityDTO>(community);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while updating community cover photo: {ex.Message}";
+            }
+            return result;
+        }
     }
 }

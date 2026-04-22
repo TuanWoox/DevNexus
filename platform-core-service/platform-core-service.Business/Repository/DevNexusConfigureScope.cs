@@ -46,6 +46,10 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IBookMarkService, BookMarkService>();
             services.AddScoped<IBookMarkItemService, BookMarkedItemService>();
             services.AddScoped<ISocialGuardService, SocialGuardService>();
+            services.AddScoped<IProfileMediaService, ProfileMediaService>();
+            services.AddScoped<ICommunityMediaService, CommunityMediaService>();
+            services.AddScoped<IPostMediaService, PostMediaService>();
+            services.AddScoped<IQAMediaService, QAMediaService>();
             services.AddScoped<IModerationService, ModerationService>();
             // AiWorkerClient uses IHttpClientFactory — must register with AddHttpClient
             services.AddHttpClient<IAiWorkerClient, AiWorkerClient>();

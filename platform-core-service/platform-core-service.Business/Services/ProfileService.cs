@@ -14,6 +14,7 @@ using Hangfire;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
+using platform_core_service.Common.Attributes;
 
 namespace platform_core_service.Business.Services
 {
@@ -116,6 +117,11 @@ namespace platform_core_service.Business.Services
                 await _context.SaveChangesAsync();
 
                 returnResult.Result = _mapper.Map<SelectProfileDTO>(profile);
+
+                //Publsih To Other Source Too
+                _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                    x => x.PublishEntity(_mapper.Map<ProfilePublishDTO>(profile), MessageBusEnum.Update, MessageBusEntityEnum.Profile)
+                );
             }
             catch (Exception ex)
             {
@@ -151,6 +157,38 @@ namespace platform_core_service.Business.Services
             {
                 DevNexusLogger.Instance.Debug(ex.Message);
                 returnResult.Message = $"An error occurred while retrieving profile: {ex.Message}";
+            }
+            return returnResult;
+        }
+
+        //Only used when we update a primary image on profileMedia
+        public async Task<ReturnResult<SelectProfileDTO>> UpdateProfileAvatarUrl([TrimmedRequired] string profileId, string urlId)
+        {
+            ReturnResult<SelectProfileDTO> returnResult = new ReturnResult<SelectProfileDTO>();
+            try
+            {
+                // Step 1: Load upcoming updated profile
+                var profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Id == profileId);
+                if (profile == null)
+                {
+                    returnResult.Message = $"Profile {profileId} not found";
+                    return returnResult;
+                }
+
+                // Step 2: Perform update
+                profile.AvatarUrl = urlId;
+                _context.Profiles.Update(profile);
+                await _context.SaveChangesAsync();
+                returnResult.Result = _mapper.Map<SelectProfileDTO>(profile);
+                //Publsih To Other Source Too
+                _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                    x => x.PublishEntity(_mapper.Map<ProfilePublishDTO>(profile), MessageBusEnum.Update, MessageBusEntityEnum.Profile)
+                );
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = $"An error occurred while updating profile: {ex.Message}";
             }
             return returnResult;
         }

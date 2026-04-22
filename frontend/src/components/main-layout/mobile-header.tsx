@@ -4,9 +4,11 @@ import Link from 'next/link'
 import { Hexagon, Sparkles, Search } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
+import { useGetProfileById } from '@/hooks/profile-hooks/use-get-profile-by-id'
 
 export function MobileHeader() {
     const { user } = useSelector((state: RootState) => state.auth)
+    const { data: userProfile } = useGetProfileById(user?.profileId as string);
 
     return (
         <header className="sm:hidden sticky top-0 h-14 bg-page/80 backdrop-blur-md border-b border-default flex items-center justify-between px-4 z-50">
@@ -24,9 +26,16 @@ export function MobileHeader() {
                 <button className="text-muted-foreground hover:text-primary transition-colors p-2">
                     <Search className="h-5 w-5" />
                 </button>
-                <button className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
+                {/* <button className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
                     {user?.userName?.charAt(0).toUpperCase() || 'U'}
-                </button>
+                </button> */}
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default">
+                    {userProfile?.avatarUrl ? (
+                        <img src={userProfile.avatarUrl} alt={userProfile.fullName} className="w-full h-full object-cover" />
+                    ) : (
+                        <span className="text-primary font-bold">{userProfile?.fullName?.charAt(0) || 'U'}</span>
+                    )}
+                </div>
             </div>
         </header>
     )
