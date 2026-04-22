@@ -117,8 +117,8 @@ namespace platform_core_service.Business.Services
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .FirstOrDefaultAsync(p =>
-                        (p.Id == postId || p.Slug == postId) &&
-                        p.ModerationStatus == ModerationStatus.Approved);
+                        (p.Id == postId || p.Slug == postId) );
+                        // && p.ModerationStatus == ModerationStatus.Approved);
 
                 if (post == null)
                 {
@@ -151,7 +151,7 @@ namespace platform_core_service.Business.Services
 
                 // Step 2: Build query — news feed shows only approved posts for all users
                 var query = _context.Posts
-                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    // .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .AsQueryable();
