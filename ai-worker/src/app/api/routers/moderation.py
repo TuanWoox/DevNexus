@@ -6,7 +6,7 @@ from google import genai
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.core.config import get_settings
-from src.app.core.security import CurrentUser, get_current_user
+from src.app.core.security import verify_internal_api_key
 from src.app.infrastructure.database import get_db_session
 from src.app.infrastructure.gemini import get_gemini_client
 from src.app.schemas.moderation import ModerationSubmitResponse
@@ -33,7 +33,7 @@ async def submit_content(
     image: UploadFile | None = File(None, description="Optional image file to moderate."),
     db: AsyncSession = Depends(get_db_session),
     gemini_client: genai.Client = Depends(get_gemini_client),
-    current_user: CurrentUser = Depends(get_current_user),
+    api_key_valid: bool = Depends(verify_internal_api_key),
 ) -> ModerationSubmitResponse:
     """
     Fire-and-forget endpoint.

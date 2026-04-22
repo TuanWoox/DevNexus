@@ -20,7 +20,7 @@ class AiUsageService:
         await usage_service.log_from_response(
             response=response,
             feature_name="metadata",
-            model_used="gemini-2.5-flash",
+            model_used="gemini-2.5-flash-lite",
             user_id=current_user.sub,
         )
     """

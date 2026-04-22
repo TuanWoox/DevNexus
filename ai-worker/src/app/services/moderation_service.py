@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.core.exceptions import AIWorkerException
 from src.app.infrastructure.model_manager import AIModelManager
+from pydantic import BaseModel, Field
+
 from src.app.schemas.moderation import (
     ModerationDecision,
     ModerationStatus,
@@ -27,11 +29,15 @@ _SAFE_THRESHOLD = 0.3
 _TOXIC_THRESHOLD = 0.7
 _T2_CONFIDENCE_THRESHOLD = 0.8
 
-_MODEL = "gemini-2.5-flash"
+_MODEL = "gemini-2.5-flash-lite"
 _MAX_INPUT_CHARS = 15_000
 
-# Pydantic schema sent to Gemini for Tier 2 structured output
-_T2_RESPONSE_SCHEMA = TierTwoResult
+
+# Gemini's response_schema must not contain Literal[int] — use a flat model
+class _GeminiT2Response(BaseModel):
+    decision: ModerationDecision
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    reasoning: str
 
 
 def _truncate_input(text: str, max_chars: int = _MAX_INPUT_CHARS) -> str:
@@ -87,22 +93,22 @@ class ModerationService:
         )
 
         if t1.combined_score < _SAFE_THRESHOLD:
-            logger.info("[Moderation][T1] AUTO SAFE — post=%s", post_id)
-            await self._notify_platform(post_id, ModerationDecision.APPROVE)
+            logger.info("[Moderation][T1] AUTO APPROVED — post=%s", post_id)
+            await self._notify_platform(post_id, ModerationDecision.APPROVE, t1=t1)
             return ModerationTaskResult(
                 post_id=post_id,
-                final_status=ModerationStatus.SAFE,
+                final_status=ModerationStatus.APPROVED,
                 decision=ModerationDecision.APPROVE,
                 tier_reached=1,
                 tier_one=t1,
             )
 
         if t1.combined_score > _TOXIC_THRESHOLD:
-            logger.info("[Moderation][T1] AUTO TOXIC — post=%s", post_id)
-            await self._notify_platform(post_id, ModerationDecision.FLAG)
+            logger.info("[Moderation][T1] AUTO FLAGGED — post=%s", post_id)
+            await self._notify_platform(post_id, ModerationDecision.FLAG, t1=t1)
             return ModerationTaskResult(
                 post_id=post_id,
-                final_status=ModerationStatus.PENDING,
+                final_status=ModerationStatus.FLAGGED,
                 decision=ModerationDecision.FLAG,
                 tier_reached=1,
                 tier_one=t1,
@@ -121,10 +127,10 @@ class ModerationService:
 
         if t2.confidence > _T2_CONFIDENCE_THRESHOLD:
             status = (
-                ModerationStatus.SAFE if t2.decision == ModerationDecision.APPROVE
-                else ModerationStatus.PENDING
+                ModerationStatus.APPROVED if t2.decision == ModerationDecision.APPROVE
+                else ModerationStatus.FLAGGED
             )
-            await self._notify_platform(post_id, t2.decision)
+            await self._notify_platform(post_id, t2.decision, t1=t1, t2=t2)
             return ModerationTaskResult(
                 post_id=post_id,
                 final_status=status,
@@ -137,7 +143,7 @@ class ModerationService:
         # ------- Tier 3 (still uncertain) -------
         logger.info("[Moderation][T3] Low confidence — escalating to human queue. post=%s", post_id)
         t3 = await self._run_tier_three(post_id, t1, t2)
-        await self._notify_platform(post_id, ModerationDecision.ESCALATE)
+        await self._notify_platform(post_id, ModerationDecision.ESCALATE, t1=t1, t2=t2)
         return ModerationTaskResult(
             post_id=post_id,
             final_status=ModerationStatus.IN_REVIEW,
@@ -222,7 +228,7 @@ class ModerationService:
             contents=user_content,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                response_schema=_T2_RESPONSE_SCHEMA,
+                response_schema=_GeminiT2Response,
                 temperature=0.1,
                 system_instruction=system_prompt,
             ),
@@ -241,7 +247,12 @@ class ModerationService:
             )
             raise AIWorkerException("Gemini returned empty response text.", status_code=502)
 
-        return TierTwoResult.model_validate_json(response.text)
+        parsed = _GeminiT2Response.model_validate_json(response.text)
+        return TierTwoResult(
+            decision=parsed.decision,
+            confidence=parsed.confidence,
+            reasoning=parsed.reasoning,
+        )
 
     # ------------------------------------------------------------------
     # Tier 3 — Human Queue via C# backend
@@ -279,13 +290,27 @@ class ModerationService:
     # Helper — notify platform on auto-flag
     # ------------------------------------------------------------------
 
-    async def _notify_platform(self, post_id: str, decision: ModerationDecision) -> None:
+    async def _notify_platform(
+        self, 
+        post_id: str, 
+        decision: ModerationDecision,
+        t1: TierOneResult | None = None,
+        t2: TierTwoResult | None = None
+    ) -> None:
+        payload = {"postId": post_id, "decision": decision.value}
+        if t1:
+            payload["textScore"] = t1.text_score
+            payload["imageScore"] = t1.image_score
+            payload["combinedScore"] = t1.combined_score
+        if t2:
+            payload["reasoning"] = t2.reasoning
+
         try:
             headers = {"X-Internal-Api-Key": self._internal_api_key}
             async with httpx.AsyncClient(timeout=5.0) as client:
                 await client.post(
                     f"{self._platform_core_url}/internal/moderation/callback",
-                    json={"postId": post_id, "decision": decision.value},
+                    json=payload,
                     headers=headers,
                 )
         except Exception as exc:

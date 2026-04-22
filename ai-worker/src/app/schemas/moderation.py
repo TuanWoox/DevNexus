@@ -10,10 +10,10 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 
 class ModerationStatus(str, Enum):
-    SAFE = "safe"
-    PENDING = "pending"       # flagged by T1 > 0.7, awaiting C# moderator
-    IN_REVIEW = "in_review"   # escalated to human queue (Tier 3)
-    PROCESSING = "processing"  # background task still running
+    PENDING = "Pending"       # initial state, still processing
+    APPROVED = "Approved"     # auto-approved (T1 safe or T2 high-confidence approve)
+    FLAGGED = "Flagged"       # auto-flagged (T1 toxic or T2 high-confidence flag)
+    IN_REVIEW = "InReview"    # escalated to human queue (Tier 3)
 
 
 class ModerationDecision(str, Enum):

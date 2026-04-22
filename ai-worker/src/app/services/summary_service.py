@@ -12,7 +12,7 @@ from src.app.services.ai_usage_service import AiUsageService
 
 logger = logging.getLogger(__name__)
 
-_MODEL = "gemini-2.5-flash"
+_MODEL = "gemini-2.5-flash-lite"
 # Average adult reading speed (words per minute)
 _WORDS_PER_MINUTE = 200
 

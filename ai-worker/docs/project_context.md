@@ -45,12 +45,12 @@ All service-level constants (model IDs, thresholds, limits) MUST be declared as 
 
 ```python
 # CORRECT
-_MODEL = "gemini-2.5-flash"
+_MODEL = "gemini-2.5-flash-lite"
 _MAX_INPUT_CHARS = 15_000
 _SAFE_THRESHOLD = 0.3
 
 # WRONG — inline magic string
-response = await client.aio.models.generate_content(model="gemini-2.5-flash", ...)
+response = await client.aio.models.generate_content(model="gemini-2.5-flash-lite", ...)
 ```
 
 ---
@@ -261,7 +261,7 @@ Only `CodeToolsService.generate_diagram()` needs `_strip_mermaid_fences()`. Do n
 
 ### 5.4 Model ID Constant — Single Source of Truth Per File
 
-The model string `"gemini-2.5-flash"` MUST be defined as `_MODEL` at module level in each service file. It MUST NOT appear as an inline string literal in method calls.
+The model string `"gemini-2.5-flash-lite"` MUST be defined as `_MODEL` at module level in each service file. It MUST NOT appear as an inline string literal in method calls.
 
 ### 5.5 Usage Logging — After Successful Response, Before Return
 

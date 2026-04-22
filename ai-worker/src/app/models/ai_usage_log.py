@@ -10,7 +10,7 @@ class AiUsageLog(Base):
     -------
     id              : Auto-increment PK
     feature_name    : Logical feature that triggered the call, e.g. "metadata", "tl_dr"
-    model_used      : Gemini model string, e.g. "gemini-2.5-flash"
+    model_used      : Gemini model string, e.g. "gemini-2.5-flash-lite"
     input_tokens    : Prompt token count from usage_metadata
     output_tokens   : Completion token count from usage_metadata
     total_tokens    : Derived sum (input + output)

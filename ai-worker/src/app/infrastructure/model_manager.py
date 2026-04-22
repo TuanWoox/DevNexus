@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # Model identifiers
 _TEXT_MODEL_ID = "unitary/multilingual-toxic-xlm-roberta"
 _CLIP_MODEL_ID = "openai/clip-vit-base-patch32"
-
+_TEXT_MODEL_ID = r"D:\Learning\Fouth_Year\fine-tunning\my-final-toxic-model"
 # Toxicity label returned by the text model for the positive class
 _TOXIC_LABEL = "toxic"
 
@@ -35,9 +35,20 @@ class ImageAnalysisResult:
     flagged_concepts: list[str]
 
 
-# Candidate prompts used for zero-shot CLIP classification
-_SAFE_PROMPTS = ["a safe image", "a normal software engineering screenshot", "code on a screen"]
-_UNSAFE_PROMPTS = ["explicit nudity", "graphic violence", "hate speech imagery", "disturbing content"]
+_SAFE_PROMPTS = [
+    "a normal everyday photograph", 
+    "a software engineering or coding screenshot", 
+    "a professional office environment",
+    "a clean educational diagram"
+]
+
+_UNSAFE_PROMPTS = [
+    "explicit nudity, pornography, or sexual content", 
+    "graphic violence, blood, or gore", 
+    "a person holding a gun, knife, or weapon",
+    "hate speech imagery, offensive symbols, or racism", 
+    "self-harm or disturbing scary content"
+]
 _ALL_PROMPTS = _SAFE_PROMPTS + _UNSAFE_PROMPTS
 
 
@@ -113,34 +124,54 @@ class AIModelManager:
 
     def analyze_text(self, text: str) -> TextAnalysisResult:
         """
-        Run XLM-RoBERTa toxicity classification on a text snippet.
-        Returns a score from 0.0 (safe) to 1.0 (toxic).
+        Run XLM-RoBERTa toxicity classification on the full text.
+        Long texts are split into 512-token chunks; the worst-chunk score wins.
         """
         if not self._loaded:
             raise RuntimeError("Models are not loaded. Call load_models() first.")
 
-        inputs = self._text_tokenizer(
-            text,
-            return_tensors="pt",
-            truncation=True,
-            max_length=512,
-            padding=True,
-        ).to(self._device)
+        # Tokenize without truncation to get all token IDs
+        # verbose=False suppresses the "sequence length > 512" HuggingFace warning
+        all_ids = self._text_tokenizer.encode(text, add_special_tokens=False, verbose=False)
 
-        with torch.no_grad():
-            logits = self._text_model(**inputs).logits
+        # Split into 510-token chunks (leaving room for [CLS] and [SEP])
+        chunk_size = 510
+        chunks = [all_ids[i : i + chunk_size] for i in range(0, max(len(all_ids), 1), chunk_size)]
 
-        probs = torch.softmax(logits, dim=-1)[0]
-
-        # Map label id → label name using model's config
         id2label: dict[int, str] = self._text_model.config.id2label
-        scores = {id2label[i]: probs[i].item() for i in range(len(id2label))}
+        worst_score = 0.0
 
-        # The positive-class label may be "toxic" or index 1 depending on the checkpoint
-        toxic_score = scores.get(_TOXIC_LABEL, probs[-1].item())
-        predicted_label = max(scores, key=lambda k: scores[k])
+        for idx, chunk_ids in enumerate(chunks):
+            chunk_text = self._text_tokenizer.decode(chunk_ids, skip_special_tokens=True)
+            inputs = self._text_tokenizer(
+                chunk_text,
+                return_tensors="pt",
+                truncation=True,
+                max_length=512,
+                padding=True,
+            ).to(self._device)
 
-        return TextAnalysisResult(score=toxic_score, label=predicted_label)
+            with torch.no_grad():
+                logits = self._text_model(**inputs).logits
+
+            probs = torch.sigmoid(logits)[0]
+            scores = {id2label[i]: probs[i].item() for i in range(len(id2label))}
+            chunk_score = scores.get(_TOXIC_LABEL) or scores.get("LABEL_1", probs[-1].item())
+
+            logger.info(
+                "DEBUG_TEXT chunk=%d/%d tokens=%d score=%.4f text=%r",
+                idx + 1, len(chunks), len(chunk_ids), chunk_score, text[idx * chunk_size * 4 : idx * chunk_size * 4 + 80],
+            )
+
+            if chunk_score > worst_score:
+                worst_score = chunk_score
+
+        predicted_label = _TOXIC_LABEL if worst_score >= 0.5 else "safe"
+        logger.info(
+            "DEBUG_TEXT [total_len=%d chunks=%d] worst_score=%.4f",
+            len(text), len(chunks), worst_score,
+        )
+        return TextAnalysisResult(score=worst_score, label=predicted_label)
 
     def analyze_image(self, image_bytes: bytes) -> ImageAnalysisResult:
         """
