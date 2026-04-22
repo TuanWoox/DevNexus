@@ -1,13 +1,27 @@
 version: '3.8'
 
 services:
+
+  frontend:
+    container_name: frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:3000"
+    depends_on:
+      platform-core-service:
+        condition: service_started
+      background_job_worker:
+        condition: service_started
+
   platform-core-service:
     container_name: platform-core-service
     build:
       context: .
       dockerfile: ./platform-core-service/Dockerfile
     ports: 
-      - "80:8080"
+      - "8080:8080"
     # Chờ postgres healthy mới start platform-core-service
     # service_healthy = tự động từ healthcheck của postgres
     depends_on:
