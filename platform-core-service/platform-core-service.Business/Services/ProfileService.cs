@@ -15,6 +15,7 @@ using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Attributes;
+using Microsoft.Extensions.Configuration;
 
 namespace platform_core_service.Business.Services
 {
@@ -24,19 +25,22 @@ namespace platform_core_service.Business.Services
         private readonly IMapper _mapper;
         private readonly IUserContext _userContext;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IConfiguration _configuration;
 
         public ProfileService
         (
             ApplicationDbContext context, 
             IMapper mapper,
             IUserContext userContext,
-            IBackgroundJobClient backgroundJobClient 
+            IBackgroundJobClient backgroundJobClient,
+            IConfiguration configuration
          )
         {
             _context = context;
             _mapper = mapper;
             _userContext = userContext;
             _backgroundJobClient = backgroundJobClient;
+            _configuration = configuration;
         }
 
         public async Task<ReturnResult<bool>> CreateAsync(CreateProfileDTO createDTO, ApplicationUser? user = null)
@@ -175,12 +179,26 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                // Step 2: Branch on media type — Avatar vs Background
-                if (type == ProfileMediaType.Avatar)
-                    profile.AvatarUrl = urlId;
-                else
-                    profile.BackgroundUrl = urlId;
+                // Step 2: Get the baseUrl from the env
+                string? baseUrl = _configuration["ApiSettings:ProfileMediaBaseUrl"];
+                if (string.IsNullOrEmpty(baseUrl))
+                {
+                    returnResult.Message = "ProfileMediaBaseUrl is not configured.";
+                    return returnResult;
+                }
 
+                // Step 3: Perform update base on media type
+                string mediaUrl = $"{baseUrl.TrimEnd('/')}/{urlId}";
+
+                if (type == ProfileMediaType.Avatar)
+                {
+                    profile.AvatarUrl = mediaUrl;
+                }
+                else if (type == ProfileMediaType.Background)
+                {
+                    profile.BackgroundUrl = mediaUrl;
+                }
+                
                 _context.Profiles.Update(profile);
                 await _context.SaveChangesAsync();
                 returnResult.Result = _mapper.Map<SelectProfileDTO>(profile);

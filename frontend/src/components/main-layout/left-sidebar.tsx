@@ -24,6 +24,7 @@ import {
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import useLogout from '@/hooks/auth-hooks/use-logout'
+import { useGetProfileById } from '@/hooks/profile-hooks/use-get-profile-by-id'
 
 const menuItems = [
     { name: 'Home', href: '/feed', icon: Home },
@@ -40,6 +41,7 @@ export function LeftSidebar() {
     const dropdownRef = useRef<HTMLDivElement>(null)
 
     const { user } = useSelector((state: RootState) => state.auth)
+    const { data: userProfile } = useGetProfileById(user?.profileId as string);
     const { logout, isLoggingOut } = useLogout()
 
     useEffect(() => {
@@ -58,14 +60,14 @@ export function LeftSidebar() {
 
     return (
         <aside className="hidden sm:flex flex-col sticky top-0 h-screen py-6 border-r border-default sm:w-20 lg:w-64 sm:pr-2 lg:pr-6">
-            <Link href="/feed" className="flex items-center gap-3 mb-8 px-3">
+            <Link href="/feed" className="flex items-center gap-3 mb-6 px-3">
                 <div className="relative">
                     <Hexagon className="h-7 w-7 sm:h-8 sm:w-8 animate-pulse text-primary" />
                     <div className="absolute inset-0 flex items-center justify-center">
                         <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 dark:text-emerald-400 text-emerald-500" />
                     </div>
                 </div>
-                <span className="text-xl font-bold text-heading hidden lg:block">
+                <span className="text-2xl font-bold text-heading hidden lg:block">
                     DevNexus
                 </span>
             </Link>
@@ -163,11 +165,15 @@ export function LeftSidebar() {
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
                     className="flex items-center gap-3 p-2 w-full rounded-xl hover:bg-subtle transition-colors group"
                 >
-                    <div className="h-10 w-10 sm:h-12 sm:w-12 lg:h-10 lg:w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold shrink-0">
-                        {user?.userName?.charAt(0).toUpperCase() || 'U'}
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default">
+                        {userProfile?.avatarUrl ? (
+                            <img src={userProfile.avatarUrl} alt={userProfile.fullName} className="w-full h-full object-cover" />
+                        ) : (
+                            <span className="text-primary font-bold">{userProfile?.fullName?.charAt(0) || 'U'}</span>
+                        )}
                     </div>
                     <div className="hidden lg:flex flex-col text-left flex-1 overflow-hidden">
-                        <span className="text-sm font-bold text-heading truncate">@{user?.userName || 'username'}</span>
+                        <span className="text-sm font-bold text-heading truncate">{userProfile?.fullName || 'username'}</span>
                         <span className="text-xs text-muted-foreground truncate">{user?.roles || 'Role'}</span>
                     </div>
                     <ChevronDown className={`hidden lg:block w-4 h-4 text-muted-foreground transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />

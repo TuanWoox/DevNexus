@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Helpers;
 using platform_core_service.Common.Interfaces.Contexts;
@@ -17,12 +18,14 @@ namespace platform_core_service.Business.Services
         ApplicationDbContext context,
         IMapper mapper,
         IUserContext userContext,
-        IRepository<CommunityEntity, string> communityRepository) : ICommunityService
+        IRepository<CommunityEntity, string> communityRepository,
+        IConfiguration configuration) : ICommunityService
     {
         private readonly ApplicationDbContext _context = context;
         private readonly IMapper _mapper = mapper;
         private readonly IUserContext _userContext = userContext;
         private readonly IRepository<CommunityEntity, string> _communityRepository = communityRepository;
+        private readonly IConfiguration _configuration = configuration;
 
         public async Task<ReturnResult<SelectCommunityDTO>> CreateAsync(CreateCommunityDTO createDTO)
         {
@@ -322,7 +325,16 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                community.CommunityCoverPhotoUrl = mediaId;
+                string? baseUrl = _configuration["ApiSettings:CommunityMediaBaseUrl"];
+                if (string.IsNullOrEmpty(baseUrl))
+                {
+                    result.Message = "CommunityMediaBaseUrl is not configured";
+                    return result;
+                }
+
+                string mediaUrl = $"{baseUrl.TrimEnd('/')}/{mediaId}";
+
+                community.CommunityCoverPhotoUrl = mediaUrl;
                 _context.Communities.Update(community);
                 await _context.SaveChangesAsync();
                 result.Result = _mapper.Map<SelectCommunityDTO>(community);
