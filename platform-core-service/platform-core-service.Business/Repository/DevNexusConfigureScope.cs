@@ -50,6 +50,9 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<ICommunityMediaService, CommunityMediaService>();
             services.AddScoped<IPostMediaService, PostMediaService>();
             services.AddScoped<IQAMediaService, QAMediaService>();
+            services.AddScoped<IModerationService, ModerationService>();
+            // AiWorkerClient uses IHttpClientFactory — must register with AddHttpClient
+            services.AddHttpClient<IAiWorkerClient, AiWorkerClient>();
             // Register the Redis connection multiplexer as a singleton service
             // This allows the application to interact directly with Redis for advanced scenarios
             services.AddSingleton<IConnectionMultiplexer>(sp =>

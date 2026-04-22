@@ -1,10 +1,19 @@
 import jwt
-from fastapi import Depends, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, Request, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, APIKeyHeader
 from src.app.core.config import get_settings, Settings
 from src.app.core.exceptions import AIWorkerException
 
 security_scheme = HTTPBearer()
+api_key_header = APIKeyHeader(name="X-Internal-Api-Key", auto_error=True)
+
+async def verify_internal_api_key(
+    api_key: str = Security(api_key_header),
+    settings: Settings = Depends(get_settings)
+) -> bool:
+    if api_key != settings.internal_api_key:
+        raise AIWorkerException("Invalid Internal API Key.", status_code=403)
+    return True
 
 class CurrentUser:
     def __init__(self, user_id: str, email: str, role: str):
@@ -25,9 +34,14 @@ async def get_current_user(
             audience=settings.jwt_audience
         )
 
-        user_id: str = payload.get("sub")
-        email: str = payload.get("email")
-        role: str = payload.get("role", "Developer")
+        # Support both standard JWT claims and Microsoft/ASP.NET Identity claims
+        user_id_claim = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"
+        email_claim = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
+        role_claim = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+
+        user_id: str = payload.get("sub") or payload.get(user_id_claim) # type: ignore
+        email: str = payload.get("email") or payload.get(email_claim, "") # type: ignore
+        role: str = payload.get("role") or payload.get(role_claim, "Developer") # type: ignore
 
         if user_id is None:
             raise AIWorkerException("Invalid token payload.", status_code=401)

@@ -33,6 +33,8 @@ namespace platform_core_service.Data
         public DbSet<CommunityMedia> CommunityMedias { get;set; }
         public DbSet<PostMedia> PostMedias { get; set; }
         public DbSet<QAMedia> QAMedias { get; set; }
+        public DbSet<PostModerationResult> PostModerationResults { get; set; }
+        public DbSet<ModerationQueueEntry> ModerationQueueEntries { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
@@ -99,6 +101,11 @@ namespace platform_core_service.Data
                 .WithMany(c => c.Replies)
                 .HasForeignKey(c => c.ReplyToCommentId)
                 .OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<Post>()
+                .HasOne(p => p.ModerationResult)
+                .WithOne(m => m.Post)
+                .HasForeignKey<PostModerationResult>(m => m.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
 
         public async Task<int> SaveChangesAsync(bool populatedICreated = true, bool populatedIModified = true, CancellationToken cancellationToken = default)
