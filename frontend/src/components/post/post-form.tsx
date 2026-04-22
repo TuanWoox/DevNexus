@@ -155,7 +155,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
     }
 
     return (
-        <div className="max-w-4xl mx-auto py-6 px-4 animate-fade-in-up">
+        <div className="w-full p-4 sm:p-6 animate-fade-in-up">
             {/* Header */}
             <div className="mb-4 relative auto-mx">
                 <div className="absolute -inset-1 bg-linear-to-r from-emerald-400 to-cyan-400 blur-2xl opacity-20 dark:opacity-10 rounded-full animate-pulse-slow -z-10" />
