@@ -41,5 +41,8 @@ namespace platform_core_service.Common.Entities.DbEntities
         public virtual Community? Community { get; set; }
         [JsonIgnore]
         public List<PostMedia> PostMedias { get; set; } = [];
+        [EnumDataType(typeof(ModerationStatus), ErrorMessage = "ModerationStatus must be a valid Moderation type")]
+        public ModerationStatus ModerationStatus { get; set; } = ModerationStatus.Pending;
+        public virtual PostModerationResult? ModerationResult { get; set; }
     }
 }

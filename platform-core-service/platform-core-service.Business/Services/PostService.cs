@@ -12,6 +12,7 @@ using PostEntity = platform_core_service.Common.Entities.DbEntities.Post;
 using TagEntity = platform_core_service.Common.Entities.DbEntities.Tag;
 using PostTagEntity = platform_core_service.Common.Entities.DbEntities.PostTag;
 using platform_core_service.Common.Interfaces.Helper;
+using platform_core_service.Common.Utils.Enums;
 using System.Text.RegularExpressions;
 using platform_core_service.Common.Helper;
 
@@ -24,13 +25,15 @@ namespace platform_core_service.Business.Services
         private readonly IUserContext _userContext;
         private readonly IRepository<PostEntity, string> _postRepository;
         private readonly ISocialGuardService _socialGuardService;
+        private readonly IAiWorkerClient _aiWorkerClient;
 
         public PostService(
             ApplicationDbContext context,
             IMapper mapper,
             IUserContext userContext,
             IRepository<PostEntity, string> postRepository,
-            ISocialGuardService socialGuardService
+            ISocialGuardService socialGuardService,
+            IAiWorkerClient aiWorkerClient
         )
         {
             _context = context;
@@ -38,6 +41,7 @@ namespace platform_core_service.Business.Services
             _userContext = userContext;
             _postRepository = postRepository;
             _socialGuardService = socialGuardService;
+            _aiWorkerClient = aiWorkerClient;
         }
 
         public async Task<ReturnResult<SelectPostDTO>> CreateAsync(CreatePostDTO createDTO)
@@ -73,7 +77,7 @@ namespace platform_core_service.Business.Services
                 var postTags = await CreateOrGetTagsAsync(createDTO.TagNames, post.Id);
                 post.PostTags = postTags;
 
-                // Step 6: Save post
+                // Step 6: Save post — ModerationStatus defaults to Pending (set in entity)
                 _context.Posts.Add(post);
                 await _context.SaveChangesAsync();
 
@@ -84,6 +88,10 @@ namespace platform_core_service.Business.Services
                     .FirstOrDefaultAsync(p => p.Id == post.Id);
 
                 result.Result = _mapper.Map<SelectPostDTO>(savedPost);
+
+                // Step 8: Fire-and-forget — submit to AI moderation pipeline.
+                // Runs after response is already built; never blocks or throws to caller.
+                await _aiWorkerClient.SubmitForModerationAsync(post.Id, createDTO.Content);
             }
             catch (Exception ex)
             {
@@ -105,11 +113,13 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                // Step 2: Load post with tags (public read - no ownership check)
+                // Step 2: Load post with tags (public read — only show approved posts)
                 var post = await _context.Posts
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
-                    .FirstOrDefaultAsync(p => p.Id == postId || p.Slug == postId);
+                    .FirstOrDefaultAsync(p =>
+                        (p.Id == postId || p.Slug == postId) );
+                        // && p.ModerationStatus == ModerationStatus.Approved);
 
                 if (post == null)
                 {
@@ -181,9 +191,9 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Step 2: Build query for current user's posts
+                // Step 2: Build query — news feed shows only approved posts for all users
                 var query = _context.Posts
-                    .Where(p => p.AuthorId == profileId)
+                    // .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .AsQueryable();

@@ -1,13 +1,15 @@
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
 
-from src.app.api.routers import health, moderation, roadmaps
-from src.app.core.exceptions import AIWorkerException
-from src.app.infrastructure.database import engine
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from src.app.api.routers import health, moderation, roadmaps, content, taxonomy, code_tools
 from src.app.core.config import get_settings
+from src.app.core.exceptions import AIWorkerException
+from src.app.infrastructure.database import create_tables, engine
+from src.app.infrastructure.model_manager import AIModelManager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,16 +18,27 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("AI Worker Microservice is initializing...")
-    
+    logger.info("AI Worker Microservice is initializing…")
+
+    # 1. Ensure DB tables exist (idempotent, safe to run every startup)
+    logger.info("Running DB table creation…")
+    await create_tables()
+    logger.info("DB tables ready ✓")
+
+    # 2. Load local ML models into RAM
+    model_manager = AIModelManager.get_instance()
+    await model_manager.load_models()
+
     yield
-    
-    logger.info("AI Worker Microservice is shutting down...")
-    
-    await engine.dispose() 
-    logger.info("Database connections closed cleanly.")
+
+    # Shutdown: release model memory + close DB pool
+    logger.info("AI Worker Microservice is shutting down…")
+    await model_manager.unload_models()
+    await engine.dispose()
+    logger.info("Shutdown complete.")
 
 app = FastAPI(
     title="AI Worker Microservice",
@@ -40,10 +53,10 @@ origins = [origin.strip() for origin in settings.cors_origins.split(",")] if set
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,        
-    allow_credentials=True,       
-    allow_methods=["*"],          
-    allow_headers=["*"],          
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.exception_handler(AIWorkerException)
@@ -60,3 +73,6 @@ async def ai_worker_exception_handler(request: Request, exc: AIWorkerException):
 app.include_router(health.router)
 app.include_router(moderation.router)
 app.include_router(roadmaps.router)
+app.include_router(content.router)
+app.include_router(taxonomy.router)
+app.include_router(code_tools.router)
