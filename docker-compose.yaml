@@ -53,6 +53,15 @@ services:
       redis:
         condition: service_healthy
   
+  ai-worker:
+    container_name: ai-worker
+    build:
+      context: ./ai-worker
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   background_job_worker:
     container_name: background_job_worker
     build:
