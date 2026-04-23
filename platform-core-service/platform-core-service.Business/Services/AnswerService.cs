@@ -71,8 +71,9 @@ namespace platform_core_service.Business.Services
                 _dbContext.Answers.Add(answer);
                 await _dbContext.SaveChangesAsync();
 
-                // Step 6: Reload and return
+                // Step 6: Reload with author and return
                 var saved = await _dbContext.Answers
+                    .Include(a => a.Author)
                     .FirstOrDefaultAsync(a => a.Id == answer.Id);
 
                 result.Result = _mapper.Map<SelectAnswerDTO>(saved);
@@ -97,8 +98,9 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Step 2: Load (public read — no ownership check)
+                // Step 2: Load with author (public read — no ownership check)
                 var answer = await _dbContext.Answers
+                    .Include(a => a.Author)
                     .FirstOrDefaultAsync(a => a.Id == answerId);
 
                 if (answer == null)
@@ -140,6 +142,7 @@ namespace platform_core_service.Business.Services
                 // Step 3: Build query and delegate paging
                 var query = _dbContext.Answers
                     .Where(a => a.QAPostId == postId)
+                    .Include(a => a.Author)
                     .AsQueryable();
 
                 result.Result = await _answerRepository.GetPagingAsync<Page<string>, SelectAnswerDTO>(query, page);
@@ -186,6 +189,7 @@ namespace platform_core_service.Business.Services
                 await _dbContext.SaveChangesAsync();
 
                 var saved = await _dbContext.Answers
+                    .Include(a => a.Author)
                     .FirstOrDefaultAsync(a => a.Id == answer.Id);
 
                 result.Result = _mapper.Map<SelectAnswerDTO>(saved);

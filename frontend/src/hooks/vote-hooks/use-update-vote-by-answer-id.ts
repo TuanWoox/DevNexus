@@ -8,8 +8,8 @@ export const useUpdateVoteByAnswerId = (answerId: string) => {
 
     return useMutation({
         mutationFn: (voteRequestDTO: VoteRequestDTO) => voteService.updateVoteByAnswerId(answerId, voteRequestDTO),
-        onSuccess: () => {
-            // Refetch lại danh sách answer. (Tuỳ biến lại sử dụng answerQueryKeys nếu bạn đã tạo ra query factory cho answers)
+        onSuccess: (data) => {
+            if (!data) return;
             queryClient.invalidateQueries({ queryKey: answerQueryKeys.lists() });
         },
     });

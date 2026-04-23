@@ -85,6 +85,7 @@ namespace platform_core_service.Business.Services
                 var savedPost = await _context.Posts
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
                     .FirstOrDefaultAsync(p => p.Id == post.Id);
 
                 result.Result = _mapper.Map<SelectPostDTO>(savedPost);
@@ -113,10 +114,11 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                // Step 2: Load post with tags (public read — only show approved posts)
+                // Step 2: Load post with tags and author (public read)
                 var post = await _context.Posts
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
                     .FirstOrDefaultAsync(p =>
                         (p.Id == postId || p.Slug == postId) );
                         // && p.ModerationStatus == ModerationStatus.Approved);
@@ -151,8 +153,10 @@ namespace platform_core_service.Business.Services
             ReturnResult<SelectPostDTO> returnResult = new ReturnResult<SelectPostDTO>();
             try
             {
-                var post = await _context.Posts.Include(p => p.PostTags)
+                var post = await _context.Posts
+                                            .Include(p => p.PostTags)
                                             .ThenInclude(pt => pt.Tag)
+                                            .Include(p => p.Author)
                                             .FirstOrDefaultAsync(p => p.Id == postId || p.Slug == postId && p.CommunityId == communityId);
                 if(post == null)
                 {
@@ -196,6 +200,7 @@ namespace platform_core_service.Business.Services
                     // .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
                     .AsQueryable();
 
                 // Step 3: Get paged results
@@ -265,10 +270,11 @@ namespace platform_core_service.Business.Services
                 _context.Posts.Update(post);
                 await _context.SaveChangesAsync();
 
-                // Step 8: Reload and return
+                // Step 8: Reload with author and return
                 var updatedPost = await _context.Posts
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
                     .FirstOrDefaultAsync(p => p.Id == postId);
 
                 result.Result = _mapper.Map<SelectPostDTO>(updatedPost);

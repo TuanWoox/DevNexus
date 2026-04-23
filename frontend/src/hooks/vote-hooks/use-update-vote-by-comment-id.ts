@@ -8,10 +8,9 @@ export const useUpdateVoteByCommentId = (commentId: string) => {
 
     return useMutation({
         mutationFn: (voteRequestDTO: VoteRequestDTO) => voteService.updateVoteByCommentId(commentId, voteRequestDTO),
-        onSuccess: () => {
-            // Khi vote comment thành công, refetch lại dữ liệu của comment đó
+        onSuccess: (data) => {
+            if (!data) return;
             queryClient.invalidateQueries({ queryKey: commentQueryKeys.detail(commentId) });
-            // Hoặc refetch toàn bộ cây comment (nếu list có hiển thị số lượng vote)
             queryClient.invalidateQueries({ queryKey: commentQueryKeys.all });
         },
     });

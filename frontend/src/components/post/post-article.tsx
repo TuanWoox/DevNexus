@@ -1,48 +1,25 @@
 'use client';
 
 import {
-    MoreHorizontal,
     ArrowBigUp,
     ArrowBigDown,
     MessageSquare,
     Bookmark,
     Share2,
-    UserPlus,
-    Flag,
-    Edit,
-    Trash
 } from 'lucide-react';
-import { useDeletePostById, useGetPostById } from '@/hooks/post-hooks';
-import { useGetProfileById } from '@/hooks/profile-hooks/use-get-profile-by-id';
+import { useGetPostById } from '@/hooks/post-hooks';
 import { useGetCommentsByPostId } from '@/hooks/comment-hooks/use-get-comments-by-post-id';
 import { SortOrderType } from '@/constants/sortOrderType';
 import { useUpdateVoteByPostId } from '@/hooks/vote-hooks/use-update-vote-by-post-id';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useGetQAPostById } from '@/hooks/qa-post-hooks/use-get-qa-post-by-id';
-import { useGetAnswersByPostId } from '@/hooks/answer-hooks/use-get-answers-by-post-id';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { MarkdownViewer } from '../editor/markdown-viewer';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
-import { useDeleteQAPostById } from '@/hooks/qa-post-hooks/use-delete-qa-post-by-id';
-import { useState } from 'react';
 import { useRouter } from "next/navigation";
+import { PostActionsDropdown } from './post-actions-dropdown';
 
 interface Props {
     postId: string;
@@ -51,21 +28,15 @@ interface Props {
 
 export default function PostArticle({ postId, isQAPost }: Props) {
     const router = useRouter();
-    const [showDeleteAlert, setShowDeleteAlert] = useState(false);
 
     const { user } = useSelector((state: RootState) => state.auth);
-    // Luôn luôn gọi cả 2, nhưng tùy isQAPost mà bật cái nào, tắt cái nào
     const { data: qaPost, isLoading: isQALoading } = useGetQAPostById(postId, isQAPost);
     const { data: normalPost, isLoading: isNormalLoading } = useGetPostById(postId, !isQAPost);
-    // Sau đó quyết định lấy data từ biến nào
     const post = isQAPost ? qaPost : normalPost;
     const isPostLoading = isQAPost ? isQALoading : isNormalLoading;
     const isAuthor = user?.profileId === post?.authorId;
 
-    const { data: author, isLoading: isAuthorLoading } = useGetProfileById(post?.authorId || '');
-
-    const { mutate: deletePost, isPending: isDeletingPost } = useDeletePostById();
-    const { mutate: deleteQAPost, isPending: isDeletingQAPost } = useDeleteQAPostById();
+    const author = post?.author;
 
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(postId);
 
@@ -74,35 +45,10 @@ export default function PostArticle({ postId, isQAPost }: Props) {
         updateVote({ isUpvote });
     };
 
-    const handleDeletePost = () => {
-        const mutationOptions = {
-            onSuccess: () => {
-                setShowDeleteAlert(false);
-                router.push('/feed'); // Redirect user về trang chủ / feed
-            },
-            onError: () => {
-                setShowDeleteAlert(false);
-            }
-        };
-
-        if (isQAPost) {
-            deleteQAPost(postId, mutationOptions);
-        } else {
-            deletePost(postId, mutationOptions);
-        }
-    }
-
-    // Minimal fetch just to get total elements if it's not in post DTO
-    const { data: answerData } = useGetAnswersByPostId(postId, isQAPost, {
-        size: -1,
-        pageNumber: 0,
-        totalElements: 0,
-        orders: [{ sort: 'dateCreated', sortDir: SortOrderType.DESC, dynamicProperty: '', delimiter: '', dataType: '' }],
-        filter: [],
-        selected: []
-    });
-    const { data: commentData } = useGetCommentsByPostId(postId, !isQAPost, {
-        size: -1,
+    // QA posts already include answerCount in the DTO — no extra fetch needed.
+    // For normal posts, fetch page size 1 just to get totalElements for the comment badge.
+    const { data: commentCountData } = useGetCommentsByPostId(postId, !isQAPost, {
+        size: 1,
         pageNumber: 0,
         totalElements: 0,
         orders: [{ sort: 'dateCreated', sortDir: SortOrderType.DESC, dynamicProperty: '', delimiter: '', dataType: '' }],
@@ -110,9 +56,11 @@ export default function PostArticle({ postId, isQAPost }: Props) {
         selected: []
     });
 
-    const commentsData = isQAPost ? answerData : commentData;
+    const commentCount = isQAPost
+        ? (post as import('@/types/qa-post/select-qa-post-dto').SelectQAPostDTO)?.answerCount ?? 0
+        : commentCountData?.page?.totalElements ?? 0;
 
-    const isLoading = isPostLoading || isAuthorLoading;
+    const isLoading = isPostLoading;
 
     if (isLoading) {
         return (
@@ -199,9 +147,9 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                 {/* Author Info */}
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
                             {author?.avatarUrl ? (
-                                <img src={author.avatarUrl} alt={author.fullName} className="w-full h-full object-cover" />
+                                <Image src={author.avatarUrl} alt={author.fullName} fill className="object-cover" />
                             ) : (
                                 <span className="text-primary font-bold">{author?.fullName?.charAt(0) || 'U'}</span>
                             )}
@@ -223,55 +171,13 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                             </span>
                         </div>
                     </div>
-                    {/* Dropdown Menu Options */}
-                    <DropdownMenu modal={false}>
-                        <DropdownMenuTrigger asChild>
-                            <button
-                                className="p-2 text-muted-foreground hover:text-primary hover:bg-subtle rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                aria-label="More options"
-                            >
-                                <MoreHorizontal className="w-5 h-5" />
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-42 bg-card border rounded-xl shadow-elevated p-1 z-10">
-                            {isAuthor ? (
-                                <>
-                                    <DropdownMenuItem
-                                        onClick={() => router.push(`/${isQAPost ? 'questions' : 'post'}/edit/${post.id}`)}
-                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium"
-                                    >
-                                        <Edit className="w-4 h-4" />
-                                        <span>Edit Post</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                        onClick={() => setShowDeleteAlert(true)}
-                                        disabled={isDeletingPost || isDeletingQAPost}
-                                        variant='destructive'
-                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
-                                    >
-                                        <Trash className="w-4 h-4" />
-                                        <span>Delete Post</span>
-                                    </DropdownMenuItem>
-                                </>
-                            ) : (
-                                <>
-                                    <DropdownMenuItem
-                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium"
-                                    >
-                                        <UserPlus className="w-4 h-4" />
-                                        <span>Follow User</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                        variant='destructive'
-                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
-                                    >
-                                        <Flag className="w-4 h-4" />
-                                        <span>Report Comment</span>
-                                    </DropdownMenuItem>
-                                </>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    {/* Post Actions Dropdown (Edit / Delete / Follow / Report) */}
+                    <PostActionsDropdown
+                        postId={postId}
+                        isQAPost={isQAPost}
+                        isAuthor={isAuthor}
+                        onDeleted={() => router.push('/feed')}
+                    />
                 </div>
 
                 {/* Content */}
@@ -305,7 +211,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
 
                     <button className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg transition-colors">
                         <MessageSquare className="w-5 h-5" />
-                        <span className="text-sm font-medium hidden sm:block">{commentsData?.page?.totalElements || 0} {isQAPost ? 'Answers' : 'Comments'}</span>
+                        <span className="text-sm font-medium hidden sm:block">{commentCount} {isQAPost ? 'Answers' : 'Comments'}</span>
                     </button>
                 </div>
 
@@ -320,38 +226,6 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                     </button>
                 </div>
             </div>
-            {/* Delete Confirmation Alert */}
-            <AlertDialog
-                open={showDeleteAlert}
-                onOpenChange={(open) => {
-                    if (!isDeletingPost && !isDeletingQAPost) {
-                        setShowDeleteAlert(open);
-                    }
-                }}
-            >
-                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete post?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            {`Once you delete this post, it can't be restored.`}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isDeletingPost || isDeletingQAPost} variant="custom" size="lg" className="btn-secondary">Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={(e) => {
-                                e.preventDefault(); // Giữ modal mở để hiển thị trạng thái loading
-                                handleDeletePost();
-                            }}
-                            variant="destructive"
-                            disabled={isDeletingPost || isDeletingQAPost}
-                            size="lg"
-                        >
-                            {isDeletingPost || isDeletingQAPost ? "Deleting..." : "Delete"}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
         </article>
     );
 }

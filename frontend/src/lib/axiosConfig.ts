@@ -91,11 +91,9 @@ api.interceptors.response.use(
         const newTokens = res.data.result;
         if (!newTokens.accessToken) throw new Error('Failed to refresh token');
 
-        // Lưu cookie mới
-        Cookies.set('accessToken', newTokens.accessToken, { expires: 15 });
-        // (Tùy backend, có thể refreshToken cũng được đổi nên lưu lại)
+        Cookies.set('accessToken', newTokens.accessToken, { expires: 15, secure: true, sameSite: 'strict' });
         if (newTokens.refreshToken) {
-          Cookies.set('refreshToken', newTokens.refreshToken, { expires: 15 });
+          Cookies.set('refreshToken', newTokens.refreshToken, { expires: 15, secure: true, sameSite: 'strict' });
         }
 
         // Cập nhật Redux ngay lập tức để giao diện (Navbar, ...) không bị chớp hay lỗi

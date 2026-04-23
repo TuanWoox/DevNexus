@@ -83,6 +83,7 @@ namespace platform_core_service.Business.Services
                     .Include(q => q.Answers)
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
                     .FirstOrDefaultAsync(q => q.Id == qaPost.Id);
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(savedPost);
@@ -113,6 +114,7 @@ namespace platform_core_service.Business.Services
                     .Include(q => q.Answers)
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
                     .FirstOrDefaultAsync(q => q.Id == postId || q.Slug == postId);
 
                 if (qaPost == null)
@@ -151,6 +153,7 @@ namespace platform_core_service.Business.Services
                     .Include(q => q.Answers)
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
                     .AsQueryable();
 
                 // Step 3: Delegate paging to repository
@@ -223,12 +226,13 @@ namespace platform_core_service.Business.Services
                 _dbContext.Posts.Update(qaPost);
                 await _dbContext.SaveChangesAsync();
 
-                // Step 8: Reload and return
+                // Step 8: Reload with author and return
                 var updatedPost = await _dbContext.Posts
                     .OfType<QAPost>()
                     .Include(q => q.Answers)
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
                     .FirstOrDefaultAsync(q => q.Id == postId);
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(updatedPost);

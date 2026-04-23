@@ -5,6 +5,7 @@ import { MarkdownEditor } from '../editor/markdown-editor';
 import { useCreateComment } from '@/hooks/comment-hooks/use-create-comment';
 import { CreateCommentDTO } from '@/types/comment/create-comment-dto';
 import { useCreateAnswer } from '@/hooks/answer-hooks/use-create-answer';
+import Image from 'next/image';
 import { CreateAnswerDTO } from '@/types/answer/create-answer-dto';
 
 interface CommentInputProps {
@@ -60,9 +61,9 @@ export function CommentInput({ postId, currentUserAvatar, isQAPost }: CommentInp
     return (
         <div className="flex gap-3 sm:gap-4 mb-8">
             {/* Avatar */}
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/20 shrink-0 mt-1 border border-default overflow-hidden">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/20 shrink-0 mt-1 border border-default overflow-hidden relative">
                 {currentUserAvatar ? (
-                    <img src={currentUserAvatar} alt="Current User" className="w-full h-full object-cover" />
+                    <Image src={currentUserAvatar} alt="Current User" fill className="object-cover" />
                 ) : (
                     <span className="w-full h-full flex items-center justify-center font-bold text-primary">U</span>
                 )}

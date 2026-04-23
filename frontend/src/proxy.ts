@@ -3,10 +3,12 @@ import type { NextRequest } from 'next/server';
 import { jwtDecode } from 'jwt-decode';
 
 // Định nghĩa cấu trúc Role trong Token của bạn
+// Dùng URL-format claims cho nhất quán với auth-slice.ts
 interface DecodedToken {
-    nameid: string;
-    unique_name: string;
-    role?: string[] | string;
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"?: string;
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"?: string;
+    "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"?: string[] | string;
+    profileId?: string;
     exp: number;
 }
 
@@ -89,9 +91,10 @@ export function proxy(request: NextRequest) {
         }
 
         // Chuẩn hóa role thành mảng string[]
-        const userRoles = Array.isArray(decoded.role)
-            ? decoded.role
-            : decoded.role ? [decoded.role] : [];
+        const roleRaw = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+        const userRoles = Array.isArray(roleRaw)
+            ? roleRaw
+            : roleRaw ? [roleRaw] : [];
 
         // 5. Phân Quyền: Nếu route yêu cầu quyền cụ thể (Admin/Mod)
         if (matchedRule.roles.length > 0) {
