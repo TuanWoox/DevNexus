@@ -1,4 +1,4 @@
-﻿using platform_core_service.Common.Entities.BaseEntity;
+using platform_core_service.Common.Entities.BaseEntity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +14,8 @@ namespace platform_core_service.Common.Models.DTOs.MessageBusDTO
         public string FullName { get; set; }
 
         public string? AvatarUrl { get; set; }
+
+        public string? BackgroundUrl { get; set; }
 
         public string Bio { get; set; }
 

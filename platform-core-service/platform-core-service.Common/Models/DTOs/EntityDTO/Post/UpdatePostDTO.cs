@@ -22,5 +22,8 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Post
         public string? Slug { get; set; }
 
         public List<string>? TagNames { get; set; }
+
+        // Optional: IDs of pre-uploaded media to link to this post on update
+        public List<string>? MediaIds { get; set; }
     }
 }

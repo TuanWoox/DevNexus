@@ -1,5 +1,10 @@
 import os
-os.environ["HF_HOME"] = "D:/AI_Cache"
+
+# Configure Hugging Face cache directory
+# In Docker: uses /app/.hf_cache (mounted from D:\Ai-Worker-Model\cache\huggingface)
+# Local development: falls back to D:/AI_Cache
+_hf_home = "/app/.hf_cache" if os.path.exists("/app") else "D:/ai-worker-store/model/my-final-toxic-model"
+os.environ["HF_HOME"] = _hf_home
 
 import logging
 from dataclasses import dataclass
@@ -16,9 +21,11 @@ from transformers import (
 logger = logging.getLogger(__name__)
 
 # Model identifiers
-_TEXT_MODEL_ID = "unitary/multilingual-toxic-xlm-roberta"
+# In Docker: /app/models/text-model (mounted from D:\Ai-Worker-Model\model\my-final-toxic-model)
+# Local development: D:\Learning\Fouth_Year\fine-tunning\my-final-toxic-model
+_TEXT_MODEL_ID = "/app/models/my-final-toxic-model" if os.path.exists("/app") else r"D:\ai-worker-store\model\my-final-toxic-model"
 _CLIP_MODEL_ID = "openai/clip-vit-base-patch32"
-_TEXT_MODEL_ID = r"D:\Learning\Fouth_Year\fine-tunning\my-final-toxic-model"
+
 # Toxicity label returned by the text model for the positive class
 _TOXIC_LABEL = "toxic"
 
@@ -88,14 +95,26 @@ class AIModelManager:
             logger.warning("AIModelManager.load_models() called more than once — skipping.")
             return
 
-        logger.info("Loading XLM-RoBERTa toxicity model on device: %s …", self._device)
-        self._text_tokenizer = AutoTokenizer.from_pretrained(_TEXT_MODEL_ID)
-        self._text_model = AutoModelForSequenceClassification.from_pretrained(
-            _TEXT_MODEL_ID,
-            torch_dtype=torch.float16 if self._device == "cuda" else torch.float32,
-        ).to(self._device)
-        self._text_model.eval()
-        logger.info("XLM-RoBERTa loaded ✓")
+        # Verify model path exists
+        if not os.path.exists(_TEXT_MODEL_ID):
+            raise RuntimeError(
+                f"Text model path not found: {_TEXT_MODEL_ID}\n"
+                f"Expected directory with config.json, pytorch_model.bin, tokenizer.json, etc.\n"
+                f"Available at {_TEXT_MODEL_ID}: {os.listdir(os.path.dirname(_TEXT_MODEL_ID)) if os.path.exists(os.path.dirname(_TEXT_MODEL_ID)) else 'parent dir not found'}"
+            )
+
+        logger.info("Loading XLM-RoBERTa toxicity model from: %s on device: %s …", _TEXT_MODEL_ID, self._device)
+        try:
+            self._text_tokenizer = AutoTokenizer.from_pretrained(_TEXT_MODEL_ID)
+            self._text_model = AutoModelForSequenceClassification.from_pretrained(
+                _TEXT_MODEL_ID,
+                torch_dtype=torch.float16 if self._device == "cuda" else torch.float32,
+            ).to(self._device)
+            self._text_model.eval()
+            logger.info("XLM-RoBERTa loaded ✓")
+        except Exception as e:
+            logger.error("Failed to load text model from %s: %s", _TEXT_MODEL_ID, str(e))
+            raise
 
         logger.info("Loading CLIP model …")
         self._clip_processor = CLIPProcessor.from_pretrained(_CLIP_MODEL_ID)

@@ -5,7 +5,7 @@ import { ProfilesyncService } from '../sync-data-from-platform/profilesync.servi
 import { MessageBusEntityEnum } from 'src/utils/enums/MessageBusEnum';
 import { ProfileblocksyncService } from '../sync-data-from-platform/profileblocksync.service';
 import { UserfollowsyncService } from '../sync-data-from-platform/userfollowsync.service';
-
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class RabbitMQService implements OnModuleInit {
@@ -14,11 +14,31 @@ export class RabbitMQService implements OnModuleInit {
     constructor(
         private readonly profileSyncService: ProfilesyncService,
         private readonly profileBlockSyncService: ProfileblocksyncService,
-        private readonly userfollowBlockSyncService: UserfollowsyncService
+        private readonly userfollowBlockSyncService: UserfollowsyncService,
+        private readonly configService: ConfigService
     ) { }
 
     async onModuleInit() {
-        const connection = await amqp.connect('amqp://localhost');
+        const rabbitUrl = this.configService.get<string>('RABBITMQ_URL') || 'amqp://localhost';
+
+        // Add retry mechanism for RabbitMQ connection
+        let connection;
+        let retries = 10;
+        while (retries) {
+            try {
+                connection = await amqp.connect(rabbitUrl);
+                break;
+            } catch (err) {
+                console.error(`RabbitMQ connection failed, retrying in 5s... (${retries} attempts left)`);
+                retries -= 1;
+                await new Promise(res => setTimeout(res, 5000));
+            }
+        }
+
+        if (!connection) {
+            throw new Error('Could not connect to RabbitMQ');
+        }
+
         this.channel = await connection.createChannel();
 
         const exchange = 'devnexus_sync';

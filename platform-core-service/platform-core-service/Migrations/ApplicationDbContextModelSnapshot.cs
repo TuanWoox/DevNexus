@@ -810,6 +810,10 @@ namespace platform_core_service.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("BackgroundUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("Bio")
                         .IsRequired()
                         .HasMaxLength(500)

@@ -22,6 +22,9 @@ namespace platform_core_service.Common.Entities.DbEntities
         public string? AvatarUrl { get; set; }
 
         [MaxLength(500)]
+        public string? BackgroundUrl { get; set; }
+
+        [MaxLength(500)]
         public string Bio { get; set; }
 
         [Range(0, int.MaxValue)]
