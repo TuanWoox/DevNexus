@@ -355,7 +355,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                     <Button
                         type="button"
                         variant="custom"
-                        className="btn-secondary text-sm px-6 py-2 h-auto"
+                        className="btn-secondary px-6 py-2 h-auto"
                         disabled={isPending}
                         onClick={() => router.back()}
                     >

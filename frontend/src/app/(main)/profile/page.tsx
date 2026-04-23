@@ -10,10 +10,16 @@ import { useGetPostsWithPagination } from "@/hooks/post-hooks/use-get-posts-with
 import { useGetQAPostsWithPagination } from "@/hooks/qa-post-hooks/use-get-qa-posts-with-pagination";
 import { PostCard } from "@/components/post/post-card";
 import { SortOrderType } from "@/constants/sortOrderType";
-import { Loader2 } from "lucide-react";
+import { Loader2, Camera, Image as ImageIcon } from "lucide-react";
+import { EditProfileModal } from "@/components/profile/edit-profile-modal";
+import { ProfileMediaUploadModal } from "@/components/profile/avatar-upload-modal";
+import { ProfileMediaType } from "@/types/profile-media/profile-media-type";
 
 const ProfilePage = () => {
     const [activeTab, setActiveTab] = useState<"overview" | "post" | "qa-post" | "saved">("overview");
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+    const [isBackgroundModalOpen, setIsBackgroundModalOpen] = useState(false);
 
     const { user } = useSelector((state: RootState) => state.auth);
     const { data: userProfile, isLoading: isProfileLoading } = useGetProfileById(user?.profileId as string);
@@ -57,38 +63,53 @@ const ProfilePage = () => {
     return (
         <div className="flex flex-col w-full min-h-screen pb-10">
             {/* Background / Cover Image */}
-            <div className="w-full h-48 md:h-64 relative bg-muted">
+            <div 
+                className="w-full h-48 md:h-64 relative bg-muted group cursor-pointer"
+                onClick={() => setIsBackgroundModalOpen(true)}
+            >
                 <Image
                     src={userProfile.backgroundUrl || "https://images.unsplash.com/photo-1707343843437-caacff5cfa74"}
                     alt="Cover Image"
                     fill
                     priority
                     unoptimized
-                    className="object-cover"
+                    className="object-cover transition-opacity group-hover:opacity-80"
                 />
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex flex-col items-center text-white">
+                        <ImageIcon className="w-10 h-10 mb-2" />
+                        <span className="font-semibold shadow-sm text-lg">Update Cover</span>
+                    </div>
+                </div>
             </div>
 
             <div className="px-4 md:px-8 max-w-5xl mx-auto w-full">
                 {/* Profile Header (Avatar and Actions) */}
                 <div className="relative flex justify-between items-end -mt-16 md:-mt-20 mb-4">
-                    <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-background overflow-hidden bg-muted flex items-center justify-center">
+                    <div 
+                        className="relative w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-background overflow-hidden bg-muted flex items-center justify-center cursor-pointer group shadow-sm transition-transform hover:scale-[1.02]"
+                        onClick={() => setIsAvatarModalOpen(true)}
+                    >
                         {userProfile.avatarUrl ? (
                             <Image
                                 src={userProfile.avatarUrl}
                                 alt="Avatar"
                                 fill
                                 unoptimized
-                                className="object-cover"
+                                className="object-cover transition-opacity group-hover:opacity-80"
                             />
                         ) : (
-                            <span className="text-4xl text-primary font-bold">
+                            <span className="text-4xl text-primary font-bold transition-opacity group-hover:opacity-80">
                                 {userProfile.fullName ? userProfile.fullName.charAt(0) : "U"}
                             </span>
                         )}
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Camera className="w-8 h-8 text-white" />
+                        </div>
                     </div>
 
                     <div className="mb-2">
-                        <Button variant="outline" size="lg">Edit Profile</Button>
+                        <Button variant="outline" size="lg" onClick={() => setIsEditModalOpen(true)}>Edit Profile</Button>
                     </div>
                 </div>
 
@@ -186,6 +207,26 @@ const ProfilePage = () => {
                     )}
                 </div>
             </div>
+
+            <EditProfileModal 
+                isOpen={isEditModalOpen} 
+                onClose={() => setIsEditModalOpen(false)} 
+                currentProfile={userProfile} 
+            />
+
+            <ProfileMediaUploadModal
+                isOpen={isAvatarModalOpen}
+                onClose={() => setIsAvatarModalOpen(false)}
+                profileId={userProfile.id}
+                mediaType={ProfileMediaType.Avatar}
+            />
+
+            <ProfileMediaUploadModal
+                isOpen={isBackgroundModalOpen}
+                onClose={() => setIsBackgroundModalOpen(false)}
+                profileId={userProfile.id}
+                mediaType={ProfileMediaType.Background}
+            />
         </div >
     );
 };
