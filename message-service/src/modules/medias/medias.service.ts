@@ -14,14 +14,16 @@ import { PrismaService } from '../prisma-database/prisma.service';
 import { UserContextService } from '../auth/userContext.service';
 import { MediaType } from 'src/generated/prisma/enums';
 import { AuthGuard } from '../auth/auth.guard';
-
+import { ConfigService } from '@nestjs/config';
+import { platform } from 'os';
 
 @Injectable()
 @UseGuards(AuthGuard)
 export class MediasService {
     constructor(
         private readonly prismaService: PrismaService,
-        private readonly userContext: UserContextService
+        private readonly userContext: UserContextService,
+        private readonly configService: ConfigService
     ) {
 
     }
@@ -41,7 +43,9 @@ export class MediasService {
             const { type, folder } = this.getMediaInfo(file.mimetype);
 
             // Construct paths cleanly
-            const basePath = join(__dirname, '..', '..', '..', 'upload');
+            const isWindows = platform() === 'win32';
+            const configuredUploadDir = this.configService.get<string>(isWindows ? 'UPLOAD_FOLDER_WINDOWS' : 'UPLOAD_FOLDER_LINUX');
+            const basePath = configuredUploadDir || join(__dirname, '..', '..', '..', 'upload');
             const uploadPath = join(basePath, folder);
 
             const ext = extname(file.originalname).toLowerCase();
@@ -99,19 +103,23 @@ export class MediasService {
                     }
                 })
                 if (canAccess) {
+                    const isWindows = platform() === 'win32';
+                    const configuredUploadDir = this.configService.get<string>(isWindows ? 'UPLOAD_FOLDER_WINDOWS' : 'UPLOAD_FOLDER_LINUX');
+                    const basePath = configuredUploadDir || join(__dirname, '..', '..', '..', 'upload');
+
                     switch (mediaExist.Type) {
                         case MediaType.Image: {
-                            const filePath = join(__dirname, '../../..', 'upload/images', fileName);
+                            const filePath = join(basePath, 'images', fileName);
                             return res.sendFile(filePath);
                         }
 
                         case MediaType.Video: {
-                            const filePath = join(__dirname, '../../..', 'upload/videos', fileName);
+                            const filePath = join(basePath, 'videos', fileName);
                             return res.sendFile(filePath);
                         }
 
                         case MediaType.File: { // assuming you meant something else here
-                            const filePath = join(__dirname, '../../..', 'upload/files', fileName);
+                            const filePath = join(basePath, 'files', fileName);
                             return res.sendFile(filePath);
                         }
                         default: {

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Hangfire;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
@@ -8,6 +9,7 @@ using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.ProfileMedia;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 
 namespace platform_core_service.Controllers
@@ -45,12 +47,13 @@ namespace platform_core_service.Controllers
         }
 
         [HttpPost("paging/{profileId}")]
-        public async Task<IActionResult> GetPaging([TrimmedRequired] string profileId,Page<string> page)
+        public async Task<IActionResult> GetPaging([TrimmedRequired] string profileId,Page<string> page, [FromQuery] string profileMediaType)
         {
-            ReturnResult<PagedData<SelectProfileMediaDTO, string>> returnResult = new();
+            ReturnResult<PagedData<DisplayProfileMediaDTO, string>> returnResult = new();
             try
             {
-                returnResult = await _profileMediaService.GetPaging(profileId, page);
+                var parsed = Enum.TryParse(profileMediaType, out ProfileMediaType mediaType);
+                returnResult = await _profileMediaService.GetPaging(profileId, page, parsed ? mediaType : ProfileMediaType.Avatar);
             }
             catch (Exception ex)
             {
