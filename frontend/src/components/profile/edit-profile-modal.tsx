@@ -53,7 +53,7 @@ export function EditProfileModal({ isOpen, onClose, currentProfile }: EditProfil
                 fullName: currentProfile.fullName || '',
                 bio: currentProfile.bio || '',
                 techStacks: currentProfile.techStacks || [],
-                isPrivate: false // Add logic if SelectProfileDTO has isPrivate, otherwise false
+                isPrivate: currentProfile.isPrivate ?? true // Use true as default fallback as requested by user
             });
             setTechInput('');
         }

@@ -20,7 +20,7 @@ export const postService = {
     getPostsWithPagination: async (payload: Page<string>): Promise<PagedData<SelectPostDTO, string>> => {
         // Sử dụng POST cho paging vì payload (Page) có cấu trúc phức tạp (filter, sort)
         const { data } = await api.post<ReturnResult<PagedData<SelectPostDTO, string>>>('/Posts/paging', payload);
-        return data.result;
+        return data.result ?? { data: [], page: payload };
     },
 
     updatePost: async (updatePostDTO: UpdatePostDTO): Promise<SelectPostDTO> => {

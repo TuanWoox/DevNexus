@@ -18,7 +18,7 @@ interface ProfileMediaGalleryProps {
 export function ProfileMediaGallery({ profileId, mediaType, onClose }: ProfileMediaGalleryProps) {
     const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
 
-    const { data: pagedData, isLoading } = useGetProfileMediasWithPagination(profileId, {
+    const { data: pagedData, isLoading } = useGetProfileMediasWithPagination(profileId, mediaType, {
         size: 20,
         pageNumber: 0,
         totalElements: 0,
@@ -42,21 +42,16 @@ export function ProfileMediaGallery({ profileId, mediaType, onClose }: ProfileMe
         });
     };
 
-    const getImageUrl = (id: string) => {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL_HTTPS || process.env.NEXT_PUBLIC_API_URL_HTTP;
-        return `${baseUrl}/ProfileMedia/${id}`;
-    };
-
     if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <p className="text-muted-foreground font-medium animate-pulse">Loading previous avatars...</p>
+                <p className="text-muted-foreground font-medium animate-pulse">Loading previous {mediaType === ProfileMediaType.Avatar ? `avatars` : `background`}...</p>
             </div>
         );
     }
 
-    const mediaList = pagedData?.data?.filter(m => m.profileMediaType === mediaType) || [];
+    const mediaList = pagedData?.data || [];
 
     return (
         <div className="flex flex-col h-full fade-in">
@@ -81,7 +76,7 @@ export function ProfileMediaGallery({ profileId, mediaType, onClose }: ProfileMe
                             >
                                 <div className="absolute inset-0 bg-muted">
                                     <Image
-                                        src={getImageUrl(media.id)}
+                                        src={media.url}
                                         alt="Avatar selection"
                                         fill
                                         unoptimized

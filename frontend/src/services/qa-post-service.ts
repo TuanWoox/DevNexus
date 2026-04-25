@@ -19,7 +19,7 @@ export const qaPostService = {
 
     getQAPostWithPagination: async (payload: Page<string>): Promise<PagedData<SelectQAPostDTO, string>> => {
         const { data } = await api.post<ReturnResult<PagedData<SelectQAPostDTO, string>>>('/QAPosts/paging', payload);
-        return data.result;
+        return data.result ?? { data: [], page: payload };
     },
 
     updateQAPost: async (updateQAPostDTO: UpdateQAPostDTO): Promise<SelectQAPostDTO> => {

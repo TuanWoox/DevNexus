@@ -5,6 +5,8 @@ import { ReturnResult } from "@/types/common/return-result";
 import { SelectProfileMediaDTO } from "@/types/profile-media/select-profile-media-dto";
 import { CreateProfileMediaDTO } from "@/types/profile-media/create-profile-media-dto";
 import { UpdatePrimaryProfileMediaDTO } from "@/types/profile-media/update-primary-profile-media-dto";
+import { DisplayProfileMediaDTO } from "@/types/profile-media/display-profile-media-dto";
+import { ProfileMediaType } from "@/types/profile-media/profile-media-type";
 
 export const profileMediaService = {
     createProfileMedia: async (data: CreateProfileMediaDTO): Promise<SelectProfileMediaDTO> => {
@@ -21,9 +23,9 @@ export const profileMediaService = {
         return response.data.result;
     },
 
-    getProfileMediasWithPagination: async (profileId: string, payload: Page<string>): Promise<PagedData<SelectProfileMediaDTO, string>> => {
-        const response = await api.post<ReturnResult<PagedData<SelectProfileMediaDTO, string>>>(`/ProfileMedia/paging/${profileId}`, payload);
-        return response.data.result;
+    getProfileMediasWithPagination: async (profileId: string, profileMediaType: ProfileMediaType, payload: Page<string>): Promise<PagedData<DisplayProfileMediaDTO, string>> => {
+        const response = await api.post<ReturnResult<PagedData<DisplayProfileMediaDTO, string>>>(`/ProfileMedia/paging/${profileId}?profileMediaType=${profileMediaType}`, payload);
+        return response.data.result ?? { data: [], page: payload };
     },
 
     updatePrimaryProfileMedia: async (payload: UpdatePrimaryProfileMediaDTO): Promise<SelectProfileMediaDTO> => {
