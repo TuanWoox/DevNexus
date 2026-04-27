@@ -23,6 +23,9 @@ dependencies = [
     "httpx (>=0.27.0,<1.0.0)"
 ]
 
+[tool.poetry]
+packages = [{include = "app", from = "src"}]
+
 [tool.poetry.dependencies]
 torch = {version = ">=2.2.0", source = "pytorch-cpu"}
 

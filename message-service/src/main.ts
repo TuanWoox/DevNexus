@@ -29,9 +29,12 @@ async function bootstrap() {
     console.error("✗ Failed to create upload directories", err);
   }
 
-  await app.listen(3000);
+  // Set global prefix for all routes
+  app.setGlobalPrefix("message-service");
 
-  console.log("HTTP server running on :3000");
+  await app.listen(3001);
+
+  console.log("HTTP server running on :3001");
 }
 
 bootstrap().catch((err) => {
