@@ -26,15 +26,13 @@ const useLogin = () => {
                         refreshToken: data.result.refreshToken,
                         user: parsedData.user
                     }));
-                    console.log(parsedData.user)
-                    // const expiresDate = new Date(parsedData.exp * 1000);
 
-                    Cookies.set("accessToken", data.result.accessToken, { expires: 15 }); // 15 days 
-                    // (Cookie lưu accessToken có thể còn tồn tại dù accessToken đã hết hạn 
-                    // vì việc check accessToken hết hạn chưa sẽ do server check. 
-                    // Nếu cookie hết hạn cùng lúc với accessToken luôn thì middleware sẽ redirect user về login luôn (vì check ko thấy cookie lưu accessToken) 
-                    // mà sẽ ko trigger đc axios interceptor để refetch lại token bằng refreshToken)
-                    Cookies.set("refreshToken", data.result.refreshToken, { expires: 15 });  // 15 days
+                    // secure: true blocks cookie storage on plain http://localhost in all modern browsers.
+                    // Only set Secure flag when the page is served over HTTPS (production).
+                    const isSecureContext = typeof window !== 'undefined' && window.location.protocol === 'https:';
+                    const cookieOptions = { expires: 15, secure: isSecureContext, sameSite: 'strict' as const };
+                    Cookies.set("accessToken", data.result.accessToken, cookieOptions);
+                    Cookies.set("refreshToken", data.result.refreshToken, cookieOptions);
                     toast.success("Login successfully!");
 
                     const callbackUrl = searchParams.get('callbackUrl') || '/feed';

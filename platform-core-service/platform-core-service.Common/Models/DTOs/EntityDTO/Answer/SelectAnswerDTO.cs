@@ -1,5 +1,4 @@
 using platform_core_service.Common.Entities.BaseEntity;
-using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 
 namespace platform_core_service.Common.Models.DTOs.EntityDTO.Answer
 {
@@ -12,8 +11,17 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Answer
         public int DownvoteCount { get; set; } = 0;
         public string QAPostId { get; set; } = null!;
         public string AuthorId { get; set; } = null!;
+        public SelectAnswerAuthorDTO? Author { get; set; }
         public DateTimeOffset DateCreated { get; set; }
         public DateTimeOffset? DateModified { get; set; }
+        public bool? CurrentUserVote { get; set; }
+    }
+
+    public class SelectAnswerAuthorDTO
+    {
+        public string Id { get; set; } = null!;
+        public string FullName { get; set; } = null!;
+        public string? AvatarUrl { get; set; }
     }
 }
 

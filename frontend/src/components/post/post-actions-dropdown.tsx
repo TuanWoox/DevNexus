@@ -1,0 +1,127 @@
+'use client';
+
+import { MoreHorizontal, Edit, Trash, UserPlus, Flag } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { usePostDelete } from '@/hooks/post-hooks/use-post-delete';
+
+interface PostActionsDropdownProps {
+    postId: string;
+    isQAPost: boolean;
+    isAuthor: boolean;
+    onDeleted?: () => void;
+    dropdownClassName?: string;
+}
+
+export function PostActionsDropdown({
+    postId,
+    isQAPost,
+    isAuthor,
+    onDeleted,
+    dropdownClassName = '',
+}: PostActionsDropdownProps) {
+    const router = useRouter();
+    const basePath = isQAPost ? '/questions' : '/post';
+    const { showDeleteAlert, setShowDeleteAlert, isPending, handleDeleteConfirm } = usePostDelete({
+        isQAPost,
+        onDeleted,
+    });
+
+    return (
+        <>
+            <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                    <button
+                        className={`p-2 text-muted-foreground hover:text-primary hover:bg-subtle rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${dropdownClassName}`}
+                        aria-label="More options"
+                    >
+                        <MoreHorizontal className="w-5 h-5" />
+                    </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-42 bg-card border rounded-xl shadow-elevated p-1 z-10">
+                    {isAuthor ? (
+                        <>
+                            <DropdownMenuItem
+                                onClick={() => router.push(`${basePath}/edit/${postId}`)}
+                                className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium"
+                            >
+                                <Edit className="w-4 h-4" />
+                                <span>Edit Post</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={() => setShowDeleteAlert(true)}
+                                disabled={isPending}
+                                variant='destructive'
+                                className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
+                            >
+                                <Trash className="w-4 h-4" />
+                                <span>Delete Post</span>
+                            </DropdownMenuItem>
+                        </>
+                    ) : (
+                        <>
+                            <DropdownMenuItem
+                                className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium"
+                            >
+                                <UserPlus className="w-4 h-4" />
+                                <span>Follow User</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                variant='destructive'
+                                className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
+                            >
+                                <Flag className="w-4 h-4" />
+                                <span>Report Post</span>
+                            </DropdownMenuItem>
+                        </>
+                    )}
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            <AlertDialog
+                open={showDeleteAlert}
+                onOpenChange={(open) => {
+                    if (!isPending) setShowDeleteAlert(open);
+                }}
+            >
+                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete post?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {`Once you delete this post, it can't be restored.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isPending} variant="custom" size="lg" className="btn-secondary">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleDeleteConfirm(postId);
+                            }}
+                            variant="destructive"
+                            disabled={isPending}
+                            size="lg"
+                        >
+                            {isPending ? "Deleting..." : "Delete"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
+    );
+}

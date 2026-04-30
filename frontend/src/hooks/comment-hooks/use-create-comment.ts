@@ -9,6 +9,7 @@ export const useCreateComment = () => {
     return useMutation({
         mutationFn: (createCommentDTO: CreateCommentDTO) => commentService.createComment(createCommentDTO),
         onSuccess: (data) => {
+            if (!data) return;
             if (data.postId) {
                 queryClient.invalidateQueries({ queryKey: commentQueryKeys.byPost(data.postId) });
             }

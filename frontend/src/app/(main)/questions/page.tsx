@@ -1,56 +1,50 @@
-'use client';
+import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
+import { getQueryClient } from '@/lib/get-query-client';
+import { serverPost } from '@/lib/server-api';
+import { qaPostQueryKeys } from '@/hooks/qa-post-hooks/use-qa-post-query-key';
+import { PagedData } from '@/types/common/paged-data';
+import { SelectQAPostDTO } from '@/types/qa-post/select-qa-post-dto';
+import { InfiniteQAPostList } from '@/components/post/infinite-qa-post-list';
+import { QUESTIONS_BASE_PAYLOAD, INFINITE_PAGE_SIZE } from '@/constants/feed-payload';
+import type { Metadata } from 'next';
 
-import { PostCard } from "@/components/post/post-card";
-import { Loader2 } from "lucide-react";
-import { SortOrderType } from "@/constants/sortOrderType";
-import { useGetQAPostsWithPagination } from "@/hooks/qa-post-hooks/use-get-qa-posts-with-pagination";
+export const metadata: Metadata = {
+    title: 'Questions',
+    description: 'Find answers to technical questions from the DevNexus engineering community.',
+};
 
-export default function QuestionsPage() {
-    // Tạm thời gọi tất cả bài posts theo yêu cầu, disable ordering/filtering cứng.
-    const { data: pagedData, isLoading, isError } = useGetQAPostsWithPagination({
-        size: -1,
-        pageNumber: 0,
-        totalElements: 0,
-        orders: [{ sort: 'dateCreated', sortDir: SortOrderType.DESC, dynamicProperty: '', delimiter: '', dataType: '' }],
-        filter: [],
-        selected: []
-    });
+export default async function QuestionsPage() {
+    const queryClient = getQueryClient();
+
+    try {
+        await queryClient.prefetchInfiniteQuery({
+            queryKey: qaPostQueryKeys.list({ ...QUESTIONS_BASE_PAYLOAD, infinite: true }),
+            queryFn: ({ pageParam = 0 }) =>
+                serverPost<PagedData<SelectQAPostDTO, string>>('/QAPosts/paging', {
+                    ...QUESTIONS_BASE_PAYLOAD,
+                    size: INFINITE_PAGE_SIZE,
+                    pageNumber: pageParam as number,
+                }),
+            initialPageParam: 0,
+            getNextPageParam: (lastPage) => {
+                if (!lastPage) return undefined;
+                const { pageNumber, size, totalElements } = lastPage.page;
+                const loaded = (pageNumber + 1) * size;
+                return loaded < totalElements ? pageNumber + 1 : undefined;
+            },
+            pages: 1,
+        });
+    } catch (error) {
+        // Intentional: auth token expired → InfiniteQAPostList self-fetches client-side.
+        // Log in dev to surface misconfigurations and unexpected errors.
+        if (process.env.NODE_ENV === 'development') {
+            console.error('[SSR Prefetch Error] questions/page.tsx:', error);
+        }
+    }
 
     return (
-        <div className="w-full mx-auto py-4 sm:p-6">
-            <div className="mb-6 px-4 sm:px-0">
-                <h1 className="text-2xl font-bold text-heading">Questions</h1>
-                <p className="text-base text-muted-foreground mt-1">Discover the latest Q&As.</p>
-            </div>
-
-            <div className="flex flex-col gap-4 px-4 sm:px-0">
-                {isLoading && (
-                    <div className="flex flex-col items-center justify-center py-20 gap-4">
-                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                        <p className="text-muted-foreground font-medium animate-pulse">Loading Q&A posts...</p>
-                    </div>
-                )}
-
-                {isError && (
-                    <div className="card p-6 text-center border-destructive">
-                        <p className="text-destructive font-medium">Failed to load Q&A posts. Please try again.</p>
-                    </div>
-                )}
-
-                {!isLoading && !isError && pagedData?.data && pagedData.data.length === 0 && (
-                    <div className="card p-10 text-center flex flex-col items-center justify-center fade-in">
-                        <div className="w-16 h-16 rounded-full bg-subtle flex items-center justify-center mb-4">
-                            <span className="text-2xl">📭</span>
-                        </div>
-                        <h3 className="text-lg font-bold text-heading">No Q&A posts yet</h3>
-                        <p className="text-muted-foreground mt-2">Check back later or create a new Q&A post to get started.</p>
-                    </div>
-                )}
-
-                {!isLoading && !isError && pagedData?.data?.map((post) => (
-                    <PostCard key={post.id} post={post} />
-                ))}
-            </div>
-        </div>
+        <HydrationBoundary state={dehydrate(queryClient)}>
+            <InfiniteQAPostList />
+        </HydrationBoundary>
     );
 }
