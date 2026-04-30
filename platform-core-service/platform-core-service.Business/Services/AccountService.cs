@@ -66,7 +66,8 @@ namespace platform_core_service.Business.Services
                     Email = newAccount.Email,
                     DateCreated = DateTimeOffset.UtcNow,
                     Deleted = false,
-                    EmailConfirmed = _env.IsDevelopment() // Auto-confirm in development
+                    // EmailConfirmed = _env.IsDevelopment() // Auto-confirm in development
+                    EmailConfirmed = true,
                 };
 
                 var createResult = await _userManager.CreateAsync(user, newAccount.Password);
@@ -96,15 +97,16 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                if (_env.IsDevelopment())
-                {
-                    returnResult.Result = true;
-                }
-                else
-                {
-                    returnResult = await RequestConfirmEmail(new RequestConfirmEmailDTO { Email = user.Email! });
-                }
+                // if (_env.IsDevelopment())
+                // {
+                //     returnResult.Result = true;
+                // }
+                // else
+                // {
+                //     returnResult = await RequestConfirmEmail(new RequestConfirmEmailDTO { Email = user.Email! });
+                // }
 
+                returnResult.Result = true;
 
             }
             catch (Exception ex)

@@ -16,6 +16,7 @@ import { MessagesModule } from './modules/messages/messages.module';
 import { MediasModule } from './modules/medias/medias.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 
 @Module({
@@ -38,12 +39,21 @@ import { memoryStorage } from 'multer';
       storage: memoryStorage()
     }),
     ScheduleModule.forRoot(),
-    BullModule.forRoot({
-      connection: {
-        host: 'localhost',
-        port: 6379,
-      },
+    ConfigModule.forRoot({
+      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+      isGlobal: true,
     }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          host: configService.get<string>('REDIS_HOST') || 'localhost',
+          port: configService.get<number>('REDIS_PORT') || 6379,
+        },
+      }),
+      inject: [ConfigService],
+    }),
+
   ],
   controllers: [],
   providers: []

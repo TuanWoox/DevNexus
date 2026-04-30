@@ -1,9 +1,10 @@
-﻿using AutoMapper;
+using AutoMapper;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Configuration;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Attributes;
 using platform_core_service.Common.Entities.DbEntities;
@@ -14,8 +15,10 @@ using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.ProfileMedia;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
+using System.Configuration;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
@@ -29,7 +32,8 @@ namespace platform_core_service.Business.Services
         IUserContext userContext,
         ICloudinary cloudinary,
         ICacheService cacheService,
-        IProfileService profileService
+        IProfileService profileService,
+        IConfiguration configuration
     ) : IProfileMediaService
     {
         private readonly ApplicationDbContext _context = context;
@@ -40,6 +44,7 @@ namespace platform_core_service.Business.Services
         private readonly ICloudinary _cloudinary = cloudinary;
         private readonly ICacheService _cacheService = cacheService;
         private readonly IProfileService _profileService = profileService;
+        private readonly IConfiguration _configuration = configuration;
 
         public async Task<string> GetById([TrimmedRequired] string Id)
         {
@@ -69,14 +74,28 @@ namespace platform_core_service.Business.Services
             }
             return fileDestination;
         }
-        public async Task<ReturnResult<PagedData<SelectProfileMediaDTO, string>>> GetPaging([TrimmedRequired] string ProfileId, Page<string> page)
+        public async Task<ReturnResult<PagedData<DisplayProfileMediaDTO, string>>> GetPaging([TrimmedRequired] string ProfileId, Page<string> page, ProfileMediaType profileMediaType = ProfileMediaType.Avatar)
         {
-            ReturnResult<PagedData<SelectProfileMediaDTO, string>> returnResult = new();
+            ReturnResult<PagedData<DisplayProfileMediaDTO, string>> returnResult = new();
             try
             {
-                var query = _context.ProfileMedias.Where(x => x.ProfileId == ProfileId).OrderByDescending(x => x.IsPrimary).AsQueryable().AsNoTracking();
+                var query = _context.ProfileMedias.Where(x => x.ProfileId == ProfileId 
+                                                    && x.ProfileMediaType == profileMediaType)
+                                                    .OrderByDescending(x => x.IsPrimary)
+                                                    .AsQueryable().AsNoTracking();
                 var pagingResult = await _repository.GetPagingAsync<Page<string>, SelectProfileMediaDTO>(query, page);
-                returnResult.Result = pagingResult;
+                if(pagingResult.Data.Count() > 0)
+                {
+                    string? baseUrl = _configuration["ApiSettings:ProfileMediaBaseUrl"] ?? "https://localhost:7184/api/ProfileMedia";
+                    var displayProfiles = pagingResult.Data.Select(x => new DisplayProfileMediaDTO
+                    {
+                        Url = baseUrl + "/" + x.Id,
+                        Id = x.Id
+                    }).ToList();
+
+                    returnResult.Result = new PagedData<DisplayProfileMediaDTO, string>(pagingResult.Page);
+                    returnResult.Result.Data = displayProfiles;
+                }
             }
             catch (Exception ex)
             {
@@ -125,7 +144,7 @@ namespace platform_core_service.Business.Services
                     {
                         returnResult.Result = _mapper.Map<SelectProfileMediaDTO>(sameHashProfileMedia);
                         await _cacheService.SetCacheAsync($"profile-media-{sameHashProfileMedia.Id}", sameHashProfileMedia.StoreDestination, HelperUtils.CacheEntryOptions);
-                        await _profileService.UpdateProfileAvatarUrl(sameHashProfileMedia.ProfileId, sameHashProfileMedia.Id);
+                        await _profileService.UpdateProfileImageUrl(sameHashProfileMedia.ProfileId, sameHashProfileMedia.Id, sameHashProfileMedia.ProfileMediaType);
                         return returnResult;
                     }
                     else
@@ -170,7 +189,7 @@ namespace platform_core_service.Business.Services
                 {
                     returnResult.Result = _mapper.Map<SelectProfileMediaDTO>(newProfileMedia ?? sameHashProfileMedia);
                     var media = newProfileMedia ?? sameHashProfileMedia;
-                    if (!string.IsNullOrEmpty(media?.Id) && !string.IsNullOrEmpty(media?.ProfileId)) await _profileService.UpdateProfileAvatarUrl(media.ProfileId, media.Id);
+                    if (!string.IsNullOrEmpty(media?.Id) && !string.IsNullOrEmpty(media?.ProfileId)) await _profileService.UpdateProfileImageUrl(media.ProfileId, media.Id, media.ProfileMediaType);
                     if (!string.IsNullOrEmpty(primaryProfileMedia?.Id)) await _cacheService.RemoveCacheAsync($"profile-media-{primaryProfileMedia.Id}");
 
                 }
@@ -225,7 +244,7 @@ namespace platform_core_service.Business.Services
                 if (await _context.SaveChangesAsync() > 0)
                 {
                     returnResult.Result = _mapper.Map<SelectProfileMediaDTO>(updatedPrimaryProfileMedia);
-                    await _profileService.UpdateProfileAvatarUrl(updatedPrimaryProfileMedia.ProfileId, updatedPrimaryProfileMedia.Id);
+                    await _profileService.UpdateProfileImageUrl(updatedPrimaryProfileMedia.ProfileId, updatedPrimaryProfileMedia.Id, updatedPrimaryProfileMedia.ProfileMediaType);
                     await _cacheService.SetCacheAsync($"profile-media-{updatedPrimaryProfileMedia.Id}", updatedPrimaryProfileMedia.StoreDestination, HelperUtils.CacheEntryOptions);
                     if (primaryProfileMedia != null) await _cacheService.RemoveCacheAsync($"profile-media-{primaryProfileMedia.Id}");
                 }
@@ -256,7 +275,7 @@ namespace platform_core_service.Business.Services
                     {
                         returnResult.Result = true;
                         await _cacheService.RemoveCacheAsync($"profile-media-{deleteProfileMedia.Id}");
-                        if (deleteProfileMedia.IsPrimary) await _profileService.UpdateProfileAvatarUrl(deleteProfileMedia.ProfileId, "");
+                        if (deleteProfileMedia.IsPrimary) await _profileService.UpdateProfileImageUrl(deleteProfileMedia.ProfileId, "", deleteProfileMedia.ProfileMediaType);
                     }
                     else
                     {
@@ -289,8 +308,8 @@ namespace platform_core_service.Business.Services
                     if (await _context.SaveChangesAsync() > 0)
                     {
                         returnResult.Result = deleteProfileMedias.Count;
-                        var primaryMediaProfile = deleteProfileMedias.Where(x => x.IsPrimary).FirstOrDefault();
-                        if (primaryMediaProfile != null) await _profileService.UpdateProfileAvatarUrl(primaryMediaProfile.ProfileId, "");
+                        var primaryMediaProfiles = deleteProfileMedias.Where(x => x.IsPrimary).ToList();
+                        await Task.WhenAll(primaryMediaProfiles.Select(x => _profileService.UpdateProfileImageUrl(x.ProfileId, "", x.ProfileMediaType)));
                         await Task.WhenAll(deleteProfileMedias.Select(x => _cacheService.RemoveCacheAsync($"profile-media-{x.Id}")));
                     }
                     else

@@ -65,7 +65,7 @@ export function PostCard({ post }: PostCardProps) {
 
             {/* Content Wrap in Link */}
             <Link href={`${basePath}/${post.id}`} className="block mt-1 group after:absolute after:inset-0">
-                <h2 className="text-lg sm:text-xl font-bold text-heading group-hover:text-primary transition-colors line-clamp-2 leading-tight">
+                <h2 className="text-lg sm:text-xl font-bold text-heading transition-colors line-clamp-2 leading-tight">
                     {post.title}
                 </h2>
             </Link>
@@ -127,7 +127,7 @@ export function PostCard({ post }: PostCardProps) {
                 </div>
 
                 <div className="flex items-center gap-1 sm:gap-2">
-                    <button className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-primary hover:bg-subtle rounded-full sm:rounded-lg transition-colors flex items-center gap-2 relative z-10">
+                    <button className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg transition-colors flex items-center gap-2 relative z-10">
                         <Bookmark className="w-5 h-5" />
                         <span className="text-sm font-medium hidden sm:block">Save</span>
                     </button>

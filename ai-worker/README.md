@@ -47,6 +47,49 @@ Open the newly created `.env` file and update the values to match your local set
    os.environ["HF_HOME"] = "D:/AI_Cache"
    ```
 
+### 4. Docker Volume Binding (For Docker Deployment)
+
+When running the AI Worker in Docker, bind your local model directories to avoid re-downloading the ~2GB model each time:
+
+**Update `docker-compose.yaml`** to mount the model directories:
+
+```yaml
+services:
+  ai-worker:
+    # ... other configuration ...
+    volumes:
+      # Bind local fine-tuned model (avoid re-downloading)
+      - D:\Learning\Fouth_Year\fine-tunning\my-final-toxic-model:/app/models/text-model
+      # Bind Hugging Face cache directory (optional, ~2GB+ for downloaded models)
+      - D:\AI_Cache:/app/.hf_cache
+    environment:
+      # Point to the mounted model inside the container
+      - HF_HOME=/app/.hf_cache
+      # Update the model_manager.py to use the mounted path:
+      # _TEXT_MODEL_ID = "/app/models/text-model"
+```
+
+**Or use Docker CLI**:
+
+```bash
+docker run -v D:\Learning\Fouth_Year\fine-tunning\my-final-toxic-model:/app/models/text-model \
+           -v D:\AI_Cache:/app/.hf_cache \
+           -e HF_HOME=/app/.hf_cache \
+           devnexus-ai-worker
+```
+
+**Update the model path** in `src/app/infrastructure/model_manager.py`:
+
+```python
+import os
+
+# For Docker containers, use the mounted path
+_TEXT_MODEL_ID = "/app/models/text-model"
+
+# Configure cache directory
+os.environ["HF_HOME"] = os.getenv("HF_HOME", "/app/.hf_cache")
+```
+
 ## Running the Application
 
 Once your `.env` is configured and dependencies are installed, you can start the FastAPI application using Poetry:

@@ -15,6 +15,7 @@ using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Attributes;
+using Microsoft.Extensions.Configuration;
 
 namespace platform_core_service.Business.Services
 {
@@ -24,19 +25,22 @@ namespace platform_core_service.Business.Services
         private readonly IMapper _mapper;
         private readonly IUserContext _userContext;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IConfiguration _configuration;
 
         public ProfileService
         (
             ApplicationDbContext context, 
             IMapper mapper,
             IUserContext userContext,
-            IBackgroundJobClient backgroundJobClient 
+            IBackgroundJobClient backgroundJobClient,
+            IConfiguration configuration
          )
         {
             _context = context;
             _mapper = mapper;
             _userContext = userContext;
             _backgroundJobClient = backgroundJobClient;
+            _configuration = configuration;
         }
 
         public async Task<ReturnResult<bool>> CreateAsync(CreateProfileDTO createDTO, ApplicationUser? user = null)
@@ -162,7 +166,7 @@ namespace platform_core_service.Business.Services
         }
 
         //Only used when we update a primary image on profileMedia
-        public async Task<ReturnResult<SelectProfileDTO>> UpdateProfileAvatarUrl([TrimmedRequired] string profileId, string urlId)
+        public async Task<ReturnResult<SelectProfileDTO>> UpdateProfileImageUrl([TrimmedRequired] string profileId, string urlId, ProfileMediaType type)
         {
             ReturnResult<SelectProfileDTO> returnResult = new ReturnResult<SelectProfileDTO>();
             try
@@ -175,12 +179,30 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                // Step 2: Perform update
-                profile.AvatarUrl = urlId;
+                // Step 2: Get the baseUrl from the env
+                string? baseUrl = _configuration["ApiSettings:ProfileMediaBaseUrl"];
+                if (string.IsNullOrEmpty(baseUrl))
+                {
+                    returnResult.Message = "ProfileMediaBaseUrl is not configured.";
+                    return returnResult;
+                }
+
+                // Step 3: Perform update base on media type
+                string mediaUrl = $"{baseUrl.TrimEnd('/')}/{urlId}";
+
+                if (type == ProfileMediaType.Avatar)
+                {
+                    profile.AvatarUrl = mediaUrl;
+                }
+                else if (type == ProfileMediaType.Background)
+                {
+                    profile.BackgroundUrl = mediaUrl;
+                }
+                
                 _context.Profiles.Update(profile);
                 await _context.SaveChangesAsync();
                 returnResult.Result = _mapper.Map<SelectProfileDTO>(profile);
-                //Publsih To Other Source Too
+                //Publish To Other Source Too
                 _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
                     x => x.PublishEntity(_mapper.Map<ProfilePublishDTO>(profile), MessageBusEnum.Update, MessageBusEntityEnum.Profile)
                 );

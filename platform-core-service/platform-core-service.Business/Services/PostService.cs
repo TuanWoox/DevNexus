@@ -1,8 +1,10 @@
 using AutoMapper;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
@@ -27,6 +29,7 @@ namespace platform_core_service.Business.Services
         private readonly IUserContext _userContext;
         private readonly IRepository<PostEntity, string> _postRepository;
         private readonly ISocialGuardService _socialGuardService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IAiWorkerClient _aiWorkerClient;
 
         public PostService(
@@ -35,6 +38,7 @@ namespace platform_core_service.Business.Services
             IUserContext userContext,
             IRepository<PostEntity, string> postRepository,
             ISocialGuardService socialGuardService,
+            IBackgroundJobClient backgroundJobClient,
             IAiWorkerClient aiWorkerClient
         )
         {
@@ -43,6 +47,7 @@ namespace platform_core_service.Business.Services
             _userContext = userContext;
             _postRepository = postRepository;
             _socialGuardService = socialGuardService;
+            _backgroundJobClient = backgroundJobClient;
             _aiWorkerClient = aiWorkerClient;
         }
 
@@ -83,7 +88,10 @@ namespace platform_core_service.Business.Services
                 _context.Posts.Add(post);
                 await _context.SaveChangesAsync();
 
-                // Step 7: Return mapped DTO
+                // Step 7: Link pre-uploaded media (upload-first flow)
+                if (createDTO.MediaIds.Count > 0) _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x => x.UpdatePostMediaPostId(_userContext.UserId, post.Id, createDTO.MediaIds));
+
+                // Step 8: Return mapped DTO
                 var savedPost = await _context.Posts
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
@@ -122,8 +130,8 @@ namespace platform_core_service.Business.Services
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
                     .FirstOrDefaultAsync(p =>
-                        (p.Id == postId || p.Slug == postId) );
-                        // && p.ModerationStatus == ModerationStatus.Approved);
+                        (p.Id == postId || p.Slug == postId));
+                // && p.ModerationStatus == ModerationStatus.Approved);
 
                 if (post == null)
                 {
@@ -161,7 +169,7 @@ namespace platform_core_service.Business.Services
                                             .ThenInclude(pt => pt.Tag)
                                             .Include(p => p.Author)
                                             .FirstOrDefaultAsync(p => p.Id == postId || p.Slug == postId && p.CommunityId == communityId);
-                if(post == null)
+                if (post == null)
                 {
                     returnResult.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_FOUND, "post", postId);
                     return returnResult;
@@ -311,7 +319,10 @@ namespace platform_core_service.Business.Services
                 _context.Posts.Update(post);
                 await _context.SaveChangesAsync();
 
-                // Step 8: Reload with author and return
+                // Step 8: Link any newly provided pre-uploaded media
+                if (updateDTO.MediaIds?.Count > 0) _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x => x.UpdatePostMediaPostId(_userContext.UserId, postId, updateDTO.MediaIds));
+
+                // Step 9: Reload and return
                 var updatedPost = await _context.Posts
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
