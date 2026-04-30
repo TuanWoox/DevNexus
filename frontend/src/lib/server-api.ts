@@ -4,14 +4,16 @@
 import { cookies } from 'next/headers';
 import { ReturnResult } from '@/types/common/return-result';
 
-const BASE_URL =
-    process.env.NEXT_PUBLIC_API_URL_HTTPS ||
-    process.env.NEXT_PUBLIC_API_URL_HTTP;
-
-if (!BASE_URL) {
-    throw new Error(
-        'Missing API base URL: set NEXT_PUBLIC_API_URL_HTTPS or NEXT_PUBLIC_API_URL_HTTP in .env'
-    );
+function getBaseUrl(): string {
+    const url =
+        process.env.NEXT_PUBLIC_API_URL_HTTPS ||
+        process.env.NEXT_PUBLIC_API_URL_HTTP;
+    if (!url) {
+        throw new Error(
+            'Missing API base URL: set NEXT_PUBLIC_API_URL_HTTPS or NEXT_PUBLIC_API_URL_HTTP in .env'
+        );
+    }
+    return url;
 }
 
 export async function serverPost<T>(
@@ -31,7 +33,7 @@ export async function serverPost<T>(
         }
     }
 
-    const res = await fetch(`${BASE_URL}${path}`, {
+    const res = await fetch(`${getBaseUrl()}${path}`, {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
