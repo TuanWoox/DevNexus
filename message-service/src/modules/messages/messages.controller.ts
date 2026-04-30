@@ -1,7 +1,8 @@
-import { Controller, Post, Param, ParseIntPipe, UploadedFile, UseGuards, UseInterceptors, Body, HttpCode } from '@nestjs/common';
+import { Controller, Post, UploadedFile, UseGuards, UseInterceptors, Body, HttpCode, Param } from '@nestjs/common';
 import { MessagesService } from './messages.service';
 import { AuthGuard } from '../auth/auth.guard';
 import type { CreateMessageDto } from './dto/create-message.dto';
+import type { MarkMultipleMessagesAsReadDto } from './dto/mark-multiple-messages-as-read.dto';
 import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
 import { Message, MessageReadReceipt } from 'src/generated/prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -12,7 +13,7 @@ import type { PagedData } from 'src/shared/dtos/paging/pagedData';
 @Controller('messages')
 @UseGuards(AuthGuard)
 export class MessagesController {
-  constructor(private readonly messagesService: MessagesService) {}
+  constructor(private readonly messagesService: MessagesService) { }
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
@@ -31,11 +32,11 @@ export class MessagesController {
     }
   }
 
-  @Post(':id/read')
-  async markAsRead(
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<ReturnResult<MessageReadReceipt>> {
-    return this.messagesService.markAsRead(id);
+  @Post('read')
+  async markMultipleAsRead(
+    @Body() dto: MarkMultipleMessagesAsReadDto,
+  ): Promise<ReturnResult<MessageReadReceipt[]>> {
+    return this.messagesService.markMultipleAsRead(dto.messageIds);
   }
 
   @Post('paging/:chatId')

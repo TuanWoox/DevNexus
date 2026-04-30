@@ -1,48 +1,84 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { MessageBubble } from "@/app/(main)/messages/_component/message-bubble";
-import { ChatDetailData, Message } from "@/features/messages/types/contracts";
-import { Separator } from "@/components/ui/separator";
+import { Message } from "@/features/messages/types/contracts";
+import { cn } from "@/lib/utils";
 
 interface MessageThreadProps {
-    detail: ChatDetailData;
+    messages: Message[];
     currentProfileId: string;
+    onLoadMore?: () => void;
+    hasMore?: boolean;
+    isLoadingMore?: boolean;
 }
 
-function isSameDay(a: string, b: string): boolean {
-    const da = new Date(a);
-    const db = new Date(b);
-    return da.getFullYear() === db.getFullYear() &&
-        da.getMonth() === db.getMonth() &&
-        da.getDate() === db.getDate();
-}
 
-function formatDaySeparator(isoDate: string): string {
-    const d = new Date(isoDate);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-    if (isSameDay(isoDate, today.toISOString())) return "Today";
-    if (isSameDay(isoDate, yesterday.toISOString())) return "Yesterday";
-    return d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
-}
-
-export function MessageThread({ detail, currentProfileId }: MessageThreadProps) {
+export function MessageThread({
+    messages,
+    currentProfileId,
+    onLoadMore,
+    hasMore,
+    isLoadingMore,
+}: MessageThreadProps) {
     const bottomRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-    const profileLookup = useMemo(() => {
-        const map = new Map<string, { Id: string; FullName: string; AvatarUrl: string | null }>();
-        map.set(currentProfileId, { Id: currentProfileId, FullName: "You", AvatarUrl: null });
-        detail.Participants.forEach((p) => map.set(p.Id, p));
-        return map;
-    }, [currentProfileId, detail.Participants]);
+    const prevScrollHeightRef = useRef(0);
 
+    // ✅ Preserve scroll position when loading older messages
     useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [detail.Messages.length]);
+        const el = scrollContainerRef.current;
+        if (!el) return;
 
-    if (detail.Messages.length === 0) {
+        if (isLoadingMore) {
+            // Take a snapshot of the current total height before new messages are inserted
+            prevScrollHeightRef.current = el.scrollHeight;
+        } else {
+            // After new messages are inserted, calculate how much taller the content got
+            // This equals exactly how far down our previously-viewed content got pushed
+            const diff = el.scrollHeight - prevScrollHeightRef.current;
+
+            if (diff > 0) {
+                // Shift the viewport down by the same amount so we stay on the same message
+                //Scroll top starts from bottom up => so we must add for it not minus because if we minus => we increase the scrolltop instead of keep the same
+                el.scrollTop += diff;
+            }
+        }
+    }, [messages, isLoadingMore]);
+
+    // ✅ Auto-scroll ONLY if user is near bottom
+    useEffect(() => {
+        const el = scrollContainerRef.current;
+        if (!el) return;
+        //Scroll top is how many you scroll          → how far down you've gone so far
+        //client height is how many px you can see right now  → the visible window size
+        //scroll height is total of px you have      → entire content height (visible + hidden)
+        const isNearBottom =
+            el.scrollHeight - Math.abs(el.scrollTop) - el.clientHeight < 100;
+
+        if (isNearBottom) {
+            bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [messages.length]);
+
+    // ✅ Load more when scrolling up (because of flex-col-reverse layout)
+    // In flex-col-reverse, scrollTop is 0 at visual bottom (newest)
+    // and becomes negative as user scrolls up toward older messages.
+    const handleScroll = () => {
+        const el = scrollContainerRef.current;
+        if (!el) return;
+
+        // scrollTop is negative in flex-col-reverse; top of scroll = most negative
+        const scrolledToTop =
+            Math.abs(el.scrollTop) + el.clientHeight >= el.scrollHeight - 100;
+
+        if (scrolledToTop && hasMore && !isLoadingMore) {
+            onLoadMore?.();
+        }
+    };
+
+    if (messages.length === 0) {
         return (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                 No messages yet — say hello! 👋
@@ -50,46 +86,72 @@ export function MessageThread({ detail, currentProfileId }: MessageThreadProps) 
         );
     }
 
-    const messages = detail.Messages;
-
     return (
-        <div className="flex flex-col gap-1 pb-2">
-            {messages.map((message, idx) => {
-                const prev: Message | undefined = messages[idx - 1];
-                const next: Message | undefined = messages[idx + 1];
-                const sender = profileLookup.get(message.SenderId) ?? {
-                    Id: message.SenderId,
-                    FullName: "Unknown",
-                    AvatarUrl: null,
-                };
-                const isMine = message.SenderId === currentProfileId;
-                const showDay = !prev || !isSameDay(message.DateCreated, prev.DateCreated);
-                const isLastInGroup = !next || next.SenderId !== message.SenderId;
-                const senderChanged = prev && prev.SenderId !== message.SenderId;
-
-                return (
-                    <div key={message.Id} className={senderChanged ? "mt-3" : ""}>
-                        {showDay && (
-                            <div className="my-4 flex items-center gap-3">
-                                <Separator className="flex-1" />
-                                <span className="shrink-0 text-[11px] font-medium text-muted-foreground">
-                                    {formatDaySeparator(message.DateCreated)}
-                                </span>
-                                <Separator className="flex-1" />
-                            </div>
-                        )}
-                        <MessageBubble
-                            message={message}
-                            sender={sender}
-                            isMine={isMine}
-                            receipts={detail.Receipts}
-                            currentProfileId={currentProfileId}
-                            showAvatar={isLastInGroup}
-                        />
-                    </div>
-                );
-            })}
+        <div
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
+            className="flex flex-1 flex-col-reverse overflow-y-auto px-4 py-3"
+        >
+            {/* 👇 bottom anchor (visually bottom because of reverse) */}
             <div ref={bottomRef} />
+
+            {/* Pre-compute: find the newest message sent by me that has been read */}
+            {(() => {
+                // messages[0] = newest (sorted desc). Find the newest "mine + read" message.
+                const lastSeenMsgId = messages.find(
+                    (m) =>
+                        m.SenderId === currentProfileId &&
+                        m.MessageReadReceipt?.some((r) => r.ReaderId !== currentProfileId)
+                )?.Id;
+
+                return messages.map((message, idx) => {
+                    const prev: Message | undefined = messages[idx - 1];
+
+                    const sender = message.Sender ?? {
+                        Id: message.SenderId,
+                        FullName: "Unknown",
+                        AvatarUrl: null,
+                    };
+
+                    const isMine = message.SenderId === currentProfileId;
+
+                    const isLastInGroup = idx == 0;
+
+                    const senderChanged =
+                        prev && prev.SenderId !== message.SenderId;
+
+                    // Messenger-style status:
+                    // "seen" → on the newest read message (can be anywhere in the list)
+                    // "sent" → only on the very last message (idx=0) if mine & unread
+                    let messageStatus: "seen" | "sent" | undefined;
+                    if (isMine && message.Id === lastSeenMsgId) {
+                        messageStatus = "seen";
+                    } else if (isMine && idx === 0 && message.Id !== lastSeenMsgId) {
+                        messageStatus = "sent";
+                    }
+
+                    return (
+                        <div key={message.Id} className={cn("py-0.5", senderChanged && "mt-3")}>
+
+                            <MessageBubble
+                                message={message}
+                                sender={sender}
+                                isMine={isMine}
+                                currentProfileId={currentProfileId}
+                                showAvatar={isLastInGroup}
+                                messageStatus={messageStatus}
+                            />
+                        </div>
+                    );
+                });
+            })()}
+
+            {/* 👇 loading indicator (appears at top visually) */}
+            {isLoadingMore && (
+                <div className="flex justify-center py-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                </div>
+            )}
         </div>
     );
 }

@@ -1,30 +1,39 @@
 "use client";
 
 import { FormEvent, useRef, useState } from "react";
-import { Send, Smile } from "lucide-react";
+import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { useCreateMessage } from "@/features/messages/hooks/messages/use-create-message";
+import { Chat } from "@/features/messages/types/contracts";
 
 interface MessageComposerProps {
-    disabled?: boolean;
-    onSend: (content: string) => Promise<void>;
+    selectedChat: Chat | null;
 }
 
-export function MessageComposer({ disabled = false, onSend }: MessageComposerProps) {
+export function MessageComposer({ selectedChat }: MessageComposerProps) {
+    const createMessage = useCreateMessage();
     const [value, setValue] = useState("");
     const [isSending, setIsSending] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    const canSend = value.trim().length > 0 && !isSending && !disabled;
+    const canSend = value.trim().length > 0 && !isSending && !createMessage.isPending;
+
+    if (!selectedChat) return null;
 
     const submit = async (e?: FormEvent) => {
         e?.preventDefault();
         const content = value.trim();
-        if (!content || isSending || disabled) return;
+        if (!content || isSending || createMessage.isPending) return;
         setIsSending(true);
         try {
-            await onSend(content);
+            await createMessage.mutateAsync({
+                createMessageDto: {
+                    ChatId: selectedChat.Id,
+                    Content: content,
+                },
+            });
             setValue("");
             if (textareaRef.current) {
                 textareaRef.current.style.height = "auto";
@@ -52,29 +61,20 @@ export function MessageComposer({ disabled = false, onSend }: MessageComposerPro
             onSubmit={submit}
             className="flex items-end gap-2 rounded-2xl border border-border bg-muted/40 px-3 py-2"
         >
-            <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="mb-0.5 h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
-                aria-label="Emoji"
-            >
-                <Smile className="h-5 w-5" />
-            </Button>
-
             <Textarea
                 ref={textareaRef}
                 value={value}
                 onChange={handleChange}
                 onKeyDown={handleKeyDown}
                 placeholder="Message…"
-                disabled={disabled || isSending}
+                disabled={createMessage.isPending || isSending}
                 rows={1}
                 className={cn(
                     "flex-1 resize-none border-0 bg-transparent p-0 text-sm shadow-none",
                     "focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground",
-                    "max-h-[120px] min-h-0 leading-relaxed",
+                    "overflow-y-auto leading-relaxed",  // ✅ removed min-h-0, max-h-30
                 )}
+                style={{ maxHeight: "120px", minHeight: "unset" }} // ✅ inline to override shadcn defaults
             />
 
             <Button

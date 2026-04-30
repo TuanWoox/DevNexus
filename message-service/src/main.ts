@@ -1,10 +1,11 @@
-import { NestFactory } from "@nestjs/core";
+import { NestFactory, Reflector } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { AppModule } from "./app.module";
 import { mkdirSync } from "fs";
 import { join } from "path";
 import { ConfigService } from "@nestjs/config";
 import { platform } from "os";
+import { ClassSerializerInterceptor } from "@nestjs/common";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -29,6 +30,12 @@ async function bootstrap() {
     console.error("✗ Failed to create upload directories", err);
   }
 
+  app.enableCors({
+    origin: ['http://localhost:3000'],
+    credentials: true,
+  });
+
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   // Set global prefix for all routes
   app.setGlobalPrefix("message-service");
 

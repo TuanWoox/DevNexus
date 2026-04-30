@@ -50,10 +50,7 @@ export class MessagesService {
         return returnResult;
       }
 
-      const otherMemberIds = chat.Members
-        .filter(x => x.MemberId !== profileId)
-        .map(x => x.MemberId);
-
+      const otherMemberIds = chat.Members.filter(x => x.MemberId !== profileId).map(x => x.MemberId);
       const profileBlocks = await this.profileBlocksService.checkBlocks(otherMemberIds);
       if (profileBlocks) {
         returnResult.Message = "Forbidden";
@@ -69,8 +66,18 @@ export class MessagesService {
         include: { Chat: true }
       });
 
-      if (file) {
-        await this.mediasService.handleUpload(file, createMessage.Id);
+      if (createMessage) {
+        await this.prismaService.chat.update({
+          where: {
+            Id: createEntity.ChatId
+          },
+          data: {
+            DateModified: new Date()
+          }
+        })
+        if (file) {
+          await this.mediasService.handleUpload(file, createMessage.Id);
+        }
       }
 
       // Emit new-message to all other chat members — frontend handles
@@ -86,15 +93,21 @@ export class MessagesService {
     }
     return returnResult;
   }
-
-  async markAsRead(messageId: number): Promise<ReturnResult<MessageReadReceipt>> {
-    const returnResult = new ReturnResult<MessageReadReceipt>();
+  async markMultipleAsRead(messageIdStrings: string[]): Promise<ReturnResult<MessageReadReceipt[]>> {
+    const returnResult = new ReturnResult<MessageReadReceipt[]>();
     try {
       const profileId = this.userContext.getProfileId();
+      const messageIds = messageIdStrings.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
 
-      const message = await this.prismaService.message.findFirst({
+      if (messageIds.length === 0) {
+        returnResult.Message = 'No valid message IDs provided';
+        return returnResult;
+      }
+
+      // Fetch all messages to verify access and get details
+      const messages = await this.prismaService.message.findMany({
         where: {
-          Id: messageId,
+          Id: { in: messageIds },
           Chat: {
             Members: { some: { MemberId: profileId } },
           },
@@ -114,46 +127,66 @@ export class MessagesService {
         },
       });
 
-      if (!message) {
-        returnResult.Message = 'Message not found or you are not a member of this chat';
+      if (messages.length !== messageIds.length) {
+        returnResult.Message = 'Some messages not found or you are not a member of their chats';
         return returnResult;
       }
 
-      if (message.SenderId === profileId) {
-        returnResult.Message = 'Sender cannot mark their own message as read';
+      // Filter out messages sent by the current user
+      const validMessages = messages.filter(msg => msg.SenderId !== profileId);
+
+      if (validMessages.length === 0) {
+        returnResult.Message = 'No valid messages to mark as read (cannot mark own messages)';
         return returnResult;
       }
 
-      const receipt = await this.prismaService.messageReadReceipt.upsert({
-        where: {
-          MessageId_ReaderId: { MessageId: messageId, ReaderId: profileId },
-        },
-        create: { MessageId: messageId, ReaderId: profileId },
-        update: {},
+      // Create or update read receipts for all valid messages
+      const receipts = await Promise.all(
+        validMessages.map(message =>
+          this.prismaService.messageReadReceipt.upsert({
+            where: {
+              MessageId_ReaderId: { MessageId: message.Id, ReaderId: profileId },
+            },
+            create: { MessageId: message.Id, ReaderId: profileId },
+            update: {},
+          }),
+        ),
+      );
+
+      // Notify senders for each message (only if not requested)
+      const notificationMap = new Map<string, { messageIds: number[]; isRequested: boolean }>();
+
+      validMessages.forEach(message => {
+        const senderSetting = message.Chat.ChatSettings.find(
+          s => s.ProfileId === message.SenderId,
+        );
+        if (senderSetting && !senderSetting.IsRequested) {
+          if (!notificationMap.has(message.SenderId)) {
+            notificationMap.set(message.SenderId, { messageIds: [], isRequested: false });
+          }
+          notificationMap.get(message.SenderId)!.messageIds.push(message.Id);
+        }
       });
 
-      // Notify the original sender that their message was read (only if not requested)
-      const senderSetting = message.Chat.ChatSettings.find(
-        s => s.ProfileId === message.SenderId,
-      );
-      if (senderSetting && !senderSetting.IsRequested) {
+      // Emit notifications by sender
+      notificationMap.forEach((data, senderId) => {
         this.gateway.emitToUsers(
-          [message.SenderId],
-          'message-read',
-          { messageId, readerId: profileId, chatId: message.ChatId },
+          [senderId],
+          'messages-read',
+          { messageIds: data.messageIds, readerId: profileId },
         );
-      }
+      });
 
-      returnResult.Result = receipt;
+      returnResult.Result = receipts;
     } catch (ex) {
       returnResult.Message = ex instanceof Error ? ex.message : String(ex);
     }
     return returnResult;
   }
-
   async getMessagePaging(chatId: string, page: Page<number>) {
     const returnResult = new ReturnResult<PagedData<number, Message>>();
     try {
+
       const profileId = this.userContext.getProfileId();
 
       const chat = await this.prismaService.chat.findFirst({
@@ -188,10 +221,18 @@ export class MessagesService {
         include: {
           Sender: {
             select: { FullName: true, AvatarUrl: true }
+          },
+          //We exclude our own
+          ReadReceipts: {
+            where: {
+              ReaderId: {
+                not: profileId
+              }
+            }
           }
         },
         take: pageSize,
-        orderBy: [{ DateCreated: 'desc' }, { Id: 'desc' }],
+        orderBy: [{ Id: 'desc' }],
       });
 
       returnResult.Result = { page: { ...page }, data: messages };

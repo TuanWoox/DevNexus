@@ -3,40 +3,27 @@
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChatDetailData } from "@/features/messages/types/contracts";
 import { ChatActionMenu } from "@/app/(main)/messages/_component/chat-action-menu";
+import { Chat } from "@/features/messages/types/contracts";
+import { getProfileId, getTitle, getAvatarUrl, getInitials } from "@/features/messages/utils/message-service.helper";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 interface ChatHeaderProps {
-    detail: ChatDetailData;
-    onToggleArchive: () => void;
-    onTogglePin: () => void;
-    onToggleMute: () => void;
-    onClearMessages: () => void;
-    onAcceptRequest: () => void;
+    detail: Chat;
     onBack?: () => void;
-}
-
-function getTitle(detail: ChatDetailData): string {
-    if (detail.Chat.IsGroup) return detail.Chat.Name || "Group Chat";
-    return detail.Participants[0]?.FullName || detail.Chat.Name || "Conversation";
-}
-
-function getInitials(name: string): string {
-    return name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
 }
 
 export function ChatHeader({
     detail,
-    onToggleArchive,
-    onTogglePin,
-    onToggleMute,
-    onClearMessages,
-    onAcceptRequest,
     onBack,
 }: ChatHeaderProps) {
-    const title = getTitle(detail);
-    const avatarUrl = detail.Participants[0]?.AvatarUrl ?? detail.Chat.ChatPictureUrl ?? undefined;
-    const isRequest = detail.CurrentSetting.IsRequested;
+    const currentProfileId = useSelector((state: RootState) => getProfileId(state.auth.user?.profileId));
+    const title = getTitle(detail, currentProfileId);
+    const avatarUrl = getAvatarUrl(detail, currentProfileId);
+    const isRequest = detail?.ChatSettings?.find(
+        (s) => s.ProfileId === currentProfileId
+    )?.IsRequested ?? detail?.ChatSettings?.[0]?.IsRequested;
 
     return (
         <header className="flex items-center gap-3 border-b border-border px-4 py-3 bg-card">
@@ -72,12 +59,8 @@ export function ChatHeader({
             </div>
 
             <ChatActionMenu
-                setting={detail.CurrentSetting}
-                onToggleArchive={onToggleArchive}
-                onTogglePin={onTogglePin}
-                onToggleMute={onToggleMute}
-                onClearMessages={onClearMessages}
-                onAcceptRequest={onAcceptRequest}
+                chat={detail}
+                onBack={onBack}
             />
         </header>
     );

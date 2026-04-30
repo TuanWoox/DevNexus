@@ -1,37 +1,26 @@
-import { Message, MessageReadReceipt, ProfileSummary } from "@/features/messages/types/contracts";
+import { Message, ProfileSummary } from "@/features/messages/types/contracts";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CheckCheck } from "lucide-react";
+import { toRelativeTime, getInitials } from "@/features/messages/utils/message-service.helper";
+import { Check, CheckCheck } from "lucide-react";
 
 interface MessageBubbleProps {
     message: Message;
     sender: ProfileSummary;
     isMine: boolean;
-    receipts: MessageReadReceipt[];
     currentProfileId: string;
     showAvatar: boolean;
-}
-
-function formatTime(isoDate: string): string {
-    return new Date(isoDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-function getInitials(name: string): string {
-    return name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
+    /** Messenger-style: "seen" | "sent" | undefined (no status) */
+    messageStatus?: "seen" | "sent";
 }
 
 export function MessageBubble({
     message,
     sender,
     isMine,
-    receipts,
-    currentProfileId,
     showAvatar,
+    messageStatus,
 }: MessageBubbleProps) {
-    const readCount = receipts.filter(
-        (r) => r.MessageId === message.Id && r.ReaderId !== currentProfileId,
-    ).length;
-
     return (
         <div className={cn("flex items-end gap-2 px-1", isMine ? "flex-row-reverse" : "flex-row")}>
             {!isMine && (
@@ -48,11 +37,6 @@ export function MessageBubble({
             )}
 
             <div className={cn("flex max-w-[72%] flex-col gap-1", isMine ? "items-end" : "items-start")}>
-                {!isMine && showAvatar && (
-                    <span className="ml-1 text-[11px] font-medium text-muted-foreground">
-                        {sender.FullName}
-                    </span>
-                )}
 
                 <div
                     className={cn(
@@ -65,12 +49,28 @@ export function MessageBubble({
                     {message.Content}
                 </div>
 
-                <div className="flex items-center gap-1 px-1">
-                    <span className="text-[10px] text-muted-foreground">{formatTime(message.DateCreated)}</span>
-                    {isMine && readCount > 0 && (
-                        <CheckCheck className="h-3 w-3 text-primary" />
-                    )}
-                </div>
+                {/* Messenger-style: only the last message shows status */}
+                {messageStatus && (
+                    <div className="flex items-center gap-1 px-1">
+                        {messageStatus === "seen" ? (
+                            <>
+                                <CheckCheck className="h-3 w-3 text-primary" />
+                                <span className="text-[10px] text-muted-foreground">
+                                    Seen · {toRelativeTime(message.DateCreated)}
+                                </span>
+                            </>
+                        ) : (
+                            <>
+                                <Check className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-[10px] text-muted-foreground">
+                                    {toRelativeTime(message.DateCreated) === "now"
+                                        ? "Sent"
+                                        : `Sent · ${toRelativeTime(message.DateCreated)}`}
+                                </span>
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

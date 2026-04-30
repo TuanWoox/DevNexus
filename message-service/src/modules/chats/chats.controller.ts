@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, UseGuards, UseInterceptors, UploadedFile, } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, UseGuards, UseInterceptors, UploadedFile, Query, } from '@nestjs/common';
 import { ChatsService } from './chats.service';
 import type { CreateChatDto } from './dto/create-chat.dto';
 import { AuthGuard } from '../auth/auth.guard';
@@ -37,10 +37,10 @@ export class ChatsController {
 
   @Post('paging')
   @HttpCode(200)
-  async paging(@Body() page: Page<string>) {
+  async paging(@Body() page: Page<string>, @Query('type') type?: string) {
     let returnResult = new ReturnResult<PagedData<string, Chat>>();
     try {
-      returnResult = await this.chatsService.getPaging(page);
+      returnResult = await this.chatsService.getPaging(page, type || "");
     }
     catch (ex) {
       if (ex instanceof Error) {

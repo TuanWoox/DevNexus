@@ -57,43 +57,65 @@ export class ChatsettingsService {
 
   async updateChatSetting(updateInfo: UpdateChatSettingDTO) {
     const returnResult = new ReturnResult<ChatSetting>();
+
     try {
+      // When they archive the message => unpin,
+      // or when it is still request => we can't pin the chat
+      if (updateInfo.IsArchived) updateInfo.IsPinned = false;
+      if (updateInfo.IsRequested) updateInfo.IsPinned = false;
+
       const chatSetting = await this.prismaService.chatSetting.findFirst({
         where: {
           ProfileId: this.userContext.getProfileId(),
           Id: updateInfo.Id,
         },
         include: {
-          Chat: true
-        }
-      })
+          Chat: true,
+        },
+      });
+
       if (!chatSetting) {
-        returnResult.Message = "Chat setting cant be found or does not exist";
+        returnResult.Message = "Chat setting can't be found or does not exist";
         return returnResult;
+      }
+
+      // If pinning this chat, unpin any other currently pinned chat first
+      if (updateInfo.IsPinned === true) {
+        await this.prismaService.chatSetting.updateMany({
+          where: {
+            ProfileId: this.userContext.getProfileId(),
+            IsPinned: true,
+            NOT: { Id: updateInfo.Id },
+          },
+          data: { IsPinned: false },
+        });
       }
 
       // Convert null to undefined so Prisma ignores those fields
       const updatedData = Object.fromEntries(
-        Object.entries(updateInfo).map(([key, value]) => [key, value ?? undefined])
+        Object.entries(updateInfo).map(([key, value]) => [
+          key,
+          value ?? undefined,
+        ])
       );
 
       const updatedEntity = await this.prismaService.chatSetting.update({
         where: {
           Id: updateInfo.Id,
-          ProfileId: this.userContext.getProfileId()
+          ProfileId: this.userContext.getProfileId(),
         },
         data: { ...updatedData },
         include: {
-          Chat: true
-        }
-      })
+          Chat: true,
+        },
+      });
 
       if (updateInfo.MuteUntil) {
         const delay = updateInfo.MuteUntil.getTime() - Date.now();
 
         if (delay > 0) {
           await this.chatSettingQueue.add(
-            'unMute',
+            "unMute",
             { chatSettingId: updateInfo.Id },
             { delay }
           );
@@ -101,11 +123,11 @@ export class ChatsettingsService {
       }
 
       returnResult.Result = updatedEntity;
+    } catch (ex) {
+      returnResult.Message =
+        ex instanceof Error ? ex.message : String(ex);
+    }
 
-    }
-    catch (ex) {
-      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
-    }
     return returnResult;
   }
 
@@ -164,9 +186,10 @@ export class ChatsettingsService {
       })
 
       if (latestMessageId && chatSetting.DeleteUpToMessageId != latestMessageId.Id) {
+        //When we delete all => also unpin
         returnResult.Result = await this.prismaService.chatSetting.update({
           where: { Id: id },
-          data: { DeleteUpToMessageId: latestMessageId.Id },
+          data: { DeleteUpToMessageId: latestMessageId.Id, IsPinned: false },
           include: { Chat: true }
         });
       } else if (chatSetting.DeleteUpToMessageId == latestMessageId?.Id) {

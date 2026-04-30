@@ -21,6 +21,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
+    // ConfigModule MUST be first — it loads .env vars that other modules depend on
+    ConfigModule.forRoot({
+      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+      isGlobal: true,
+    }),
     MessageChatGatewayModule,
     RabbitMqModule,
     MessageChatGatewayModule,
@@ -39,10 +44,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       storage: memoryStorage()
     }),
     ScheduleModule.forRoot(),
-    ConfigModule.forRoot({
-      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
-      isGlobal: true,
-    }),
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
