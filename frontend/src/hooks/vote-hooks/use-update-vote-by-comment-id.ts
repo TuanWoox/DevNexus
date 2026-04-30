@@ -65,7 +65,15 @@ export const useUpdateVoteByCommentId = (commentId: string) => {
             }
 
             queryClient.setQueriesData<PagedData<SelectCommentDTO, string>>(
-                { queryKey: commentQueryKeys.all },
+                {
+                    queryKey: commentQueryKeys.all,
+                    // Exclude 'detail' entries — they hold SelectCommentDTO, not PagedData.
+                    // detail keys have the shape: ['comments', 'detail', id]
+                    predicate: (query) => {
+                        const key = query.queryKey as string[];
+                        return key[1] !== 'detail';
+                    },
+                },
                 (old) => applyVoteToPagedComments(old, commentId, voteRequestDTO)
             );
 

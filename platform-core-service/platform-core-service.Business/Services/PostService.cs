@@ -236,8 +236,9 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Step 2: Build query — news feed shows only approved posts for all users
+                // Step 2: Build query — only concrete Post rows (exclude QAPost subtype)
                 var query = _context.Posts
+                    .Where(p => p.GetType() == typeof(PostEntity))
                     // .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Where(p => p.AuthorId == profileId)
                     .Include(p => p.PostTags)

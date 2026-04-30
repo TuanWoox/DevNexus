@@ -27,8 +27,12 @@ const useLogin = () => {
                         user: parsedData.user
                     }));
 
-                    Cookies.set("accessToken", data.result.accessToken, { expires: 15, secure: true, sameSite: 'strict' });
-                    Cookies.set("refreshToken", data.result.refreshToken, { expires: 15, secure: true, sameSite: 'strict' });
+                    // secure: true blocks cookie storage on plain http://localhost in all modern browsers.
+                    // Only set Secure flag when the page is served over HTTPS (production).
+                    const isSecureContext = typeof window !== 'undefined' && window.location.protocol === 'https:';
+                    const cookieOptions = { expires: 15, secure: isSecureContext, sameSite: 'strict' as const };
+                    Cookies.set("accessToken", data.result.accessToken, cookieOptions);
+                    Cookies.set("refreshToken", data.result.refreshToken, cookieOptions);
                     toast.success("Login successfully!");
 
                     const callbackUrl = searchParams.get('callbackUrl') || '/feed';

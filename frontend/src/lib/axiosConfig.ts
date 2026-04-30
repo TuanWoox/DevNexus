@@ -91,11 +91,15 @@ api.interceptors.response.use(
         const newTokens = res.data.result;
         if (!newTokens.accessToken) throw new Error('Failed to refresh token');
 
-        Cookies.set('accessToken', newTokens.accessToken, { expires: 15, secure: true, sameSite: 'strict' });
+        // secure: true blocks cookie storage on plain http://localhost.
+        // Only set Secure flag when running over HTTPS (production).
+        const isSecureContext = typeof window !== 'undefined' && window.location.protocol === 'https:';
+        const cookieOptions = { expires: 15, secure: isSecureContext, sameSite: 'strict' as const };
+        Cookies.set('accessToken', newTokens.accessToken, cookieOptions);
         if (newTokens.refreshToken) {
-          Cookies.set('refreshToken', newTokens.refreshToken, { expires: 15, secure: true, sameSite: 'strict' });
+          Cookies.set('refreshToken', newTokens.refreshToken, cookieOptions);
         }
-
+        
         // Cập nhật Redux ngay lập tức để giao diện (Navbar, ...) không bị chớp hay lỗi
         const parsedData = parseUserFromToken(newTokens.accessToken, false);
         if (parsedData) {

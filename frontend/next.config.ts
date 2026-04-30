@@ -26,12 +26,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'localhost',
       },
-      // Production: allow any HTTPS origin for avatar URLs served by the backend or CDN.
-      // Narrow this down to specific hostnames once the production domain is known.
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
+      // TODO: Before production, replace this with your actual backend / CDN hostname(s).
+      // Example: { protocol: 'https', hostname: 'api.devnexus.io' }
+      // Wildcard ('**') is intentionally NOT used here to prevent SSRF-style fetches
+      // from attacker-controlled URLs stored in user-controlled fields (e.g. avatarUrl).
     ],
   },
   async rewrites() {
