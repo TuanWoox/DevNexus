@@ -22,6 +22,7 @@ export function AnswerItem({ answer, currentUserId }: { answer: SelectAnswerDTO,
             author={answer.author}
             authorId={answer.authorId}
             currentUserId={currentUserId}
+            currentUserVote={answer.currentUserVote}
             onVote={(isUpvote) => updateVote({ isUpvote })}
             isVotePending={isVotePending}
             onDelete={() => deleteAnswer(answer.id)}

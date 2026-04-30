@@ -46,9 +46,9 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     };
 
     // QA posts already include answerCount in the DTO — no extra fetch needed.
-    // For normal posts, fetch page size 1 just to get totalElements for the comment badge.
+    // Use the same payload as CommentSection so React Query deduplicates into one request.
     const { data: commentCountData } = useGetCommentsByPostId(postId, !isQAPost, {
-        size: 1,
+        size: 20,
         pageNumber: 0,
         totalElements: 0,
         orders: [{ sort: 'dateCreated', sortDir: SortOrderType.DESC, dynamicProperty: '', delimiter: '', dataType: '' }],
@@ -193,19 +193,27 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                         <button
                             onClick={(e) => handleVote(e, true)}
                             disabled={isVotePending}
-                            className="p-1.5 sm:p-2 text-muted-foreground hover:text-emerald-500 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group"
+                            className={`p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group
+                                ${post.currentUserVote === true
+                                    ? 'text-emerald-500'
+                                    : 'text-muted-foreground hover:text-emerald-500'
+                                }`}
                         >
-                            <ArrowBigUp className="w-5 h-5 group-hover:fill-emerald-500/20" />
+                            <ArrowBigUp className={`w-5 h-5 transition-all ${post.currentUserVote === true ? 'fill-emerald-500' : 'group-hover:fill-emerald-500/20'}`} />
                             <span className="text-sm font-medium pr-1">{post.upvoteCount}</span>
                         </button>
                         <div className="w-px h-5 bg-default mx-0.5"></div>
                         <button
                             onClick={(e) => handleVote(e, false)}
                             disabled={isVotePending}
-                            className="p-1.5 sm:p-2 text-muted-foreground hover:text-rose-500 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group"
+                            className={`p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group
+                                ${post.currentUserVote === false
+                                    ? 'text-rose-500'
+                                    : 'text-muted-foreground hover:text-rose-500'
+                                }`}
                         >
                             <span className="text-sm font-medium pr-1">{post.downvoteCount}</span>
-                            <ArrowBigDown className="w-5 h-5 group-hover:fill-rose-500/20" />
+                            <ArrowBigDown className={`w-5 h-5 transition-all ${post.currentUserVote === false ? 'fill-rose-500' : 'group-hover:fill-rose-500/20'}`} />
                         </button>
                     </div>
 

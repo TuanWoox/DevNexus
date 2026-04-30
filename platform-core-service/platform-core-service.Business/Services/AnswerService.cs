@@ -5,10 +5,11 @@ using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Answer;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
+using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
-using platform_core_service.Common.Models.DTOs.HelperDTO;
 
 namespace platform_core_service.Business.Services
 {
@@ -110,6 +111,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 result.Result = _mapper.Map<SelectAnswerDTO>(answer);
+                await SetCurrentUserVoteAsync(result.Result);
             }
             catch (Exception ex)
             {
@@ -146,6 +148,10 @@ namespace platform_core_service.Business.Services
                     .AsQueryable();
 
                 result.Result = await _answerRepository.GetPagingAsync<Page<string>, SelectAnswerDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                }
             }
             catch (Exception ex)
             {
@@ -193,6 +199,7 @@ namespace platform_core_service.Business.Services
                     .FirstOrDefaultAsync(a => a.Id == answer.Id);
 
                 result.Result = _mapper.Map<SelectAnswerDTO>(saved);
+                await SetCurrentUserVoteAsync(result.Result);
             }
             catch (Exception ex)
             {
@@ -306,6 +313,39 @@ namespace platform_core_service.Business.Services
                 result.Result = false;
             }
             return result;
+        }
+        private async Task SetCurrentUserVotesForListAsync(List<SelectAnswerDTO> dtos)
+        {
+            if (dtos == null || !dtos.Any()) return;
+            string profileId = _userContext.ProfileId;
+            if (string.IsNullOrEmpty(profileId)) return;
+            var answerIds = dtos.Select(s => s.Id).ToList();
+
+            var votes = await _dbContext.Votes
+                .Where(v => v.AuthorId == profileId && answerIds.Contains(v.AnswerId))
+                .Select(v => new { v.AnswerId, v.IsUpvote })
+                .ToListAsync();
+
+            var voteMap = votes.ToDictionary(v => v.AnswerId, v => (bool?)v.IsUpvote);
+
+            foreach (var dto in dtos)
+            {
+                dto.CurrentUserVote = voteMap.TryGetValue(dto.Id, out var vote) ? vote : null;
+            }
+        }
+        private async Task SetCurrentUserVoteAsync(SelectAnswerDTO dto)
+        {
+            if (dto == null) return;
+
+            string profileId = _userContext.ProfileId;
+            if (string.IsNullOrEmpty(profileId)) return;
+
+            var vote = await _dbContext.Votes
+                .Where(v => v.AuthorId == profileId && v.AnswerId == dto.Id)
+                .Select(v => (bool?)v.IsUpvote)
+                .FirstOrDefaultAsync();
+
+            dto.CurrentUserVote = vote;
         }
     }
 }

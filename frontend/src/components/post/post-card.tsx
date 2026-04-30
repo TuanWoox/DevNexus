@@ -91,19 +91,27 @@ export function PostCard({ post }: PostCardProps) {
                         <button
                             onClick={(e) => handleVote(e, true)}
                             disabled={isVotePending}
-                            className="p-1.5 sm:p-2 text-muted-foreground hover:text-emerald-500 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group"
+                            className={`p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group
+                                ${post.currentUserVote === true
+                                    ? 'text-emerald-500'
+                                    : 'text-muted-foreground hover:text-emerald-500'
+                                }`}
                         >
-                            <ArrowBigUp className="w-5 h-5 group-hover:fill-emerald-500/20" />
+                            <ArrowBigUp className={`w-5 h-5 transition-all ${post.currentUserVote === true ? 'fill-emerald-500' : 'group-hover:fill-emerald-500/20'}`} />
                             <span className="text-sm font-medium pr-1">{post.upvoteCount}</span>
                         </button>
                         <div className="w-px h-5 bg-default mx-0.5"></div>
                         <button
                             onClick={(e) => handleVote(e, false)}
                             disabled={isVotePending}
-                            className="p-1.5 sm:p-2 text-muted-foreground hover:text-rose-500 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group"
+                            className={`p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group
+                                ${post.currentUserVote === false
+                                    ? 'text-rose-500'
+                                    : 'text-muted-foreground hover:text-rose-500'
+                                }`}
                         >
                             <span className="text-sm font-medium pr-1">{post.downvoteCount}</span>
-                            <ArrowBigDown className="w-5 h-5 group-hover:fill-rose-500/20" />
+                            <ArrowBigDown className={`w-5 h-5 transition-all ${post.currentUserVote === false ? 'fill-rose-500' : 'group-hover:fill-rose-500/20'}`} />
                         </button>
                     </div>
 
@@ -113,6 +121,7 @@ export function PostCard({ post }: PostCardProps) {
                         className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg transition-colors relative z-10"
                     >
                         <MessageSquare className="w-5 h-5" />
+                        <span className="text-sm font-medium">{isQaPost ? (post as SelectQAPostDTO).answerCount : post.commentCount}</span>
                         <span className="text-sm font-medium hidden sm:block">{isQaPost ? 'Answers' : 'Comments'}</span>
                     </Link>
                 </div>

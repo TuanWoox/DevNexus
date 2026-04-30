@@ -1,133 +1,136 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { jwtDecode } from 'jwt-decode';
+import { jwtVerify, type JWTPayload } from 'jose';
 
-// Định nghĩa cấu trúc Role trong Token của bạn
+// ─── JWT Payload shape ────────────────────────────────────────────────────────
 // Dùng URL-format claims cho nhất quán với auth-slice.ts
-interface DecodedToken {
+interface DevNexusJWTPayload extends JWTPayload {
     "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"?: string;
     "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"?: string;
     "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"?: string[] | string;
     profileId?: string;
-    exp: number;
 }
 
-// Danh sách các route Auth (Nếu đã đăng nhập thì không được vào nữa)
+// ─── Route config ─────────────────────────────────────────────────────────────
+
+// Trang Auth — đã đăng nhập thì đá về feed
 const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
 
-// Cấu hình các Route cần bảo vệ và Role tương ứng
-// App có 3 roles là Admin, Moderator, Developer
+// Routes cần bảo vệ + role tương ứng
+// roles: [] = cần đăng nhập (bất kỳ role), roles: ['Admin'] = chỉ Admin
 const routeRules = [
     {
         pathMatch: /^\/admin/,
-        roles: ['Admin'] // Chỉ Admin được vào toàn bộ route /admin/...
+        roles: ['Admin'],
     },
     {
         pathMatch: /^\/moderation/,
-        roles: ['Admin', 'Moderator'] // Mod và Admin được vào khu vực kiểm duyệt
+        roles: ['Admin', 'Moderator'],
     },
     {
-        // Gộp các route chức năng cốt lõi của mạng xã hội học tập
         pathMatch: /^\/(feed|post|questions|communities|messages|notifications|profile)/,
-        roles: [] // Mảng rỗng = Cần đăng nhập (Bất kỳ ai có token hợp lệ đều vào được)
-    }
+        roles: [],
+    },
 ];
 
-// NEXT.JS 16: Bắt buộc dùng export function proxy
-export function proxy(request: NextRequest) {
+// ─── Helper: verify JWT với jose ──────────────────────────────────────────────
+// jose.jwtVerify thực hiện cryptographic signature verification (không chỉ base64 decode).
+// Throw nếu: token giả mạo, chữ ký sai, hết hạn, format lỗi.
+async function verifyToken(token: string): Promise<DevNexusJWTPayload | null> {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        // JWT_SECRET chưa được set — log warning và fail-safe (từ chối)
+        console.error('[proxy] JWT_SECRET is not set. Cannot verify tokens.');
+        return null;
+    }
+
+    try {
+        const { payload } = await jwtVerify<DevNexusJWTPayload>(
+            token,
+            new TextEncoder().encode(secret),
+        );
+        return payload;
+    } catch {
+        // Token giả, chữ ký sai, hết hạn → trả null → caller redirect về /login
+        return null;
+    }
+}
+
+// ─── Helper: normalize role claim ────────────────────────────────────────────
+function normalizeRoles(raw?: string[] | string): string[] {
+    if (!raw) return [];
+    return Array.isArray(raw) ? raw : [raw];
+}
+
+// ─── Proxy function ───────────────────────────────────────────────────────────
+// Next.js 16: export function proxy() — codemod @next/codemod@canary middleware-to-proxy
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const token = request.cookies.get('accessToken')?.value;
     const refreshToken = request.cookies.get('refreshToken')?.value;
 
-    // 1. Chặn user ĐÃ đăng nhập quay lại trang Auth (Đá về trang chủ /feed)
+    // ── 1. Auth pages: đá user đã login về /feed ──────────────────────────────
     if (authRoutes.some(route => pathname.startsWith(route))) {
-        // Có bất kỳ token nào thì cũng coi là đang có session, đá về feed
         if (token || refreshToken) {
             return NextResponse.redirect(new URL('/feed', request.url));
         }
         return NextResponse.next();
     }
 
-    // 2. Kiểm tra xem route hiện tại có nằm trong danh sách cần bảo vệ không?
+    // ── 2. Không phải route cần bảo vệ → cho qua ─────────────────────────────
     const matchedRule = routeRules.find(rule => rule.pathMatch.test(pathname));
-
-    // Nếu không phải route cần bảo vệ (VD: /, /about, /faq), cho phép đi tiếp
     if (!matchedRule) {
         return NextResponse.next();
     }
 
-    // 3. Nếu KHÔNG CÓ CẢ HAI token -> Chắc chắn chưa đăng nhập -> Đá về Login
+    // ── 3. Không có cả hai token → chưa đăng nhập → login ───────────────────
     if (!token && !refreshToken) {
         const loginUrl = new URL('/login', request.url);
         loginUrl.searchParams.set('callbackUrl', pathname);
         return NextResponse.redirect(loginUrl);
     }
 
-    // 4. Nếu mất accessToken nhưng VẪN CÒN refreshToken -> Cho đi qua
-    // Để Axios ở Client tự gọi API lấy token mới
+    // ── 4. Mất accessToken nhưng còn refreshToken → bypass cho Axios refresh ─
     if (!token && refreshToken) {
         return NextResponse.next();
     }
 
+    // ── 5. Verify token bằng jose (cryptographic) ─────────────────────────────
+    const payload = await verifyToken(token!);
 
-    // 4. Giải mã Token để lấy Role (Edge Runtime an toàn với jwt-decode)
-    try {
-        const decoded = jwtDecode<DecodedToken>(token!);
-
-        // Kiểm tra Token hết hạn (Dù Axios có refresh, những đôi khi user vào thẳng URL bằng trình duyệt)
-        if (decoded.exp * 1000 < Date.now()) {
-            const hasRefreshToken = request.cookies.has('refreshToken');
-            // Nếu có refreshToken, ta bypass (cho đi tiếp) để phía Frontend (Axios) tự bắt lỗi 401 và gọi API Refresh.
-            // Nếu KHÔNG có refreshToken, đá văng về login.
-            if (!hasRefreshToken) {
-                const loginUrl = new URL('/login', request.url);
-                loginUrl.searchParams.set('callbackUrl', pathname);
-
-                // Xóa cookie cũ đã hết hạn để trình duyệt sạch sẽ
-                const response = NextResponse.redirect(loginUrl);
-                response.cookies.delete('accessToken');
-                return response;
-            }
+    if (!payload) {
+        // Token giả mạo, chữ ký sai, hoặc hết hạn và không có refreshToken
+        if (refreshToken) {
+            // Còn refreshToken → bypass, để Axios tự refresh
+            return NextResponse.next();
         }
 
-        // Chuẩn hóa role thành mảng string[]
-        const roleRaw = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
-        const userRoles = Array.isArray(roleRaw)
-            ? roleRaw
-            : roleRaw ? [roleRaw] : [];
-
-        // 5. Phân Quyền: Nếu route yêu cầu quyền cụ thể (Admin/Mod)
-        if (matchedRule.roles.length > 0) {
-            const hasPermission = matchedRule.roles.some(requiredRole => userRoles.includes(requiredRole));
-
-            // Nếu không có quyền -> Chuyển hướng tới trang 403 Access Denied
-            if (!hasPermission) {
-                return NextResponse.redirect(new URL('/unauthorized', request.url));
-            }
-        }
-
-        // Hợp lệ, cho qua
-        return NextResponse.next();
-
-    } catch {
-        // Token bị lỗi định dạng hoặc bị giả mạo sửa đổi payload -> Xóa token và bắt đăng nhập lại
-        const response = NextResponse.redirect(new URL('/login', request.url));
+        // Không có gì cả → xóa cookie bẩn và redirect login
+        const loginUrl = new URL('/login', request.url);
+        loginUrl.searchParams.set('callbackUrl', pathname);
+        const response = NextResponse.redirect(loginUrl);
         response.cookies.delete('accessToken');
-        response.cookies.delete('refreshToken');
         return response;
     }
+
+    // ── 6. RBAC: kiểm tra role nếu route yêu cầu ─────────────────────────────
+    if (matchedRule.roles.length > 0) {
+        const roleRaw = payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+        const userRoles = normalizeRoles(roleRaw);
+
+        const hasPermission = matchedRule.roles.some(r => userRoles.includes(r));
+        if (!hasPermission) {
+            return NextResponse.redirect(new URL('/unauthorized', request.url));
+        }
+    }
+
+    // ── 7. Hợp lệ → cho qua ──────────────────────────────────────────────────
+    return NextResponse.next();
 }
 
-// Chỉ áp dụng Proxy cho các route hệ thống, bỏ qua assets / api
+// Chỉ áp dụng cho các route hệ thống, bỏ qua assets / api
 export const config = {
     matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - api (API routes)
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico, sitemap.xml, robots.txt (metadata files)
-         */
         '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
     ],
 };

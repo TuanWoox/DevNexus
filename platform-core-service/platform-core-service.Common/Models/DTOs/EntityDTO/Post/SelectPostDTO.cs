@@ -21,12 +21,14 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Post
 
         public int UpvoteCount { get; set; } = 0;
         public int DownvoteCount { get; set; } = 0;
+        public int CommentCount { get; set; } = 0;
 
         public List<string> TagNames { get; set; } = new List<string>();
 
         public DateTimeOffset DateCreated { get; set; }
 
         public DateTimeOffset? DateModified { get; set; }
+        public bool? CurrentUserVote { get; set; }
     }
 
     public class SelectPostAuthorDTO

@@ -26,6 +26,7 @@ export interface BaseReplyItemProps {
     author?: ReplyAuthor;
     authorId: string;
     currentUserId: string;
+    currentUserVote?: boolean | null; // null/undefined = no vote, true = upvoted, false = downvoted
     onVote: (isUpvote: boolean) => void;
     isVotePending: boolean;
     onDelete: () => void;
@@ -42,6 +43,7 @@ export function BaseReplyItem({
     author,
     authorId,
     currentUserId,
+    currentUserVote,
     onVote,
     isVotePending,
     onDelete,
@@ -122,17 +124,25 @@ export function BaseReplyItem({
                     <button
                         onClick={() => onVote(true)}
                         disabled={isVotePending}
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-emerald-500 disabled:opacity-50 font-medium transition-colors"
+                        className={`flex items-center gap-1 text-xs font-medium transition-colors disabled:opacity-50
+                            ${currentUserVote === true
+                                ? 'text-emerald-500'
+                                : 'text-muted-foreground hover:text-emerald-500'
+                            }`}
                     >
-                        <ArrowBigUp className="w-4 h-4" />
+                        <ArrowBigUp className={`w-4 h-4 transition-all ${currentUserVote === true ? 'fill-emerald-500' : ''}`} />
                         {upvoteCount}
                     </button>
                     <button
                         onClick={() => onVote(false)}
                         disabled={isVotePending}
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-rose-500 disabled:opacity-50 font-medium transition-colors"
+                        className={`flex items-center gap-1 text-xs font-medium transition-colors disabled:opacity-50
+                            ${currentUserVote === false
+                                ? 'text-rose-500'
+                                : 'text-muted-foreground hover:text-rose-500'
+                            }`}
                     >
-                        <ArrowBigDown className="w-4 h-4" />
+                        <ArrowBigDown className={`w-4 h-4 transition-all ${currentUserVote === false ? 'fill-rose-500' : ''}`} />
                         {downvoteCount}
                     </button>
                     <button className="text-xs text-muted-foreground hover:text-heading font-medium transition-colors">

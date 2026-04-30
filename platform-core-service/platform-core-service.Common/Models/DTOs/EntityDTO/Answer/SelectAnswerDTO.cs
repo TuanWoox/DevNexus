@@ -14,6 +14,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Answer
         public SelectAnswerAuthorDTO? Author { get; set; }
         public DateTimeOffset DateCreated { get; set; }
         public DateTimeOffset? DateModified { get; set; }
+        public bool? CurrentUserVote { get; set; }
     }
 
     public class SelectAnswerAuthorDTO

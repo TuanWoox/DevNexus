@@ -1,46 +1,50 @@
-'use client';
+import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
+import { getQueryClient } from '@/lib/get-query-client';
+import { serverPost } from '@/lib/server-api';
+import { postQueryKeys } from '@/hooks/post-hooks/use-post-query-keys';
+import { PagedData } from '@/types/common/paged-data';
+import { SelectPostDTO } from '@/types/post/select-post-dto';
+import { InfinitePostList } from '@/components/post/infinite-post-list';
+import { FEED_BASE_PAYLOAD, INFINITE_PAGE_SIZE } from '@/constants/feed-payload';
+import type { Metadata } from 'next';
 
-import { useMemo } from 'react';
-import { PostListView } from "@/components/post/post-list-view";
-import { SortOrderType } from "@/constants/sortOrderType";
-import { useGetPostsInfinite } from "@/hooks/post-hooks/use-get-posts-infinite";
-
-const BASE_PAYLOAD = {
-    totalElements: 0,
-    orders: [{ sort: 'dateCreated', sortDir: SortOrderType.DESC, dynamicProperty: '', delimiter: '', dataType: '' }],
-    filter: [],
-    selected: [],
+export const metadata: Metadata = {
+    title: 'Feed',
+    description: 'Discover the latest discussions and Q&As from the DevNexus community.',
 };
 
-export default function FeedPage() {
-    const {
-        data,
-        isLoading,
-        isError,
-        isFetchingNextPage,
-        hasNextPage,
-        fetchNextPage,
-    } = useGetPostsInfinite(BASE_PAYLOAD);
+export default async function FeedPage() {
+    const queryClient = getQueryClient();
 
-    // Flatten tất cả pages thành 1 array duy nhất
-    const posts = useMemo(
-        () => data?.pages.flatMap((page) => page?.data ?? []),
-        [data]
-    );
+    try {
+        await queryClient.prefetchInfiniteQuery({
+            queryKey: postQueryKeys.list({ ...FEED_BASE_PAYLOAD, infinite: true }),
+            queryFn: ({ pageParam = 0 }) =>
+                serverPost<PagedData<SelectPostDTO, string>>('/Posts/paging', {
+                    ...FEED_BASE_PAYLOAD,
+                    size: INFINITE_PAGE_SIZE,
+                    pageNumber: pageParam as number,
+                }),
+            initialPageParam: 0,
+            getNextPageParam: (lastPage) => {
+                if (!lastPage) return undefined;
+                const { pageNumber, size, totalElements } = lastPage.page;
+                const loaded = (pageNumber + 1) * size;
+                return loaded < totalElements ? pageNumber + 1 : undefined;
+            },
+            pages: 1,
+        });
+    } catch (error) {
+        // Intentional: auth token expired → InfinitePostList self-fetches client-side.
+        // Log in dev to surface misconfigurations and unexpected errors.
+        if (process.env.NODE_ENV === 'development') {
+            console.error('[SSR Prefetch Error] feed/page.tsx:', error);
+        }
+    }
 
     return (
-        <PostListView
-            title="Your Feed"
-            subtitle="Discover the latest discussions and Q&As."
-            posts={posts}
-            isLoading={isLoading}
-            isError={isError}
-            isFetchingNextPage={isFetchingNextPage}
-            hasNextPage={hasNextPage}
-            onLoadMore={fetchNextPage}
-            loadingText="Loading posts..."
-            emptyTitle="No posts yet"
-            emptySubtitle="Check back later or create a new post to get started."
-        />
+        <HydrationBoundary state={dehydrate(queryClient)}>
+            <InfinitePostList />
+        </HydrationBoundary>
     );
 }

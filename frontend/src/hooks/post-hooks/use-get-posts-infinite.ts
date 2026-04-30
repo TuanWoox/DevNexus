@@ -2,16 +2,36 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { postService } from '@/services/post-service';
 import { Page } from '@/types/common/page';
 import { postQueryKeys } from './use-post-query-keys';
+import { INFINITE_PAGE_SIZE } from '@/constants/feed-payload';
 
-const PAGE_SIZE = 20;
+type InfiniteBasePayload = {
+    totalElements: number;
+    orders?: ReadonlyArray<NonNullable<Page<string>['orders']>[number]>;
+    filter?: ReadonlyArray<NonNullable<Page<string>['filter']>[number]>;
+    selected?: ReadonlyArray<string>;
+};
 
-export function useGetPostsInfinite(basePayload: Omit<Page<string>, 'pageNumber' | 'size'>) {
+function toMutablePayload(basePayload: InfiniteBasePayload): Omit<Page<string>, 'pageNumber' | 'size'> {
+    return {
+        totalElements: basePayload.totalElements,
+        orders: basePayload.orders ? [...basePayload.orders] : undefined,
+        filter: basePayload.filter ? [...basePayload.filter] : undefined,
+        selected: basePayload.selected ? [...basePayload.selected] : undefined,
+    };
+}
+
+export function useGetPostsInfinite(
+    basePayload: InfiniteBasePayload,
+    staleTime?: number,
+) {
+    const mutablePayload = toMutablePayload(basePayload);
+
     return useInfiniteQuery({
-        queryKey: postQueryKeys.list({ ...basePayload, infinite: true }),
+        queryKey: postQueryKeys.list({ ...mutablePayload, infinite: true }),
         queryFn: ({ pageParam = 0 }) =>
             postService.getPostsWithPagination({
-                ...basePayload,
-                size: PAGE_SIZE,
+                ...mutablePayload,
+                size: INFINITE_PAGE_SIZE,
                 pageNumber: pageParam as number,
             }),
         initialPageParam: 0,
@@ -21,5 +41,6 @@ export function useGetPostsInfinite(basePayload: Omit<Page<string>, 'pageNumber'
             const loaded = (pageNumber + 1) * size;
             return loaded < totalElements ? pageNumber + 1 : undefined;
         },
+        staleTime,
     });
 }

@@ -15,4 +15,5 @@ export interface SelectAnswerDTO {
     author?: SelectAnswerAuthorDTO;
     dateCreated: string;
     dateModified?: string;
+    currentUserVote?: boolean | null; // null = no vote, true = upvoted, false = downvoted
 }

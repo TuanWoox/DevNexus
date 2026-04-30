@@ -17,6 +17,8 @@ export interface SelectCommentDTO {
     dateModified?: string;
     author?: SelectCommentAuthorDTO;
 
+    currentUserVote?: boolean | null; // null = no vote, true = upvoted, false = downvoted
+
     // Thuộc tính đệ quy: Một comment có thể chứa nhiều comment con (replies)
     replies: SelectCommentDTO[];
 }

@@ -22,6 +22,7 @@ export function CommentItem({ comment, currentUserId }: { comment: SelectComment
             author={comment.author}
             authorId={comment.authorId}
             currentUserId={currentUserId}
+            currentUserVote={comment.currentUserVote}
             onVote={(isUpvote) => updateVote({ isUpvote })}
             isVotePending={isVotePending}
             onDelete={() => deleteComment(comment.id)}
