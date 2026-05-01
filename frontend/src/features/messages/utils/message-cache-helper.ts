@@ -8,7 +8,7 @@ type MessagesInfiniteData = InfiniteData<MessagesPage>;
 
 export function prependMessageToCache(
     oldData: MessagesInfiniteData | undefined,
-    newMessage: Message,
+    newMessage: Message
 ): MessagesInfiniteData | undefined {
     if (!oldData?.pages?.length) return oldData;
 
@@ -29,6 +29,7 @@ export function prependMessageToCache(
 export function appendMessageToChatCache(
     queryClient: QueryClient,
     message: Message,
+    fromOwnCreate: boolean = false
 ): void {
     const chatKey = messagingQueryKeys.messagesInsideChat(message.ChatId);
     queryClient.setQueryData<MessagesInfiniteData>(chatKey, (oldData) =>
@@ -43,16 +44,20 @@ export function appendMessageToChatCache(
         type = "request";
     }
 
-    invalidateAllChats(queryClient, type);
+    invalidateAllChats(queryClient, type, fromOwnCreate);
 }
 
 //Can optimized later, but row we just use it for demo as soon as possible
-export function invalidateAllChats(queryClient: QueryClient, type: InboxTab): void {
-    queryClient.invalidateQueries({ queryKey: ["messages", "chats"] });
-    // const arrayOfType = ["main", "archived", "requested"].filter(x => x.toLowerCase() == type.toLowerCase());
-    // arrayOfType.map(x => {
-    //     queryClient.removeQueries({ queryKey: ["messages", "chats", x] })
-    // })
+export function invalidateAllChats(queryClient: QueryClient, type: InboxTab, fromOwnCreate: boolean = true): void {
+    //fromOwnCreate = true mean we receive message from other people, if false we create and then append
+    if (!fromOwnCreate) queryClient.invalidateQueries({ queryKey: ["messages", "chats"] });
+    else {
+        queryClient.invalidateQueries({ queryKey: ["messages", "chats", type] });
+        const arrayOfType = ["main", "archived", "requested"].filter(x => x.toLowerCase() == type.toLowerCase());
+        arrayOfType.map(x => {
+            queryClient.removeQueries({ queryKey: ["messages", "chats", x] })
+        })
+    }
 }
 
 //Can optimized later, but row we just use it for demo as soon as possible

@@ -33,18 +33,19 @@ export function PersonalChatActionMenu({ chat, onBack }: PersonalChatActionMenuP
     const canPin = !mySetting.IsArchived && !mySetting.IsRequested;
 
     const handleToggleArchive = () => {
+        const archiving = !mySetting.IsArchived;
         updateChatSetting.mutate(
             {
                 Id: mySetting.Id,
-                IsArchived: !mySetting.IsArchived,
+                IsArchived: archiving,
+                IsRequested: false,   // archive & request are mutually exclusive
                 IsMuted: null,
                 IsPinned: null,
-                IsRequested: null,
                 MuteUntil: null,
             },
             {
                 onSuccess: () => {
-                    if (chat.Id === mySetting.ChatId && onBack) onBack?.();
+                    if (archiving && chat.Id === mySetting.ChatId && onBack) onBack?.();
                 },
             }
         );
@@ -88,7 +89,7 @@ export function PersonalChatActionMenu({ chat, onBack }: PersonalChatActionMenuP
         updateChatSetting.mutate({
             Id: mySetting.Id,
             IsRequested: false,
-            IsArchived: null,
+            IsArchived: false,    // accepting moves it to main inbox, not archived
             IsMuted: null,
             IsPinned: null,
             MuteUntil: null,

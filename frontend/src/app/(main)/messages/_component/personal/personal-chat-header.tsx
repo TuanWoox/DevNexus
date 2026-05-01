@@ -8,6 +8,7 @@ import { Chat } from "@/features/messages/types/contracts";
 import { getProfileId, getTitle, getAvatarUrl, getInitials } from "@/features/messages/utils/message-service.helper";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
+import { cn } from "@/lib/utils";
 
 interface PersonalChatHeaderProps {
     detail: Chat;
@@ -23,14 +24,14 @@ export function PersonalChatHeader({ detail, onBack }: PersonalChatHeaderProps) 
     )?.IsRequested ?? detail?.ChatSettings?.[0]?.IsRequested;
 
     return (
-        <header className="flex items-center gap-3 border-b border-border px-4 py-3 bg-card">
+        <header className="flex items-center gap-3 border-b border-border/60 bg-card/80 backdrop-blur-md px-4 py-3">
             {onBack && (
                 <Button
                     variant="ghost"
                     size="icon"
                     onClick={onBack}
                     aria-label="Back to inbox"
-                    className="shrink-0 md:hidden"
+                    className="shrink-0 md:hidden rounded-lg hover:bg-muted transition-colors"
                 >
                     <ChevronLeft className="h-5 w-5" />
                 </Button>
@@ -38,18 +39,21 @@ export function PersonalChatHeader({ detail, onBack }: PersonalChatHeaderProps) 
 
             <div className="flex flex-1 min-w-0 items-center gap-3">
                 <div className="relative shrink-0">
-                    <Avatar className="h-10 w-10">
+                    <Avatar className="h-11 w-11 ring-2 ring-border/50">
                         <AvatarImage src={avatarUrl} alt={title} />
-                        <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                        <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
                             {getInitials(title)}
                         </AvatarFallback>
                     </Avatar>
-                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-card bg-emerald-500" />
+                    <span className={cn(
+                        "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card",
+                        isRequest ? "bg-amber-400" : "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]",
+                    )} />
                 </div>
 
                 <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-foreground">{title}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="truncate text-sm font-bold text-foreground">{title}</p>
+                    <p className="text-xs text-muted-foreground/80">
                         {isRequest ? "Message request" : "Active now"}
                     </p>
                 </div>

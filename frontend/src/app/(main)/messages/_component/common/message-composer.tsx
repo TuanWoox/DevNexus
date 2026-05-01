@@ -127,30 +127,30 @@ export function MessageComposer({ selectedChat }: MessageComposerProps) {
     return (
         <form
             onSubmit={submit}
-            className="rounded-2xl border border-border bg-muted/40 px-3 py-2"
+            className="relative rounded-lg border border-border/80 bg-muted/30 px-3 py-2 transition-all duration-200 focus-within:border-primary/30 focus-within:shadow-[0_0_12px_rgba(99,102,241,0.08)]"
         >
             {selectedFile && (
-                <div className="flex items-start gap-2 mb-2 px-1">
+                <div className="flex items-start gap-2 mb-2 px-1 animate-fade-in-up">
                     {isImage && previewUrl ? (
-                        <div className="relative rounded-lg overflow-hidden border max-w-40 shrink-0">
+                        <div className="relative rounded-lg overflow-hidden border border-border/60 max-w-44 shrink-0 shadow-sm">
                             <img
                                 src={previewUrl}
                                 alt="Preview"
-                                className="h-24 w-full object-cover"
+                                className="h-28 w-full object-cover"
                             />
                         </div>
                     ) : isVideo && previewUrl ? (
-                        <div className="relative rounded-lg overflow-hidden border max-w-40 shrink-0">
-                            <video src={previewUrl} className="h-24 w-full object-cover" />
+                        <div className="relative rounded-lg overflow-hidden border border-border/60 max-w-44 shrink-0 shadow-sm">
+                            <video src={previewUrl} className="h-28 w-full object-cover" />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                <Play className="h-8 w-8 text-white" />
+                                <Play className="h-10 w-10 text-white drop-shadow-lg" />
                             </div>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-2 rounded-lg bg-background px-3 py-1.5 text-xs border min-w-0 flex-1">
-                            <Paperclip className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        <div className="flex items-center gap-2.5 rounded-lg bg-card px-3 py-2 text-xs border border-border/60 min-w-0 flex-1 shadow-sm">
+                            <Paperclip className="h-3.5 w-3.5 shrink-0 text-primary" />
                             <span className="truncate font-medium">{selectedFile.name}</span>
-                            <span className="text-muted-foreground shrink-0">
+                            <span className="text-muted-foreground shrink-0 tabular-nums">
                                 {formatFileSize(selectedFile.size)}
                             </span>
                         </div>
@@ -158,27 +158,27 @@ export function MessageComposer({ selectedChat }: MessageComposerProps) {
                     <button
                         type="button"
                         onClick={removeFile}
-                        className="shrink-0 rounded-full p-1 hover:bg-accent transition-colors"
+                        className="shrink-0 rounded-full p-1.5 hover:bg-destructive/10 hover:text-destructive transition-colors"
                         aria-label="Remove file"
                     >
-                        <X className="h-4 w-4 text-muted-foreground" />
+                        <X className="h-4 w-4" />
                     </button>
                 </div>
             )}
 
-            <div className="flex items-end gap-2">
+            <div className="flex items-end gap-1.5">
                 <Textarea
                     ref={textareaRef}
                     value={value}
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
-                    placeholder="Message…"
+                    placeholder="Type a message…"
                     disabled={createMessage.isPending || isSending}
                     rows={1}
                     className={cn(
                         "min-h-10 flex-1 resize-none border-0 bg-transparent p-0 text-sm shadow-none",
-                        "focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground",
-                        "overflow-y-auto leading-relaxed",
+                        "focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60",
+                        "overflow-y-auto leading-relaxed py-1.5",
                     )}
                     style={{ maxHeight: "120px" }}
                 />
@@ -198,7 +198,7 @@ export function MessageComposer({ selectedChat }: MessageComposerProps) {
                     variant="ghost"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={createMessage.isPending || isSending}
-                    className="mb-0.5 h-8 w-8 shrink-0 rounded-full transition-all"
+                    className="mb-0.5 h-8 w-8 shrink-0 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
                     aria-label="Attach file"
                 >
                     <Paperclip className="h-4 w-4" />
@@ -208,7 +208,12 @@ export function MessageComposer({ selectedChat }: MessageComposerProps) {
                     type="submit"
                     size="icon"
                     disabled={!canSend}
-                    className="mb-0.5 h-8 w-8 shrink-0 rounded-full transition-all"
+                    className={cn(
+                        "mb-0.5 h-9 w-9 shrink-0 rounded-full transition-colors",
+                        canSend
+                            ? "bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-sm"
+                            : "bg-muted text-muted-foreground",
+                    )}
                     aria-label="Send message"
                 >
                     <Send className="h-4 w-4" />

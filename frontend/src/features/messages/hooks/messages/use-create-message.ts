@@ -17,7 +17,7 @@ export const useCreateMessage = () => {
         },
         onSuccess: (data) => {
             if (data.result) {
-                appendMessageToChatCache(queryClient, data.result as Message);
+                appendMessageToChatCache(queryClient, data.result as Message, true);
             } else {
                 toast.error(data.message);
             }
