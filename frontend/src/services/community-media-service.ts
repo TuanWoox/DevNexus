@@ -28,5 +28,17 @@ export const communityMediaService = {
     updatePrimaryCommunityMedia: async (payload: UpdatePrimaryCommunityMediaDTO): Promise<SelectCommunityMediaDTO> => {
         const response = await api.patch<ReturnResult<SelectCommunityMediaDTO>>('/CommunityMedia/primary', payload);
         return response.data.result;
+    },
+
+    deleteCommunityMedia: async (id: string): Promise<boolean> => {
+        const response = await api.delete<ReturnResult<boolean>>(`/CommunityMedia/${id}`);
+        return response.data.result;
+    },
+
+    bulkDeleteCommunityMedia: async (ids: string[]): Promise<number> => {
+        const response = await api.delete<ReturnResult<number>>('/CommunityMedia/bulk', {
+            data: ids
+        });
+        return response.data.result;
     }
 };

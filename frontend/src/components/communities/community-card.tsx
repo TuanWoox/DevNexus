@@ -14,10 +14,11 @@ export function CommunityCard({ community }: CommunityCardProps) {
         : "N/A";
 
     return (
+        // ở đây có thể thay community.id bằng community.slug
         <Link href={`/communities/${community.id}`} className="block h-full group">
             <Card className="h-full flex flex-col hover:border-primary/50 transition-colors overflow-hidden bg-card/50 backdrop-blur-sm">
                 {/* Cover Photo Area */}
-                <div className="relative h-32 w-full bg-gradient-to-r from-primary/20 to-primary/5 overflow-hidden">
+                <div className="relative h-32 w-full bg-linear-to-r from-primary/20 to-primary/5 overflow-hidden">
                     {community.communityCoverPhotoUrl ? (
                         <Image
                             src={community.communityCoverPhotoUrl}
