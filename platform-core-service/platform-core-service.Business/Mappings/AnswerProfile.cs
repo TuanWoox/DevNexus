@@ -1,8 +1,7 @@
 using AutoMapper;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Answer;
-using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
-using platform_core_service.Common.Models.DTOs.EntityDTO.QAPost;
+using ProfileEntity = platform_core_service.Common.Entities.DbEntities.Profile;
 
 namespace platform_core_service.Business.Mappings
 {
@@ -13,7 +12,12 @@ namespace platform_core_service.Business.Mappings
             CreateMap<CreateAnswerDTO, Answer>();
             CreateMap<UpdateAnswerDTO, Answer>()
                  .ForMember(dest => dest.Id, opt => opt.Ignore());
-            CreateMap<Answer, SelectAnswerDTO>();
+            CreateMap<Answer, SelectAnswerDTO>()
+                .ForMember(dest => dest.Author,
+                    opt => opt.MapFrom(src => src.Author));
+
+            // Profile -> SelectAnswerAuthorDTO
+            CreateMap<ProfileEntity, SelectAnswerAuthorDTO>();
         }
     }
 }

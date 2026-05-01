@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Answer;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Comment;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
@@ -143,6 +144,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 result.Result = _mapper.Map<SelectCommentDTO>(comment);
+                await SetCurrentUserVoteAsync(result.Result);
             }
             catch (Exception ex)
             {
@@ -192,6 +194,10 @@ namespace platform_core_service.Business.Services
 
                 // Step 4: Get paged results
                 result.Result = await _commentRepository.GetPagingAsync<Page<string>, SelectCommentDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                }
             }
             catch (Exception ex)
             {
@@ -231,6 +237,10 @@ namespace platform_core_service.Business.Services
 
                 // Step 4: Get paged results
                 result.Result = await _commentRepository.GetPagingAsync<Page<string>, SelectCommentDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                }
             }
             catch (Exception ex)
             {
@@ -287,6 +297,7 @@ namespace platform_core_service.Business.Services
                     .FirstOrDefaultAsync(c => c.Id == commentId);
 
                 result.Result = _mapper.Map<SelectCommentDTO>(updatedComment);
+                await SetCurrentUserVoteAsync(result.Result);
             }
             catch (Exception ex)
             {
@@ -366,10 +377,16 @@ namespace platform_core_service.Business.Services
                 var query = _context.Comments
                     .Where(c => c.PostId == postId && string.IsNullOrEmpty(c.ReplyToCommentId))
                     .Include(c => c.Author)
+                    .Include(c => c.Replies)
+                        .ThenInclude(r => r.Author)
                     .AsQueryable();
 
                 // Step 3: Get paged results
                 result.Result = await _commentRepository.GetPagingAsync<Page<string>, SelectCommentDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                }
             }
             catch (Exception ex)
             {
@@ -400,6 +417,10 @@ namespace platform_core_service.Business.Services
 
                 // Step 3: Get paged results
                 result.Result = await _commentRepository.GetPagingAsync<Page<string>, SelectCommentDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                }
             }
             catch (Exception ex)
             {
@@ -407,6 +428,39 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while retrieving comments: {ex.Message}";
             }
             return result;
+        }
+        private async Task SetCurrentUserVotesForListAsync(List<SelectCommentDTO> dtos)
+        {
+            if (dtos == null || !dtos.Any()) return;
+            string profileId = _userContext.ProfileId;
+            if (string.IsNullOrEmpty(profileId)) return;
+            var commentIds = dtos.Select(s => s.Id).ToList();
+
+            var votes = await _context.Votes
+                .Where(v => v.AuthorId == profileId && commentIds.Contains(v.CommentId))
+                .Select(v => new { v.CommentId, v.IsUpvote })
+                .ToListAsync();
+
+            var voteMap = votes.ToDictionary(v => v.CommentId, v => (bool?)v.IsUpvote);
+
+            foreach (var dto in dtos)
+            {
+                dto.CurrentUserVote = voteMap.TryGetValue(dto.Id, out var vote) ? vote : null;
+            }
+        }
+        private async Task SetCurrentUserVoteAsync(SelectCommentDTO dto)
+        {
+            if (dto == null) return;
+
+            string profileId = _userContext.ProfileId;
+            if (string.IsNullOrEmpty(profileId)) return;
+
+            var vote = await _context.Votes
+                .Where(v => v.AuthorId == profileId && v.CommentId == dto.Id)
+                .Select(v => (bool?)v.IsUpvote)
+                .FirstOrDefaultAsync();
+
+            dto.CurrentUserVote = vote;
         }
     }
 }

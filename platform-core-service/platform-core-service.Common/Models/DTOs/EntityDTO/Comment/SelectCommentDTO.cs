@@ -29,6 +29,8 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Comment
         public SelectCommentAuthorDTO? Author { get; set; }
 
         public List<SelectCommentDTO> Replies { get; set; } = new List<SelectCommentDTO>();
+        public bool? CurrentUserVote { get; set; }
+
     }
 
     public class SelectCommentAuthorDTO

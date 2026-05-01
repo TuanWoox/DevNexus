@@ -1,5 +1,6 @@
 import { SortOrderType } from "@/constants/sortOrderType";
 import { FilterType } from "@/constants/filterType";
+import { FilterOperator } from "@/constants/filterOperator";
 
 export interface OrderMapping {
     sort: string;
@@ -11,8 +12,8 @@ export interface OrderMapping {
 
 export interface FilterMapping {
     prop: string;
-    value: unknown;
-    filterOperator: unknown;
+    value: string | number | boolean;
+    filterOperator: FilterOperator;
     filterType: FilterType;
     dynamicProperty: string;
     delimiter: string;

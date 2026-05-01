@@ -1,6 +1,7 @@
 using AutoMapper;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using PostEntity = platform_core_service.Common.Entities.DbEntities.Post;
+using ProfileEntity = platform_core_service.Common.Entities.DbEntities.Profile;
 
 namespace platform_core_service.Business.Mappings
 {
@@ -22,7 +23,12 @@ namespace platform_core_service.Business.Mappings
             // Post -> SelectPostDTO
             CreateMap<PostEntity, SelectPostDTO>()
                 .ForMember(dest => dest.TagNames,
-                    opt => opt.MapFrom(src => src.PostTags.Select(pt => pt.Tag.Name).ToList()));
+                    opt => opt.MapFrom(src => src.PostTags.Select(pt => pt.Tag.Name).ToList()))
+                .ForMember(dest => dest.Author,
+                    opt => opt.MapFrom(src => src.Author));
+
+            // Profile -> SelectPostAuthorDTO
+            CreateMap<ProfileEntity, SelectPostAuthorDTO>();
 
             CreateMap<PostEntity, SelectPartialPost>();
         }

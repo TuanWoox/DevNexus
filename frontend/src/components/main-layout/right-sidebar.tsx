@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Sparkles } from 'lucide-react'
 
+// TODO: fetch trending tags from API instead of using hardcoded mock data
 const trendingTags = [
     { tag: '#reactjs', posts: '12.5K posts' },
     { tag: '#system-design', posts: '8.2K posts' },
