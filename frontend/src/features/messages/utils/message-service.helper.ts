@@ -77,3 +77,39 @@ export function formatDaySeparator(isoDate: string): string {
         day: "numeric",
     });
 }
+
+export function getWsBaseUrl(): string {
+    const httpUrl =
+        process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTPS ||
+        process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTP ||
+        "http://localhost:3001/message-service";
+
+    return httpUrl.replace(/\/message-service\/?$/, "");
+}
+
+export function getMediaUrl(mediaName: string): string {
+    const baseUrl =
+        process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTPS ||
+        process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTP ||
+        "http://localhost:3001/message-service";
+
+    return `${baseUrl}/medias/${mediaName}`;
+}
+
+export async function syncMessageServiceCookie(accessToken: string): Promise<void> {
+    const baseUrl =
+        process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTPS ||
+        process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTP ||
+        "http://localhost:3001/message-service";
+
+    try {
+        await fetch(`${baseUrl}/auth/set-cookie`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accessToken }),
+            credentials: 'include',
+        });
+    } catch {
+        // Silently fail — cookie sync is best-effort for media loading
+    }
+}

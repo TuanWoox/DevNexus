@@ -55,7 +55,7 @@ export function MessageThread({
         //client height is how many px you can see right now  → the visible window size
         //scroll height is total of px you have      → entire content height (visible + hidden)
         const isNearBottom =
-            el.scrollHeight - Math.abs(el.scrollTop) - el.clientHeight < 100;
+            el.scrollHeight - el.scrollTop - el.clientHeight < 100;
 
         if (isNearBottom) {
             bottomRef.current?.scrollIntoView({ behavior: "smooth" });

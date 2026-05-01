@@ -4,6 +4,7 @@ import { ReturnResult } from "@/types/common/return-result";
 import { TokenResponseDTO } from "@/types/helper/token-response-dto";
 import { clearToken, parseUserFromToken, setToken } from "@/store/slices/auth-slice";
 import { store } from "@/store/store";
+import { syncMessageServiceCookie } from "../utils/message-service.helper";
 
 // --- QUẢN LÝ TRẠNG THÁI REFRESH ---
 let isRefreshing = false;
@@ -97,6 +98,9 @@ api.interceptors.response.use(
                         user: parsedData.user
                     }));
                 }
+
+                // Sync cookie to message-service domain for media loading
+                syncMessageServiceCookie(newTokens.accessToken);
 
                 isRefreshing = false;
                 onRerefreshed(newTokens.accessToken);

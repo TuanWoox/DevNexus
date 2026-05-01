@@ -14,6 +14,16 @@ const services = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  images: {
+    remotePatterns: [
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "3001",
+        pathname: "/message-service/medias/**",
+      },
+    ],
+  },
   async rewrites() {
     return services.map(({ source, destination }) => ({
       source: `${source}/:path*`,

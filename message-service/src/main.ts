@@ -6,6 +6,7 @@ import { join } from "path";
 import { ConfigService } from "@nestjs/config";
 import { platform } from "os";
 import { ClassSerializerInterceptor } from "@nestjs/common";
+import cookieParser from "cookie-parser";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -29,6 +30,9 @@ async function bootstrap() {
   } catch (err) {
     console.error("✗ Failed to create upload directories", err);
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  app.use(cookieParser());
 
   app.enableCors({
     origin: ['http://localhost:3000'],

@@ -5,6 +5,7 @@ import Cookies from "js-cookie";
 import { TokenResponseDTO } from "../types/helper/token-response-dto";
 import { store } from "../store/store";
 import { setToken, clearToken, parseUserFromToken } from "../store/slices/auth-slice";
+import { syncMessageServiceCookie } from "@/features/messages/utils/message-service.helper";
 
 // --- QUẢN LÝ TRẠNG THÁI REFRESH ---
 let isRefreshing = false;
@@ -93,10 +94,12 @@ api.interceptors.response.use(
 
         // Lưu cookie mới
         Cookies.set('accessToken', newTokens.accessToken, { expires: 15 });
-        // (Tùy backend, có thể refreshToken cũng được đổi nên lưu lại)
         if (newTokens.refreshToken) {
           Cookies.set('refreshToken', newTokens.refreshToken, { expires: 15 });
         }
+
+        // Sync cookie to message-service domain for media loading
+        syncMessageServiceCookie(newTokens.accessToken);
 
         // Cập nhật Redux ngay lập tức để giao diện (Navbar, ...) không bị chớp hay lỗi
         const parsedData = parseUserFromToken(newTokens.accessToken, false);

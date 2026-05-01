@@ -165,6 +165,7 @@ export class ChatsService {
                 Reader: { select: { FullName: true, AvatarUrl: true } },
               },
             },
+            Medias: true
           },
         },
       };
@@ -245,6 +246,7 @@ export class ChatsService {
 
       returnResult.Result = { page, data: collected };
     } catch (ex) {
+      console.log(ex);
       returnResult.Message = ex instanceof Error ? ex.message : String(ex);
     }
     return returnResult;

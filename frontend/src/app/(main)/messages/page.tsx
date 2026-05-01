@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { MessageListSection } from "@/app/(main)/messages/_component/message-list-section";
 import { MessageTabs } from "@/app/(main)/messages/_component/message-tabs";
 import { cn } from "@/lib/utils";
@@ -8,10 +8,14 @@ import { Chat, InboxTab } from "@/features/messages/types/contracts";
 import { useChatsPaging } from "@/features/messages/hooks/chats/use-chats-paging";
 import { MessageSquareDashed } from "lucide-react";
 import ChatPanel from "./_component/chat-panel";
+import { useMessageGateway } from "@/features/messages/hooks/gateways/use-message-gateway";
 
 export default function MessagesPage() {
+    //Used to connect, can place anywhere because right now we are talking through react query cache not built it from scatch anymore
+    useMessageGateway();
     const [activeTab, setActiveTab] = useState<InboxTab>("main");
     const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
+    useMessageGateway();
 
     // Fetch chats for the active tab
     const chatPagingQuery = useChatsPaging(30, activeTab);
@@ -23,16 +27,12 @@ export default function MessagesPage() {
         ) ?? [];
     }, [chatPagingQuery.data?.pages]);
 
-    // Keep selectedChat in sync with the latest fetched data
-    // so that mutations (mute, pin, archive, etc.) are reflected in the UI
-    useEffect(() => {
-        if (selectedChat) {
-            const freshChat = flattenedChats.find((c) => c.Id === selectedChat.Id);
-            if (freshChat) {
-                setSelectedChat(freshChat);
-            }
-        }
-    }, [flattenedChats]);
+    // Derive the fresh version of selectedChat from the latest fetched data
+    // so that mutations (mute, pin, archive, etc.) are reflected without a cascading render
+    const effectiveChat = useMemo(() => {
+        if (!selectedChat) return null;
+        return flattenedChats.find((c) => c.Id === selectedChat.Id) ?? null;
+    }, [flattenedChats, selectedChat]);
 
     const handleTabChange = (tab: InboxTab) => {
         setActiveTab(tab);
@@ -53,7 +53,7 @@ export default function MessagesPage() {
                 className={cn(
                     "flex flex-col w-full md:w-85 lg:w-95 shrink-0",
                     "border-r border-border bg-card",
-                    selectedChat ? "hidden md:flex" : "flex",
+                    effectiveChat ? "hidden md:flex" : "flex",
                 )}
             >
                 <div className="px-4 pt-5 pb-2">
@@ -79,7 +79,7 @@ export default function MessagesPage() {
                     <MessageListSection
                         isLoading={chatPagingQuery.isLoading}
                         items={flattenedChats}
-                        selectedChatId={selectedChat?.Id ?? undefined}
+                        selectedChatId={effectiveChat?.Id ?? undefined}
                         onSelectChat={setSelectedChat}
                         isFetchingMore={chatPagingQuery.isFetchingNextPage}
                     />
@@ -89,10 +89,10 @@ export default function MessagesPage() {
             <section
                 className={cn(
                     "flex min-h-0 flex-1 flex-col",
-                    selectedChat ? "flex" : "hidden md:flex",
+                    effectiveChat ? "flex" : "hidden md:flex",
                 )}
             >
-                {!selectedChat ? (
+                {!effectiveChat ? (
                     <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
                         <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-border">
                             <MessageSquareDashed className="h-7 w-7" strokeWidth={1.5} />
@@ -103,7 +103,7 @@ export default function MessagesPage() {
                         </div>
                     </div>
                 ) : <ChatPanel
-                    selectedChat={selectedChat}
+                    selectedChat={effectiveChat}
                     setSelectedChat={setSelectedChat}
                 />}
             </section>

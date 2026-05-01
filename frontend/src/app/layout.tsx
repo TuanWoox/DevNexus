@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+// @ts-expect-error CSS module is handled by Next.js at build time.
 import "@/styles/globals.css";
 import { Providers } from "@/providers/providers";
 

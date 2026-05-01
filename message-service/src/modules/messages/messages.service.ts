@@ -63,7 +63,6 @@ export class MessagesService {
           ChatId: createEntity.ChatId,
           SenderId: profileId,
         },
-        include: { Chat: true }
       });
 
       if (createMessage) {
@@ -80,13 +79,38 @@ export class MessagesService {
         }
       }
 
+      const newlyCreatedMessage = await this.prismaService.message.findFirst({
+        where: {
+          Id: createMessage.Id
+        },
+        include: {
+          Chat: {
+            include: {
+              ChatSettings: {
+                where: {
+                  ProfileId: profileId
+                }
+              }
+            }
+          },
+          Sender: { select: { FullName: true, AvatarUrl: true } },
+          ReadReceipts: {
+            where: { ReaderId: { not: profileId } },
+            include: {
+              Reader: { select: { FullName: true, AvatarUrl: true } },
+            },
+          },
+          Medias: true
+        }
+      })
+
       // Emit new-message to all other chat members — frontend handles
       // whether to show notification or silently insert (requested vs accepted)
       if (otherMemberIds.length > 0) {
-        this.gateway.emitToUsers(otherMemberIds, 'new-message', createMessage);
+        this.gateway.emitToUsers(otherMemberIds, 'new-message', newlyCreatedMessage);
       }
 
-      returnResult.Result = createMessage;
+      returnResult.Result = newlyCreatedMessage!;
     }
     catch (ex) {
       returnResult.Message = ex instanceof Error ? ex.message : String(ex);
@@ -229,7 +253,8 @@ export class MessagesService {
                 not: profileId
               }
             }
-          }
+          },
+          Medias: true
         },
         take: pageSize,
         orderBy: [{ Id: 'desc' }],

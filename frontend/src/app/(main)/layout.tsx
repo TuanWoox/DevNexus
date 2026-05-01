@@ -10,7 +10,7 @@ export default function MainLayout({
 }) {
     return (
         <div className="min-h-screen bg-page text-body flex justify-center">
-            <div className="w-full flex px-0 sm:px-4 lg:px-6 2xl:px-8">
+            <div className="w-full flex">
 
                 {/* CỘT 1: LEFT SIDEBAR */}
                 <LeftSidebar />

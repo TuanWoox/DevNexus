@@ -59,9 +59,30 @@ export interface Message {
     DateModified: string;
     Sender: ProfileSummary
     MessageReadReceipt: MessageReadReceipt[]
+    Chat: Chat
+    Medias: Media[]
 }
 
+export interface Media {
+    Id: string;
+    MediaName: string;
+    Type: MediaType;
 
+    MessageId: number;
+    Message: Message; // make sure you define this type elsewhere
+
+    DateCreated?: Date | null;
+    DateModified?: Date | null;
+
+    Deleted: boolean;
+    DateDeleted?: Date | null;
+}
+
+export enum MediaType {
+    Video = "Video",
+    Image = "Image",
+    File = "File",
+}
 export interface MessageReadReceipt {
     MessageId: number;
     ReaderId: string;

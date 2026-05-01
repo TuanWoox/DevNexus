@@ -41,7 +41,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     MessagesModule,
     MediasModule,
     MulterModule.register({
-      storage: memoryStorage()
+      storage: memoryStorage(),
+      limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB
+      },
     }),
     ScheduleModule.forRoot(),
     BullModule.forRootAsync({

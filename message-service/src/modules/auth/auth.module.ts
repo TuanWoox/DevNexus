@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthGuard } from './auth.guard';
+import { AuthController } from './auth.controller';
 import { UserContextService } from './userContext.service';
 
 @Global()
@@ -19,6 +20,7 @@ import { UserContextService } from './userContext.service';
         }),
     })
     ],
+    controllers: [AuthController],
     providers: [AuthService, AuthGuard, UserContextService],
     exports: [AuthService, AuthGuard, UserContextService]
 })
