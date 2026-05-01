@@ -48,11 +48,11 @@ export function appendMessageToChatCache(
 
 //Can optimized later, but row we just use it for demo as soon as possible
 export function invalidateAllChats(queryClient: QueryClient, type: InboxTab): void {
-    queryClient.invalidateQueries({ queryKey: ["messages", "chats", type] });
-    const arrayOfType = ["main", "archived", "requested"].filter(x => x.toLowerCase() == type.toLowerCase());
-    arrayOfType.map(x => {
-        queryClient.removeQueries({ queryKey: ["messages", "chats", x] })
-    })
+    queryClient.invalidateQueries({ queryKey: ["messages", "chats"] });
+    // const arrayOfType = ["main", "archived", "requested"].filter(x => x.toLowerCase() == type.toLowerCase());
+    // arrayOfType.map(x => {
+    //     queryClient.removeQueries({ queryKey: ["messages", "chats", x] })
+    // })
 }
 
 //Can optimized later, but row we just use it for demo as soon as possible

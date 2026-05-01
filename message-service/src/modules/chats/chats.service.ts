@@ -252,6 +252,112 @@ export class ChatsService {
     return returnResult;
   }
 
+  async searchContactsAndGroups(page: Page<string>) {
+    const returnResult = new ReturnResult<PagedData<string, Chat>>();
+
+    try {
+      const profileId = this.userContext.getProfileId();
+      const query = page.selected?.[0]?.trim() ?? '';
+
+      if (!query) {
+        returnResult.Result = { page: { ...page, totalElements: 0 }, data: [] };
+        return returnResult;
+      }
+
+      if (page.size > 30) page.size = 30;
+
+      // Same include as getPaging so frontend gets the full Chat shape
+      const includeClause = {
+        Members: {
+          where: { MemberId: { not: profileId } },
+          include: {
+            Member: { select: { FullName: true, AvatarUrl: true } },
+          },
+        },
+        ChatSettings: {
+          where: { ProfileId: { equals: profileId } },
+        },
+        Messages: {
+          orderBy: { DateCreated: 'desc' as const },
+          take: 1,
+          include: {
+            Sender: { select: { FullName: true, AvatarUrl: true } },
+            ReadReceipts: {
+              where: { ReaderId: { not: profileId } },
+              include: {
+                Reader: { select: { FullName: true, AvatarUrl: true } },
+              },
+            },
+            Medias: true,
+          },
+        },
+      };
+
+      const contactWhere: any = {
+        IsGroup: false,
+        AND: [
+          { Members: { some: { MemberId: profileId } } },
+          {
+            Members: {
+              some: {
+                MemberId: { not: profileId },
+                Member: {
+                  FullName: { contains: query, mode: 'insensitive' },
+                },
+              },
+            },
+          },
+        ],
+      };
+
+      const groupWhere = {
+        IsGroup: true,
+        Members: { some: { MemberId: profileId } },
+        Name: { contains: query, mode: 'insensitive' as const },
+      };
+
+      // Count totals for cross-source pagination
+      const contactCount = await this.prismaService.chat.count({ where: contactWhere });
+      const groupCount = await this.prismaService.chat.count({ where: groupWhere });
+      const totalElements = contactCount + groupCount;
+
+      const offset = ((page.pageNumber ?? 1) - 1) * page.size;
+      const allResults: any[] = [];
+
+      // Fetch contacts if offset falls within contact range
+      if (offset < contactCount) {
+        const take = Math.min(page.size, contactCount - offset);
+        const batch = await this.prismaService.chat.findMany({
+          where: contactWhere,
+          include: includeClause,
+          orderBy: [{ DateModified: 'desc' }, { DateCreated: 'desc' }],
+          skip: offset,
+          take,
+        });
+        allResults.push(...batch);
+      }
+
+      // Fill remaining from groups
+      const remaining = page.size - allResults.length;
+      if (remaining > 0) {
+        const groupOffset = Math.max(0, offset - contactCount);
+        const batch = await this.prismaService.chat.findMany({
+          where: groupWhere,
+          include: includeClause,
+          orderBy: [{ DateModified: 'desc' }, { DateCreated: 'desc' }],
+          skip: groupOffset,
+          take: remaining,
+        });
+        allResults.push(...batch);
+      }
+
+      returnResult.Result = { page: { ...page, totalElements }, data: allResults };
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+    }
+    return returnResult;
+  }
+
   //Private helper function
   getGroupName(profiles: Profile[]): string {
     const lastNames = profiles

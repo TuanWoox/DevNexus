@@ -52,4 +52,21 @@ export class ChatsController {
     return returnResult;
   }
 
+  @Post('search')
+  @HttpCode(200)
+  async search(@Body() page: Page<string>) {
+    let returnResult = new ReturnResult<PagedData<string, Chat>>();
+    try {
+      returnResult = await this.chatsService.searchContactsAndGroups(page);
+    }
+    catch (ex) {
+      if (ex instanceof Error) {
+        returnResult.Message = ex.message;
+      } else {
+        returnResult.Message = String(ex);
+      }
+    }
+    return returnResult;
+  }
+
 }

@@ -7,5 +7,10 @@ export const chatService = {
     getChatPaging: async (page: Page<string>, type: string) => {
         const { data } = await messageApi.post<ReturnResult<PagedData<string, Chat>>>(`/chats/paging?type=${type}`, page)
         return data;
+    },
+
+    searchChats: async (page: Page<string>) => {
+        const { data } = await messageApi.post<ReturnResult<PagedData<string, Chat>>>('/chats/search', page)
+        return data;
     }
 }

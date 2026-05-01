@@ -82,9 +82,10 @@ export function getWsBaseUrl(): string {
     const httpUrl =
         process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTPS ||
         process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTP ||
-        "http://localhost:3001/message-service";
+        "http://localhost:3001/message-service/api";
 
-    return httpUrl.replace(/\/message-service\/?$/, "");
+    // WebSocket namespaces aren't affected by NestJS global prefix — use origin
+    return new URL(httpUrl).origin;
 }
 
 export function getMediaUrl(mediaName: string): string {
