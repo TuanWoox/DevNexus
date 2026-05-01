@@ -5,7 +5,7 @@ import { Page } from "@/types/common/page";
 
 export const useChatsPaging = (size: number = 20, type: string) => {
     return useInfiniteQuery({
-        queryKey: messagingQueryKeys.inbox(type),
+        queryKey: messagingQueryKeys.chat(type),
         queryFn: ({ pageParam = 1 }) => {
             const page: Page<string> = { pageNumber: pageParam, size };
             return chatService.getChatPaging(page, type);

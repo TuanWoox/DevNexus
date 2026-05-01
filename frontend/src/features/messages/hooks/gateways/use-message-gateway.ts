@@ -5,20 +5,12 @@ import { io, Socket } from "socket.io-client";
 import { useSelector } from "react-redux";
 import { useQueryClient } from "@tanstack/react-query";
 import { RootState } from "@/store/store";
-import { messagingQueryKeys } from "../messaging-query-keys";
-import type { InfiniteData } from "@tanstack/react-query";
-import type { ReturnResult } from "@/types/common/return-result";
-import type { Message, PagedData } from "../../types/contracts";
+import type { Message } from "../../types/contracts";
 import { getProfileId, getWsBaseUrl } from "../../utils/message-service.helper";
 import {
-    prependMessageToCache,
-    invalidateInbox,
-    invalidateAllChats,
+    appendMessageToChatCache,
+    invalidateAllMessagesInsideChat,
 } from "../../utils/message-cache-helper";
-
-type MessagesInfiniteData = InfiniteData<
-    ReturnResult<PagedData<number, Message>>
->;
 
 export function useMessageGateway() {
     const socketRef = useRef<Socket | null>(null);
@@ -92,19 +84,11 @@ export function useMessageGateway() {
                 }
             }
 
-            // 📨 update cache
-            const chatKey = messagingQueryKeys.chat("", message.ChatId);
-
-            queryClient.setQueryData<MessagesInfiniteData>(
-                chatKey,
-                (oldData) => prependMessageToCache(oldData, message),
-            );
-
-            invalidateInbox(queryClient);
+            appendMessageToChatCache(queryClient, message);
         });
 
         socket.on("messages-read", () => {
-            invalidateAllChats(queryClient);
+            invalidateAllMessagesInsideChat(queryClient);
         });
 
         socket.on("disconnect", () => {

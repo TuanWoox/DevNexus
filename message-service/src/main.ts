@@ -41,7 +41,7 @@ async function bootstrap() {
 
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   // Set global prefix for all routes
-  app.setGlobalPrefix("message-service");
+  app.setGlobalPrefix("message-service/api");
 
   await app.listen(3001);
 

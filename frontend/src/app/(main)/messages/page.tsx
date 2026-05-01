@@ -9,12 +9,14 @@ import { useChatsPaging } from "@/features/messages/hooks/chats/use-chats-paging
 import { MessageSquareDashed } from "lucide-react";
 import ChatPanel from "./_component/chat-panel";
 import { useMessageGateway } from "@/features/messages/hooks/gateways/use-message-gateway";
+import { MessageSearch } from "./_component/message-search";
 
 export default function MessagesPage() {
     //Used to connect, can place anywhere because right now we are talking through react query cache not built it from scatch anymore
     useMessageGateway();
     const [activeTab, setActiveTab] = useState<InboxTab>("main");
     const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
     useMessageGateway();
 
     // Fetch chats for the active tab
@@ -60,7 +62,8 @@ export default function MessagesPage() {
                     <h1 className="text-xl font-bold tracking-tight text-foreground">Messages</h1>
                 </div>
 
-                <div className="px-3 pb-1">
+                <div className="px-3 pb-3 space-y-3">
+                    <MessageSearch value={searchQuery} onChange={setSearchQuery} />
                     <MessageTabs activeTab={activeTab} onTabChange={handleTabChange} />
                 </div>
 

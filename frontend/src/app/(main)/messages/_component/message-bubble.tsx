@@ -96,7 +96,7 @@ export function MessageBubble({
                     </div>
                 )}
 
-                <div className={cn("flex flex-col gap-1", isMine ? "items-end" : "items-start")}>
+                <div className={cn("flex flex-col gap-1 max-w-[50%]", isMine ? "items-end" : "items-start")}>
 
                     {/* Media — wider than text bubble, no background/padding */}
                     {hasMedias && (
@@ -119,7 +119,7 @@ export function MessageBubble({
                     {message.Content && (
                         <div
                             className={cn(
-                                "max-w-[72%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed overflow-hidden",
+                                "rounded-2xl px-3.5 py-2 text-sm leading-relaxed overflow-hidden",
                                 isMine
                                     ? "rounded-br-sm bg-primary text-primary-foreground"
                                     : "rounded-bl-sm bg-muted text-foreground",

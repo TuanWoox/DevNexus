@@ -5,7 +5,7 @@ import { messageService } from "../../services/message-service";
 
 export const useMessagesPaging = (chatId: string, size: number = 20) => {
     return useInfiniteQuery({
-        queryKey: messagingQueryKeys.chat("", chatId),
+        queryKey: messagingQueryKeys.messagesInsideChat(chatId),
 
         queryFn: ({ pageParam }) => {
             const page: Page<number> = {
