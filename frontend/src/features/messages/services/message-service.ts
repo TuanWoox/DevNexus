@@ -1,4 +1,4 @@
-import messageApi from "../config/messageServiceAxiosConfig";
+import messageApi from "../../../lib/messageServiceAxiosConfig";
 import type { CreateMessageDto, Message, MessageReadReceipt, PagedData } from "@/features/messages/types/contracts";
 import { Page } from "@/types/common/page";
 import { ReturnResult } from "@/types/common/return-result";

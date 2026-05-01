@@ -1,10 +1,12 @@
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { toast } from "sonner";
+import Cookies from "js-cookie";
 import { ReturnResult } from "@/types/common/return-result";
 import { TokenResponseDTO } from "@/types/helper/token-response-dto";
 import { clearToken, parseUserFromToken, setToken } from "@/store/slices/auth-slice";
 import { store } from "@/store/store";
-import { syncMessageServiceCookie } from "../utils/message-service.helper";
+
+const coreServiceUrL = process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTP || process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTPS
 
 // --- QUẢN LÝ TRẠNG THÁI REFRESH ---
 let isRefreshing = false;
@@ -22,20 +24,23 @@ const onRerefreshed = (token: string) => {
 };
 
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTPS || process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTP,
+    baseURL: process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTP || process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTP,
     headers: {
         'Content-Type': 'application/json',
     },
+    withCredentials: true,
 });
 
 // Interceptor cho các Gửi yêu cầu (Request): Chạy trước khi gửi API
 api.interceptors.request.use(
     (config) => {
-        // Lấy token từ Redux store
-        const state = store.getState();
-        const token = state.auth.accessToken;
-        if (token && config.headers) {
-            config.headers.Authorization = `Bearer ${token}`;
+        // Lấy token từ nơi ta đã lưu (ví dụ local storage, cookie...) như ở đây là từ cookie
+        // Trong Next.js thì cần check môi trường client (window)
+        if (typeof window !== 'undefined') {
+            const token = Cookies.get('accessToken');
+            if (token && config.headers) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
         }
         return config;
     },
@@ -43,6 +48,7 @@ api.interceptors.request.use(
         return Promise.reject(error);
     }
 );
+
 
 // Interceptor cho Phản hồi (Response): Chạy khi có response từ server
 api.interceptors.response.use(
@@ -81,7 +87,7 @@ api.interceptors.response.use(
                 }
 
                 // Gọi API refresh token. KHÔNG dùng `api` để tránh loop vô tận
-                const refreshUrl = `${api.defaults.baseURL}/Accounts/refresh-token`;
+                const refreshUrl = `${coreServiceUrL}/Accounts/refresh-token`;
                 const res = await axios.post<ReturnResult<TokenResponseDTO>>(refreshUrl, {
                     refreshToken: refreshToken
                 });
@@ -98,9 +104,6 @@ api.interceptors.response.use(
                         user: parsedData.user
                     }));
                 }
-
-                // Sync cookie to message-service domain for media loading
-                syncMessageServiceCookie(newTokens.accessToken);
 
                 isRefreshing = false;
                 onRerefreshed(newTokens.accessToken);

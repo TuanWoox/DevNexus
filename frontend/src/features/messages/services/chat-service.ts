@@ -1,5 +1,5 @@
 import { Chat, PagedData } from "../types/contracts";
-import messageApi from "../config/messageServiceAxiosConfig"
+import messageApi from "../../../lib/messageServiceAxiosConfig"
 import { Page } from "@/types/common/page";
 import { ReturnResult } from "@/types/common/return-result";
 

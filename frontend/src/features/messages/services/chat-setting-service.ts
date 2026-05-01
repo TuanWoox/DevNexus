@@ -1,5 +1,5 @@
 import { ReturnResult } from "@/types/common/return-result";
-import messageApi from "../config/messageServiceAxiosConfig";
+import messageApi from "../../../lib/messageServiceAxiosConfig";
 import type { ChatSetting, UpdateChatSettingDTO, UpdateNickName } from "@/features/messages/types/contracts";
 
 export const chatSettingService = {

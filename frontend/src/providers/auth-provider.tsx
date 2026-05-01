@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { setToken, clearToken, parseUserFromToken } from '@/store/slices/auth-slice';
 import Cookies from 'js-cookie';
-import { syncMessageServiceCookie } from '@/features/messages/utils/message-service.helper';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const dispatch = useDispatch();
@@ -25,8 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     refreshToken: refreshToken ?? null,
                     user: parsedData.user
                 }));
-                // Sync cookie to message-service domain for media loading
-                syncMessageServiceCookie(accessToken);
+
             } else {
                 // Token lỗi hoặc hết hạn mà KHÔNG CÓ refreshToken
                 dispatch(clearToken());

@@ -96,6 +96,7 @@ export function getMediaUrl(mediaName: string): string {
     return `${baseUrl}/medias/${mediaName}`;
 }
 
+//Right now when we host on localhost => dont need to
 export async function syncMessageServiceCookie(accessToken: string): Promise<void> {
     const baseUrl =
         process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTPS ||

@@ -5,7 +5,6 @@ import Cookies from "js-cookie";
 import { TokenResponseDTO } from "../types/helper/token-response-dto";
 import { store } from "../store/store";
 import { setToken, clearToken, parseUserFromToken } from "../store/slices/auth-slice";
-import { syncMessageServiceCookie } from "@/features/messages/utils/message-service.helper";
 
 // --- QUẢN LÝ TRẠNG THÁI REFRESH ---
 let isRefreshing = false;
@@ -101,9 +100,6 @@ api.interceptors.response.use(
           Cookies.set('refreshToken', newTokens.refreshToken, cookieOptions);
         }
 
-        // Sync cookie to message-service domain for media loading
-        syncMessageServiceCookie(newTokens.accessToken);
-
         // Cập nhật Redux ngay lập tức để giao diện (Navbar, ...) không bị chớp hay lỗi
         const parsedData = parseUserFromToken(newTokens.accessToken, false);
         if (parsedData) {
@@ -141,7 +137,7 @@ api.interceptors.response.use(
 
     // Các lỗi HTTP khác (400, 403, 500)
     if (error.response?.data?.message) {
-      toast.error(error.response.data.message);
+      toast.error(error.response.data.message as string);
     }
 
     return Promise.reject(error);

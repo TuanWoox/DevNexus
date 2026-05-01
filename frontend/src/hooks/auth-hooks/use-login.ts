@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { toast } from "sonner";
 import Cookies from "js-cookie";
-import { syncMessageServiceCookie } from "@/features/messages/utils/message-service.helper";
 
 const useLogin = () => {
     const dispatch = useDispatch();
@@ -42,9 +41,6 @@ const useLogin = () => {
 
                     Cookies.set("accessToken", data.result.accessToken, cookieOptions);
                     Cookies.set("refreshToken", data.result.refreshToken, cookieOptions);
-
-                    // Sync cookie to message-service domain (if needed)
-                    syncMessageServiceCookie(data.result.accessToken);
 
                     toast.success("Login successfully!");
 
