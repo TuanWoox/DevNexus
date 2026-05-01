@@ -85,6 +85,21 @@ namespace platform_core_service.Controllers
             }
             return Ok(returnResult);
         }
+        [HttpPost("profile/{profileId}/paging")]
+        public async Task<IActionResult> GetPagingByProfileId([FromBody] Page<string> page, [TrimmedRequired] string profileId)
+        {
+            var returnResult = new ReturnResult<PagedData<SelectPostDTO, string>>();
+            try
+            {
+                returnResult = await _postService.GetPageAsyncByProfileId(page, profileId);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
 
         [HttpPut]
         public async Task<IActionResult> Update([FromBody] UpdatePostDTO updateDTO)

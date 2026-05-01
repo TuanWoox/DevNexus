@@ -2,6 +2,7 @@ using AutoMapper;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
+using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
@@ -10,12 +11,14 @@ using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
-using PostEntity = platform_core_service.Common.Entities.DbEntities.Post;
-using TagEntity = platform_core_service.Common.Entities.DbEntities.Tag;
-using PostTagEntity = platform_core_service.Common.Entities.DbEntities.PostTag;
+using System.Linq.Dynamic.Core;
 using System.Text.RegularExpressions;
+using PostEntity = platform_core_service.Common.Entities.DbEntities.Post;
+using PostTagEntity = platform_core_service.Common.Entities.DbEntities.PostTag;
+using TagEntity = platform_core_service.Common.Entities.DbEntities.Tag;
 
 namespace platform_core_service.Business.Services
 {
@@ -92,6 +95,7 @@ namespace platform_core_service.Business.Services
                 var savedPost = await _context.Posts
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
                     .FirstOrDefaultAsync(p => p.Id == post.Id);
 
                 result.Result = _mapper.Map<SelectPostDTO>(savedPost);
@@ -120,10 +124,11 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                // Step 2: Load post with tags (public read — only show approved posts)
+                // Step 2: Load post with tags and author (public read)
                 var post = await _context.Posts
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
                     .FirstOrDefaultAsync(p =>
                         (p.Id == postId || p.Slug == postId));
                 // && p.ModerationStatus == ModerationStatus.Approved);
@@ -144,6 +149,7 @@ namespace platform_core_service.Business.Services
 
 
                 returnResult.Result = _mapper.Map<SelectPostDTO>(post);
+                await SetCurrentUserVoteAsync(returnResult.Result);
             }
             catch (Exception ex)
             {
@@ -158,8 +164,10 @@ namespace platform_core_service.Business.Services
             ReturnResult<SelectPostDTO> returnResult = new ReturnResult<SelectPostDTO>();
             try
             {
-                var post = await _context.Posts.Include(p => p.PostTags)
+                var post = await _context.Posts
+                                            .Include(p => p.PostTags)
                                             .ThenInclude(pt => pt.Tag)
+                                            .Include(p => p.Author)
                                             .FirstOrDefaultAsync(p => p.Id == postId || p.Slug == postId && p.CommunityId == communityId);
                 if (post == null)
                 {
@@ -176,6 +184,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 returnResult.Result = _mapper.Map<SelectPostDTO>(post);
+                await SetCurrentUserVoteAsync(returnResult.Result);
             }
             catch (Exception ex)
             {
@@ -190,23 +199,62 @@ namespace platform_core_service.Business.Services
             var result = new ReturnResult<PagedData<SelectPostDTO, string>>();
             try
             {
+                // Step 2: Build query — news feed shows only approved posts for all users
+                var query = _context.Posts
+                    .Where(p => p.GetType() == typeof(PostEntity))
+                    // .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Include(p => p.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
+                    .AsNoTracking()
+                    .AsQueryable();
+
+                // Step 3: Get paged results
+                result.Result = await _postRepository.GetPagingAsync<Page<string>, SelectPostDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCommentCountForListAsync(result.Result.Data.ToList());
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while retrieving posts: {ex.Message}";
+            }
+            return result;
+        }
+        public async Task<ReturnResult<PagedData<SelectPostDTO, string>>> GetPageAsyncByProfileId(Page<string> page, string profileId)
+        {
+            var result = new ReturnResult<PagedData<SelectPostDTO, string>>();
+            try
+            {
                 // Step 1: Get current user profile
-                var profileId = _userContext.ProfileId;
                 if (string.IsNullOrEmpty(profileId))
                 {
                     result.Message = "User profile not found";
                     return result;
                 }
 
-                // Step 2: Build query — news feed shows only approved posts for all users
+                // Step 2: Build query — only concrete Post rows (exclude QAPost subtype)
                 var query = _context.Posts
+                    .Where(p => p.GetType() == typeof(PostEntity))
                     // .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Where(p => p.AuthorId == profileId)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
+                    .AsNoTracking()
                     .AsQueryable();
 
                 // Step 3: Get paged results
                 result.Result = await _postRepository.GetPagingAsync<Page<string>, SelectPostDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCommentCountForListAsync(result.Result.Data.ToList());
+                }
+
             }
             catch (Exception ex)
             {
@@ -279,9 +327,12 @@ namespace platform_core_service.Business.Services
                 var updatedPost = await _context.Posts
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
                     .FirstOrDefaultAsync(p => p.Id == postId);
 
                 result.Result = _mapper.Map<SelectPostDTO>(updatedPost);
+                await SetCurrentUserVoteAsync(result.Result);
+
             }
             catch (Exception ex)
             {
@@ -457,6 +508,55 @@ namespace platform_core_service.Business.Services
                     post.PostTags.Add(tag);
                 }
             }
+        }
+        private async Task SetCurrentUserVotesForListAsync(List<SelectPostDTO> dtos)
+        {
+            if (dtos == null || !dtos.Any()) return;
+            string profileId = _userContext.ProfileId;
+            if (string.IsNullOrEmpty(profileId)) return;
+            var postIds = dtos.Select(s => s.Id).ToList();
+
+            var votes = await _context.Votes
+                .Where(v => v.AuthorId == profileId && postIds.Contains(v.PostId))
+                .Select(v => new { v.PostId, v.IsUpvote })
+                .ToListAsync();
+
+            var voteMap = votes.ToDictionary(v => v.PostId, v => (bool?)v.IsUpvote);
+
+            foreach (var dto in dtos)
+            {
+                dto.CurrentUserVote = voteMap.TryGetValue(dto.Id, out var vote) ? vote : null;
+            }
+        }
+        private async Task SetCommentCountForListAsync(List<SelectPostDTO> dtos)
+        {
+            if (dtos == null || !dtos.Any()) return;
+            var postIds = dtos.Select(s => s.Id).ToList();
+
+            var comments = await _context.Comments
+                .Where(c => c.PostId != null && postIds.Contains(c.PostId))
+                .GroupBy(c => c.PostId)
+                .Select(g => new { PostId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.PostId!, x => x.Count);
+
+            foreach (var dto in dtos)
+            {
+                dto.CommentCount = comments.TryGetValue(dto.Id, out var count) ? count : 0;
+            }
+        }
+        private async Task SetCurrentUserVoteAsync(SelectPostDTO dto)
+        {
+            if (dto == null) return;
+
+            string profileId = _userContext.ProfileId;
+            if (string.IsNullOrEmpty(profileId)) return;
+
+            var vote = await _context.Votes
+                .Where(v => v.AuthorId == profileId && v.PostId == dto.Id)
+                .Select(v => (bool?)v.IsUpvote)
+                .FirstOrDefaultAsync();
+
+            dto.CurrentUserVote = vote;
         }
     }
 }

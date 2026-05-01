@@ -27,22 +27,28 @@ const useLogin = () => {
                         refreshToken: data.result.refreshToken,
                         user: parsedData.user
                     }));
-                    console.log(parsedData.user)
-                    // const expiresDate = new Date(parsedData.exp * 1000);
 
-                    // (Cookie lưu accessToken có thể còn tồn tại dù accessToken đã hết hạn 
-                    // vì việc check accessToken hết hạn chưa sẽ do server check. 
-                    // Nếu cookie hết hạn cùng lúc với accessToken luôn thì middleware sẽ redirect user về login luôn (vì check ko thấy cookie lưu accessToken) 
-                    // mà sẽ ko trigger đc axios interceptor để refetch lại token bằng refreshToken)
-                    Cookies.set("accessToken", data.result.accessToken, { expires: 7 }); // 15 days
-                    Cookies.set("refreshToken", data.result.refreshToken, { expires: 7 });  // 15 days
+                    // Detect if running under HTTPS (production)
+                    const isSecureContext =
+                        typeof window !== "undefined" &&
+                        window.location.protocol === "https:";
 
-                    // Sync cookie to message-service domain for media loading
+                    // Balanced config for both Docker (HTTP) and production (HTTPS)
+                    const cookieOptions = {
+                        expires: 7, // keep shorter for better control
+                        secure: isSecureContext,
+                        sameSite: "lax" as const
+                    };
+
+                    Cookies.set("accessToken", data.result.accessToken, cookieOptions);
+                    Cookies.set("refreshToken", data.result.refreshToken, cookieOptions);
+
+                    // Sync cookie to message-service domain (if needed)
                     syncMessageServiceCookie(data.result.accessToken);
 
                     toast.success("Login successfully!");
 
-                    const callbackUrl = searchParams.get('callbackUrl') || '/feed';
+                    const callbackUrl = searchParams.get("callbackUrl") || "/feed";
                     router.push(callbackUrl);
                 }
             }
@@ -53,7 +59,7 @@ const useLogin = () => {
         login: loginMutation.mutate,
         isAuthenticating: loginMutation.isPending,
         authenError: loginMutation.error
-    }
-}
+    };
+};
 
 export default useLogin;

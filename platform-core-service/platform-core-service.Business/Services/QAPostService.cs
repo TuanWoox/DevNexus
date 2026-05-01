@@ -4,11 +4,12 @@ using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.EntityDTO.QAPost;
+using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
-using platform_core_service.Common.Models.DTOs.HelperDTO;
 using PostTagEntity = platform_core_service.Common.Entities.DbEntities.PostTag;
 using TagEntity = platform_core_service.Common.Entities.DbEntities.Tag;
 using Hangfire;
@@ -92,6 +93,7 @@ namespace platform_core_service.Business.Services
                     .Include(q => q.Answers)
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
                     .FirstOrDefaultAsync(q => q.Id == qaPost.Id);
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(savedPost);
@@ -122,6 +124,7 @@ namespace platform_core_service.Business.Services
                     .Include(q => q.Answers)
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
                     .FirstOrDefaultAsync(q => q.Id == postId || q.Slug == postId);
 
                 if (qaPost == null)
@@ -131,6 +134,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(qaPost);
+                await SetCurrentUserVoteAsync(result.Result);
             }
             catch (Exception ex)
             {
@@ -145,25 +149,21 @@ namespace platform_core_service.Business.Services
             var result = new ReturnResult<PagedData<SelectQAPostDTO, string>>();
             try
             {
-                // Step 1: Check authentication
-                var profileId = _userContext.ProfileId;
-                if (string.IsNullOrEmpty(profileId))
-                {
-                    result.Message = "User profile not found";
-                    return result;
-                }
-
-                // Step 2: Build query for current user's QA posts
                 var query = _dbContext.Posts
                     .OfType<QAPost>()
-                    .Where(q => q.AuthorId == profileId)
                     .Include(q => q.Answers)
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
                     .AsQueryable();
 
-                // Step 3: Delegate paging to repository
                 result.Result = await _qaPostRepository.GetPagingAsync<Page<string>, SelectQAPostDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCommentCountForListAsync(result.Result.Data.ToList());
+                }
+
             }
             catch (Exception ex)
             {
@@ -241,9 +241,12 @@ namespace platform_core_service.Business.Services
                     .Include(q => q.Answers)
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
                     .FirstOrDefaultAsync(q => q.Id == postId);
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(updatedPost);
+                await SetCurrentUserVoteAsync(result.Result);
+
             }
             catch (Exception ex)
             {
@@ -445,6 +448,55 @@ namespace platform_core_service.Business.Services
                     qaPost.PostTags.Add(tag);
                 }
             }
+        }
+        private async Task SetCurrentUserVotesForListAsync(List<SelectQAPostDTO> dtos)
+        {
+            if (dtos == null || !dtos.Any()) return;
+            string profileId = _userContext.ProfileId;
+            if (string.IsNullOrEmpty(profileId)) return;
+            var postIds = dtos.Select(s => s.Id).ToList();
+
+            var votes = await _dbContext.Votes
+                .Where(v => v.AuthorId == profileId && postIds.Contains(v.PostId))
+                .Select(v => new { v.PostId, v.IsUpvote })
+                .ToListAsync();
+
+            var voteMap = votes.ToDictionary(v => v.PostId, v => (bool?)v.IsUpvote);
+
+            foreach (var dto in dtos)
+            {
+                dto.CurrentUserVote = voteMap.TryGetValue(dto.Id, out var vote) ? vote : null;
+            }
+        }
+        private async Task SetCommentCountForListAsync(List<SelectQAPostDTO> dtos)
+        {
+            if (dtos == null || !dtos.Any()) return;
+            var postIds = dtos.Select(s => s.Id).ToList();
+
+            var comments = await _dbContext.Comments
+                .Where(c => c.PostId != null && postIds.Contains(c.PostId))
+                .GroupBy(c => c.PostId)
+                .Select(g => new { PostId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.PostId!, x => x.Count);
+
+            foreach (var dto in dtos)
+            {
+                dto.CommentCount = comments.TryGetValue(dto.Id, out var count) ? count : 0;
+            }
+        }
+        private async Task SetCurrentUserVoteAsync(SelectQAPostDTO dto)
+        {
+            if (dto == null) return;
+
+            string profileId = _userContext.ProfileId;
+            if (string.IsNullOrEmpty(profileId)) return;
+
+            var vote = await _dbContext.Votes
+                .Where(v => v.AuthorId == profileId && v.PostId == dto.Id)
+                .Select(v => (bool?)v.IsUpvote)
+                .FirstOrDefaultAsync();
+
+            dto.CurrentUserVote = vote;
         }
     }
 }

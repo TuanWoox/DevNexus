@@ -22,6 +22,20 @@ const nextConfig: NextConfig = {
         port: "3001",
         pathname: "/message-service/medias/**",
       },
+      // Local development API (HTTP)
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
+      // Local development API (HTTPS)
+      {
+        protocol: 'https',
+        hostname: 'localhost',
+      },
+      // TODO: Before production, replace this with your actual backend / CDN hostname(s).
+      // Example: { protocol: 'https', hostname: 'api.devnexus.io' }
+      // Wildcard ('**') is intentionally NOT used here to prevent SSRF-style fetches
+      // from attacker-controlled URLs stored in user-controlled fields (e.g. avatarUrl).
     ],
   },
   async rewrites() {

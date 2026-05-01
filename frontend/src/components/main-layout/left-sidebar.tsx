@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { useTheme } from 'next-themes'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
     Hexagon,
@@ -28,7 +29,13 @@ import { RootState } from '@/store/store'
 import useLogout from '@/hooks/auth-hooks/use-logout'
 import { useGetProfileById } from '@/hooks/profile-hooks/use-get-profile-by-id'
 import { cn } from '@/lib/utils'
-import Image from 'next/image'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const menuItems = [
     { name: 'Home', href: '/feed', icon: Home },
@@ -40,24 +47,12 @@ const menuItems = [
 
 export function LeftSidebar() {
     const pathname = usePathname()
-    const [isProfileOpen, setIsProfileOpen] = useState(false)
     const [isCollapsed, setIsCollapsed] = useState(true)
     const { theme, setTheme } = useTheme()
-    const dropdownRef = useRef<HTMLDivElement>(null)
 
     const { user } = useSelector((state: RootState) => state.auth)
     const { data: userProfile } = useGetProfileById(user?.profileId as string);
     const { logout, isLoggingOut } = useLogout()
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsProfileOpen(false)
-            }
-        }
-        document.addEventListener('mousedown', handleClickOutside)
-        return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [])
 
     const toggleTheme = () => {
         setTheme(theme === 'dark' ? 'light' : 'dark')
@@ -83,6 +78,7 @@ export function LeftSidebar() {
                     <ChevronLeft className="w-3 h-3" />
                 )}
             </button>
+
             {/* Header: logo */}
             <Link
                 href="/feed"
@@ -151,88 +147,82 @@ export function LeftSidebar() {
                 </Link>
             </div>
 
-            <div className="mt-auto pt-3 relative" ref={dropdownRef}>
-                {isProfileOpen && (
-                    <div className={cn(
-                        "absolute bottom-full mb-3 bg-card border border-default rounded-xl shadow-elevated p-2 flex flex-col gap-1 z-50 animate-in fade-in slide-in-from-bottom-2",
-                        isCollapsed ? "left-1/2 -translate-x-1/2 w-44" : "left-2 w-52",
-                    )}>
-                        <Link
-                            href="/profile"
-                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors"
-                            onClick={() => setIsProfileOpen(false)}
-                        >
-                            <User className="w-5 h-5" />
-                            <span className="text-sm font-medium">View Profile</span>
-                        </Link>
+            <div className="mt-auto pt-4">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button suppressHydrationWarning className={cn(
+                            "flex items-center gap-3 p-2 w-full rounded-xl hover:bg-subtle transition-colors group",
+                            isCollapsed && "justify-center",
+                        )}>
+                            <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
+                                {userProfile?.avatarUrl ? (
+                                    <Image src={userProfile.avatarUrl} alt={userProfile.fullName} fill className="object-cover" />
+                                ) : (
+                                    <span className="text-primary font-bold">{userProfile?.fullName?.charAt(0) || 'U'}</span>
+                                )}
+                            </div>
+                            {!isCollapsed && (
+                                <>
+                                    <div className="flex flex-col text-left flex-1 overflow-hidden">
+                                        <span className="text-sm font-bold text-heading truncate">{userProfile?.fullName || 'username'}</span>
+                                        <span className="text-xs text-muted-foreground truncate">{user?.roles || 'Role'}</span>
+                                    </div>
+                                    <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                </>
+                            )}
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent side="top" align="center" sideOffset={8} className="w-52 bg-card border border-default rounded-xl shadow-elevated p-2 flex flex-col gap-1 z-50">
+                        <DropdownMenuItem asChild>
+                            <Link
+                                href="/profile"
+                                className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer"
+                            >
+                                <User className="w-5 h-5 shrink-0" />
+                                <span className="text-sm font-medium">View Profile</span>
+                            </Link>
+                        </DropdownMenuItem>
 
-                        <Link
-                            href="/settings"
-                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors"
-                            onClick={() => setIsProfileOpen(false)}
-                        >
-                            <Settings className="w-5 h-5" />
-                            <span className="text-sm font-medium">Settings</span>
-                        </Link>
+                        <DropdownMenuItem asChild>
+                            <Link
+                                href="/settings"
+                                className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer"
+                            >
+                                <Settings className="w-5 h-5 shrink-0" />
+                                <span className="text-sm font-medium">Settings</span>
+                            </Link>
+                        </DropdownMenuItem>
 
-                        <button
+                        <DropdownMenuItem
                             onClick={toggleTheme}
-                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors w-full"
+                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer"
                         >
-                            {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-                            <span className="text-sm font-medium">Display Mode</span>
-                            <div className={`w-8 h-4 rounded-full flex items-center px-0.5 transition-colors ${theme === 'dark' ? 'bg-primary' : 'bg-muted'}`}>
+                            {theme === 'dark' ? <Moon className="w-5 h-5 shrink-0" /> : <Sun className="w-5 h-5 shrink-0" />}
+                            <span className="text-sm font-medium flex-1">Display Mode</span>
+                            <div className={`w-8 h-4 flex rounded-full items-center px-0.5 transition-colors ${theme === 'dark' ? 'bg-primary' : 'bg-muted'}`}>
                                 <div className={`w-3 h-3 rounded-full bg-white transform transition-transform ${theme === 'dark' ? 'translate-x-4' : 'translate-x-0'}`} />
                             </div>
-                        </button>
+                        </DropdownMenuItem>
 
-                        <div className="h-px bg-default my-1 w-full" />
+                        <DropdownMenuSeparator className="bg-default my-1" />
 
-                        <button
-                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors w-full disabled:opacity-50"
-                            onClick={() => { setIsProfileOpen(false); logout(); }}
+                        <DropdownMenuItem
+                            onClick={() => logout()}
                             disabled={isLoggingOut}
+                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors cursor-pointer disabled:opacity-50"
                         >
                             {isLoggingOut ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <Loader2 className="w-5 h-5 animate-spin shrink-0" />
                             ) : (
-                                <LogOut className="w-5 h-5" />
+                                <LogOut className="w-5 h-5 shrink-0" />
                             )}
                             <span className="text-sm font-medium">
                                 {isLoggingOut ? "Logging out..." : "Log Out"}
                             </span>
-                        </button>
-                    </div>
-                )}
-
-                <button
-                    onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    className={cn(
-                        "flex items-center gap-3 p-2 w-full rounded-xl hover:bg-subtle transition-colors group",
-                        isCollapsed && "justify-center",
-                    )}
-                >
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default">
-                        {userProfile?.avatarUrl ? (
-                            <Image src={userProfile.avatarUrl} alt={userProfile.fullName} className="w-full h-full object-cover" />
-                        ) : (
-                            <span className="text-primary font-bold">{userProfile?.fullName?.charAt(0) || 'U'}</span>
-                        )}
-                    </div>
-                    {!isCollapsed && (
-                        <>
-                            <div className="flex flex-col text-left flex-1 overflow-hidden">
-                                <span className="text-sm font-bold text-heading truncate">{userProfile?.fullName || 'username'}</span>
-                                <span className="text-xs text-muted-foreground truncate">{user?.roles || 'Role'}</span>
-                            </div>
-                            <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
-                        </>
-                    )}
-                </button>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
-
-
         </aside>
     )
 }
-

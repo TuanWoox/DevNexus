@@ -82,7 +82,6 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
     const handleSetIsQAPost = (value: boolean) => {
         if (fixedPostType) return;
         setIsQAPost(value);
-        // setValue('postType', value ? 1 : 0, { shouldValidate: true });
     };
 
     const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -104,55 +103,61 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
         const slug = data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 
         if (isEditMode && initialData) {
-            // EDIT MODE
-            const payload = {
-                id: initialData.id,
-                title: data.title,
-                content: data.content,
-                postType: 0,
-                slug,
-                tagNames: data.tags
-            };
-
-            if (isQAPost) {
-                updateQAPost(payload as UpdateQAPostDTO, {
-                    onSuccess: () => router.push(`/questions/${initialData.id}`)
-                });
-            } else {
-                updatePost(payload as UpdatePostDTO, {
-                    onSuccess: () => router.push(`/post/${initialData.id}`)
-                });
-            }
+            handleEdit(data, slug);
         } else {
-            // CREATE MODE
-            const basePayload = {
-                title: data.title,
-                content: data.content,
-                postType: 0,
-                slug,
-                tagNames: data.tags,
-                ...(data.communityId && data.communityId !== "" ? { communityId: data.communityId } : {})
-            };
-
-            if (isQAPost) {
-                createQAPost(basePayload as CreateQAPostDTO, {
-                    onSuccess: (res) => {
-                        reset();
-                        setTagInput('');
-                        if (res?.id) router.push(`/questions/${res.id}`);
-                    }
-                });
-            } else {
-                createPost(basePayload as CreatePostDTO, {
-                    onSuccess: (res) => {
-                        reset();
-                        setTagInput('');
-                        if (res?.id) router.push(`/post/${res.id}`);
-                    }
-                });
-            }
+            handleCreate(data, slug);
         }
     }
+
+    const handleEdit = (data: PostFormData, slug: string) => {
+        const payload = {
+            id: initialData!.id,
+            title: data.title,
+            content: data.content,
+            postType: 0,
+            slug,
+            tagNames: data.tags
+        };
+
+        if (isQAPost) {
+            updateQAPost(payload as UpdateQAPostDTO, {
+                onSuccess: () => router.push(`/questions/${initialData!.id}`)
+            });
+        } else {
+            updatePost(payload as UpdatePostDTO, {
+                onSuccess: () => router.push(`/post/${initialData!.id}`)
+            });
+        }
+    };
+
+    const handleCreate = (data: PostFormData, slug: string) => {
+        const basePayload = {
+            title: data.title,
+            content: data.content,
+            postType: 0,
+            slug,
+            tagNames: data.tags,
+            ...(data.communityId && data.communityId !== "" ? { communityId: data.communityId } : {})
+        };
+
+        if (isQAPost) {
+            createQAPost(basePayload as CreateQAPostDTO, {
+                onSuccess: (res) => {
+                    reset();
+                    setTagInput('');
+                    if (res?.id) router.push(`/questions/${res.id}`);
+                }
+            });
+        } else {
+            createPost(basePayload as CreatePostDTO, {
+                onSuccess: (res) => {
+                    reset();
+                    setTagInput('');
+                    if (res?.id) router.push(`/post/${res.id}`);
+                }
+            });
+        }
+    };
 
     return (
         <div className="w-full p-4 sm:p-6 animate-fade-in-up">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { useGetCommentsByPostId } from '@/hooks/comment-hooks/use-get-comments-by-post-id';
 import { Page } from '@/types/common/page';
 import { SortOrderType } from '@/constants/sortOrderType';
@@ -21,8 +21,9 @@ interface Props {
 }
 
 export default function CommentSection({ postId, isQAPost }: Props) {
-    const [commentConfig] = useState<Page<string>>({
-        size: -1,
+    // TODO: implement pagination for comments/answers — currently loads first 20
+    const commentConfig = useMemo<Page<string>>(() => ({
+        size: 20,
         pageNumber: 0,
         totalElements: 0,
         orders: [
@@ -36,7 +37,7 @@ export default function CommentSection({ postId, isQAPost }: Props) {
         ],
         filter: [],
         selected: []
-    });
+    }), []);
 
     const { user } = useSelector((state: RootState) => state.auth)
     const { data: userProfile } = useGetProfileById(user?.profileId as string);
