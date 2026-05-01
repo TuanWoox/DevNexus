@@ -1,9 +1,9 @@
 "use client";
 
-import { MessageListItem } from "@/app/(main)/messages/_component/message-list-item";
-import { MessageListSkeleton } from "@/app/(main)/messages/_component/message-list-skeleton";
-import { MessageEmptyState } from "@/app/(main)/messages/_component/message-empty-state";
-import { Chat } from "@/features/messages/types/contracts";
+import { MessageListItem } from "@/app/(main)/messages/_component/common/message-list-item";
+import { MessageListSkeleton } from "@/app/(main)/messages/_component/common/message-list-skeleton";
+import { MessageEmptyState } from "@/app/(main)/messages/_component/common/message-empty-state";
+import { Chat, InboxTab } from "@/features/messages/types/contracts";
 
 interface MessageListSectionProps {
     isLoading: boolean;
@@ -11,9 +11,10 @@ interface MessageListSectionProps {
     selectedChatId?: string;
     onSelectChat?: (item: Chat) => void;
     isFetchingMore?: boolean;
+    activeTab?: InboxTab;
 }
 
-const emptyCopy = {
+const emptyCopy: Record<InboxTab, { title: string; description: string }> = {
     main: {
         title: "No conversations yet",
         description: "Start a chat to see your conversations here.",
@@ -34,6 +35,7 @@ export function MessageListSection({
     selectedChatId,
     onSelectChat,
     isFetchingMore,
+    activeTab = "main",
 }: MessageListSectionProps) {
     if (isLoading) return <MessageListSkeleton />;
 
@@ -41,8 +43,8 @@ export function MessageListSection({
         return (
             <div className="px-2 pt-4">
                 <MessageEmptyState
-                    title={emptyCopy.main.title}
-                    description={emptyCopy.main.description}
+                    title={emptyCopy[activeTab].title}
+                    description={emptyCopy[activeTab].description}
                 />
             </div>
         );

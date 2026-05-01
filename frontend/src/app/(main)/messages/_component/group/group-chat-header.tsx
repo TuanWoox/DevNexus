@@ -3,24 +3,22 @@
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChatActionMenu } from "@/app/(main)/messages/_component/chat-action-menu";
+import { GroupChatActionMenu } from "./group-chat-action-menu";
 import { Chat } from "@/features/messages/types/contracts";
 import { getProfileId, getTitle, getAvatarUrl, getInitials } from "@/features/messages/utils/message-service.helper";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 
-interface ChatHeaderProps {
+interface GroupChatHeaderProps {
     detail: Chat;
     onBack?: () => void;
 }
 
-export function ChatHeader({
-    detail,
-    onBack,
-}: ChatHeaderProps) {
+export function GroupChatHeader({ detail, onBack }: GroupChatHeaderProps) {
     const currentProfileId = useSelector((state: RootState) => getProfileId(state.auth.user?.profileId));
     const title = getTitle(detail, currentProfileId);
     const avatarUrl = getAvatarUrl(detail, currentProfileId);
+    const memberCount = detail.Members?.length ?? 0;
     const isRequest = detail?.ChatSettings?.find(
         (s) => s.ProfileId === currentProfileId
     )?.IsRequested ?? detail?.ChatSettings?.[0]?.IsRequested;
@@ -53,15 +51,14 @@ export function ChatHeader({
                 <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-foreground">{title}</p>
                     <p className="text-xs text-muted-foreground">
-                        {isRequest ? "Message request" : "Active now"}
+                        {isRequest
+                            ? "Message request"
+                            : `${memberCount} member${memberCount !== 1 ? "s" : ""}`}
                     </p>
                 </div>
             </div>
 
-            <ChatActionMenu
-                chat={detail}
-                onBack={onBack}
-            />
+            <GroupChatActionMenu chat={detail} onBack={onBack} />
         </header>
     );
 }

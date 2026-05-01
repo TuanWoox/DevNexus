@@ -1,67 +1,46 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { MessageListSection } from "@/app/(main)/messages/_component/message-list-section";
-import { MessageTabs } from "@/app/(main)/messages/_component/message-tabs";
+import { MessageListSection } from "@/app/(main)/messages/_component/common/message-list-section";
+import { MessageTabs } from "@/app/(main)/messages/_component/common/message-tabs";
 import { cn } from "@/lib/utils";
 import { Chat, InboxTab } from "@/features/messages/types/contracts";
-import { useChatsPaging } from "@/features/messages/hooks/chats/use-chats-paging";
+import { useChatList } from "@/features/messages/hooks/chats/use-chat-list";
 import { useChatSearch } from "@/features/messages/hooks/chats/use-chat-search";
 import { MessageSquareDashed } from "lucide-react";
-import ChatPanel from "./_component/chat-panel";
+import { PersonalChatPanel } from "./_component/personal/personal-chat-panel";
+import { GroupChatPanel } from "./_component/group/group-chat-panel";
 import { useMessageGateway } from "@/features/messages/hooks/gateways/use-message-gateway";
-import { MessageSearch } from "./_component/message-search";
+import { MessageSearch } from "./_component/common/message-search";
 
 export default function MessagesPage() {
     useMessageGateway();
+
     const [activeTab, setActiveTab] = useState<InboxTab>("main");
     const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Fetch chats for the active tab
-    const chatPagingQuery = useChatsPaging(30, activeTab);
+    const { chats: chatList, isLoading: chatsLoading, isFetchingMore: chatsFetchingMore,
+            hasMore: chatsHasMore, loadMore: chatsLoadMore } = useChatList(30, activeTab);
 
-    // Search
     const searchQueryHook = useChatSearch(searchQuery);
 
-    // Flatten pages into single array for infinite pagination
-    const flattenedChats = useMemo(() => {
-        return chatPagingQuery.data?.pages?.flatMap(
-            (page) => page?.result?.data ?? []
-        ) ?? [];
-    }, [chatPagingQuery.data?.pages]);
-
-    // Flatten search results
     const searchResults = useMemo(() => {
         return searchQueryHook.data?.pages?.flatMap(
             (page) => page?.result?.data ?? []
         ) ?? [];
     }, [searchQueryHook.data?.pages]);
 
-    // Derive the fresh version of selectedChat from the latest fetched data
-    // so that mutations (mute, pin, archive, etc.) are reflected without a cascading render
     const effectiveChat = useMemo(() => {
         if (!selectedChat) return null;
-        return flattenedChats.find((c) => c.Id === selectedChat.Id)
+        return chatList.find((c) => c.Id === selectedChat.Id)
             ?? searchResults.find((c) => c.Id === selectedChat.Id)
-            ?? selectedChat; // fallback: chat from search (still valid even after results clear)
-    }, [flattenedChats, searchResults, selectedChat]);
+            ?? selectedChat;
+    }, [chatList, searchResults, selectedChat]);
 
     const handleTabChange = (tab: InboxTab) => {
         setActiveTab(tab);
         setSelectedChat(null);
-    };
-
-    const handleLoadMore = () => {
-        if (chatPagingQuery.hasNextPage && !chatPagingQuery.isFetchingNextPage) {
-            chatPagingQuery.fetchNextPage();
-        }
-    };
-
-    const handleSearchLoadMore = () => {
-        if (searchQueryHook.hasNextPage && !searchQueryHook.isFetchingNextPage) {
-            searchQueryHook.fetchNextPage();
-        }
     };
 
     return (
@@ -88,7 +67,11 @@ export default function MessagesPage() {
                         isFetchingMore={searchQueryHook.isFetchingNextPage}
                         hasMore={searchQueryHook.hasNextPage}
                         onSelectResult={setSelectedChat}
-                        onLoadMore={handleSearchLoadMore}
+                        onLoadMore={() => {
+                            if (searchQueryHook.hasNextPage && !searchQueryHook.isFetchingNextPage) {
+                                searchQueryHook.fetchNextPage();
+                            }
+                        }}
                     />
                     <MessageTabs activeTab={activeTab} onTabChange={handleTabChange} />
                 </div>
@@ -98,23 +81,25 @@ export default function MessagesPage() {
                         const element = e.currentTarget;
                         if (
                             element.scrollHeight - element.scrollTop - element.clientHeight < 100 &&
-                            chatPagingQuery.hasNextPage &&
-                            !chatPagingQuery.isFetchingNextPage
+                            chatsHasMore &&
+                            !chatsFetchingMore
                         ) {
-                            handleLoadMore();
+                            chatsLoadMore();
                         }
                     }}
                 >
                     <MessageListSection
-                        isLoading={chatPagingQuery.isLoading}
-                        items={flattenedChats}
+                        isLoading={chatsLoading}
+                        items={chatList}
                         selectedChatId={effectiveChat?.Id ?? undefined}
                         onSelectChat={setSelectedChat}
-                        isFetchingMore={chatPagingQuery.isFetchingNextPage}
+                        isFetchingMore={chatsFetchingMore}
+                        activeTab={activeTab}
                     />
                 </div>
             </aside>
 
+            {/* ── RIGHT PANEL: chat view ── */}
             <section
                 className={cn(
                     "flex min-h-0 flex-1 flex-col",
@@ -131,10 +116,17 @@ export default function MessagesPage() {
                             <p className="mt-1 text-sm">Select a conversation to start chatting</p>
                         </div>
                     </div>
-                ) : <ChatPanel
-                    selectedChat={effectiveChat}
-                    setSelectedChat={setSelectedChat}
-                />}
+                ) : effectiveChat.IsGroup ? (
+                    <GroupChatPanel
+                        selectedChat={effectiveChat}
+                        setSelectedChat={setSelectedChat}
+                    />
+                ) : (
+                    <PersonalChatPanel
+                        selectedChat={effectiveChat}
+                        setSelectedChat={setSelectedChat}
+                    />
+                )}
             </section>
         </div>
     );

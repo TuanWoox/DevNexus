@@ -15,9 +15,9 @@ export const useUpdateChatSetting = () => {
         onSuccess: (data) => {
             if (data.result) {
                 toast.success("Updated chat successfully")
-                // Invalidate inbox queries to reflect setting changes
+                // Invalidate only chat lists — message contents don't change on settings update
                 queryClient.invalidateQueries({
-                    queryKey: messagingQueryKeys.all,
+                    queryKey: ["messages", "chats"],
                 });
             }
         },

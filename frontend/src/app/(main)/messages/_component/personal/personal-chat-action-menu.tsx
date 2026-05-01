@@ -15,12 +15,12 @@ import { useDeleteAllMessages } from "@/features/messages/hooks/chatsettings/use
 import { toast } from "sonner";
 import { useMemo } from "react";
 
-interface ChatActionMenuProps {
+interface PersonalChatActionMenuProps {
     chat: Chat;
     onBack?: () => void;
 }
 
-export function ChatActionMenu({ chat, onBack }: ChatActionMenuProps) {
+export function PersonalChatActionMenu({ chat, onBack }: PersonalChatActionMenuProps) {
     const updateChatSetting = useUpdateChatSetting();
     const deleteAllMessages = useDeleteAllMessages();
 

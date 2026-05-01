@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { MessageBubble } from "@/app/(main)/messages/_component/message-bubble";
+import { MessageBubble } from "@/app/(main)/messages/_component/common/message-bubble";
 import { Message } from "@/features/messages/types/contracts";
 import { cn } from "@/lib/utils";
 
