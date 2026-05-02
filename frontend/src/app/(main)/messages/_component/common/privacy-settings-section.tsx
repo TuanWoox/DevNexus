@@ -1,8 +1,9 @@
 "use client";
 
-import { Pin, BellOff, Bell, Archive, UserPlus, LogOut } from "lucide-react";
+import { Pin, BellOff, Bell, Archive, UserPlus, LogOut, Loader2 } from "lucide-react";
 import { Chat } from "@/features/messages/types/contracts";
 import { useUpdateChatSetting } from "@/features/messages/hooks/chatsettings/use-update-chat-setting";
+import { useLeaveGroup } from "@/features/messages/hooks/groups/use-leave-group";
 import { toast } from "sonner";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,7 @@ interface PrivacySettingsSectionProps {
 
 export function PrivacySettingsSection({ chat, onBack }: PrivacySettingsSectionProps) {
     const updateChatSetting = useUpdateChatSetting();
+    const leaveGroup = useLeaveGroup(chat.Id, onBack);
 
     const mySetting = useMemo(() => {
         return chat?.ChatSettings?.[0];
@@ -77,7 +79,7 @@ export function PrivacySettingsSection({ chat, onBack }: PrivacySettingsSectionP
     };
 
     const handleLeaveGroup = () => {
-        toast.info("Leave group coming soon");
+        leaveGroup.mutate();
     };
 
     return (
@@ -169,12 +171,19 @@ export function PrivacySettingsSection({ chat, onBack }: PrivacySettingsSectionP
                     <button
                         type="button"
                         onClick={handleLeaveGroup}
-                        className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors duration-150 hover:bg-destructive/10"
+                        disabled={leaveGroup.isPending}
+                        className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors duration-150 hover:bg-destructive/10 disabled:opacity-50"
                     >
                         <div className="shrink-0 h-9 w-9 rounded-full bg-destructive/10 flex items-center justify-center">
-                            <LogOut className="h-4 w-4 text-destructive" />
+                            {leaveGroup.isPending ? (
+                                <Loader2 className="h-4 w-4 text-destructive animate-spin" />
+                            ) : (
+                                <LogOut className="h-4 w-4 text-destructive" />
+                            )}
                         </div>
-                        <span className="text-sm font-medium text-destructive">Leave group</span>
+                        <span className="text-sm font-medium text-destructive">
+                            {leaveGroup.isPending ? "Leaving..." : "Leave group"}
+                        </span>
                     </button>
                 )}
             </div>

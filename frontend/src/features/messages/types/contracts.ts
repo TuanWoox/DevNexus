@@ -109,3 +109,28 @@ export interface UpdateNickName {
     NickName: string | null;
     ProfileIdToUpdate: string;
 }
+
+// Group chat types
+export interface GroupMember {
+    ProfileId: string;
+    FullName: string;
+    AvatarUrl: string | null;
+    Role: ChatRole;
+    NickName: string | null;
+}
+
+export interface UpdateGroupDto {
+    Name?: string;
+}
+
+export interface AddMembersDto {
+    profileIds: string[];
+}
+
+export interface UpdateRoleDto {
+    Role: ChatRole;
+}
+
+export interface TransferOwnershipDto {
+    newOwnerProfileId: string;
+}

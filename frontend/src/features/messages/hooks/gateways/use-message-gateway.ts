@@ -102,6 +102,30 @@ export function useMessageGateway() {
             appendReadReceiptToChatListItem(queryClient, payload.chatId, payload.messageId, receipt);
         });
 
+        // Group events — invalidate relevant queries so UI stays in sync
+        socket.on("group-updated", () => {
+            queryClient.invalidateQueries({ queryKey: ["messages", "chats"] });
+        });
+
+        socket.on("member-added", () => {
+            queryClient.invalidateQueries({ queryKey: ["messages", "chats"] });
+            queryClient.invalidateQueries({ queryKey: ["messages", "groupMembers"] });
+        });
+
+        socket.on("member-removed", () => {
+            queryClient.invalidateQueries({ queryKey: ["messages", "chats"] });
+            queryClient.invalidateQueries({ queryKey: ["messages", "groupMembers"] });
+        });
+
+        socket.on("role-changed", () => {
+            queryClient.invalidateQueries({ queryKey: ["messages", "groupMembers"] });
+        });
+
+        socket.on("ownership-transferred", () => {
+            queryClient.invalidateQueries({ queryKey: ["messages", "chats"] });
+            queryClient.invalidateQueries({ queryKey: ["messages", "groupMembers"] });
+        });
+
         socket.on("disconnect", () => {
             setIsConnected(false);
         });

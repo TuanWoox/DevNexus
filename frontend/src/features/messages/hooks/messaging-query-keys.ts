@@ -6,4 +6,5 @@ export const messagingQueryKeys = {
     messageReaders: (messageId: number) => [...messagingQueryKeys.all, "messageReaders", messageId] as const,
     chatMedia: (chatId: string, mediaType: string) => [...messagingQueryKeys.all, "chatMedia", chatId, mediaType] as const,
     chatMediaAll: (chatId: string) => [...messagingQueryKeys.all, "chatMedia", chatId] as const,
+    groupMembers: (chatId: string) => [...messagingQueryKeys.all, "groupMembers", chatId] as const,
 };

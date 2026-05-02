@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Chat } from "@/features/messages/types/contracts";
@@ -8,6 +9,8 @@ import { ChatAvatarSection } from "./chat-avatar-section";
 import { MediaSection } from "./media-section";
 import { PrivacySettingsSection } from "./privacy-settings-section";
 import { DeleteAllMessagesSection } from "./delete-all-messages-section";
+import { GroupMemberList } from "../group/group-member-list";
+import { GroupAddMembersDialog } from "../group/group-add-members-dialog";
 
 interface ChatDetailPanelProps {
     chat: Chat;
@@ -19,6 +22,7 @@ interface ChatDetailPanelProps {
 
 export function ChatDetailPanel({ chat, open, onClose, currentProfileId, onBack }: ChatDetailPanelProps) {
     const mySetting = chat?.ChatSettings?.[0];
+    const [showAddMembers, setShowAddMembers] = useState(false);
 
     return (
         <>
@@ -65,6 +69,18 @@ export function ChatDetailPanel({ chat, open, onClose, currentProfileId, onBack 
                 <div className="flex-1 overflow-y-auto overscroll-contain">
                     <ChatAvatarSection chat={chat} currentProfileId={currentProfileId} />
 
+                    {/* Group members section */}
+                    {chat.IsGroup && (
+                        <>
+                            <div className="border-t border-border/60" />
+                            <GroupMemberList
+                                chat={chat}
+                                currentProfileId={currentProfileId}
+                                onAddMembers={() => setShowAddMembers(true)}
+                            />
+                        </>
+                    )}
+
                     <div className="border-t border-border/60" />
 
                     <MediaSection chatId={chat.Id} />
@@ -83,6 +99,15 @@ export function ChatDetailPanel({ chat, open, onClose, currentProfileId, onBack 
                     )}
                 </div>
             </aside>
+
+            {/* Add members dialog */}
+            {chat.IsGroup && (
+                <GroupAddMembersDialog
+                    open={showAddMembers}
+                    onClose={() => setShowAddMembers(false)}
+                    chatId={chat.Id}
+                />
+            )}
         </>
     );
 }

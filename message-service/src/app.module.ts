@@ -14,6 +14,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bullmq';
 import { MessagesModule } from './modules/messages/messages.module';
 import { MediasModule } from './modules/medias/medias.module';
+import { GroupChatsModule } from './modules/group-chats/group-chats.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -40,6 +41,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     ProfilechatsModule,
     MessagesModule,
     MediasModule,
+    GroupChatsModule,
     MulterModule.register({
       storage: memoryStorage(),
       limits: {

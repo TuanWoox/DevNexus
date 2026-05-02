@@ -50,4 +50,28 @@ export class ProfilesService {
     }
     return returnResult;
   }
+
+  async searchProfiles(query: string, excludeIds: string[] = []) {
+    const returnResult: ReturnResult<Profile[]> = new ReturnResult<Profile[]>();
+    try {
+      if (!query || query.trim().length === 0) {
+        returnResult.Result = [];
+        return returnResult;
+      }
+
+      const profiles = await this.prismaService.profile.findMany({
+        where: {
+          FullName: { contains: query.trim(), mode: 'insensitive' },
+          ...(excludeIds.length > 0 && { Id: { notIn: excludeIds } }),
+        },
+        take: 20,
+        select: { Id: true, FullName: true, AvatarUrl: true },
+      });
+
+      returnResult.Result = profiles as Profile[];
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+    }
+    return returnResult;
+  }
 }
