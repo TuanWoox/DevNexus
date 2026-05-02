@@ -3,7 +3,7 @@ import { MessagesService } from './messages.service';
 import { AuthGuard } from '../auth/auth.guard';
 import type { CreateMessageDto } from './dto/create-message.dto';
 import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
-import { Message, MessageReadReceipt } from 'src/generated/prisma/client';
+import { Message, MessageReadReceipt, Media } from 'src/generated/prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Page } from 'src/shared/dtos/paging/page';
 import type { PagedData } from 'src/shared/dtos/paging/pagedData';
@@ -47,6 +47,21 @@ export class MessagesController {
     const returnResult = new ReturnResult<PagedData<number, Message>>();
     try {
       return await this.messagesService.getMessagePaging(chatId, page);
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+      return returnResult;
+    }
+  }
+
+  @Post('media/:chatId')
+  @HttpCode(200)
+  async chatMediaPaging(
+    @Param('chatId') chatId: string,
+    @Body() page: Page<string>,
+  ): Promise<ReturnResult<PagedData<string, Media>>> {
+    const returnResult = new ReturnResult<PagedData<string, Media>>();
+    try {
+      return await this.messagesService.getMediaPaging(chatId, page);
     } catch (ex) {
       returnResult.Message = ex instanceof Error ? ex.message : String(ex);
       return returnResult;

@@ -15,7 +15,7 @@ export const useMessageList = (chatId: string, size: number = 20) => {
             };
             return messageService.getMessagesPaging(chatId, page);
         },
-        initialPageParam: undefined,
+        initialPageParam: undefined as number | undefined,
         getNextPageParam: (lastPage) => {
             const result = lastPage?.result;
             if (!result) return undefined;

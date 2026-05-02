@@ -1,9 +1,8 @@
 "use client";
 
-import { ChevronLeft, Users } from "lucide-react";
+import { ChevronLeft, Users, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { GroupChatActionMenu } from "./group-chat-action-menu";
 import { Chat } from "@/features/messages/types/contracts";
 import { getProfileId, getTitle, getAvatarUrl, getInitials } from "@/features/messages/utils/message-service.helper";
 import { useSelector } from "react-redux";
@@ -13,9 +12,10 @@ import { cn } from "@/lib/utils";
 interface GroupChatHeaderProps {
     detail: Chat;
     onBack?: () => void;
+    onTogglePanel?: () => void;
 }
 
-export function GroupChatHeader({ detail, onBack }: GroupChatHeaderProps) {
+export function GroupChatHeader({ detail, onBack, onTogglePanel }: GroupChatHeaderProps) {
     const currentProfileId = useSelector((state: RootState) => getProfileId(state.auth.user?.profileId));
     const title = getTitle(detail, currentProfileId);
     const avatarUrl = getAvatarUrl(detail, currentProfileId);
@@ -67,7 +67,15 @@ export function GroupChatHeader({ detail, onBack }: GroupChatHeaderProps) {
                 </div>
             </div>
 
-            <GroupChatActionMenu chat={detail} onBack={onBack} />
+            <Button
+                variant="ghost"
+                size="icon"
+                onClick={onTogglePanel}
+                aria-label="Open chat details"
+                className="shrink-0 rounded-lg hover:bg-muted transition-colors"
+            >
+                <Info className="h-4 w-4" />
+            </Button>
         </header>
     );
 }

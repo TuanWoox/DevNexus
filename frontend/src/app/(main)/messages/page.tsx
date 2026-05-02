@@ -19,6 +19,7 @@ export default function MessagesPage() {
     const [activeTab, setActiveTab] = useState<InboxTab>("main");
     const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [isPanelOpen, setIsPanelOpen] = useState(false);
 
     const { chats: chatList, isLoading: chatsLoading, isFetchingMore: chatsFetchingMore,
             hasMore: chatsHasMore, loadMore: chatsLoadMore } = useChatList(30, activeTab);
@@ -41,6 +42,7 @@ export default function MessagesPage() {
     const handleTabChange = (tab: InboxTab) => {
         setActiveTab(tab);
         setSelectedChat(null);
+        setIsPanelOpen(false);
     };
 
     return (
@@ -120,11 +122,15 @@ export default function MessagesPage() {
                     <GroupChatPanel
                         selectedChat={effectiveChat}
                         setSelectedChat={setSelectedChat}
+                        isPanelOpen={isPanelOpen}
+                        onTogglePanel={() => setIsPanelOpen((prev) => !prev)}
                     />
                 ) : (
                     <PersonalChatPanel
                         selectedChat={effectiveChat}
                         setSelectedChat={setSelectedChat}
+                        isPanelOpen={isPanelOpen}
+                        onTogglePanel={() => setIsPanelOpen((prev) => !prev)}
                     />
                 )}
             </section>

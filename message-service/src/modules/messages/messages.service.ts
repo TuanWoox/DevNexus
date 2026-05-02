@@ -2,7 +2,7 @@ import { Injectable, Scope } from '@nestjs/common';
 import { PrismaService } from '../prisma-database/prisma.service';
 import { UserContextService } from '../auth/userContext.service';
 import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
-import { Message, MessageReadReceipt } from 'src/generated/prisma/client';
+import { Message, MessageReadReceipt, Media } from 'src/generated/prisma/client';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { ProfileblocksService } from '../profileblocks/profileblocks.service';
 import { MediasService } from '../medias/medias.service';
@@ -174,7 +174,6 @@ export class MessagesService {
       };
 
       // Prisma include returns richer type than the base MessageReadReceipt export
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let receipt: any;
 
       if (latestReadMessage) {
@@ -210,7 +209,9 @@ export class MessagesService {
           readerId: profileId,
           chatId,
           reader: {
-            FullName: receipt.Reader?.FullName ?? 'Unknown',
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            FullName: receipt?.FullName ?? 'Unknown',
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             AvatarUrl: receipt.Reader?.AvatarUrl ?? null,
           },
         },
@@ -251,13 +252,18 @@ export class MessagesService {
       const deleteUpTo = chat.ChatSettings[0]?.DeleteUpToMessageId ?? null;
       const pageSize = page.size || 30;
 
+
+      console.log("Delete up to", deleteUpTo)
+      console.log("Index paging", page.indexPaging);
+
+      const idFilter: { lt?: number; gt?: number } = {};
+      if (page.indexPaging) idFilter.lt = page.indexPaging;
+      if (deleteUpTo) idFilter.gt = deleteUpTo;
+
       const messages = await this.prismaService.message.findMany({
         where: {
           ChatId: chatId,
-          // Cursor-based: only messages older than the cursor
-          ...(page.indexPaging && { Id: { lt: page.indexPaging } }),
-          // Soft-delete filter: hide messages the user has cleared
-          ...(deleteUpTo && { Id: { gt: deleteUpTo } }),
+          ...(Object.keys(idFilter).length > 0 && { Id: idFilter }),
         },
         include: {
           Sender: {
@@ -278,6 +284,8 @@ export class MessagesService {
         take: pageSize,
         orderBy: [{ Id: 'desc' }],
       });
+
+      console.log(messages);
 
       returnResult.Result = { page: { ...page }, data: messages };
     } catch (ex) {
@@ -334,6 +342,80 @@ export class MessagesService {
       returnResult.Result = {
         page: { ...page, totalElements: total },
         data: readers,
+      };
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+    }
+    return returnResult;
+  }
+
+  async getMediaPaging(chatId: string, page: Page<string>) {
+    const returnResult = new ReturnResult<PagedData<string, Media>>();
+    try {
+      const profileId = this.userContext.getProfileId();
+
+      const chat = await this.prismaService.chat.findFirst({
+        where: {
+          Id: chatId,
+          Members: { some: { MemberId: profileId } },
+        },
+        include: {
+          ChatSettings: {
+            where: { ProfileId: profileId },
+          },
+        },
+      });
+
+      if (!chat) {
+        returnResult.Message = "Can't find the chat";
+        return returnResult;
+      }
+
+      const deleteUpTo = chat.ChatSettings[0]?.DeleteUpToMessageId ?? null;
+      const pageSize = page.size || 30;
+      const pageNumber = page.pageNumber || 1;
+      const skip = (pageNumber - 1) * pageSize;
+
+      const mediaTypeFilter = page.selected?.length
+        ? page.selected[0] as unknown as string
+        : undefined;
+
+      const where: Record<string, unknown> = {
+        Deleted: false,
+        Message: {
+          ChatId: chatId,
+        },
+      };
+
+      // Exclude media from messages the user has cleared (soft-delete)
+      if (deleteUpTo != null) {
+        where.MessageId = { gt: deleteUpTo };
+      }
+
+      if (mediaTypeFilter) {
+        where.Type = mediaTypeFilter;
+      }
+
+      const [medias, total] = await Promise.all([
+        this.prismaService.media.findMany({
+          where: where as any,
+          include: {
+            Message: {
+              select: { Id: true, Content: true, DateCreated: true, SenderId: true },
+            },
+          },
+          skip,
+          take: pageSize,
+          orderBy: { DateCreated: 'desc' },
+        }),
+        this.prismaService.media.count({
+          where: where as any,
+        }),
+      ]);
+
+      returnResult.Result = {
+        page: { ...page, totalElements: total },
+        data: medias,
       };
     } catch (ex) {
       returnResult.Message = ex instanceof Error ? ex.message : String(ex);

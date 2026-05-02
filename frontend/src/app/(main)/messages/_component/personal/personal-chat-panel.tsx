@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import { PersonalChatHeader } from "./personal-chat-header";
 import { MessageThread } from "../common/message-thread";
 import { MessageComposer } from "../common/message-composer";
+import { ChatDetailPanel } from "../common/chat-detail-panel";
 import { Chat } from "@/features/messages/types/contracts";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
@@ -13,9 +14,11 @@ import { useMessageList } from "@/features/messages/hooks/messages/use-message-l
 interface PersonalChatPanelProps {
     selectedChat: Chat | null;
     setSelectedChat: (item: Chat | null) => void;
+    isPanelOpen: boolean;
+    onTogglePanel: () => void;
 }
 
-export function PersonalChatPanel({ selectedChat, setSelectedChat }: PersonalChatPanelProps) {
+export function PersonalChatPanel({ selectedChat, setSelectedChat, isPanelOpen, onTogglePanel }: PersonalChatPanelProps) {
     const currentProfileId = useSelector((state: RootState) => getProfileId(state.auth.user?.profileId));
     const { messages, isLoading, hasMore, loadMore, isFetchingMore } = useMessageList(selectedChat?.Id ?? "", 30);
 
@@ -30,23 +33,36 @@ export function PersonalChatPanel({ selectedChat, setSelectedChat }: PersonalCha
     }
 
     return (
-        <div className="flex h-full flex-col overflow-hidden">
-            <PersonalChatHeader
-                detail={selectedChat}
+        <div className="flex h-full overflow-hidden relative">
+            {/* Chat content */}
+            <div className="flex h-full flex-1 flex-col overflow-hidden min-w-0">
+                <PersonalChatHeader
+                    detail={selectedChat}
+                    onBack={() => setSelectedChat(null)}
+                    onTogglePanel={onTogglePanel}
+                />
+
+                <MessageThread
+                    messages={messages}
+                    currentProfileId={currentProfileId}
+                    onLoadMore={loadMore}
+                    hasMore={hasMore}
+                    isLoadingMore={isFetchingMore}
+                />
+
+                <div className="border-t border-border px-4 py-3">
+                    <MessageComposer selectedChat={selectedChat} messages={messages} currentProfileId={currentProfileId} />
+                </div>
+            </div>
+
+            {/* Detail panel */}
+            <ChatDetailPanel
+                chat={selectedChat}
+                open={isPanelOpen}
+                onClose={onTogglePanel}
+                currentProfileId={currentProfileId}
                 onBack={() => setSelectedChat(null)}
             />
-
-            <MessageThread
-                messages={messages}
-                currentProfileId={currentProfileId}
-                onLoadMore={loadMore}
-                hasMore={hasMore}
-                isLoadingMore={isFetchingMore}
-            />
-
-            <div className="border-t border-border px-4 py-3">
-                <MessageComposer selectedChat={selectedChat} messages={messages} currentProfileId={currentProfileId} />
-            </div>
         </div>
     );
 }

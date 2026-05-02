@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { X, ChevronLeft, ChevronRight, FileIcon } from "lucide-react";
 import { Media, MediaType } from "@/features/messages/types/contracts";
 import { getMediaUrl } from "@/features/messages/utils/message-service.helper";
@@ -76,9 +77,9 @@ export function MediaLightbox({ medias, currentIndex, onClose, onPrev, onNext }:
         );
     };
 
-    return (
+    return createPortal(
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm"
             onClick={onClose}
         >
             {/* Close button */}
@@ -129,6 +130,7 @@ export function MediaLightbox({ medias, currentIndex, onClose, onPrev, onNext }:
             <div onClick={(e) => e.stopPropagation()}>
                 {renderMedia()}
             </div>
-        </div>
+        </div>,
+        document.body,
     );
 }

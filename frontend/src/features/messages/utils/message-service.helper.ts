@@ -97,6 +97,12 @@ export function getMediaUrl(mediaName: string): string {
     return `${baseUrl}/medias/${mediaName}`;
 }
 
+export function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 //Right now when we host on localhost => dont need to
 export async function syncMessageServiceCookie(accessToken: string): Promise<void> {
     const baseUrl =

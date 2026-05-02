@@ -1,9 +1,8 @@
 "use client";
 
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PersonalChatActionMenu } from "./personal-chat-action-menu";
 import { Chat } from "@/features/messages/types/contracts";
 import { getProfileId, getTitle, getAvatarUrl, getInitials } from "@/features/messages/utils/message-service.helper";
 import { useSelector } from "react-redux";
@@ -13,9 +12,10 @@ import { cn } from "@/lib/utils";
 interface PersonalChatHeaderProps {
     detail: Chat;
     onBack?: () => void;
+    onTogglePanel?: () => void;
 }
 
-export function PersonalChatHeader({ detail, onBack }: PersonalChatHeaderProps) {
+export function PersonalChatHeader({ detail, onBack, onTogglePanel }: PersonalChatHeaderProps) {
     const currentProfileId = useSelector((state: RootState) => getProfileId(state.auth.user?.profileId));
     const title = getTitle(detail, currentProfileId);
     const avatarUrl = getAvatarUrl(detail, currentProfileId);
@@ -59,7 +59,15 @@ export function PersonalChatHeader({ detail, onBack }: PersonalChatHeaderProps) 
                 </div>
             </div>
 
-            <PersonalChatActionMenu chat={detail} onBack={onBack} />
+            <Button
+                variant="ghost"
+                size="icon"
+                onClick={onTogglePanel}
+                aria-label="Open chat details"
+                className="shrink-0 rounded-lg hover:bg-muted transition-colors"
+            >
+                <Info className="h-4 w-4" />
+            </Button>
         </header>
     );
 }

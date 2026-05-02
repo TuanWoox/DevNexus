@@ -47,6 +47,13 @@ export function appendMessageToChatCache(
         type = "request";
     }
 
+    // Invalidate media cache if the message has media attachments
+    if (message.Medias?.length > 0) {
+        queryClient.invalidateQueries({
+            queryKey: messagingQueryKeys.chatMediaAll(message.ChatId),
+        });
+    }
+
     invalidateAllChats(queryClient, type, fromOwnCreate);
 }
 
