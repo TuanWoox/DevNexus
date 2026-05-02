@@ -12,8 +12,10 @@ using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using PostTagEntity = platform_core_service.Common.Entities.DbEntities.PostTag;
 using TagEntity = platform_core_service.Common.Entities.DbEntities.Tag;
+using platform_core_service.Common.Utils.Enums;
 using Hangfire;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
+using platform_core_service.Common.Interfaces.Services;
 
 namespace platform_core_service.Business.Services
 {
@@ -24,13 +26,15 @@ namespace platform_core_service.Business.Services
         private readonly IMapper _mapper;
         private readonly IRepository<QAPost, string> _qaPostRepository;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IAiWorkerClient _aiWorkerClient;
 
         public QAPostService(
             ApplicationDbContext dbContext,
             IUserContext userContext,
             IMapper mapper,
-            IRepository<QAPost, string> qaPostRepository, 
-            IBackgroundJobClient backgroundJobClient
+            IRepository<QAPost, string> qaPostRepository,
+            IBackgroundJobClient backgroundJobClient,
+            IAiWorkerClient aiWorkerClient
             )
         {
             _dbContext = dbContext;
@@ -38,6 +42,7 @@ namespace platform_core_service.Business.Services
             _mapper = mapper;
             _qaPostRepository = qaPostRepository;
             _backgroundJobClient = backgroundJobClient;
+            _aiWorkerClient = aiWorkerClient;
         }
 
         public async Task<ReturnResult<SelectQAPostDTO>> CreateAsync(CreateQAPostDTO createDTO)
@@ -97,6 +102,10 @@ namespace platform_core_service.Business.Services
                     .FirstOrDefaultAsync(q => q.Id == qaPost.Id);
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(savedPost);
+
+                // Step 9: Fire-and-forget — submit to AI moderation pipeline.
+                // Runs after response is already built; never blocks or throws to caller.
+                await _aiWorkerClient.SubmitForModerationAsync(qaPost.Id, createDTO.Content);
             }
             catch (Exception ex)
             {
@@ -125,7 +134,9 @@ namespace platform_core_service.Business.Services
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(q => q.Author)
-                    .FirstOrDefaultAsync(q => q.Id == postId || q.Slug == postId);
+                    .FirstOrDefaultAsync(q =>
+                        (q.Id == postId || q.Slug == postId)
+                        && q.ModerationStatus == ModerationStatus.Approved);
 
                 if (qaPost == null)
                 {
@@ -151,6 +162,7 @@ namespace platform_core_service.Business.Services
             {
                 var query = _dbContext.Posts
                     .OfType<QAPost>()
+                    .Where(q => q.ModerationStatus == ModerationStatus.Approved)
                     .Include(q => q.Answers)
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
@@ -246,6 +258,15 @@ namespace platform_core_service.Business.Services
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(updatedPost);
                 await SetCurrentUserVoteAsync(result.Result);
+
+                // Step 10: Reset to Pending and re-submit for moderation.
+                // Edited content must pass the pipeline again before becoming visible.
+                if (!string.IsNullOrWhiteSpace(updateDTO.Content))
+                {
+                    qaPost.ModerationStatus = ModerationStatus.Pending;
+                    await _dbContext.SaveChangesAsync();
+                    await _aiWorkerClient.SubmitForModerationAsync(postId, updateDTO.Content);
+                }
 
             }
             catch (Exception ex)

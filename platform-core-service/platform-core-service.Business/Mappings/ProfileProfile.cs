@@ -14,6 +14,12 @@ namespace platform_core_service.Business.Mappings
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.ApplicationUserId, opt => opt.Ignore());
             CreateMap<ProfileEntity, SelectProfileDTO>();
+            CreateMap<ProfileEntity, AdminProfileDTO>()
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.ApplicationUserId))
+                .ForMember(dest => dest.DisplayName, opt => opt.MapFrom(src => src.FullName))
+                .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.ApplicationUser.UserRoles.FirstOrDefault()!.Role.Name))
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.DateCreated))
+                .ForMember(dest => dest.PostCount, opt => opt.MapFrom(src => src.Posts.Count));
             CreateMap<ProfileEntity, ProfilePublishDTO>();
         }
     }

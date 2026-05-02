@@ -1,5 +1,8 @@
+using Microsoft.EntityFrameworkCore;
 using platform_core_service.Common.Attributes;
 using platform_core_service.Common.Utils.Enums;
+using platform_core_service.Common.Utils.Extensions;
+using platform_core_service.Data;
 
 namespace platform_core_service.Middlewares
 {
@@ -27,6 +30,27 @@ namespace platform_core_service.Middlewares
 
             if (!isExemptByPrefix && !isExemptByAttr && isAuthenticated)
             {
+                var userId = context.User.GetUserId();
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    var dbContext = context.RequestServices.GetRequiredService<ApplicationDbContext>();
+                    var profile = await dbContext.Profiles
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(p => p.ApplicationUserId == userId);
+
+                    if (profile?.IsSuspended == true &&
+                        (profile.SuspendedUntil == null || profile.SuspendedUntil > DateTimeOffset.UtcNow))
+                    {
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        await context.Response.WriteAsJsonAsync(new
+                        {
+                            message = "Your account has been suspended.",
+                            suspendedUntil = profile.SuspendedUntil
+                        });
+                        return;
+                    }
+                }
+
                 bool isDeveloper = context.User.IsInRole(RoleEnum.Developer.ToString());
 
                 if (isDeveloper)

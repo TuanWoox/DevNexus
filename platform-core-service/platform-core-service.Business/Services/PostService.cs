@@ -130,8 +130,8 @@ namespace platform_core_service.Business.Services
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
                     .FirstOrDefaultAsync(p =>
-                        (p.Id == postId || p.Slug == postId));
-                // && p.ModerationStatus == ModerationStatus.Approved);
+                        (p.Id == postId || p.Slug == postId)
+                        && p.ModerationStatus == ModerationStatus.Approved);
 
                 if (post == null)
                 {
@@ -202,7 +202,7 @@ namespace platform_core_service.Business.Services
                 // Step 2: Build query — news feed shows only approved posts for all users
                 var query = _context.Posts
                     .Where(p => p.GetType() == typeof(PostEntity))
-                    // .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
@@ -239,7 +239,7 @@ namespace platform_core_service.Business.Services
                 // Step 2: Build query — only concrete Post rows (exclude QAPost subtype)
                 var query = _context.Posts
                     .Where(p => p.GetType() == typeof(PostEntity))
-                    // .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Where(p => p.AuthorId == profileId)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
@@ -333,6 +333,14 @@ namespace platform_core_service.Business.Services
                 result.Result = _mapper.Map<SelectPostDTO>(updatedPost);
                 await SetCurrentUserVoteAsync(result.Result);
 
+                // Step 10: Reset to Pending and re-submit for moderation.
+                // Edited content must pass the pipeline again before becoming visible.
+                if (!string.IsNullOrWhiteSpace(updateDTO.Content))
+                {
+                    post.ModerationStatus = ModerationStatus.Pending;
+                    await _context.SaveChangesAsync();
+                    await _aiWorkerClient.SubmitForModerationAsync(postId, updateDTO.Content);
+                }
             }
             catch (Exception ex)
             {
