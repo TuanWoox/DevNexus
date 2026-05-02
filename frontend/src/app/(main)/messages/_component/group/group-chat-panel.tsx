@@ -45,7 +45,7 @@ export function GroupChatPanel({ selectedChat, setSelectedChat }: GroupChatPanel
             />
 
             <div className="border-t border-border px-4 py-3">
-                <MessageComposer selectedChat={selectedChat} />
+                <MessageComposer selectedChat={selectedChat} messages={messages} currentProfileId={currentProfileId} />
             </div>
         </div>
     );

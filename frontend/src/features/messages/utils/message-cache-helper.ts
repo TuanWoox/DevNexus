@@ -1,10 +1,13 @@
 import type { InfiniteData, QueryClient } from "@tanstack/react-query";
-import type { InboxTab, Message, PagedData } from "../types/contracts";
+import type { Chat, InboxTab, Message, PagedData, ReadReceipt } from "../types/contracts";
 import type { ReturnResult } from "@/types/common/return-result";
 import { messagingQueryKeys } from "../hooks/messaging-query-keys";
 
 type MessagesPage = ReturnResult<PagedData<number, Message>>;
 type MessagesInfiniteData = InfiniteData<MessagesPage>;
+
+type ChatListPage = ReturnResult<PagedData<string, Chat>>;
+type ChatListInfiniteData = InfiniteData<ChatListPage>;
 
 export function prependMessageToCache(
     oldData: MessagesInfiniteData | undefined,
@@ -53,14 +56,95 @@ export function invalidateAllChats(queryClient: QueryClient, type: InboxTab, fro
     if (!fromOwnCreate) queryClient.invalidateQueries({ queryKey: ["messages", "chats"] });
     else {
         queryClient.invalidateQueries({ queryKey: ["messages", "chats", type] });
-        const arrayOfType = ["main", "archived", "requested"].filter(x => x.toLowerCase() == type.toLowerCase());
+        const arrayOfType = ["main", "archived", "requested"].filter(x => x.toLowerCase() !== type.toLowerCase());
         arrayOfType.map(x => {
             queryClient.removeQueries({ queryKey: ["messages", "chats", x] })
         })
     }
 }
 
-//Can optimized later, but row we just use it for demo as soon as possible
-export function invalidateAllMessagesInsideChat(queryClient: QueryClient, chatId: string = ""): void {
-    queryClient.invalidateQueries({ queryKey: ["messages", "messagesInsideChat", chatId] });
+export function appendReadReceiptToMessage(
+    queryClient: QueryClient,
+    chatId: string,
+    messageId: number,
+    receipt: { ReaderId: string; ReadAt: string; Reader?: { FullName: string; AvatarUrl: string | null } }
+): void {
+    const chatKey = messagingQueryKeys.messagesInsideChat(chatId);
+    const oldData = queryClient.getQueryData<MessagesInfiniteData>(chatKey);
+    if (!oldData?.pages?.length) return;
+
+    let changed = false;
+    const pages = oldData.pages.map((page) => {
+        if (!page.result) return page;
+        const data = page.result.data as Message[];
+        let pageChanged = false;
+        const updated = data.map((msg) => {
+            if (msg.Id !== messageId) return msg;
+            const existing = msg.ReadReceipts ?? [];
+            if (existing.some((r) => r.ReaderId === receipt.ReaderId)) return msg;
+            pageChanged = true;
+            const newReceipt: ReadReceipt = {
+                MessageId: messageId,
+                ReaderId: receipt.ReaderId,
+                ReadAt: receipt.ReadAt,
+                Reader: receipt.Reader,
+            };
+            return { ...msg, ReadReceipts: [...existing, newReceipt] };
+        });
+        if (!pageChanged) return page;
+        changed = true;
+        return { ...page, result: { ...page.result, data: updated } };
+    });
+
+    if (changed) {
+        queryClient.setQueryData<MessagesInfiniteData>(chatKey, { ...oldData, pages });
+    }
+}
+
+export function appendReadReceiptToChatListItem(
+    queryClient: QueryClient,
+    chatId: string,
+    messageId: number,
+    receipt: { ReaderId: string; ReadAt: string; Reader?: { FullName: string; AvatarUrl: string | null } }
+): void {
+    console.log(messageId);
+    const tabTypes: string[] = ["main", "request", "archived"];
+    for (const type of tabTypes) {
+        const chatListKey = messagingQueryKeys.chat(type);
+        const oldData = queryClient.getQueryData<ChatListInfiniteData>(chatListKey);
+        if (!oldData?.pages?.length) continue;
+
+        let changed = false;
+        const pages = oldData.pages.map((page) => {
+            if (!page.result) return page;
+            const chats = page.result.data;
+            const updated = chats.map((chat) => {
+                if (chat.Id !== chatId) return chat;
+                const latestMessage = chat.Messages?.[0];
+                if (!latestMessage || latestMessage.Id !== messageId) return chat;
+                const existing = latestMessage.ReadReceipts ?? [];
+                if (existing.some((r) => r.ReaderId === receipt.ReaderId)) return chat;
+                changed = true;
+                const newReceipt: ReadReceipt = {
+                    MessageId: messageId,
+                    ReaderId: receipt.ReaderId,
+                    ReadAt: receipt.ReadAt,
+                    Reader: receipt.Reader,
+                };
+                return {
+                    ...chat,
+                    Messages: [{
+                        ...latestMessage,
+                        ReadReceipts: [...existing, newReceipt],
+                    }],
+                };
+            });
+            if (!changed) return page;
+            return { ...page, result: { ...page.result, data: updated } };
+        });
+
+        if (changed) {
+            queryClient.setQueryData<ChatListInfiniteData>(chatListKey, { ...oldData, pages });
+        }
+    }
 }

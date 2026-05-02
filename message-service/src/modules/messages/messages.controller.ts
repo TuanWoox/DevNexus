@@ -2,7 +2,6 @@ import { Controller, Post, UploadedFile, UseGuards, UseInterceptors, Body, HttpC
 import { MessagesService } from './messages.service';
 import { AuthGuard } from '../auth/auth.guard';
 import type { CreateMessageDto } from './dto/create-message.dto';
-import type { MarkMultipleMessagesAsReadDto } from './dto/mark-multiple-messages-as-read.dto';
 import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
 import { Message, MessageReadReceipt } from 'src/generated/prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -33,10 +32,10 @@ export class MessagesController {
   }
 
   @Post('read')
-  async markMultipleAsRead(
-    @Body() dto: MarkMultipleMessagesAsReadDto,
-  ): Promise<ReturnResult<MessageReadReceipt[]>> {
-    return this.messagesService.markMultipleAsRead(dto.messageIds);
+  async markAsRead(
+    @Body('chatId') chatId: string,
+  ): Promise<ReturnResult<MessageReadReceipt>> {
+    return this.messagesService.markAsRead(chatId);
   }
 
   @Post('paging/:chatId')
@@ -48,6 +47,21 @@ export class MessagesController {
     const returnResult = new ReturnResult<PagedData<number, Message>>();
     try {
       return await this.messagesService.getMessagePaging(chatId, page);
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+      return returnResult;
+    }
+  }
+
+  @Post(':messageId/readers')
+  @HttpCode(200)
+  async messageReaders(
+    @Param('messageId') messageId: string,
+    @Body() page: Page<number>,
+  ): Promise<ReturnResult<PagedData<number, MessageReadReceipt>>> {
+    const returnResult = new ReturnResult<PagedData<number, MessageReadReceipt>>();
+    try {
+      return await this.messagesService.getMessageReaders(parseInt(messageId, 10), page);
     } catch (ex) {
       returnResult.Message = ex instanceof Error ? ex.message : String(ex);
       return returnResult;

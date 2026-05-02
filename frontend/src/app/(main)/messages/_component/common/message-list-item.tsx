@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { getAvatarUrl, getTitle, getInitials, toRelativeTime, getProfileId } from "@/features/messages/utils/message-service.helper";
-import { Pin, BellOff } from "lucide-react";
+import { Pin, BellOff, Check } from "lucide-react";
 
 interface MessageListItemProps {
     item: Chat;
@@ -23,10 +23,7 @@ export function MessageListItem({ item, isActive = false, onSelect }: MessageLis
     const messageContent = lastMessage?.Content;
     const firstMedia = lastMessage?.Medias?.[0];
     const isCurrentUserSender = lastMessage?.SenderId === currentProfileId;
-    const isUnread =
-        lastMessage &&
-        lastMessage.SenderId !== currentProfileId &&
-        !lastMessage.MessageReadReceipt?.some((r) => r.ReaderId === currentProfileId);
+    const isUnread = lastMessage && lastMessage.SenderId !== currentProfileId && !lastMessage.ReadReceipts?.some((r) => r.ReaderId === currentProfileId);
     const currentSetting = item?.ChatSettings?.[0];
 
     const isPinned = currentSetting?.IsPinned;
@@ -109,6 +106,33 @@ export function MessageListItem({ item, isActive = false, onSelect }: MessageLis
                     </p>
                     {isUnread && (
                         <span className="shrink-0 h-2 w-2 rounded-full bg-primary shadow-[0_0_6px_rgba(99,102,241,0.5)]" />
+                    )}
+                    {isCurrentUserSender && lastMessage && !isUnread && (
+                        (() => {
+                            const receipts = lastMessage.ReadReceipts ?? [];
+                            const visible = receipts.slice(0, 2);
+                            const overflow = receipts.length - 2;
+                            if (receipts.length === 0) {
+                                return <Check className="h-3 w-3 shrink-0 text-muted-foreground/60" />;
+                            }
+                            return (
+                                <div className="flex -space-x-1 shrink-0">
+                                    {visible.map((r) => (
+                                        <Avatar key={r.ReaderId} className="h-4 w-4 ring-1 ring-card">
+                                            <AvatarImage src={r.Reader?.AvatarUrl ?? undefined} alt={r.Reader?.FullName ?? "Unknown"} />
+                                            <AvatarFallback className="text-[6px] bg-primary/10 text-primary">
+                                                {getInitials(r.Reader?.FullName as string ?? "?")}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                    ))}
+                                    {overflow > 0 && (
+                                        <span className="h-4 w-4 rounded-full bg-muted ring-1 ring-card flex items-center justify-center text-[7px] font-semibold text-muted-foreground">
+                                            +{overflow}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })()
                     )}
                 </div>
             </div>

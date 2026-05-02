@@ -9,8 +9,16 @@ import type { Message } from "../../types/contracts";
 import { getProfileId, getWsBaseUrl } from "../../utils/message-service.helper";
 import {
     appendMessageToChatCache,
-    invalidateAllMessagesInsideChat,
+    appendReadReceiptToChatListItem,
+    appendReadReceiptToMessage
 } from "../../utils/message-cache-helper";
+
+interface MessageReadPayload {
+    messageId: number;
+    readerId: string;
+    chatId: string;
+    reader: { FullName: string; AvatarUrl: string | null };
+}
 
 export function useMessageGateway() {
     const socketRef = useRef<Socket | null>(null);
@@ -23,13 +31,11 @@ export function useMessageGateway() {
     );
     const queryClient = useQueryClient();
 
-    // 🔊 preload audio
     useEffect(() => {
         audioRef.current = new Audio("/sounds/receive.mp3");
         audioRef.current.preload = "auto";
     }, []);
 
-    // 🔓 unlock audio on first user interaction (fix autoplay restrictions)
     useEffect(() => {
         const unlockAudio = () => {
             if (audioRef.current) {
@@ -74,10 +80,8 @@ export function useMessageGateway() {
         });
 
         socket.on("new-message", (message: Message) => {
-            //Only allow to sounding when the message is in main inbox and not mute 
             if (!message?.Chat?.ChatSettings?.[0].IsMuted && !message?.Chat?.ChatSettings?.[0].IsArchived
                 && !message?.Chat?.ChatSettings?.[0].IsRequested) {
-                // 🔊 play sound safely
                 if (audioRef.current) {
                     audioRef.current.currentTime = 0;
                     audioRef.current.play().catch(() => { });
@@ -87,8 +91,15 @@ export function useMessageGateway() {
             appendMessageToChatCache(queryClient, message);
         });
 
-        socket.on("messages-read", () => {
-            invalidateAllMessagesInsideChat(queryClient);
+        socket.on("message-read", (payload: MessageReadPayload) => {
+            const receipt = {
+                ReaderId: payload.readerId,
+                ReadAt: new Date().toISOString(),
+                Reader: payload.reader,
+            };
+
+            appendReadReceiptToMessage(queryClient, payload.chatId, payload.messageId, receipt);
+            appendReadReceiptToChatListItem(queryClient, payload.chatId, payload.messageId, receipt);
         });
 
         socket.on("disconnect", () => {

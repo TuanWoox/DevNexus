@@ -160,7 +160,7 @@ export class ChatsService {
           include: {
             Sender: { select: { FullName: true, AvatarUrl: true } },
             ReadReceipts: {
-              where: { ReaderId: { not: profileId } },
+              where: { ReaderId: { equals: profileId } },
               include: {
                 Reader: { select: { FullName: true, AvatarUrl: true } },
               },

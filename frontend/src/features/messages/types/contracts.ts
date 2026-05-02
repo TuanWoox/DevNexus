@@ -58,7 +58,7 @@ export interface Message {
     DateCreated: string;
     DateModified: string;
     Sender: ProfileSummary
-    MessageReadReceipt: MessageReadReceipt[]
+    ReadReceipts: ReadReceipt[]
     Chat: Chat
     Medias: Media[]
 }
@@ -83,10 +83,11 @@ export enum MediaType {
     Image = "Image",
     File = "File",
 }
-export interface MessageReadReceipt {
+export interface ReadReceipt {
     MessageId: number;
     ReaderId: string;
     ReadAt: string;
+    Reader?: ProfileSummary;
 }
 
 export interface CreateMessageDto {
@@ -107,10 +108,4 @@ export interface UpdateNickName {
     Id: string;
     NickName: string | null;
     ProfileIdToUpdate: string;
-}
-
-export interface MessageReadEvent {
-    messageId: number;
-    readerId: string;
-    chatId: string;
 }

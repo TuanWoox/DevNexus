@@ -117,96 +117,113 @@ export class MessagesService {
     }
     return returnResult;
   }
-  async markMultipleAsRead(messageIdStrings: string[]): Promise<ReturnResult<MessageReadReceipt[]>> {
-    const returnResult = new ReturnResult<MessageReadReceipt[]>();
+
+  // We use a trick here => only update to the latest message, not insert every time to saveDb
+  async markAsRead(chatId: string): Promise<ReturnResult<MessageReadReceipt>> {
+    const returnResult = new ReturnResult<MessageReadReceipt>();
+
     try {
       const profileId = this.userContext.getProfileId();
-      const messageIds = messageIdStrings.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
 
-      if (messageIds.length === 0) {
-        returnResult.Message = 'No valid message IDs provided';
+      if (!chatId) {
+        returnResult.Message = 'chatId is required';
         return returnResult;
       }
 
-      // Fetch all messages to verify access and get details
-      const messages = await this.prismaService.message.findMany({
+      const chat = await this.prismaService.chat.findFirst({
         where: {
-          Id: { in: messageIds },
-          Chat: {
-            Members: { some: { MemberId: profileId } },
-          },
+          Id: chatId,
+          Members: { some: { MemberId: profileId } },
         },
-        select: {
-          Id: true,
-          SenderId: true,
-          ChatId: true,
-          Chat: {
-            select: {
-              ChatSettings: {
-                where: { ProfileId: { not: profileId } },
-                select: { ProfileId: true, IsRequested: true },
-              },
+      });
+
+      if (!chat) {
+        returnResult.Message = "Chat not found or you are not a member";
+        return returnResult;
+      }
+
+      // Get latest message not sent by us
+      const latestMessage = await this.prismaService.message.findFirst({
+        where: {
+          ChatId: chatId,
+          SenderId: { not: profileId },
+        },
+        orderBy: { Id: 'desc' },
+        select: { Id: true, SenderId: true, ChatId: true },
+      });
+
+      if (!latestMessage) {
+        returnResult.Message = 'No messages to mark as read';
+        return returnResult;
+      }
+
+      // Get our latest read receipt for this chat
+      const latestReadMessage = await this.prismaService.messageReadReceipt.findFirst({
+        where: {
+          ReaderId: { equals: profileId },
+          Message: {
+            Chat: {
+              Id: chatId,
             },
           },
         },
       });
 
-      if (messages.length !== messageIds.length) {
-        returnResult.Message = 'Some messages not found or you are not a member of their chats';
-        return returnResult;
-      }
+      const includeReader = {
+        Reader: { select: { FullName: true, AvatarUrl: true } },
+      };
 
-      // Filter out messages sent by the current user
-      const validMessages = messages.filter(msg => msg.SenderId !== profileId);
+      // Prisma include returns richer type than the base MessageReadReceipt export
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let receipt: any;
 
-      if (validMessages.length === 0) {
-        returnResult.Message = 'No valid messages to mark as read (cannot mark own messages)';
-        return returnResult;
-      }
-
-      // Create or update read receipts for all valid messages
-      const receipts = await Promise.all(
-        validMessages.map(message =>
-          this.prismaService.messageReadReceipt.upsert({
-            where: {
-              MessageId_ReaderId: { MessageId: message.Id, ReaderId: profileId },
+      if (latestReadMessage) {
+        receipt = await this.prismaService.messageReadReceipt.update({
+          where: {
+            MessageId_ReaderId: {
+              MessageId: latestReadMessage.MessageId,
+              ReaderId: profileId,
             },
-            create: { MessageId: message.Id, ReaderId: profileId },
-            update: {},
-          }),
-        ),
+          },
+          data: {
+            MessageId: latestMessage.Id,
+            ReadAt: new Date(),
+          },
+          include: includeReader,
+        });
+      } else {
+        receipt = await this.prismaService.messageReadReceipt.create({
+          data: {
+            MessageId: latestMessage.Id,
+            ReaderId: profileId,
+            ReadAt: new Date(),
+          },
+          include: includeReader,
+        });
+      }
+
+      this.gateway.emitToUsers(
+        [latestMessage.SenderId],
+        'message-read',
+        {
+          messageId: latestMessage.Id,
+          readerId: profileId,
+          chatId,
+          reader: {
+            FullName: receipt.Reader?.FullName ?? 'Unknown',
+            AvatarUrl: receipt.Reader?.AvatarUrl ?? null,
+          },
+        },
       );
 
-      // Notify senders for each message (only if not requested)
-      const notificationMap = new Map<string, { messageIds: number[]; isRequested: boolean }>();
-
-      validMessages.forEach(message => {
-        const senderSetting = message.Chat.ChatSettings.find(
-          s => s.ProfileId === message.SenderId,
-        );
-        if (senderSetting && !senderSetting.IsRequested) {
-          if (!notificationMap.has(message.SenderId)) {
-            notificationMap.set(message.SenderId, { messageIds: [], isRequested: false });
-          }
-          notificationMap.get(message.SenderId)!.messageIds.push(message.Id);
-        }
-      });
-
-      // Emit notifications by sender
-      notificationMap.forEach((data, senderId) => {
-        this.gateway.emitToUsers(
-          [senderId],
-          'messages-read',
-          { messageIds: data.messageIds, readerId: profileId },
-        );
-      });
-
-      returnResult.Result = receipts;
+      returnResult.Result = receipt;
     } catch (ex) {
       returnResult.Message = ex instanceof Error ? ex.message : String(ex);
     }
+
     return returnResult;
   }
+
   async getMessagePaging(chatId: string, page: Page<number>) {
     const returnResult = new ReturnResult<PagedData<number, Message>>();
     try {
@@ -246,13 +263,15 @@ export class MessagesService {
           Sender: {
             select: { FullName: true, AvatarUrl: true }
           },
-          //We exclude our own
           ReadReceipts: {
             where: {
               ReaderId: {
                 not: profileId
               }
-            }
+            },
+            include: {
+              Reader: { select: { FullName: true, AvatarUrl: true } },
+            },
           },
           Medias: true
         },
@@ -261,6 +280,61 @@ export class MessagesService {
       });
 
       returnResult.Result = { page: { ...page }, data: messages };
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+    }
+    return returnResult;
+  }
+
+  async getMessageReaders(messageId: number, page: Page<number>) {
+    const returnResult = new ReturnResult<PagedData<number, MessageReadReceipt>>();
+    try {
+      const profileId = this.userContext.getProfileId();
+
+      const message = await this.prismaService.message.findFirst({
+        where: {
+          Id: messageId,
+          Chat: {
+            Members: { some: { MemberId: profileId } },
+          },
+        },
+        select: { Id: true },
+      });
+
+      if (!message) {
+        returnResult.Message = "Message not found or you are not a member of its chat";
+        return returnResult;
+      }
+
+      const pageSize = page.size || 20;
+      const pageNumber = page.pageNumber || 1;
+      const skip = (pageNumber - 1) * pageSize;
+
+      const [readers, total] = await Promise.all([
+        this.prismaService.messageReadReceipt.findMany({
+          where: {
+            MessageId: messageId,
+            ReaderId: { not: profileId },
+          },
+          include: {
+            Reader: { select: { FullName: true, AvatarUrl: true } },
+          },
+          skip,
+          take: pageSize,
+          orderBy: { ReadAt: 'desc' },
+        }),
+        this.prismaService.messageReadReceipt.count({
+          where: {
+            MessageId: messageId,
+            ReaderId: { not: profileId },
+          },
+        }),
+      ]);
+
+      returnResult.Result = {
+        page: { ...page, totalElements: total },
+        data: readers,
+      };
     } catch (ex) {
       returnResult.Message = ex instanceof Error ? ex.message : String(ex);
     }

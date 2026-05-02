@@ -5,8 +5,11 @@ import { Message, MediaType, ProfileSummary } from "@/features/messages/types/co
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toRelativeTime, getInitials, getMediaUrl } from "@/features/messages/utils/message-service.helper";
-import { Check, CheckCheck, FileIcon, Download, FileText, FileArchive } from "lucide-react";
+import { Check, Download, FileText, FileArchive } from "lucide-react";
 import { MediaLightbox } from "./media-lightbox";
+import { ReadReceiptOverlay } from "./read-receipt-overlay";
+
+const MAX_VISIBLE_AVATARS = 3;
 
 interface MessageBubbleProps {
     message: Message;
@@ -14,7 +17,7 @@ interface MessageBubbleProps {
     isMine: boolean;
     currentProfileId: string;
     showAvatar: boolean;
-    messageStatus?: "seen" | "sent";
+    isLastOwn: boolean;
 }
 
 function MediaAttachment({
@@ -79,18 +82,73 @@ function MediaAttachment({
     );
 }
 
+function ReaderAvatars({
+    receipts,
+    messageId,
+}: {
+    receipts: Message["ReadReceipts"];
+    messageId: number;
+}) {
+    const [overlayOpen, setOverlayOpen] = useState(false);
+    const readers = receipts ?? [];
+    const visible = readers.slice(0, MAX_VISIBLE_AVATARS);
+    const overflow = readers.length - MAX_VISIBLE_AVATARS;
+    const overflowNames = readers.slice(MAX_VISIBLE_AVATARS).map((r) => r.Reader?.FullName ?? "Unknown").join(", ");
+
+    if (readers.length === 0) return null;
+
+    return (
+        <>
+            <div className="flex items-center gap-1 px-1.5">
+                <div className="flex -space-x-1.5">
+                    {visible.map((r) => (
+                        <Avatar key={r.ReaderId} className="h-4 w-4 ring-1 ring-background" title={r.Reader?.FullName ?? "Unknown"}>
+                            <AvatarImage src={r.Reader?.AvatarUrl ?? undefined} alt={r.Reader?.FullName ?? "Unknown"} />
+                            <AvatarFallback className="text-[6px] bg-primary/10 text-primary">
+                                {getInitials(r.Reader?.FullName as string ?? "?")}
+                            </AvatarFallback>
+                        </Avatar>
+                    ))}
+                    {overflow > 0 && (
+                        <button
+                            type="button"
+                            title={overflowNames}
+                            onClick={() => setOverlayOpen(true)}
+                            className="h-4 w-4 rounded-full bg-muted ring-1 ring-background flex items-center justify-center text-[7px] font-semibold text-muted-foreground hover:bg-accent transition-colors"
+                        >
+                            +{overflow}
+                        </button>
+                    )}
+                </div>
+                <span className="text-[10px] font-medium text-muted-foreground">
+                    {toRelativeTime(readers[0].ReadAt)}
+                </span>
+            </div>
+
+            <ReadReceiptOverlay
+                messageId={messageId}
+                open={overlayOpen}
+                onClose={() => setOverlayOpen(false)}
+            />
+        </>
+    );
+}
+
 export function MessageBubble({
     message,
     sender,
     isMine,
     showAvatar,
-    messageStatus,
+    isLastOwn,
 }: MessageBubbleProps) {
     const hasMedias = message.Medias && message.Medias.length > 0;
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
     const openLightbox = (index: number) => setLightboxIndex(index);
     const closeLightbox = () => setLightboxIndex(null);
+
+    const receipts = message.ReadReceipts ?? [];
+    const hasReaders = receipts.length > 0;
 
     return (
         <>
@@ -133,9 +191,9 @@ export function MessageBubble({
                     {message.Content && (
                         <div
                             className={cn(
-                                "rounded-lg px-4 py-2.5 text-sm leading-relaxed break-words shadow-sm",
+                                "rounded-lg px-4 py-2.5 text-sm leading-relaxed wrap-break-words shadow-sm",
                                 isMine
-                                    ? "rounded-br-md bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-[0_2px_6px_rgba(99,102,241,0.25)]"
+                                    ? "rounded-br-md bg-linear-to-br from-brand-500 to-brand-600 text-white shadow-[0_2px_6px_rgba(99,102,241,0.25)]"
                                     : "rounded-bl-md bg-card border border-border/40 text-foreground",
                             )}
                         >
@@ -143,27 +201,20 @@ export function MessageBubble({
                         </div>
                     )}
 
-                    {/* Status */}
-                    {messageStatus && (
-                        <div className="flex items-center gap-1 px-1.5">
-                            {messageStatus === "seen" ? (
-                                <>
-                                    <CheckCheck className="h-3 w-3 text-primary" />
-                                    <span className="text-[10px] font-medium text-muted-foreground">
-                                        Seen · {toRelativeTime(message.DateCreated)}
-                                    </span>
-                                </>
-                            ) : (
-                                <>
-                                    <Check className="h-3 w-3 text-muted-foreground/60" />
-                                    <span className="text-[10px] font-medium text-muted-foreground">
-                                        {toRelativeTime(message.DateCreated) === "now"
-                                            ? "Sent"
-                                            : `Sent · ${toRelativeTime(message.DateCreated)}`}
-                                    </span>
-                                </>
-                            )}
-                        </div>
+                    {/* Reader avatars / Sent — only on the last own message */}
+                    {isMine && isLastOwn && (
+                        hasReaders ? (
+                            <ReaderAvatars receipts={receipts} messageId={message.Id} />
+                        ) : (
+                            <div className="flex items-center gap-1 px-1.5">
+                                <Check className="h-3 w-3 text-muted-foreground/60" />
+                                <span className="text-[10px] font-medium text-muted-foreground">
+                                    {toRelativeTime(message.DateCreated) === "now"
+                                        ? "Sent"
+                                        : `Sent · ${toRelativeTime(message.DateCreated)}`}
+                                </span>
+                            </div>
+                        )
                     )}
                 </div>
             </div>

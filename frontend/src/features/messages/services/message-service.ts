@@ -1,5 +1,5 @@
 import messageApi from "../../../lib/messageServiceAxiosConfig";
-import type { CreateMessageDto, Message, MessageReadReceipt, PagedData } from "@/features/messages/types/contracts";
+import type { CreateMessageDto, Message, ReadReceipt, PagedData } from "@/features/messages/types/contracts";
 import { Page } from "@/types/common/page";
 import { ReturnResult } from "@/types/common/return-result";
 
@@ -19,16 +19,9 @@ export const messageService = {
         return data;
     },
 
-    markMessageAsRead: async (messageId: number): Promise<ReturnResult<MessageReadReceipt>> => {
-        const { data } = await messageApi.post<ReturnResult<MessageReadReceipt>>(
-            `/messages/${messageId}/read`
-        );
-        return data;
-    },
-
-    markMultipleMessagesAsRead: async (messageIds: string[]): Promise<ReturnResult<MessageReadReceipt[]>> => {
-        const { data } = await messageApi.post<ReturnResult<MessageReadReceipt[]>>("/messages/read", {
-            messageIds,
+    markMessageAsRead: async (chatId: string): Promise<ReturnResult<ReadReceipt>> => {
+        const { data } = await messageApi.post<ReturnResult<ReadReceipt>>("/messages/read", {
+            chatId,
         });
         return data;
     },
@@ -36,6 +29,14 @@ export const messageService = {
     getMessagesPaging: async (chatId: string, page: Page<number>): Promise<ReturnResult<PagedData<number, Message>>> => {
         const { data } = await messageApi.post<ReturnResult<PagedData<number, Message>>>(
             `/messages/paging/${chatId}`,
+            page
+        );
+        return data;
+    },
+
+    getMessageReaders: async (messageId: number, page: Page<number>): Promise<ReturnResult<PagedData<number, ReadReceipt>>> => {
+        const { data } = await messageApi.post<ReturnResult<PagedData<number, ReadReceipt>>>(
+            `/messages/${messageId}/readers`,
             page
         );
         return data;

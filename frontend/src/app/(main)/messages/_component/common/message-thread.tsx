@@ -95,14 +95,8 @@ export function MessageThread({
             {/* 👇 bottom anchor (visually bottom because of reverse) */}
             <div ref={bottomRef} />
 
-            {/* Pre-compute: find the newest message sent by me that has been read */}
             {(() => {
-                // messages[0] = newest (sorted desc). Find the newest "mine + read" message.
-                const lastSeenMsgId = messages.find(
-                    (m) =>
-                        m.SenderId === currentProfileId &&
-                        m.MessageReadReceipt?.some((r) => r.ReaderId !== currentProfileId)
-                )?.Id;
+                const lastOwnMessageId = messages.find((m) => m.SenderId === currentProfileId)?.Id;
 
                 return messages.map((message, idx) => {
                     const prev: Message | undefined = messages[idx - 1];
@@ -114,32 +108,19 @@ export function MessageThread({
                     };
 
                     const isMine = message.SenderId === currentProfileId;
-
-                    const isLastInGroup = idx == 0;
-
-                    const senderChanged =
-                        prev && prev.SenderId !== message.SenderId;
-
-                    // Messenger-style status:
-                    // "seen" → on the newest read message (can be anywhere in the list)
-                    // "sent" → only on the very last message (idx=0) if mine & unread
-                    let messageStatus: "seen" | "sent" | undefined;
-                    if (isMine && message.Id === lastSeenMsgId) {
-                        messageStatus = "seen";
-                    } else if (isMine && idx === 0 && message.Id !== lastSeenMsgId) {
-                        messageStatus = "sent";
-                    }
+                    const isLastInGroup = idx === 0;
+                    const senderChanged = prev && prev.SenderId !== message.SenderId;
+                    const isLastOwn = message.Id === lastOwnMessageId;
 
                     return (
                         <div key={message.Id} className={cn("py-0.5", senderChanged && "mt-3")}>
-
                             <MessageBubble
                                 message={message}
                                 sender={sender}
                                 isMine={isMine}
                                 currentProfileId={currentProfileId}
                                 showAvatar={isLastInGroup}
-                                messageStatus={messageStatus}
+                                isLastOwn={isLastOwn}
                             />
                         </div>
                     );

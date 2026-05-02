@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useCreateMessage } from "@/features/messages/hooks/messages/use-create-message";
-import { Chat } from "@/features/messages/types/contracts";
+import { useMarkMessageAsRead } from "@/features/messages/hooks/messages/use-mark-message-as-read";
+import { Chat, Message } from "@/features/messages/types/contracts";
 import { toast } from "sonner";
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -19,10 +20,13 @@ function formatFileSize(bytes: number): string {
 
 interface MessageComposerProps {
     selectedChat: Chat | null;
+    messages: Message[];
+    currentProfileId: string;
 }
 
-export function MessageComposer({ selectedChat }: MessageComposerProps) {
+export function MessageComposer({ selectedChat, messages, currentProfileId }: MessageComposerProps) {
     const createMessage = useCreateMessage();
+    const markAsRead = useMarkMessageAsRead();
     const [value, setValue] = useState("");
     const [isSending, setIsSending] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -31,6 +35,7 @@ export function MessageComposer({ selectedChat }: MessageComposerProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const pendingRefocus = useRef(false);
     const fileInputId = useId();
+    const lastReadMessageId = useRef<number | null>(null);
     const isImage = selectedFile?.type.startsWith("image/");
     const isVideo = selectedFile?.type.startsWith("video/");
 
@@ -51,6 +56,16 @@ export function MessageComposer({ selectedChat }: MessageComposerProps) {
     const canSend = hasContent && !isSending && !createMessage.isPending;
 
     if (!selectedChat) return null;
+
+    const handleFocus = () => {
+        if (!selectedChat || !messages.length) return;
+        const latestOther = messages.find((m) => m.SenderId !== currentProfileId);
+        if (!latestOther) return;
+        if (latestOther.ReadReceipts?.some((r) => r.ReaderId === currentProfileId)) return;
+        if (lastReadMessageId.current === latestOther.Id) return;
+        lastReadMessageId.current = latestOther.Id;
+        markAsRead.mutate(selectedChat.Id);
+    };
 
     const submit = async (e?: FormEvent) => {
         e?.preventDefault();
@@ -172,6 +187,7 @@ export function MessageComposer({ selectedChat }: MessageComposerProps) {
                     value={value}
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
+                    onFocus={handleFocus}
                     placeholder="Type a message…"
                     disabled={createMessage.isPending || isSending}
                     rows={1}
@@ -211,7 +227,7 @@ export function MessageComposer({ selectedChat }: MessageComposerProps) {
                     className={cn(
                         "mb-0.5 h-9 w-9 shrink-0 rounded-full transition-colors",
                         canSend
-                            ? "bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-sm"
+                            ? "bg-linear-to-br from-brand-500 to-brand-600 text-white shadow-sm"
                             : "bg-muted text-muted-foreground",
                     )}
                     aria-label="Send message"
