@@ -20,6 +20,12 @@ export class ProfilesController {
     return this.profilesService.searchFollowedProfiles(page);
   }
 
+  @Post('search/contacts')
+  @HttpCode(200)
+  async searchContacts(@Body() page: Page<string>) {
+    return this.profilesService.searchContactProfiles(page);
+  }
+
   @Get(':profileId')
   async getById(@Param('profileId') profileId: string) {
     return this.profilesService.getProfileById(profileId);

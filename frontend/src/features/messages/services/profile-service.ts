@@ -34,4 +34,15 @@ export const profileService = {
         );
         return data;
     },
+
+    // POST with Page body — paginated, people you've chatted with before
+    searchContactProfiles: async (
+        page: Page<string>
+    ): Promise<ReturnResult<PagedData<string, ProfileSummary>>> => {
+        const { data } = await messageApi.post<ReturnResult<PagedData<string, ProfileSummary>>>(
+            `/profiles/search/contacts`,
+            page
+        );
+        return data;
+    },
 };

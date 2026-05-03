@@ -6,6 +6,7 @@ import { MessageListSection } from "@/app/(main)/messages/_component/message-lis
 import { MessageTabs } from "@/app/(main)/messages/_component/message-tabs";
 import { MessageSearch } from "@/app/(main)/messages/_component/message-search";
 import { cn } from "@/lib/utils";
+import { UsersRound } from "lucide-react";
 import { InboxTab, Chat, ProfileSummary } from "@/features/messages/types/contracts";
 import { useChatList } from "@/features/messages/hooks/chats/use-chat-list";
 import { useMessageGateway } from "@/features/messages/hooks/gateways/use-message-gateway";
@@ -54,8 +55,16 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                     isRightPanelOpen ? "hidden md:flex" : "flex",
                 )}
             >
-                <div className="px-4 pt-5 pb-2">
+                <div className="px-4 pt-5 pb-2 flex items-center justify-between">
                     <h1 className="text-xl font-bold tracking-tight text-foreground">Messages</h1>
+                    <button
+                        type="button"
+                        onClick={() => router.push("/messages/new-group")}
+                        className="rounded-full p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                        title="New group chat"
+                    >
+                        <UsersRound className="h-5 w-5" />
+                    </button>
                 </div>
 
                 <div className="px-3 pb-3 space-y-3">

@@ -31,6 +31,11 @@ export function getInitials(name: string): string {
 }
 
 export function getAvatarUrl(chat: Chat, currentProfileId: string): string | undefined {
+    // Group pictures are stored as filenames in message-service — need getMediaUrl() prefix
+    if (chat.IsGroup && chat.ChatPictureUrl) {
+        return getMediaUrl(chat.ChatPictureUrl);
+    }
+
     if (chat.ChatPictureUrl) return chat.ChatPictureUrl;
 
     // For 1-on-1 chats, use the other person's avatar

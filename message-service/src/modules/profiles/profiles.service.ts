@@ -145,4 +145,59 @@ export class ProfilesService {
     }
     return returnResult;
   }
+
+  async searchContactProfiles(page: Page<string>) {
+    const returnResult = new ReturnResult<PagedData<string, Profile>>();
+    try {
+      const currentProfileId = this.userContext.getProfileId();
+      const query = page.selected?.[0]?.trim() ?? '';
+      const pageSize = Math.min(page.size ?? 10, 30);
+      const pageNumber = page.pageNumber ?? 1;
+      const offset = (pageNumber - 1) * pageSize;
+
+      // Find all personal chats the current user is a member of,
+      // then extract the OTHER member's profile ID from each
+      const personalChats = await this.prismaService.profileChat.findMany({
+        where: {
+          MemberId: { not: currentProfileId },
+          Chat: {
+            IsGroup: false,
+            Members: { some: { MemberId: currentProfileId } },
+          },
+        },
+        select: { MemberId: true },
+        distinct: ['MemberId'],
+      });
+
+      const contactIds = personalChats.map((pc) => pc.MemberId);
+      if (contactIds.length === 0) {
+        returnResult.Result = { page: { ...page, totalElements: 0 }, data: [] };
+        return returnResult;
+      }
+
+      const where = {
+        Id: { in: contactIds },
+        ...(query && { FullName: { contains: query, mode: 'insensitive' as const } }),
+      };
+
+      const [totalElements, profiles] = await Promise.all([
+        this.prismaService.profile.count({ where }),
+        this.prismaService.profile.findMany({
+          where,
+          select: { Id: true, FullName: true, AvatarUrl: true },
+          orderBy: { FullName: 'asc' },
+          skip: offset,
+          take: pageSize,
+        }),
+      ]);
+
+      returnResult.Result = {
+        page: { ...page, totalElements },
+        data: profiles as unknown as Profile[],
+      };
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+    }
+    return returnResult;
+  }
 }

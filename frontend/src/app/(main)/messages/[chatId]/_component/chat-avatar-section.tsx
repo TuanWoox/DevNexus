@@ -5,7 +5,7 @@ import { Users, Camera, Pencil, Check, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Chat } from "@/features/messages/types/contracts";
-import { getAvatarUrl, getTitle, getInitials, getMediaUrl } from "@/features/messages/utils/message-service.helper";
+import { getAvatarUrl, getTitle, getInitials } from "@/features/messages/utils/message-service.helper";
 import { useUploadGroupPicture } from "@/features/messages/hooks/groups/use-upload-group-picture";
 import { useUpdateGroup } from "@/features/messages/hooks/groups/use-update-group";
 import { cn } from "@/lib/utils";
@@ -18,11 +18,8 @@ interface ChatAvatarSectionProps {
 export function ChatAvatarSection({ chat, currentProfileId }: ChatAvatarSectionProps) {
     const title = getTitle(chat, currentProfileId);
     const rawAvatarUrl = getAvatarUrl(chat, currentProfileId);
-    // Group pictures stored in message-service need the /medias prefix;
-    // member avatars from platform-core are already full URLs
-    const fullAvatarUrl = chat.IsGroup && rawAvatarUrl
-        ? getMediaUrl(rawAvatarUrl)
-        : rawAvatarUrl || undefined;
+    // getAvatarUrl already applies getMediaUrl() for group pictures
+    const fullAvatarUrl = rawAvatarUrl || undefined;
     const memberCount = chat.Members?.length ?? 0;
     const isRequest = chat?.ChatSettings?.find(
         (s) => s.ProfileId === currentProfileId
