@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState } from "react";
+import { useParams, useRouter, usePathname } from "next/navigation";
 import { MessageListSection } from "@/app/(main)/messages/_component/message-list-section";
 import { MessageTabs } from "@/app/(main)/messages/_component/message-tabs";
 import { MessageSearch } from "@/app/(main)/messages/_component/message-search";
 import { cn } from "@/lib/utils";
-import { InboxTab, Chat } from "@/features/messages/types/contracts";
+import { InboxTab, Chat, ProfileSummary } from "@/features/messages/types/contracts";
 import { useChatList } from "@/features/messages/hooks/chats/use-chat-list";
-import { useChatSearch } from "@/features/messages/hooks/chats/use-chat-search";
 import { useMessageGateway } from "@/features/messages/hooks/gateways/use-message-gateway";
 
 export default function MessagesLayout({ children }: { children: React.ReactNode }) {
@@ -16,21 +15,18 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
 
     const params = useParams();
     const router = useRouter();
+    const pathname = usePathname();
     const activeChatId = params?.chatId as string | undefined;
+    // Treat /messages/new and /messages/new-group as "right panel open" for mobile
+    const isRightPanelOpen = !!activeChatId
+        || pathname === "/messages/new"
+        || pathname === "/messages/new-group";
 
     const [activeTab, setActiveTab] = useState<InboxTab>("main");
     const [searchQuery, setSearchQuery] = useState("");
 
     const { chats: chatList, isLoading: chatsLoading, isFetchingMore: chatsFetchingMore,
         hasMore: chatsHasMore, loadMore: chatsLoadMore } = useChatList(30, activeTab);
-
-    const searchQueryHook = useChatSearch(searchQuery);
-
-    const searchResults = useMemo(() => {
-        return searchQueryHook.data?.pages?.flatMap(
-            (page) => page?.result?.data ?? []
-        ) ?? [];
-    }, [searchQueryHook.data?.pages]);
 
     const handleTabChange = (tab: InboxTab) => {
         setActiveTab(tab);
@@ -42,6 +38,11 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
         router.push(`/messages/${chat.Id}`);
     };
 
+    const handleSelectPerson = (profile: ProfileSummary) => {
+        setSearchQuery("");
+        router.push(`/messages/new?profileId=${profile.Id}`);
+    };
+
     return (
         <div className="flex h-[calc(100vh-3.5rem)] w-full sm:h-screen overflow-hidden bg-card">
 
@@ -50,8 +51,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                 className={cn(
                     "flex flex-col w-full md:w-85 lg:w-95 shrink-0",
                     "border-r border-border bg-card",
-                    // On mobile: hide the list when a chat is open
-                    activeChatId ? "hidden md:flex" : "flex",
+                    isRightPanelOpen ? "hidden md:flex" : "flex",
                 )}
             >
                 <div className="px-4 pt-5 pb-2">
@@ -62,27 +62,19 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                     <MessageSearch
                         value={searchQuery}
                         onChange={setSearchQuery}
-                        results={searchResults}
-                        isLoading={searchQueryHook.isLoading}
-                        isFetchingMore={searchQueryHook.isFetchingNextPage}
-                        hasMore={searchQueryHook.hasNextPage}
-                        onSelectResult={handleSelectChat}
-                        onLoadMore={() => {
-                            if (searchQueryHook.hasNextPage && !searchQueryHook.isFetchingNextPage) {
-                                searchQueryHook.fetchNextPage();
-                            }
-                        }}
+                        onSelectChat={handleSelectChat}
+                        onSelectPerson={handleSelectPerson}
                     />
                     <MessageTabs activeTab={activeTab} onTabChange={handleTabChange} />
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-2 py-2"
+                <div
+                    className="flex-1 overflow-y-auto px-2 py-2"
                     onScroll={(e) => {
-                        const element = e.currentTarget;
+                        const el = e.currentTarget;
                         if (
-                            element.scrollHeight - element.scrollTop - element.clientHeight < 100 &&
-                            chatsHasMore &&
-                            !chatsFetchingMore
+                            el.scrollHeight - el.scrollTop - el.clientHeight < 100 &&
+                            chatsHasMore && !chatsFetchingMore
                         ) {
                             chatsLoadMore();
                         }
@@ -103,8 +95,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
             <section
                 className={cn(
                     "flex min-h-0 flex-1 flex-col",
-                    // On mobile: show the right panel only when a chat is open
-                    activeChatId ? "flex" : "hidden md:flex",
+                    isRightPanelOpen ? "flex" : "hidden md:flex",
                 )}
             >
                 {children}

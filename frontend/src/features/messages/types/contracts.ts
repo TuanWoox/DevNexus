@@ -2,6 +2,15 @@ import { Page } from "@/types/common/page";
 
 export type InboxTab = "main" | "request" | "archived";
 
+export interface CreateChatDto {
+    profileIds: string[];
+    name?: string;
+    message: {
+        Content: string;
+        ChatId: string;
+    };
+}
+
 export interface PagedData<TKey, TEntity> {
     page: Page<TKey>;
     data: TEntity[];
