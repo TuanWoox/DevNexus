@@ -49,22 +49,14 @@ export function PrivacySettingsSection({ chat, onBack }: PrivacySettingsSectionP
     };
 
     const handleToggleArchive = () => {
-        const archiving = !mySetting.IsArchived;
-        updateChatSetting.mutate(
-            {
-                Id: mySetting.Id,
-                IsArchived: archiving,
-                IsRequested: false,
-                IsMuted: null,
-                IsPinned: null,
-                MuteUntil: null,
-            },
-            {
-                onSuccess: () => {
-                    if (archiving && onBack) onBack();
-                },
-            }
-        );
+        updateChatSetting.mutate({
+            Id: mySetting.Id,
+            IsArchived: !mySetting.IsArchived,
+            IsRequested: false,
+            IsMuted: null,
+            IsPinned: null,
+            MuteUntil: null,
+        });
     };
 
     const handleAcceptRequest = () => {

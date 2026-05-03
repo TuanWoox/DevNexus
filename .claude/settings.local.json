@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(npx tsc *)",
+      "Bash(git mv *)",
+      "Bash(npm run *)",
+      "Bash(git -C \"d:/UTE/UTE 2025 - 2026/FinalSemester/Capstone/DevNexus\" diff --name-only HEAD)"
+    ]
+  }
+}

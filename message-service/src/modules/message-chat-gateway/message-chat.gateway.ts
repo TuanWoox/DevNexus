@@ -104,10 +104,14 @@ export class MessageChatGateway
     }
 
     emitToUsers(profileIds: string[], event: string, data: unknown): void {
+        console.log("Emit ne", profileIds);
         for (const profileId of profileIds) {
             const socketIds = this.connections.get(profileId);
             if (!socketIds?.length) continue;
             for (const socketId of socketIds) {
+                console.log(socketIds);
+                console.log(event);
+                console.log(data);
                 this.io.to(socketId).emit(event, data);
             }
         }

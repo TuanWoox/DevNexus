@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Scope } from '@nestjs/common';
 import { UserContextService } from '../auth/userContext.service';
 import { PrismaService } from '../prisma-database/prisma.service';
 import { UserfollowsService } from '../userfollows/userfollows.service';
@@ -7,12 +7,15 @@ import { Chat, ChatRole, ChatSetting } from 'src/generated/prisma/client';
 import { UpdateChatSettingDTO, UpdateNickName } from './dto/update-chatsetting-dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-@Injectable()
+import { MessageChatGateway } from '../message-chat-gateway/message-chat.gateway';
+
+@Injectable({ scope: Scope.REQUEST })
 export class ChatsettingsService {
   constructor(
     private readonly userContext: UserContextService,
     private readonly prismaService: PrismaService,
     private readonly userfollowsService: UserfollowsService,
+    private readonly gateway: MessageChatGateway,
     @InjectQueue('chatsetting') private chatSettingQueue: Queue
   ) { }
 
@@ -122,6 +125,16 @@ export class ChatsettingsService {
         }
       }
 
+      this.gateway.emitToUsers(
+        [chatSetting.ProfileId],
+        'chat-setting-updated',
+        {
+          ...updatedEntity,
+          PreviousIsArchived: chatSetting.IsArchived,
+          PreviousIsRequested: chatSetting.IsRequested,
+        },
+      );
+
       returnResult.Result = updatedEntity;
     } catch (ex) {
       returnResult.Message =
@@ -168,7 +181,8 @@ export class ChatsettingsService {
     try {
       const chatSetting = await this.prismaService.chatSetting.findFirst({
         where: {
-          Id: id
+          Id: id,
+          ProfileId: this.userContext.getProfileId(),
         },
       })
       if (!chatSetting) {
@@ -187,11 +201,19 @@ export class ChatsettingsService {
 
       if (latestMessageId && chatSetting.DeleteUpToMessageId != latestMessageId.Id) {
         //When we delete all => also unpin
-        returnResult.Result = await this.prismaService.chatSetting.update({
+        const updatedSetting = await this.prismaService.chatSetting.update({
           where: { Id: id },
           data: { DeleteUpToMessageId: latestMessageId.Id, IsPinned: false },
           include: { Chat: true }
         });
+
+        this.gateway.emitToUsers(
+          [chatSetting.ProfileId],
+          'all-messages-deleted',
+          updatedSetting,
+        );
+
+        returnResult.Result = updatedSetting;
       } else if (chatSetting.DeleteUpToMessageId == latestMessageId?.Id) {
         returnResult.Message = "You have already deleted up to the newest message"
       } else returnResult.Message = "Cant find"

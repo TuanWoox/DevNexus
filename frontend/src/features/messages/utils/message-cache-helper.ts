@@ -1,5 +1,5 @@
 import type { InfiniteData, QueryClient } from "@tanstack/react-query";
-import type { Chat, InboxTab, Message, PagedData, ReadReceipt } from "../types/contracts";
+import type { Chat, InboxTab, Media, Message, PagedData, ReadReceipt } from "../types/contracts";
 import type { ReturnResult } from "@/types/common/return-result";
 import { messagingQueryKeys } from "../hooks/messaging-query-keys";
 
@@ -8,6 +8,9 @@ type MessagesInfiniteData = InfiniteData<MessagesPage>;
 
 type ChatListPage = ReturnResult<PagedData<string, Chat>>;
 type ChatListInfiniteData = InfiniteData<ChatListPage>;
+
+type MediaPage = ReturnResult<PagedData<string, Media>>;
+type MediaInfiniteData = InfiniteData<MediaPage>;
 
 export function prependMessageToCache(
     oldData: MessagesInfiniteData | undefined,
@@ -44,10 +47,64 @@ export function appendMessageToChatCache(
         prependMessageToCache(oldData, message),
     );
 
-    // Invalidate media cache if the message has media attachments
     if (message.Medias?.length > 0) {
-        queryClient.invalidateQueries({
-            queryKey: messagingQueryKeys.chatMediaAll(message.ChatId),
+        optimisticPrependMedia(queryClient, message.ChatId, message.Medias);
+    }
+}
+
+export function optimisticPrependMedia(
+    queryClient: QueryClient,
+    chatId: string,
+    newMediaItems: Media[],
+): void {
+    if (!newMediaItems.length) return;
+
+    // Update the specific-type cache key for each media type present, plus the "" (all) key
+    const types = [...new Set(newMediaItems.map(m => m.Type)), "" as string];
+
+    for (const mediaType of types) {
+        const cacheKey = messagingQueryKeys.chatMedia(chatId, mediaType);
+        const oldData = queryClient.getQueryData<MediaInfiniteData>(cacheKey);
+
+        // User hasn't opened media panel for this type yet
+        if (!oldData?.pages?.length) continue;
+
+        const loadedPageCount = oldData.pages.length;
+        const MEDIA_PAGE_SIZE = 30;
+
+        const itemsForType = mediaType
+            ? newMediaItems.filter(m => m.Type === mediaType)
+            : newMediaItems;
+
+        if (!itemsForType.length) continue;
+
+        const allMedia: Media[] = oldData.pages.flatMap(p => p.result?.data ?? []);
+
+        // Dedup by Media.Id
+        const existingIds = new Set(allMedia.map(m => m.Id));
+        const toInsert = itemsForType.filter(m => !existingIds.has(m.Id));
+
+        if (!toInsert.length) continue;
+
+        const combined = [...toInsert, ...allMedia];
+
+        // Cut at loaded boundary — overflow served by server on next fetchNextPage
+        const trimmed = combined.slice(0, loadedPageCount * MEDIA_PAGE_SIZE);
+
+        const newPages = oldData.pages.map((page, pageIndex) => {
+            const start = pageIndex * MEDIA_PAGE_SIZE;
+            const pageData = trimmed.slice(start, start + MEDIA_PAGE_SIZE);
+            return {
+                ...page,
+                result: page.result
+                    ? { ...page.result, data: pageData }
+                    : page.result,
+            };
+        });
+
+        queryClient.setQueryData<MediaInfiniteData>(cacheKey, {
+            ...oldData,
+            pages: newPages,
         });
     }
 }
@@ -166,10 +223,17 @@ export function appendReadReceiptToChatListItem(
     queryClient: QueryClient,
     chatId: string,
     messageId: number,
-    receipt: { ReaderId: string; ReadAt: string; Reader?: { FullName: string; AvatarUrl: string | null } }
+    receipt: { ReaderId: string; ReadAt: string; Reader?: { FullName: string; AvatarUrl: string | null } },
+    chatSetting?: { IsArchived: boolean; IsRequested: boolean } | null
 ): void {
-    console.log(messageId);
-    const tabTypes: string[] = ["main", "request", "archived"];
+    let tabTypes: string[];
+    if (chatSetting !== undefined) {
+        if (chatSetting?.IsArchived) tabTypes = ["archived"];
+        else if (chatSetting?.IsRequested) tabTypes = ["request"];
+        else tabTypes = ["main"];
+    } else {
+        tabTypes = ["main", "request", "archived"];
+    }
     for (const type of tabTypes) {
         const chatListKey = messagingQueryKeys.chat(type);
         const oldData = queryClient.getQueryData<ChatListInfiniteData>(chatListKey);

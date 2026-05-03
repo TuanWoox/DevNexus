@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useSelector } from "react-redux";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { RootState } from "@/store/store";
-import type { Message } from "../../types/contracts";
+import type { ChatSetting, Message } from "../../types/contracts";
 import { getProfileId, getWsBaseUrl } from "../../utils/message-service.helper";
 import {
     appendMessageToChatCache,
@@ -13,12 +14,19 @@ import {
     appendReadReceiptToMessage,
     optimisticUpdateChatList,
 } from "../../utils/message-cache-helper";
+import { messagingQueryKeys } from "../messaging-query-keys";
 
 interface MessageReadPayload {
     messageId: number;
     readerId: string;
     chatId: string;
     reader: { FullName: string; AvatarUrl: string | null };
+    chatSetting: { IsArchived: boolean; IsRequested: boolean } | null;
+}
+
+interface ChatSettingUpdatedPayload extends ChatSetting {
+    PreviousIsArchived: boolean;
+    PreviousIsRequested: boolean;
 }
 
 export function useMessageGateway() {
@@ -31,6 +39,7 @@ export function useMessageGateway() {
         getProfileId(state.auth.user?.profileId),
     );
     const queryClient = useQueryClient();
+    const router = useRouter();
 
     useEffect(() => {
         audioRef.current = new Audio("/sounds/receive.mp3");
@@ -103,7 +112,32 @@ export function useMessageGateway() {
             };
 
             appendReadReceiptToMessage(queryClient, payload.chatId, payload.messageId, receipt);
-            appendReadReceiptToChatListItem(queryClient, payload.chatId, payload.messageId, receipt);
+            appendReadReceiptToChatListItem(queryClient, payload.chatId, payload.messageId, receipt, payload.chatSetting);
+        });
+
+        socket.on("chat-setting-updated", (payload: ChatSettingUpdatedPayload) => {
+            const sourceTab = payload.PreviousIsArchived ? "archived" : payload.PreviousIsRequested ? "request" : "main";
+            const targetTab = payload.IsArchived ? "archived" : payload.IsRequested ? "request" : "main";
+
+            queryClient.invalidateQueries({ queryKey: messagingQueryKeys.chat(sourceTab) });
+            if (sourceTab !== targetTab) {
+                queryClient.invalidateQueries({ queryKey: messagingQueryKeys.chat(targetTab) });
+                if (window.location.pathname.includes(payload.ChatId)) {
+                    router.push("/messages");
+                }
+            }
+        });
+
+        socket.on("all-messages-deleted", (setting: ChatSetting) => {
+            queryClient.removeQueries({ queryKey: messagingQueryKeys.messagesInsideChat(setting.ChatId) });
+            queryClient.removeQueries({ queryKey: messagingQueryKeys.chatMediaAll(setting.ChatId) });
+
+            const tab = setting.IsArchived ? "archived" : setting.IsRequested ? "request" : "main";
+            queryClient.invalidateQueries({ queryKey: messagingQueryKeys.chat(tab) });
+
+            if (window.location.pathname.includes(setting.ChatId)) {
+                router.push("/messages");
+            }
         });
 
         // Group events — invalidate relevant queries so UI stays in sync

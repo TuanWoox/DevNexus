@@ -206,21 +206,38 @@ export class MessagesService {
         });
       }
 
-      this.gateway.emitToUsers(
-        [latestMessage.SenderId],
-        'message-read',
-        {
-          messageId: latestMessage.Id,
-          readerId: profileId,
-          chatId,
-          reader: {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            FullName: receipt?.FullName ?? 'Unknown',
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            AvatarUrl: receipt.Reader?.AvatarUrl ?? null,
-          },
+      const chatSettings = await this.prismaService.chatSetting.findMany({
+        where: {
+          ChatId: chatId,
+          ProfileId: { in: [profileId, latestMessage.SenderId] },
         },
-      );
+        select: { ProfileId: true, IsArchived: true, IsRequested: true },
+      });
+
+      const readerSetting = chatSettings.find(s => s.ProfileId === profileId) ?? null;
+      const senderSetting = chatSettings.find(s => s.ProfileId === latestMessage.SenderId) ?? null;
+
+      const basePayload = {
+        messageId: latestMessage.Id,
+        readerId: profileId,
+        chatId,
+        reader: {
+          FullName: receipt.Reader?.FullName ?? 'Unknown',
+          AvatarUrl: receipt.Reader?.AvatarUrl ?? null,
+        },
+      };
+
+      this.gateway.emitToUsers([latestMessage.SenderId], 'message-read', {
+        ...basePayload,
+        chatSetting: senderSetting ? { IsArchived: senderSetting.IsArchived, IsRequested: senderSetting.IsRequested } : null,
+      });
+
+      if (profileId !== latestMessage.SenderId) {
+        this.gateway.emitToUsers([profileId], 'message-read', {
+          ...basePayload,
+          chatSetting: readerSetting ? { IsArchived: readerSetting.IsArchived, IsRequested: readerSetting.IsRequested } : null,
+        });
+      }
 
       returnResult.Result = receipt;
     } catch (ex) {
