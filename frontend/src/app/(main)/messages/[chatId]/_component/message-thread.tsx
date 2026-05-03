@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { MessageBubble } from "./message-bubble";
+import { TypingIndicator } from "./typing-indicator";
 import { Message } from "@/features/messages/types/contracts";
 
 import { cn } from "@/lib/utils";
@@ -13,6 +14,8 @@ interface MessageThreadProps {
     hasMore?: boolean;
     isLoadingMore?: boolean;
     onEdit: (message: Message) => void;
+    chatId: string;
+    isGroup: boolean;
 }
 
 
@@ -23,6 +26,8 @@ export function MessageThread({
     hasMore,
     isLoadingMore,
     onEdit,
+    chatId,
+    isGroup,
 }: MessageThreadProps) {
     const bottomRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -95,6 +100,9 @@ export function MessageThread({
             onScroll={handleScroll}
             className="flex flex-1 flex-col-reverse overflow-y-auto px-4 py-3"
         >
+            {/* Typing indicator — visually at bottom-left, like an incoming message */}
+            <TypingIndicator chatId={chatId} isGroup={isGroup} />
+
             {/* 👇 bottom anchor (visually bottom because of reverse) */}
             <div ref={bottomRef} />
 

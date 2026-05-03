@@ -200,5 +200,5 @@ export function useMessageGateway() {
         };
     }, [token, currentProfileId, queryClient]);
 
-    return { isConnected };
+    return { isConnected, socketRef };
 }

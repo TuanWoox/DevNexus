@@ -11,7 +11,8 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { getProfileId } from "@/features/messages/utils/message-service.helper";
 import { useMessageList } from "@/features/messages/hooks/messages/use-message-list";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSocket } from "@/features/messages/context/socket-context";
 
 interface PersonalChatPanelProps {
     selectedChat: Chat;
@@ -23,6 +24,17 @@ export function PersonalChatPanel({ selectedChat }: PersonalChatPanelProps) {
     const { messages, isLoading, hasMore, loadMore, isFetchingMore } = useMessageList(selectedChat?.Id ?? "", 30);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+
+    const { socketRef, isConnected } = useSocket();
+
+    useEffect(() => {
+        const socket = socketRef.current;
+        if (!socket || !isConnected) return;
+        socket.emit("join-chat", { chatId: selectedChat.Id });
+        return () => {
+            socket.emit("leave-chat", { chatId: selectedChat.Id });
+        };
+    }, [selectedChat.Id, socketRef, isConnected]);
 
     const handleBack = () => router.push("/messages");
 
@@ -51,6 +63,8 @@ export function PersonalChatPanel({ selectedChat }: PersonalChatPanelProps) {
                     hasMore={hasMore}
                     isLoadingMore={isFetchingMore}
                     onEdit={setEditingMessage}
+                    chatId={selectedChat.Id}
+                    isGroup={false}
                 />
 
                 <div className="border-t border-border px-4 py-3">

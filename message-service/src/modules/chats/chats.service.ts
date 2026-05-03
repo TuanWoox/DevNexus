@@ -146,7 +146,7 @@ export class ChatsService {
 
       const includeClause = {
         Members: {
-          where: { MemberId: { not: profileId } },
+          // do NOT filter out current user — frontend needs own member entry to emit typing events
           include: {
             Member: { select: { FullName: true, AvatarUrl: true } },
           },
@@ -264,7 +264,7 @@ export class ChatsService {
         },
         include: {
           Members: {
-            where: { MemberId: { not: profileId } },
+            // do NOT filter out current user — frontend needs own member entry to emit typing events
             include: {
               Member: { select: { FullName: true, AvatarUrl: true } },
             },
@@ -318,7 +318,6 @@ export class ChatsService {
       // Same include as getPaging so frontend gets the full Chat shape
       const includeClause = {
         Members: {
-          where: { MemberId: { not: profileId } },
           include: {
             Member: { select: { FullName: true, AvatarUrl: true } },
           },

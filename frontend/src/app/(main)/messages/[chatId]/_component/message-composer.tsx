@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useId, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useId, useRef, useState } from "react";
 import { Paperclip, Send, X, Play, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useCreateMessage } from "@/features/messages/hooks/messages/use-create-message";
 import { useMarkMessageAsRead } from "@/features/messages/hooks/messages/use-mark-message-as-read";
 import { useUpdateMessage } from "@/features/messages/hooks/messages/use-update-message";
+import { useSocket } from "@/features/messages/context/socket-context";
 import { Chat, Message } from "@/features/messages/types/contracts";
 import { toast } from "sonner";
 
@@ -31,6 +32,7 @@ export function MessageComposer({ selectedChat, messages, currentProfileId, edit
     const createMessage = useCreateMessage();
     const updateMessage = useUpdateMessage();
     const markAsRead = useMarkMessageAsRead();
+    const { socketRef } = useSocket();
     const [value, setValue] = useState("");
     const [isSending, setIsSending] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -40,8 +42,49 @@ export function MessageComposer({ selectedChat, messages, currentProfileId, edit
     const pendingRefocus = useRef(false);
     const fileInputId = useId();
     const lastReadMessageId = useRef<number | null>(null);
+    const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isImage = selectedFile?.type.startsWith("image/");
     const isVideo = selectedFile?.type.startsWith("video/");
+
+    const currentMember = selectedChat?.Members?.find(m => m.MemberId === currentProfileId);
+
+    const emitTypingStop = useCallback(() => {
+        if (!selectedChat) return;
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+            typingTimeoutRef.current = null;
+        }
+        socketRef.current?.emit("typing-stop", { chatId: selectedChat.Id });
+    }, [socketRef, selectedChat]);
+
+    const emitTyping = useCallback(() => {
+        const socket = socketRef.current;
+        console.log(selectedChat);
+        if (!socket || !selectedChat || !currentMember) return;
+
+        socket.emit("typing-start", {
+            chatId: selectedChat.Id,
+            FullName: currentMember.Member.FullName,
+            AvatarUrl: currentMember.Member.AvatarUrl ?? null,
+        });
+
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => {
+            socket.emit("typing-stop", { chatId: selectedChat.Id });
+            typingTimeoutRef.current = null;
+        }, 3000);
+    }, [socketRef, selectedChat, currentMember]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        const socket = socketRef.current;
+        const chatId = selectedChat?.Id;
+        return () => {
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+            socket?.emit("typing-stop", { chatId });
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         if (pendingRefocus.current && !isSending && !createMessage.isPending) {
@@ -103,6 +146,7 @@ export function MessageComposer({ selectedChat, messages, currentProfileId, edit
                 if (content && content !== editingMessage.Content) {
                     await updateMessage.mutateAsync({ messageId: editingMessage.Id, content });
                 }
+                emitTypingStop();
                 onCancelEdit();
                 setValue("");
             } else {
@@ -111,6 +155,7 @@ export function MessageComposer({ selectedChat, messages, currentProfileId, edit
                     createMessageDto: { ChatId: selectedChat.Id, Content: content || "" },
                     file: selectedFile ?? undefined,
                 });
+                emitTypingStop();
                 resetComposer();
             }
         } finally {
@@ -133,6 +178,7 @@ export function MessageComposer({ selectedChat, messages, currentProfileId, edit
         setValue(e.target.value);
         e.target.style.height = "auto";
         e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+        emitTyping();
     };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
