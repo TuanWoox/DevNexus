@@ -9,8 +9,8 @@ import { ChatAvatarSection } from "./chat-avatar-section";
 import { MediaSection } from "./media-section";
 import { PrivacySettingsSection } from "./privacy-settings-section";
 import { DeleteAllMessagesSection } from "./delete-all-messages-section";
-import { GroupMemberList } from "../group/group-member-list";
-import { GroupAddMembersDialog } from "../group/group-add-members-dialog";
+import { GroupMemberList } from "./group/group-member-list";
+import { GroupAddMembersDialog } from "./group/group-add-members-dialog";
 
 interface ChatDetailPanelProps {
     chat: Chat;

@@ -1,8 +1,8 @@
 "use client";
 
-import { MessageListItem } from "@/app/(main)/messages/_component/common/message-list-item";
-import { MessageListSkeleton } from "@/app/(main)/messages/_component/common/message-list-skeleton";
-import { MessageEmptyState } from "@/app/(main)/messages/_component/common/message-empty-state";
+import { MessageListItem } from "@/app/(main)/messages/_component/message-list-item";
+import { MessageListSkeleton } from "@/app/(main)/messages/_component/message-list-skeleton";
+import { MessageEmptyState } from "@/app/(main)/messages/_component/message-empty-state";
 import { Chat, InboxTab } from "@/features/messages/types/contracts";
 
 interface MessageListSectionProps {

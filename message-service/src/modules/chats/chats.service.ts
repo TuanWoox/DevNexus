@@ -160,7 +160,7 @@ export class ChatsService {
           include: {
             Sender: { select: { FullName: true, AvatarUrl: true } },
             ReadReceipts: {
-              where: { ReaderId: { equals: profileId } },
+              // where: { ReaderId: { equals: profileId } },
               include: {
                 Reader: { select: { FullName: true, AvatarUrl: true } },
               },
@@ -247,6 +247,55 @@ export class ChatsService {
       returnResult.Result = { page, data: collected };
     } catch (ex) {
       console.log(ex);
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+    }
+    return returnResult;
+  }
+
+  async getChatById(chatId: string) {
+    const returnResult = new ReturnResult<Chat>();
+    try {
+      const profileId = this.userContext.getProfileId();
+
+      const chat = await this.prismaService.chat.findFirst({
+        where: {
+          Id: chatId,
+          Members: { some: { MemberId: profileId } },
+        },
+        include: {
+          Members: {
+            where: { MemberId: { not: profileId } },
+            include: {
+              Member: { select: { FullName: true, AvatarUrl: true } },
+            },
+          },
+          ChatSettings: {
+            where: { ProfileId: { equals: profileId } },
+          },
+          Messages: {
+            orderBy: { DateCreated: 'desc' as const },
+            take: 1,
+            include: {
+              Sender: { select: { FullName: true, AvatarUrl: true } },
+              ReadReceipts: {
+                where: { ReaderId: { equals: profileId } },
+                include: {
+                  Reader: { select: { FullName: true, AvatarUrl: true } },
+                },
+              },
+              Medias: true,
+            },
+          },
+        },
+      });
+
+      if (!chat) {
+        returnResult.Message = 'Chat not found or access denied';
+        return returnResult;
+      }
+
+      returnResult.Result = chat;
+    } catch (ex) {
       returnResult.Message = ex instanceof Error ? ex.message : String(ex);
     }
     return returnResult;

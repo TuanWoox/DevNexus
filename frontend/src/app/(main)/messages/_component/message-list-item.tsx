@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Chat } from "@/features/messages/types/contracts";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,7 +16,15 @@ interface MessageListItemProps {
 }
 
 export function MessageListItem({ item, isActive = false, onSelect }: MessageListItemProps) {
+    const router = useRouter();
     const currentProfileId = useSelector((state: RootState) => getProfileId(state.auth.user?.profileId));
+    const handleSelect = () => {
+        if (onSelect) {
+            onSelect(item);
+        } else {
+            router.push(`/messages/${item.Id}`);
+        }
+    };
     const title = getTitle(item, currentProfileId);
     const avatarUrl = getAvatarUrl(item, currentProfileId);
 
@@ -40,7 +49,7 @@ export function MessageListItem({ item, isActive = false, onSelect }: MessageLis
     return (
         <button
             type="button"
-            onClick={() => onSelect?.(item)}
+            onClick={handleSelect}
             className={cn(
                 "group flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors duration-150",
                 "hover:bg-accent/40",

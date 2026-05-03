@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, UseGuards, UseInterceptors, UploadedFile, Query, } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpCode, UseGuards, UseInterceptors, UploadedFile, Query, Param } from '@nestjs/common';
 import { ChatsService } from './chats.service';
 import type { CreateChatDto } from './dto/create-chat.dto';
 import { AuthGuard } from '../auth/auth.guard';
@@ -58,6 +58,23 @@ export class ChatsController {
     let returnResult = new ReturnResult<PagedData<string, Chat>>();
     try {
       returnResult = await this.chatsService.searchContactsAndGroups(page);
+    }
+    catch (ex) {
+      if (ex instanceof Error) {
+        returnResult.Message = ex.message;
+      } else {
+        returnResult.Message = String(ex);
+      }
+    }
+    return returnResult;
+  }
+
+  @Get(':chatId')
+  @HttpCode(200)
+  async getById(@Param('chatId') chatId: string) {
+    let returnResult = new ReturnResult<Chat>();
+    try {
+      returnResult = await this.chatsService.getChatById(chatId);
     }
     catch (ex) {
       if (ex instanceof Error) {

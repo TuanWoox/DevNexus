@@ -12,5 +12,10 @@ export const chatService = {
     searchChats: async (page: Page<string>) => {
         const { data } = await messageApi.post<ReturnResult<PagedData<string, Chat>>>('/chats/search', page)
         return data;
-    }
+    },
+
+    getChatById: async (chatId: string) => {
+        const { data } = await messageApi.get<ReturnResult<Chat>>(`/chats/${chatId}`);
+        return data;
+    },
 }
