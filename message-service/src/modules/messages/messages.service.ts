@@ -9,6 +9,7 @@ import { MediasService } from '../medias/medias.service';
 import { MessageChatGateway } from '../message-chat-gateway/message-chat.gateway';
 import { Page } from 'src/shared/dtos/paging/page';
 import { PagedData } from 'src/shared/dtos/paging/pagedData';
+import { ChatsQueryService } from '../chats/chats-query.service';
 
 
 @Injectable({ scope: Scope.REQUEST })
@@ -20,6 +21,7 @@ export class MessagesService {
     private readonly profileBlocksService: ProfileblocksService,
     private readonly mediasService: MediasService,
     private readonly gateway: MessageChatGateway,
+    private readonly chatsQueryService: ChatsQueryService,
   ) { }
 
   async createMessage(createEntity: CreateMessageDto, file?: Express.Multer.File) {
@@ -36,13 +38,9 @@ export class MessagesService {
       const chat = await this.prismaService.chat.findFirst({
         where: {
           Id: createEntity.ChatId,
-          Members: {
-            some: { MemberId: profileId }
-          }
+          Members: { some: { MemberId: profileId } }
         },
-        include: {
-          Members: true,
-        }
+        include: { Members: true },
       });
 
       if (!chat) {
@@ -50,7 +48,8 @@ export class MessagesService {
         return returnResult;
       }
 
-      const otherMemberIds = chat.Members.filter(x => x.MemberId !== profileId).map(x => x.MemberId);
+      const memberIds = chat.Members.map(x => x.MemberId);
+      const otherMemberIds = memberIds.filter(id => id !== profileId);
       const profileBlocks = await this.profileBlocksService.checkBlocks(otherMemberIds);
       if (profileBlocks) {
         returnResult.Message = "Forbidden";
@@ -67,50 +66,56 @@ export class MessagesService {
 
       if (createMessage) {
         await this.prismaService.chat.update({
-          where: {
-            Id: createEntity.ChatId
-          },
-          data: {
-            DateModified: new Date()
-          }
-        })
+          where: { Id: createEntity.ChatId },
+          data: { DateModified: new Date() }
+        });
         if (file) {
           await this.mediasService.handleUpload(file, createMessage.Id);
         }
       }
 
-      const newlyCreatedMessage = await this.prismaService.message.findFirst({
-        where: {
-          Id: createMessage.Id
-        },
-        include: {
-          Chat: {
-            include: {
-              ChatSettings: {
-                where: {
-                  ProfileId: profileId
-                }
-              }
-            }
-          },
-          Sender: { select: { FullName: true, AvatarUrl: true } },
-          ReadReceipts: {
-            where: { ReaderId: { not: profileId } },
-            include: {
-              Reader: { select: { FullName: true, AvatarUrl: true } },
+      // Query message data and full chat (with ALL ChatSettings) in parallel
+      const [messageOnly, chatResult] = await Promise.all([
+        this.prismaService.message.findFirst({
+          where: { Id: createMessage.Id },
+          include: {
+            Sender: { select: { FullName: true, AvatarUrl: true } },
+            ReadReceipts: {
+              where: { ReaderId: { not: profileId } },
+              include: {
+                Reader: { select: { FullName: true, AvatarUrl: true } },
+              },
             },
+            Medias: true,
           },
-          Medias: true
-        }
-      })
+        }),
+        this.chatsQueryService.getChatByIdWithAllSettings(createEntity.ChatId, profileId),
+      ]);
 
-      // Emit new-message to all other chat members — frontend handles
-      // whether to show notification or silently insert (requested vs accepted)
-      if (otherMemberIds.length > 0) {
-        this.gateway.emitToUsers(otherMemberIds, 'new-message', newlyCreatedMessage);
+      if (!messageOnly || !chatResult.Result) {
+        returnResult.Message = "Failed to load created message or chat";
+        return returnResult;
       }
 
-      returnResult.Result = newlyCreatedMessage!;
+      const fullChat = chatResult.Result;
+
+      const buildPayloadFor = (targetProfileId: string) => {
+        const ownSetting = chatResult?.Result?.ChatSettings?.find(cs => cs.ProfileId === targetProfileId);
+        return {
+          ...messageOnly,
+          Chat: {
+            ...fullChat,
+            ChatSettings: ownSetting ? [ownSetting] : [],
+          },
+        };
+      };
+
+      // Emit to ALL members including sender for multi-device sync
+      for (const memberId of memberIds) {
+        this.gateway.emitToUsers([memberId], 'new-message', buildPayloadFor(memberId));
+      }
+
+      returnResult.Result = buildPayloadFor(profileId) as unknown as Message;
     }
     catch (ex) {
       returnResult.Message = ex instanceof Error ? ex.message : String(ex);
@@ -252,10 +257,6 @@ export class MessagesService {
       const deleteUpTo = chat.ChatSettings[0]?.DeleteUpToMessageId ?? null;
       const pageSize = page.size || 30;
 
-
-      console.log("Delete up to", deleteUpTo)
-      console.log("Index paging", page.indexPaging);
-
       const idFilter: { lt?: number; gt?: number } = {};
       if (page.indexPaging) idFilter.lt = page.indexPaging;
       if (deleteUpTo) idFilter.gt = deleteUpTo;
@@ -284,8 +285,6 @@ export class MessagesService {
         take: pageSize,
         orderBy: [{ Id: 'desc' }],
       });
-
-      console.log(messages);
 
       returnResult.Result = { page: { ...page }, data: messages };
     } catch (ex) {

@@ -15,6 +15,12 @@ export function prependMessageToCache(
 ): MessagesInfiniteData | undefined {
     if (!oldData?.pages?.length) return oldData;
 
+    // Skip if message already exists — handles sender receiving both API response and socket event
+    const alreadyExists = oldData.pages.some(page =>
+        page.result?.data?.some(m => m.Id === newMessage.Id)
+    );
+    if (alreadyExists) return oldData;
+
     const pages = oldData.pages.map((page, i) => {
         if (i !== 0 || !page.result) return page;
         return {
@@ -32,20 +38,11 @@ export function prependMessageToCache(
 export function appendMessageToChatCache(
     queryClient: QueryClient,
     message: Message,
-    fromOwnCreate: boolean = false
 ): void {
     const chatKey = messagingQueryKeys.messagesInsideChat(message.ChatId);
     queryClient.setQueryData<MessagesInfiniteData>(chatKey, (oldData) =>
         prependMessageToCache(oldData, message),
     );
-
-    const chatSettings = message?.Chat?.ChatSettings?.[0];
-    let type: InboxTab = "main";
-    if (chatSettings?.IsArchived) {
-        type = "archived";
-    } else if (chatSettings?.IsRequested) {
-        type = "request";
-    }
 
     // Invalidate media cache if the message has media attachments
     if (message.Medias?.length > 0) {
@@ -53,21 +50,78 @@ export function appendMessageToChatCache(
             queryKey: messagingQueryKeys.chatMediaAll(message.ChatId),
         });
     }
-
-    invalidateAllChats(queryClient, type, fromOwnCreate);
 }
 
-//Can optimized later, but row we just use it for demo as soon as possible
-export function invalidateAllChats(queryClient: QueryClient, type: InboxTab, fromOwnCreate: boolean = true): void {
-    //fromOwnCreate = true mean we receive message from other people, if false we create and then append
-    if (!fromOwnCreate) queryClient.invalidateQueries({ queryKey: ["messages", "chats"] });
-    else {
-        queryClient.invalidateQueries({ queryKey: ["messages", "chats", type] });
-        const arrayOfType = ["main", "archived", "requested"].filter(x => x.toLowerCase() !== type.toLowerCase());
-        arrayOfType.map(x => {
-            queryClient.removeQueries({ queryKey: ["messages", "chats", x] })
-        })
+const PAGE_SIZE = 30;
+
+export function optimisticUpdateChatList(
+    queryClient: QueryClient,
+    message: Message,
+): void {
+    const chatSettings = message?.Chat?.ChatSettings?.[0];
+    if (!chatSettings) return;
+
+    let type: InboxTab = "main";
+    if (chatSettings.IsArchived) {
+        type = "archived";
+    } else if (chatSettings.IsRequested) {
+        type = "request";
     }
+
+    const chatListKey = messagingQueryKeys.chat(type);
+    const oldData = queryClient.getQueryData<ChatListInfiniteData>(chatListKey);
+
+    // No cache yet — user hasn't opened this tab
+    if (!oldData?.pages?.length) return;
+
+    const loadedPageCount = oldData.pages.length;
+
+    const updatedChat: Chat = {
+        ...message.Chat,
+        Messages: [message],
+    };
+
+    // Flatten all pages into one array
+    const allChats: Chat[] = oldData.pages.flatMap(p => p.result?.data ?? []);
+
+    // Remove the chat if it already exists (will re-insert at correct position)
+    const existingIndex = allChats.findIndex(c => c.Id === message.ChatId);
+    if (existingIndex !== -1) {
+        allChats.splice(existingIndex, 1);
+    }
+
+    // Insert at correct position
+    if (type === "main") {
+        const pinnedIndex = allChats.findIndex(c => c.ChatSettings?.[0]?.IsPinned);
+        if (pinnedIndex !== -1) {
+            allChats.splice(pinnedIndex + 1, 0, updatedChat);
+        } else {
+            allChats.unshift(updatedChat);
+        }
+    } else {
+        allChats.unshift(updatedChat);
+    }
+
+    // Cut at loaded boundary — overflow will be served by server on next fetchNextPage
+    const maxItems = loadedPageCount * PAGE_SIZE;
+    const trimmedChats = allChats.slice(0, maxItems);
+
+    // Redistribute back into the same number of pages
+    const newPages = oldData.pages.map((page, pageIndex) => {
+        const start = pageIndex * PAGE_SIZE;
+        const pageChats = trimmedChats.slice(start, start + PAGE_SIZE);
+        return {
+            ...page,
+            result: page.result
+                ? { ...page.result, data: pageChats }
+                : page.result,
+        };
+    });
+
+    queryClient.setQueryData<ChatListInfiniteData>(chatListKey, {
+        ...oldData,
+        pages: newPages,
+    });
 }
 
 export function appendReadReceiptToMessage(

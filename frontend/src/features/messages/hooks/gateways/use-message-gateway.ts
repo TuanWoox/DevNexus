@@ -10,7 +10,8 @@ import { getProfileId, getWsBaseUrl } from "../../utils/message-service.helper";
 import {
     appendMessageToChatCache,
     appendReadReceiptToChatListItem,
-    appendReadReceiptToMessage
+    appendReadReceiptToMessage,
+    optimisticUpdateChatList,
 } from "../../utils/message-cache-helper";
 
 interface MessageReadPayload {
@@ -80,8 +81,10 @@ export function useMessageGateway() {
         });
 
         socket.on("new-message", (message: Message) => {
-            if (!message?.Chat?.ChatSettings?.[0].IsMuted && !message?.Chat?.ChatSettings?.[0].IsArchived
-                && !message?.Chat?.ChatSettings?.[0].IsRequested) {
+            const isFromSelf = message.SenderId === currentProfileId;
+            const settings = message?.Chat?.ChatSettings?.[0];
+
+            if (!isFromSelf && !settings?.IsMuted && !settings?.IsArchived && !settings?.IsRequested) {
                 if (audioRef.current) {
                     audioRef.current.currentTime = 0;
                     audioRef.current.play().catch(() => { });
@@ -89,6 +92,7 @@ export function useMessageGateway() {
             }
 
             appendMessageToChatCache(queryClient, message);
+            optimisticUpdateChatList(queryClient, message);
         });
 
         socket.on("message-read", (payload: MessageReadPayload) => {
