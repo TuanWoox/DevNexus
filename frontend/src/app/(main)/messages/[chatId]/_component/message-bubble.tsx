@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+"use client";
+
+import { useMemo, useState } from "react";
 import { Message, MediaType, ProfileSummary } from "@/features/messages/types/contracts";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toRelativeTime, getInitials, getMediaUrl } from "@/features/messages/utils/message-service.helper";
-import { Check, Download, FileText, FileArchive, MoreVertical, Trash2 } from "lucide-react";
+import { Check, Download, FileText, FileArchive, MoreVertical, Trash2, Pencil } from "lucide-react";
 import { MediaLightbox } from "./media-lightbox";
 import { ReadReceiptOverlay } from "./read-receipt-overlay";
 import {
@@ -16,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useDeleteMessage } from "@/features/messages/hooks/messages/use-delete-message";
 import { useUndoDeleteMessage } from "@/features/messages/hooks/messages/use-undo-delete-message";
+import { MessageEditHistoryOverlay } from "./message-edit-history-overlay";
 
 const MAX_VISIBLE_AVATARS = 3;
 
@@ -26,6 +29,7 @@ interface MessageBubbleProps {
     currentProfileId: string;
     showAvatar: boolean;
     isLastOwn: boolean;
+    onEdit: (message: Message) => void;
 }
 
 function MediaAttachment({
@@ -148,9 +152,11 @@ export function MessageBubble({
     isMine,
     showAvatar,
     isLastOwn,
+    onEdit,
 }: MessageBubbleProps) {
     const hasMedias = message.Medias && message.Medias.length > 0;
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+    const [historyOpen, setHistoryOpen] = useState(false);
 
     const openLightbox = (index: number) => setLightboxIndex(index);
     const closeLightbox = () => setLightboxIndex(null);
@@ -160,6 +166,11 @@ export function MessageBubble({
 
     const { mutate: deleteMessage } = useDeleteMessage();
     const { mutate: undoDeleteMessage } = useUndoDeleteMessage();
+
+    const canEdit = useMemo(() => {
+        const ageMs = Date.now() - new Date(message.DateCreated).getTime();
+        return ageMs < 5 * 60 * 1000 && !!message.Content;
+    }, [message.DateCreated, message.Content]);
 
     return (
         <>
@@ -231,6 +242,16 @@ export function MessageBubble({
                         )
                     )}
 
+                    {/* (edited) label */}
+                    {message.IsEdited && !message.IsDeleted && (
+                        <button
+                            onClick={() => setHistoryOpen(true)}
+                            className="text-[10px] text-muted-foreground/70 hover:text-muted-foreground underline px-1"
+                        >
+                            (edited)
+                        </button>
+                    )}
+
                     {/* Reader avatars / Sent — only on the last own message */}
                     {isMine && isLastOwn && (
                         hasReaders ? (
@@ -258,6 +279,12 @@ export function MessageBubble({
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent side="left" align="center">
+                                {canEdit && (
+                                    <DropdownMenuItem onClick={() => onEdit(message)}>
+                                        <Pencil className="h-4 w-4 mr-2" />
+                                        Edit
+                                    </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem
                                     onClick={() => deleteMessage(message.Id)}
                                     className="text-destructive focus:text-destructive"
@@ -270,6 +297,14 @@ export function MessageBubble({
                     </div>
                 )}
             </div>
+
+            {message.IsEdited && (
+                <MessageEditHistoryOverlay
+                    messageId={message.Id}
+                    open={historyOpen}
+                    onClose={() => setHistoryOpen(false)}
+                />
+            )}
 
             {hasMedias && lightboxIndex !== null && (
                 <MediaLightbox

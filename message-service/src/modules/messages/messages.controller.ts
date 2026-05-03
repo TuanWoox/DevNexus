@@ -2,8 +2,9 @@ import { Controller, Post, Delete, Patch, UploadedFile, UseGuards, UseIntercepto
 import { MessagesService } from './messages.service';
 import { AuthGuard } from '../auth/auth.guard';
 import type { CreateMessageDto } from './dto/create-message.dto';
+import type { UpdateMessageDto } from './dto/update-message.dto';
 import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
-import { Message, MessageReadReceipt, Media } from 'src/generated/prisma/client';
+import { Message, MessageReadReceipt, Media, MessageEditHistory } from 'src/generated/prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Page } from 'src/shared/dtos/paging/page';
 import type { PagedData } from 'src/shared/dtos/paging/pagedData';
@@ -75,11 +76,29 @@ export class MessagesController {
     return this.messagesService.deleteMessage(parseInt(messageId, 10));
   }
 
-  @Patch(':messageId/undo-delete')
+  @Post(':messageId/undo-delete')
+  @HttpCode(200)
   async undoDeleteMessage(
     @Param('messageId') messageId: string,
   ): Promise<ReturnResult<Message>> {
     return this.messagesService.undoDeleteMessage(parseInt(messageId, 10));
+  }
+
+  @Patch(':messageId')
+  async updateMessage(
+    @Param('messageId') messageId: string,
+    @Body() dto: UpdateMessageDto,
+  ): Promise<ReturnResult<Message>> {
+    return this.messagesService.updateMessage(parseInt(messageId, 10), dto);
+  }
+
+  @Post(':messageId/edit-history')
+  @HttpCode(200)
+  async messageEditHistory(
+    @Param('messageId') messageId: string,
+    @Body() page: Page<number>,
+  ): Promise<ReturnResult<PagedData<number, MessageEditHistory>>> {
+    return this.messagesService.getMessageEditHistory(parseInt(messageId, 10), page);
   }
 
   @Post(':messageId/readers')

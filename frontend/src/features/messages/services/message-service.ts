@@ -1,5 +1,5 @@
 import messageApi from "../../../lib/messageServiceAxiosConfig";
-import type { CreateMessageDto, Message, ReadReceipt, PagedData, Media } from "@/features/messages/types/contracts";
+import type { CreateMessageDto, Message, ReadReceipt, PagedData, Media, MessageEditHistory } from "@/features/messages/types/contracts";
 import { Page } from "@/types/common/page";
 import { ReturnResult } from "@/types/common/return-result";
 
@@ -56,7 +56,20 @@ export const messageService = {
     },
 
     undoDeleteMessage: async (messageId: number): Promise<ReturnResult<Message>> => {
-        const { data } = await messageApi.patch<ReturnResult<Message>>(`/messages/${messageId}/undo-delete`);
+        const { data } = await messageApi.post<ReturnResult<Message>>(`/messages/${messageId}/undo-delete`);
+        return data;
+    },
+
+    updateMessage: async (messageId: number, content: string): Promise<ReturnResult<Message>> => {
+        const { data } = await messageApi.patch<ReturnResult<Message>>(`/messages/${messageId}`, { Content: content });
+        return data;
+    },
+
+    getMessageEditHistory: async (messageId: number, page: Page<number>): Promise<ReturnResult<PagedData<number, MessageEditHistory>>> => {
+        const { data } = await messageApi.post<ReturnResult<PagedData<number, MessageEditHistory>>>(
+            `/messages/${messageId}/edit-history`,
+            page
+        );
         return data;
     },
 };

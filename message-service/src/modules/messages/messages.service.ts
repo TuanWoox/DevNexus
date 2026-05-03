@@ -2,8 +2,9 @@ import { Injectable, Scope } from '@nestjs/common';
 import { PrismaService } from '../prisma-database/prisma.service';
 import { UserContextService } from '../auth/userContext.service';
 import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
-import { Message, MessageReadReceipt, Media } from 'src/generated/prisma/client';
+import { Message, MessageReadReceipt, Media, MessageEditHistory } from 'src/generated/prisma/client';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { UpdateMessageDto } from './dto/update-message.dto';
 import { ProfileblocksService } from '../profileblocks/profileblocks.service';
 import { MediasService } from '../medias/medias.service';
 import { MessageChatGateway } from '../message-chat-gateway/message-chat.gateway';
@@ -339,6 +340,111 @@ export class MessagesService {
       }
 
       returnResult.Result = updated as unknown as Message;
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+    }
+    return returnResult;
+  }
+
+  async updateMessage(messageId: number, dto: UpdateMessageDto) {
+    const returnResult = new ReturnResult<Message>();
+    try {
+      const profileId = this.userContext.getProfileId();
+
+      if (!dto.Content?.trim()) {
+        returnResult.Message = 'Content cannot be empty';
+        return returnResult;
+      }
+
+      const message = await this.prismaService.message.findFirst({
+        where: { Id: messageId, SenderId: profileId, IsDeleted: false },
+        include: {
+          Chat: {
+            include: { Members: true, ChatSettings: true },
+          },
+        },
+      });
+
+      if (!message) {
+        returnResult.Message = 'Message not found, deleted, or you are not the sender';
+        return returnResult;
+      }
+
+      const ageMs = Date.now() - new Date(message.DateCreated!).getTime();
+      if (ageMs > 5 * 60 * 1000) {
+        returnResult.Message = 'Message can only be edited within 5 minutes of sending';
+        return returnResult;
+      }
+
+      await this.prismaService.messageEditHistory.create({
+        data: { MessageId: messageId, Content: message.Content },
+      });
+
+      const updated = await this.prismaService.message.update({
+        where: { Id: messageId },
+        data: { Content: dto.Content.trim(), IsEdited: true, DateModified: new Date() },
+        include: {
+          Sender: { select: { FullName: true, AvatarUrl: true } },
+          ReadReceipts: {
+            include: { Reader: { select: { FullName: true, AvatarUrl: true } } },
+          },
+          Medias: true,
+        },
+      });
+
+      const memberIds = message.Chat.Members.map(m => m.MemberId);
+      for (const memberId of memberIds) {
+        const ownSetting = message.Chat.ChatSettings.find(cs => cs.ProfileId === memberId);
+        this.gateway.emitToUsers([memberId], 'message-updated', {
+          ...updated,
+          Chat: { ...message.Chat, ChatSettings: ownSetting ? [ownSetting] : [] },
+        });
+      }
+
+      returnResult.Result = updated as unknown as Message;
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+    }
+    return returnResult;
+  }
+
+  async getMessageEditHistory(messageId: number, page: Page<number>) {
+    const returnResult = new ReturnResult<PagedData<number, MessageEditHistory>>();
+    try {
+      const profileId = this.userContext.getProfileId();
+
+      const message = await this.prismaService.message.findFirst({
+        where: {
+          Id: messageId,
+          Chat: { Members: { some: { MemberId: profileId } } },
+        },
+        select: { Id: true },
+      });
+
+      if (!message) {
+        returnResult.Message = 'Message not found or you are not a member';
+        return returnResult;
+      }
+
+      const pageSize = page.size || 20;
+      const idFilter: { lt?: number } = {};
+      if (page.indexPaging) idFilter.lt = page.indexPaging;
+
+      const [history, total] = await Promise.all([
+        this.prismaService.messageEditHistory.findMany({
+          where: {
+            MessageId: messageId,
+            ...(Object.keys(idFilter).length > 0 && { Id: idFilter }),
+          },
+          orderBy: { Id: 'desc' },
+          take: pageSize,
+        }),
+        this.prismaService.messageEditHistory.count({
+          where: { MessageId: messageId },
+        }),
+      ]);
+
+      returnResult.Result = { page: { ...page, totalElements: total }, data: history };
     } catch (ex) {
       returnResult.Message = ex instanceof Error ? ex.message : String(ex);
     }

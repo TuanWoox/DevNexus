@@ -106,6 +106,11 @@ export function useMessageGateway() {
             optimisticUpdateChatList(queryClient, message);
         });
 
+        socket.on("message-updated", (message: Message) => {
+            updateMessageInCache(queryClient, message);
+            updateLastMessageInChatList(queryClient, message);
+        });
+
         socket.on("message-deleted", (message: Message) => {
             updateMessageInCache(queryClient, message);
             updateLastMessageInChatList(queryClient, message);

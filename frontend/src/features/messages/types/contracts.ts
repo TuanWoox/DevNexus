@@ -63,6 +63,7 @@ export interface Message {
     Id: number;
     Content: string;
     IsDeleted: boolean;
+    IsEdited: boolean;
     SenderId: string;
     ChatId: string;
     DateCreated: string;
@@ -71,6 +72,13 @@ export interface Message {
     ReadReceipts: ReadReceipt[]
     Chat: Chat
     Medias: Media[]
+}
+
+export interface MessageEditHistory {
+    Id: number;
+    MessageId: number;
+    Content: string;
+    EditedAt: string;
 }
 
 export interface Media {

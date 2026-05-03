@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { MessageBubble } from "./message-bubble";
 import { Message } from "@/features/messages/types/contracts";
+
 import { cn } from "@/lib/utils";
 
 interface MessageThreadProps {
@@ -11,6 +12,7 @@ interface MessageThreadProps {
     onLoadMore?: () => void;
     hasMore?: boolean;
     isLoadingMore?: boolean;
+    onEdit: (message: Message) => void;
 }
 
 
@@ -20,6 +22,7 @@ export function MessageThread({
     onLoadMore,
     hasMore,
     isLoadingMore,
+    onEdit,
 }: MessageThreadProps) {
     const bottomRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -121,6 +124,7 @@ export function MessageThread({
                                 currentProfileId={currentProfileId}
                                 showAvatar={isLastInGroup}
                                 isLastOwn={isLastOwn}
+                                onEdit={onEdit}
                             />
                         </div>
                     );

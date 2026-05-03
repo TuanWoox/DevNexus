@@ -1,12 +1,13 @@
 "use client";
 
 import { FormEvent, useEffect, useId, useRef, useState } from "react";
-import { Paperclip, Send, X, Play } from "lucide-react";
+import { Paperclip, Send, X, Play, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useCreateMessage } from "@/features/messages/hooks/messages/use-create-message";
 import { useMarkMessageAsRead } from "@/features/messages/hooks/messages/use-mark-message-as-read";
+import { useUpdateMessage } from "@/features/messages/hooks/messages/use-update-message";
 import { Chat, Message } from "@/features/messages/types/contracts";
 import { toast } from "sonner";
 
@@ -22,10 +23,13 @@ interface MessageComposerProps {
     selectedChat: Chat | null;
     messages: Message[];
     currentProfileId: string;
+    editingMessage: Message | null;
+    onCancelEdit: () => void;
 }
 
-export function MessageComposer({ selectedChat, messages, currentProfileId }: MessageComposerProps) {
+export function MessageComposer({ selectedChat, messages, currentProfileId, editingMessage, onCancelEdit }: MessageComposerProps) {
     const createMessage = useCreateMessage();
+    const updateMessage = useUpdateMessage();
     const markAsRead = useMarkMessageAsRead();
     const [value, setValue] = useState("");
     const [isSending, setIsSending] = useState(false);
@@ -45,6 +49,15 @@ export function MessageComposer({ selectedChat, messages, currentProfileId }: Me
             pendingRefocus.current = false;
         }
     }, [isSending, createMessage.isPending]);
+
+    useEffect(() => {
+        if (editingMessage) {
+            setValue(editingMessage.Content);
+            textareaRef.current?.focus();
+        } else {
+            setValue("");
+        }
+    }, [editingMessage]);
 
     useEffect(() => {
         return () => {
@@ -67,38 +80,49 @@ export function MessageComposer({ selectedChat, messages, currentProfileId }: Me
         markAsRead.mutate(selectedChat.Id);
     };
 
+    const resetComposer = () => {
+        setValue("");
+        setSelectedFile(null);
+        if (previewUrl) {
+            URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(null);
+        }
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        if (textareaRef.current) textareaRef.current.style.height = "auto";
+        pendingRefocus.current = true;
+    };
+
     const submit = async (e?: FormEvent) => {
         e?.preventDefault();
         const content = value.trim();
-        if ((!content && !selectedFile) || isSending || createMessage.isPending) return;
+        if (isSending) return;
+
         setIsSending(true);
         try {
-            await createMessage.mutateAsync({
-                createMessageDto: {
-                    ChatId: selectedChat.Id,
-                    Content: content || "",
-                },
-                file: selectedFile ?? undefined,
-            });
-            setValue("");
-            setSelectedFile(null);
-            if (previewUrl) {
-                URL.revokeObjectURL(previewUrl);
-                setPreviewUrl(null);
+            if (editingMessage) {
+                if (content && content !== editingMessage.Content) {
+                    await updateMessage.mutateAsync({ messageId: editingMessage.Id, content });
+                }
+                onCancelEdit();
+                setValue("");
+            } else {
+                if (!content && !selectedFile) return;
+                await createMessage.mutateAsync({
+                    createMessageDto: { ChatId: selectedChat.Id, Content: content || "" },
+                    file: selectedFile ?? undefined,
+                });
+                resetComposer();
             }
-            if (fileInputRef.current) {
-                fileInputRef.current.value = "";
-            }
-            if (textareaRef.current) {
-                textareaRef.current.style.height = "auto";
-            }
-            pendingRefocus.current = true;
         } finally {
             setIsSending(false);
         }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === "Escape" && editingMessage) {
+            onCancelEdit();
+            return;
+        }
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             submit();
@@ -144,6 +168,18 @@ export function MessageComposer({ selectedChat, messages, currentProfileId }: Me
             onSubmit={submit}
             className="relative rounded-lg border border-border/80 bg-muted/30 px-3 py-2 transition-all duration-200 focus-within:border-primary/30 focus-within:shadow-[0_0_12px_rgba(99,102,241,0.08)]"
         >
+            {editingMessage && (
+                <div className="flex items-center justify-between px-1 py-1.5 mb-2 rounded-md bg-brand-500/10 border border-brand-500/20 text-xs">
+                    <div className="flex items-center gap-1.5 text-brand-500">
+                        <Pencil className="h-3 w-3" />
+                        <span>Editing message</span>
+                    </div>
+                    <button type="button" onClick={onCancelEdit} className="text-muted-foreground hover:text-foreground">
+                        <X className="h-3.5 w-3.5" />
+                    </button>
+                </div>
+            )}
+
             {selectedFile && (
                 <div className="flex items-start gap-2 mb-2 px-1 animate-fade-in-up">
                     {isImage && previewUrl ? (

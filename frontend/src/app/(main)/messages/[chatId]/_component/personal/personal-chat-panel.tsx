@@ -6,7 +6,7 @@ import { PersonalChatHeader } from "./personal-chat-header";
 import { MessageThread } from "../message-thread";
 import { MessageComposer } from "../message-composer";
 import { ChatDetailPanel } from "../chat-detail-panel";
-import { Chat } from "@/features/messages/types/contracts";
+import { Chat, Message } from "@/features/messages/types/contracts";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { getProfileId } from "@/features/messages/utils/message-service.helper";
@@ -22,6 +22,7 @@ export function PersonalChatPanel({ selectedChat }: PersonalChatPanelProps) {
     const currentProfileId = useSelector((state: RootState) => getProfileId(state.auth.user?.profileId));
     const { messages, isLoading, hasMore, loadMore, isFetchingMore } = useMessageList(selectedChat?.Id ?? "", 30);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const [editingMessage, setEditingMessage] = useState<Message | null>(null);
 
     const handleBack = () => router.push("/messages");
 
@@ -49,10 +50,17 @@ export function PersonalChatPanel({ selectedChat }: PersonalChatPanelProps) {
                     onLoadMore={loadMore}
                     hasMore={hasMore}
                     isLoadingMore={isFetchingMore}
+                    onEdit={setEditingMessage}
                 />
 
                 <div className="border-t border-border px-4 py-3">
-                    <MessageComposer selectedChat={selectedChat} messages={messages} currentProfileId={currentProfileId} />
+                    <MessageComposer
+                        selectedChat={selectedChat}
+                        messages={messages}
+                        currentProfileId={currentProfileId}
+                        editingMessage={editingMessage}
+                        onCancelEdit={() => setEditingMessage(null)}
+                    />
                 </div>
             </div>
 
