@@ -5,9 +5,17 @@ import { Message, MediaType, ProfileSummary } from "@/features/messages/types/co
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toRelativeTime, getInitials, getMediaUrl } from "@/features/messages/utils/message-service.helper";
-import { Check, Download, FileText, FileArchive } from "lucide-react";
+import { Check, Download, FileText, FileArchive, MoreVertical, Trash2 } from "lucide-react";
 import { MediaLightbox } from "./media-lightbox";
 import { ReadReceiptOverlay } from "./read-receipt-overlay";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useDeleteMessage } from "@/features/messages/hooks/messages/use-delete-message";
+import { useUndoDeleteMessage } from "@/features/messages/hooks/messages/use-undo-delete-message";
 
 const MAX_VISIBLE_AVATARS = 3;
 
@@ -150,10 +158,13 @@ export function MessageBubble({
     const receipts = message.ReadReceipts ?? [];
     const hasReaders = receipts.length > 0;
 
+    const { mutate: deleteMessage } = useDeleteMessage();
+    const { mutate: undoDeleteMessage } = useUndoDeleteMessage();
+
     return (
         <>
             <div className={cn(
-                "flex items-end gap-2 px-1",
+                "flex items-end gap-1 px-1 group",
                 isMine ? "flex-row-reverse" : "flex-row",
             )}>
                 {!isMine && (
@@ -170,8 +181,8 @@ export function MessageBubble({
                 )}
 
                 <div className={cn("flex flex-col gap-1", isMine ? "items-end max-w-[65%]" : "items-start max-w-[65%]")}>
-                    {/* Media */}
-                    {hasMedias && (
+                    {/* Media — hide when deleted */}
+                    {hasMedias && !message.IsDeleted && (
                         <div className="flex max-w-[90%] flex-col gap-1.5">
                             {message.Medias.map((media, idx) => (
                                 <MediaAttachment
@@ -188,17 +199,36 @@ export function MessageBubble({
                     )}
 
                     {/* Text bubble */}
-                    {message.Content && (
-                        <div
-                            className={cn(
-                                "rounded-lg px-4 py-2.5 text-sm leading-relaxed wrap-break-words shadow-sm",
-                                isMine
-                                    ? "rounded-br-md bg-linear-to-br from-brand-500 to-brand-600 text-white shadow-[0_2px_6px_rgba(99,102,241,0.25)]"
-                                    : "rounded-bl-md bg-card border border-border/40 text-foreground",
-                            )}
-                        >
+                    {message.IsDeleted ? (
+                        <div className={cn(
+                            "rounded-lg px-4 py-2.5 text-sm italic shadow-sm",
+                            isMine
+                                ? "rounded-br-md bg-linear-to-br from-brand-500/60 to-brand-600/60 text-white/80"
+                                : "rounded-bl-md bg-card border border-border/40 text-muted-foreground",
+                        )}>
                             {message.Content}
+                            {isMine && (
+                                <button
+                                    onClick={() => undoDeleteMessage(message.Id)}
+                                    className="underline ml-2 not-italic text-white/90 hover:text-white"
+                                >
+                                    Undo
+                                </button>
+                            )}
                         </div>
+                    ) : (
+                        message.Content && (
+                            <div
+                                className={cn(
+                                    "rounded-lg px-4 py-2.5 text-sm leading-relaxed wrap-break-words shadow-sm",
+                                    isMine
+                                        ? "rounded-br-md bg-linear-to-br from-brand-500 to-brand-600 text-white shadow-[0_2px_6px_rgba(99,102,241,0.25)]"
+                                        : "rounded-bl-md bg-card border border-border/40 text-foreground",
+                                )}
+                            >
+                                {message.Content}
+                            </div>
+                        )
                     )}
 
                     {/* Reader avatars / Sent — only on the last own message */}
@@ -217,6 +247,28 @@ export function MessageBubble({
                         )
                     )}
                 </div>
+
+                {/* 3 chấm — chỉ isMine, chưa deleted, hiện khi hover */}
+                {isMine && !message.IsDeleted && (
+                    <div className="self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button className="p-1 rounded-md hover:bg-accent transition-colors">
+                                    <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent side="left" align="center">
+                                <DropdownMenuItem
+                                    onClick={() => deleteMessage(message.Id)}
+                                    className="text-destructive focus:text-destructive"
+                                >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                )}
             </div>
 
             {hasMedias && lightboxIndex !== null && (

@@ -62,6 +62,7 @@ export interface Chat {
 export interface Message {
     Id: number;
     Content: string;
+    IsDeleted: boolean;
     SenderId: string;
     ChatId: string;
     DateCreated: string;

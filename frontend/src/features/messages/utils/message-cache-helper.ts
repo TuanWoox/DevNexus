@@ -181,6 +181,63 @@ export function optimisticUpdateChatList(
     });
 }
 
+export function updateMessageInCache(
+    queryClient: QueryClient,
+    updatedMessage: Message,
+): void {
+    const chatKey = messagingQueryKeys.messagesInsideChat(updatedMessage.ChatId);
+    const oldData = queryClient.getQueryData<MessagesInfiniteData>(chatKey);
+    if (!oldData?.pages?.length) return;
+
+    let changed = false;
+    const pages = oldData.pages.map((page) => {
+        if (!page.result) return page;
+        const data = page.result.data as Message[];
+        const updated = data.map((msg) => {
+            if (msg.Id !== updatedMessage.Id) return msg;
+            changed = true;
+            return updatedMessage;
+        });
+        if (!changed) return page;
+        return { ...page, result: { ...page.result, data: updated } };
+    });
+
+    if (changed) {
+        queryClient.setQueryData<MessagesInfiniteData>(chatKey, { ...oldData, pages });
+    }
+}
+
+export function updateLastMessageInChatList(
+    queryClient: QueryClient,
+    updatedMessage: Message,
+): void {
+    const chatSettings = updatedMessage?.Chat?.ChatSettings?.[0];
+    if (!chatSettings) return;
+
+    const tab: InboxTab = chatSettings.IsArchived ? "archived" : chatSettings.IsRequested ? "request" : "main";
+    const chatListKey = messagingQueryKeys.chat(tab);
+    const oldData = queryClient.getQueryData<ChatListInfiniteData>(chatListKey);
+    if (!oldData?.pages?.length) return;
+
+    let changed = false;
+    const pages = oldData.pages.map((page) => {
+        if (!page.result) return page;
+        const chats = page.result.data.map((chat) => {
+            if (chat.Id !== updatedMessage.ChatId) return chat;
+            const lastMsg = chat.Messages?.[0];
+            if (!lastMsg || lastMsg.Id !== updatedMessage.Id) return chat;
+            changed = true;
+            return { ...chat, Messages: [updatedMessage] };
+        });
+        if (!changed) return page;
+        return { ...page, result: { ...page.result, data: chats } };
+    });
+
+    if (changed) {
+        queryClient.setQueryData<ChatListInfiniteData>(chatListKey, { ...oldData, pages });
+    }
+}
+
 export function appendReadReceiptToMessage(
     queryClient: QueryClient,
     chatId: string,

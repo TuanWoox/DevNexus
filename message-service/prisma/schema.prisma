@@ -116,6 +116,8 @@ model Message {
   ChatId    String
   Chat      Chat     @relation(fields: [ChatId], references: [Id])
 
+  IsDeleted    Boolean   @default(false)
+
   DateCreated  DateTime? @default(now())
   DateModified DateTime? @updatedAt
 

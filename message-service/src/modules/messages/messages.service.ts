@@ -247,6 +247,104 @@ export class MessagesService {
     return returnResult;
   }
 
+  private maskDeleted<T extends { IsDeleted: boolean; Content: string }>(msg: T): T {
+    return msg.IsDeleted ? { ...msg, Content: 'This message has been deleted' } : msg;
+  }
+
+  async deleteMessage(messageId: number) {
+    const returnResult = new ReturnResult<Message>();
+    try {
+      const profileId = this.userContext.getProfileId();
+
+      const message = await this.prismaService.message.findFirst({
+        where: { Id: messageId, SenderId: profileId },
+        include: {
+          Chat: {
+            include: { Members: true, ChatSettings: true },
+          },
+        },
+      });
+
+      if (!message) {
+        returnResult.Message = 'Message not found or you are not the sender';
+        return returnResult;
+      }
+
+      const updated = await this.prismaService.message.update({
+        where: { Id: messageId },
+        data: { IsDeleted: true },
+        include: {
+          Sender: { select: { FullName: true, AvatarUrl: true } },
+          ReadReceipts: {
+            include: { Reader: { select: { FullName: true, AvatarUrl: true } } },
+          },
+          Medias: true,
+        },
+      });
+
+      const memberIds = message.Chat.Members.map(m => m.MemberId);
+      for (const memberId of memberIds) {
+        const ownSetting = message.Chat.ChatSettings.find(cs => cs.ProfileId === memberId);
+        this.gateway.emitToUsers([memberId], 'message-deleted', {
+          ...this.maskDeleted(updated),
+          Chat: { ...message.Chat, ChatSettings: ownSetting ? [ownSetting] : [] },
+        });
+      }
+
+      returnResult.Result = this.maskDeleted(updated) as unknown as Message;
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+    }
+    return returnResult;
+  }
+
+  async undoDeleteMessage(messageId: number) {
+    const returnResult = new ReturnResult<Message>();
+    try {
+      const profileId = this.userContext.getProfileId();
+
+      const message = await this.prismaService.message.findFirst({
+        where: { Id: messageId, SenderId: profileId, IsDeleted: true },
+        include: {
+          Chat: {
+            include: { Members: true, ChatSettings: true },
+          },
+        },
+      });
+
+      if (!message) {
+        returnResult.Message = 'Message not found, not yours, or not deleted';
+        return returnResult;
+      }
+
+      const updated = await this.prismaService.message.update({
+        where: { Id: messageId },
+        data: { IsDeleted: false },
+        include: {
+          Sender: { select: { FullName: true, AvatarUrl: true } },
+          ReadReceipts: {
+            include: { Reader: { select: { FullName: true, AvatarUrl: true } } },
+          },
+          Medias: true,
+        },
+      });
+
+      const memberIds = message.Chat.Members.map(m => m.MemberId);
+      for (const memberId of memberIds) {
+        const ownSetting = message.Chat.ChatSettings.find(cs => cs.ProfileId === memberId);
+        this.gateway.emitToUsers([memberId], 'message-undeleted', {
+          ...updated,
+          Chat: { ...message.Chat, ChatSettings: ownSetting ? [ownSetting] : [] },
+        });
+      }
+
+      returnResult.Result = updated as unknown as Message;
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+    }
+    return returnResult;
+  }
+
   async getMessagePaging(chatId: string, page: Page<number>) {
     const returnResult = new ReturnResult<PagedData<number, Message>>();
     try {
@@ -303,7 +401,7 @@ export class MessagesService {
         orderBy: [{ Id: 'desc' }],
       });
 
-      returnResult.Result = { page: { ...page }, data: messages };
+      returnResult.Result = { page: { ...page }, data: messages.map(m => this.maskDeleted(m)) };
     } catch (ex) {
       returnResult.Message = ex instanceof Error ? ex.message : String(ex);
     }
@@ -400,6 +498,7 @@ export class MessagesService {
         Deleted: false,
         Message: {
           ChatId: chatId,
+          IsDeleted: false,
         },
       };
 

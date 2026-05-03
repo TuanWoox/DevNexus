@@ -87,7 +87,8 @@ export class MediasService {
             const mediaExist = await this.prismaService.media.findFirst({
                 where: {
                     Deleted: false,
-                    MediaName: fileName
+                    MediaName: fileName,
+                    Message: { IsDeleted: false },
                 },
                 include: {
                     Message: {

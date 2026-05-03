@@ -13,6 +13,8 @@ import {
     appendReadReceiptToChatListItem,
     appendReadReceiptToMessage,
     optimisticUpdateChatList,
+    updateMessageInCache,
+    updateLastMessageInChatList,
 } from "../../utils/message-cache-helper";
 import { messagingQueryKeys } from "../messaging-query-keys";
 
@@ -102,6 +104,18 @@ export function useMessageGateway() {
 
             appendMessageToChatCache(queryClient, message);
             optimisticUpdateChatList(queryClient, message);
+        });
+
+        socket.on("message-deleted", (message: Message) => {
+            updateMessageInCache(queryClient, message);
+            updateLastMessageInChatList(queryClient, message);
+            queryClient.removeQueries({ queryKey: messagingQueryKeys.chatMediaAll(message.ChatId) });
+        });
+
+        socket.on("message-undeleted", (message: Message) => {
+            updateMessageInCache(queryClient, message);
+            updateLastMessageInChatList(queryClient, message);
+            queryClient.removeQueries({ queryKey: messagingQueryKeys.chatMediaAll(message.ChatId) });
         });
 
         socket.on("message-read", (payload: MessageReadPayload) => {

@@ -1,4 +1,4 @@
-import { Controller, Post, UploadedFile, UseGuards, UseInterceptors, Body, HttpCode, Param } from '@nestjs/common';
+import { Controller, Post, Delete, Patch, UploadedFile, UseGuards, UseInterceptors, Body, HttpCode, Param } from '@nestjs/common';
 import { MessagesService } from './messages.service';
 import { AuthGuard } from '../auth/auth.guard';
 import type { CreateMessageDto } from './dto/create-message.dto';
@@ -66,6 +66,20 @@ export class MessagesController {
       returnResult.Message = ex instanceof Error ? ex.message : String(ex);
       return returnResult;
     }
+  }
+
+  @Delete(':messageId')
+  async deleteMessage(
+    @Param('messageId') messageId: string,
+  ): Promise<ReturnResult<Message>> {
+    return this.messagesService.deleteMessage(parseInt(messageId, 10));
+  }
+
+  @Patch(':messageId/undo-delete')
+  async undoDeleteMessage(
+    @Param('messageId') messageId: string,
+  ): Promise<ReturnResult<Message>> {
+    return this.messagesService.undoDeleteMessage(parseInt(messageId, 10));
   }
 
   @Post(':messageId/readers')

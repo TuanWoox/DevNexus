@@ -49,4 +49,14 @@ export const messageService = {
         );
         return data;
     },
+
+    deleteMessage: async (messageId: number): Promise<ReturnResult<Message>> => {
+        const { data } = await messageApi.delete<ReturnResult<Message>>(`/messages/${messageId}`);
+        return data;
+    },
+
+    undoDeleteMessage: async (messageId: number): Promise<ReturnResult<Message>> => {
+        const { data } = await messageApi.patch<ReturnResult<Message>>(`/messages/${messageId}/undo-delete`);
+        return data;
+    },
 };
