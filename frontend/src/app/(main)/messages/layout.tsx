@@ -9,11 +9,8 @@ import { cn } from "@/lib/utils";
 import { UsersRound } from "lucide-react";
 import { InboxTab, Chat, ProfileSummary } from "@/features/messages/types/contracts";
 import { useChatList } from "@/features/messages/hooks/chats/use-chat-list";
-import { useMessageGateway } from "@/features/messages/hooks/gateways/use-message-gateway";
-import { SocketContext } from "@/features/messages/context/socket-context";
 
 export default function MessagesLayout({ children }: { children: React.ReactNode }) {
-    const { socketRef, isConnected } = useMessageGateway();
 
     const params = useParams();
     const router = useRouter();
@@ -46,7 +43,6 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
     };
 
     return (
-        <SocketContext.Provider value={{ socketRef, isConnected }}>
         <div className="flex h-[calc(100vh-3.5rem)] w-full sm:h-screen overflow-hidden bg-card">
 
             {/* ── LEFT PANEL: conversation list ── */}
@@ -112,6 +108,5 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                 {children}
             </section>
         </div>
-        </SocketContext.Provider>
     );
 }

@@ -100,6 +100,7 @@ export function useMessageGateway() {
                     audioRef.current.currentTime = 0;
                     audioRef.current.play().catch(() => { });
                 }
+                window.dispatchEvent(new CustomEvent("new-message-notification", { detail: message }));
             }
 
             appendMessageToChatCache(queryClient, message);

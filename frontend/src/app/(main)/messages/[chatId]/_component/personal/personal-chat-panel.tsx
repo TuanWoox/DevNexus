@@ -3,8 +3,8 @@
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { PersonalChatHeader } from "./personal-chat-header";
-import { MessageThread } from "../message-thread";
-import { MessageComposer } from "../message-composer";
+import { MessageThread } from "@/features/messages/components/message-thread";
+import { MessageComposer } from "@/features/messages/components/message-composer";
 import { ChatDetailPanel } from "../chat-detail-panel";
 import { Chat, Message } from "@/features/messages/types/contracts";
 import { useSelector } from "react-redux";
