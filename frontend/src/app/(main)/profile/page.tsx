@@ -121,7 +121,7 @@ const ProfilePage = () => {
                         {tabs.map((tab) => (
                             <button
                                 key={tab.id}
-                                onClick={() => setActiveTab(tab.id as any)}
+                                onClick={() => setActiveTab(tab.id as "overview" | "post" | "qa-post" | "saved")}
                                 className={`border-b-2 py-4 px-1 text-base font-semibold cursor-pointer whitespace-nowrap transition-colors ${activeTab === tab.id
                                     ? "border-primary text-primary"
                                     : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"

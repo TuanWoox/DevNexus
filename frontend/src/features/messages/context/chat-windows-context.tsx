@@ -31,7 +31,9 @@ export function ChatWindowsProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         if (pathname.startsWith("/messages")) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setWindows([]);
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setUnreadCounts({});
         }
     }, [pathname]);

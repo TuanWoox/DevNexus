@@ -5,7 +5,7 @@ import { ImageIcon, VideoIcon, FileIcon, FileText, FileArchive, Download, Play, 
 import { cn } from "@/lib/utils";
 import { useChatMediaFlat } from "@/features/messages/hooks/messages/use-chat-media";
 import { MediaType, Media } from "@/features/messages/types/contracts";
-import { getMediaUrl, formatFileSize } from "@/features/messages/utils/message-service.helper";
+import { getMediaUrl } from "@/features/messages/utils/message-service.helper";
 import { MediaLightbox } from "./media-lightbox";
 
 interface MediaSectionProps {
@@ -28,7 +28,7 @@ function MediaSkeleton() {
     );
 }
 
-function ImageGrid({ media, chatId }: { media: Media[]; chatId: string }) {
+function ImageGrid({ media }: { media: Media[] }) {
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
     if (media.length === 0) {
@@ -50,6 +50,7 @@ function ImageGrid({ media, chatId }: { media: Media[]; chatId: string }) {
                         onClick={() => setLightboxIndex(idx)}
                         className="aspect-square rounded-lg overflow-hidden border border-border/40 bg-muted/30 cursor-pointer group relative"
                     >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src={getMediaUrl(m.MediaName)}
                             alt={m.MediaName}
@@ -74,7 +75,7 @@ function ImageGrid({ media, chatId }: { media: Media[]; chatId: string }) {
     );
 }
 
-function VideoGrid({ media, chatId }: { media: Media[]; chatId: string }) {
+function VideoGrid({ media }: { media: Media[] }) {
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
     if (media.length === 0) {
@@ -121,7 +122,7 @@ function VideoGrid({ media, chatId }: { media: Media[]; chatId: string }) {
     );
 }
 
-function FileList({ media, chatId }: { media: Media[]; chatId: string }) {
+function FileList({ media }: { media: Media[] }) {
     if (media.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center gap-2 py-10 text-muted-foreground">
@@ -217,11 +218,11 @@ export function MediaSection({ chatId }: MediaSectionProps) {
                 {isLoading ? (
                     <MediaSkeleton />
                 ) : activeTab === MediaType.Image ? (
-                    <ImageGrid media={media} chatId={chatId} />
+                    <ImageGrid media={media} />
                 ) : activeTab === MediaType.Video ? (
-                    <VideoGrid media={media} chatId={chatId} />
+                    <VideoGrid media={media} />
                 ) : (
-                    <FileList media={media} chatId={chatId} />
+                    <FileList media={media} />
                 )}
 
                 {isFetchingMore && (

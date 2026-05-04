@@ -238,6 +238,7 @@ export function MessageComposer({ selectedChat, messages, currentProfileId, edit
                 <div className="flex items-start gap-2 mb-2 px-1 animate-fade-in-up">
                     {isImage && previewUrl ? (
                         <div className="relative rounded-lg overflow-hidden border border-border/60 max-w-44 shrink-0 shadow-sm">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 src={previewUrl}
                                 alt="Preview"

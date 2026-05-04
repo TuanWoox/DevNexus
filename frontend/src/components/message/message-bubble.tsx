@@ -42,6 +42,7 @@ function MediaAttachment({
     if (media.Type === MediaType.Image) {
         return (
             <button type="button" onClick={onClick} className="block w-full text-left">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     src={url}
                     alt={media.MediaName}
@@ -165,10 +166,12 @@ export function MessageBubble({
     const { mutate: deleteMessage } = useDeleteMessage();
     const { mutate: undoDeleteMessage } = useUndoDeleteMessage();
 
-    const canEdit = useMemo(() => {
-        const ageMs = Date.now() - new Date(message.DateCreated).getTime();
-        return ageMs < 5 * 60 * 1000 && !!message.Content;
-    }, [message.DateCreated, message.Content]);
+    const createdAt = new Date(message.DateCreated).getTime();
+    const canEdit = useMemo(
+        () => Date.now() - createdAt < 5 * 60 * 1000 && !!message.Content,
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [createdAt, message.Content],
+    );
 
     return (
         <>

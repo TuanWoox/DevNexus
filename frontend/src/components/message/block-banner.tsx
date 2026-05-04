@@ -2,7 +2,6 @@
 
 import { ShieldBan, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useBlockProfile } from "@/hooks/block-hooks/use-block-profile";
 import { useUnblockProfile } from "@/hooks/block-hooks/use-unblock-profile";
 
 interface Props {
@@ -14,7 +13,6 @@ interface Props {
 }
 
 export function BlockBanner({ iBlockedThem, theyBlockedMe, blockId, otherProfileId, otherName }: Props) {
-    const blockMutation = useBlockProfile(otherProfileId);
     const unblockMutation = useUnblockProfile(blockId, otherProfileId);
 
     if (!iBlockedThem && !theyBlockedMe) return null;

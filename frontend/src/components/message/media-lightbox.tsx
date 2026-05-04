@@ -45,6 +45,7 @@ export function MediaLightbox({ medias, currentIndex, onClose, onPrev, onNext }:
     const renderMedia = () => {
         if (media.Type === MediaType.Image) {
             return (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                     src={url}
                     alt={media.MediaName}
@@ -79,7 +80,7 @@ export function MediaLightbox({ medias, currentIndex, onClose, onPrev, onNext }:
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm"
+            className="fixed inset-0 z-9999 flex items-center justify-center bg-black/85 backdrop-blur-sm"
             onClick={onClose}
         >
             <button

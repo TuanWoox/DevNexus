@@ -47,6 +47,10 @@ export function ChatPopupWindow({ chatId }: Props) {
     const [detailOpen, setDetailOpen] = useState(false);
     const [showAddMembers, setShowAddMembers] = useState(false);
 
+    // Derive stable otherProfileId for block status — null for groups or while loading
+    const otherProfileId = chat && !chat.IsGroup ? getOtherProfileId(chat, currentProfileId) : null;
+    const { data: blockStatus } = useBlockStatus(otherProfileId);
+
     useEffect(() => {
         const socket = socketRef.current;
         if (!socket || !isConnected) return;
@@ -74,8 +78,6 @@ export function ChatPopupWindow({ chatId }: Props) {
     const avatarUrl = getAvatarUrl(chat, currentProfileId);
     const mySetting = chat.ChatSettings?.[0];
     const isRequested = mySetting?.IsRequested ?? false;
-    const otherProfileId = !chat.IsGroup ? getOtherProfileId(chat, currentProfileId) : null;
-    const { data: blockStatus } = useBlockStatus(otherProfileId);
     const isBlocked = !chat.IsGroup && ((blockStatus?.iBlockedThem || blockStatus?.theyBlockedMe) ?? false);
 
     return (

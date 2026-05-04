@@ -257,7 +257,7 @@ export function useMessageGateway() {
             socketRef.current = null;
             setIsConnected(false);
         };
-    }, [token, currentProfileId, queryClient]);
+    }, [token, currentProfileId, queryClient, router]);
 
     return { isConnected, socketRef };
 }

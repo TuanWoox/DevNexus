@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, Loader2, UserPlus } from "lucide-react";
+import { Loader2, UserPlus } from "lucide-react";
 import { useGroupMembers } from "@/features/messages/hooks/groups/use-group-members";
 import { GroupMemberItem } from "./group-member-item";
 import type { Chat } from "@/features/messages/types/contracts";

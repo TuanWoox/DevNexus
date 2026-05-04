@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Send, Loader2, Paperclip, Image } from "lucide-react";
+import { ArrowLeft, Send, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/features/messages/utils/message-service.helper";
 import { useCreateChat } from "@/features/messages/hooks/chats/use-create-chat";
