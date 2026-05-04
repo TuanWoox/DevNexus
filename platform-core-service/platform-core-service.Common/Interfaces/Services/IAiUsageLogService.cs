@@ -12,6 +12,6 @@ namespace platform_core_service.Common.Interfaces.Services
     public interface IAiUsageLogService
     {
         Task<ReturnResult<AiUsageLogPageResponseDTO>> GetLogsAsync(Page<string> page);
-
+        Task<ReturnResult<AdminAiUsageSummaryDTO>> GetSummaryAsync(DateOnly from, DateOnly to);
     }
 }

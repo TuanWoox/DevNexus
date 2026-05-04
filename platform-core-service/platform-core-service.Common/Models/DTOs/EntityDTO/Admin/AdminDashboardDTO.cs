@@ -31,5 +31,34 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Admin
 
         /// <summary>Top 5 tags by post count (descending).</summary>
         public List<TagStatDTO> TopTags { get; set; } = new();
+
+        // --- Phase 6: Expanded Metrics ---
+
+        /// <summary>Profiles created since midnight UTC today.</summary>
+        public int NewUsersToday { get; set; }
+
+        /// <summary>Profiles created in the last 7 days (rolling window from midnight UTC).</summary>
+        public int NewUsersThisWeek { get; set; }
+
+        /// <summary>Profiles created in the last 30 days (rolling window from midnight UTC).</summary>
+        public int NewUsersThisMonth { get; set; }
+
+        /// <summary>Posts that are QAPost subtype (TPH discriminator = "QAPost").</summary>
+        public int TotalQuestionPosts { get; set; }
+
+        /// <summary>Posts that are NOT QAPost subtype (concrete Post rows only).</summary>
+        public int TotalNormalPosts { get; set; }
+
+        /// <summary>Posts (all types) created in the last 7 days (rolling window from midnight UTC).</summary>
+        public int PostsThisWeek { get; set; }
+
+        /// <summary>Posts (all types) created in the last 30 days (rolling window from midnight UTC).</summary>
+        public int PostsThisMonth { get; set; }
+
+        /// <summary>Posts with ModerationStatus == InReview (flagged for human review).</summary>
+        public int InReviewPosts { get; set; }
+
+        /// <summary>Posts with ModerationStatus == Flagged (blocked by AI or admin).</summary>
+        public int FlaggedPosts { get; set; }
     }
 }

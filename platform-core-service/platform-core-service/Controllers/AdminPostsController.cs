@@ -9,13 +9,13 @@ using platform_core_service.Common.Utils.Extensions;
 namespace platform_core_service.Controllers
 {
     /// <summary>
-    /// Admin-only endpoint for content oversight.
-    /// Allows admins to view ALL posts (any ModerationStatus) and
+    /// Admin and Moderator endpoint for content oversight.
+    /// Allows admins and moderators to view ALL posts (any ModerationStatus) and
     /// manually override AI moderation decisions.
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Moderator")]
     public class AdminPostsController : ControllerBase
     {
         private readonly IAdminPostService _adminPostService;

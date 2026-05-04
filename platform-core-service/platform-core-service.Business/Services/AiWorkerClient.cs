@@ -95,7 +95,24 @@ namespace platform_core_service.Business.Services
                 result.Message = $"Failed to fetch AI usage logs: {ex.Message}";
             }
             return result;
+        }
 
+        public async Task<ReturnResult<AdminAiUsageSummaryDTO>> GetSummaryAsync(DateOnly from, DateOnly to)
+        {
+            var result = new ReturnResult<AdminAiUsageSummaryDTO>();
+            try
+            {
+                var url = $"{_baseUrl}/internal/ai-usage-logs/summary?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}";
+                var response = await _httpClient.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+                result.Result = await response.Content.ReadFromJsonAsync<AdminAiUsageSummaryDTO>();
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error($"[AiWorkerClient] GetSummaryAsync failed: {ex.Message}");
+                result.Message = $"Failed to fetch AI usage summary: {ex.Message}";
+            }
+            return result;
         }
     }
 }

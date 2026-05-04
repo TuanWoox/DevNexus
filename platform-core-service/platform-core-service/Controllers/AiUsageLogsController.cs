@@ -34,5 +34,23 @@ namespace platform_core_service.Controllers
             }
             return Ok(returnResult);
         }
+
+        [HttpGet("summary")]
+        public async Task<IActionResult> GetSummary(
+            [FromQuery] DateOnly from,
+            [FromQuery] DateOnly to)
+        {
+            ReturnResult<AdminAiUsageSummaryDTO> returnResult = new();
+            try
+            {
+                returnResult = await _aiUsageLogService.GetSummaryAsync(from, to);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
     }
 }

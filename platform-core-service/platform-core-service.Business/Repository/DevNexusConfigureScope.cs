@@ -55,6 +55,7 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IAdminPostService, AdminPostService>();
             services.AddScoped<IAdminDashboardService, AdminDashboardService>();
             services.AddScoped<IAdminUserService, AdminUserService>();
+            services.AddScoped<IAdminTagService, AdminTagService>();
             services.AddScoped<IAiUsageLogService, AiUsageLogService>();
 
             // AiWorkerClient uses IHttpClientFactory — must register with AddHttpClient

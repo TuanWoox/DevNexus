@@ -10,12 +10,12 @@ using platform_core_service.Common.Utils.Extensions;
 namespace platform_core_service.Controllers
 {
     /// <summary>
-    /// Admin-only endpoint for human review of AI-escalated posts.
+    /// Admin and Moderator endpoint for human review of AI-escalated posts.
     /// Tier 3 of the 3-tier moderation pipeline.
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Moderator")]
     public class AdminModerationController : ControllerBase
     {
         private readonly IAdminModerationService _adminModerationService;

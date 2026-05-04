@@ -85,6 +85,66 @@ namespace platform_core_service.Controllers
         }
 
         /// <summary>
+        /// POST api/adminusers/{id}/timeout/7-days
+        /// Applies a 7-day suspension preset to the specified profile.
+        /// </summary>
+        [HttpPost("{id}/timeout/7-days")]
+        public async Task<IActionResult> Timeout7Days(string id)
+        {
+            ReturnResult<bool> returnResult = new();
+            try
+            {
+                returnResult = await _adminUserService.SuspendUserAsync(id, new AdminSuspendUserDTO { DaySuspend = 7 });
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
+
+        /// <summary>
+        /// POST api/adminusers/{id}/timeout/30-days
+        /// Applies a 30-day suspension preset to the specified profile.
+        /// </summary>
+        [HttpPost("{id}/timeout/30-days")]
+        public async Task<IActionResult> Timeout30Days(string id)
+        {
+            ReturnResult<bool> returnResult = new();
+            try
+            {
+                returnResult = await _adminUserService.SuspendUserAsync(id, new AdminSuspendUserDTO { DaySuspend = 30 });
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
+
+        /// <summary>
+        /// POST api/adminusers/{id}/ban
+        /// Permanently bans the specified profile (indefinite suspension, SuspendedUntil = null).
+        /// </summary>
+        [HttpPost("{id}/ban")]
+        public async Task<IActionResult> Ban(string id)
+        {
+            ReturnResult<bool> returnResult = new();
+            try
+            {
+                returnResult = await _adminUserService.SuspendUserAsync(id, new AdminSuspendUserDTO { DaySuspend = null });
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
+
+        /// <summary>
         /// PUT api/adminusers/{id}/role
         /// Updates a user's role. The route id is ApplicationUser.Id.
         /// </summary>

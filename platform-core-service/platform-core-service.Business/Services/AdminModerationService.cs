@@ -33,7 +33,7 @@ namespace platform_core_service.Business.Services
             var result = new ReturnResult<PagedData<AdminQueueEntryDTO, string>>();
             try
             {
-                if (!_userContext.IsAdmin)
+                if (!_userContext.IsAdmin && !_userContext.IsModerator)
                 {
                     result.Message = "You are not the admin/moderator";
                     return result;
@@ -59,7 +59,7 @@ namespace platform_core_service.Business.Services
             var result = new ReturnResult<bool>();
             try
             {
-                if (!_userContext.IsAdmin)
+                if (!_userContext.IsAdmin && !_userContext.IsModerator)
                 {
                     result.Message = "You are not the admin/moderator";
                     return result;
@@ -111,7 +111,7 @@ namespace platform_core_service.Business.Services
             var result = new ReturnResult<bool>();
             try
             {
-                if (!_userContext.IsAdmin)
+                if (!_userContext.IsAdmin && !_userContext.IsModerator)
                 {
                     result.Message = "You are not the admin/moderator";
                     return result;

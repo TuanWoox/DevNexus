@@ -35,6 +35,21 @@ namespace platform_core_service.Business.Services
             }
             return returnResult;
         }
+
+        public async Task<ReturnResult<AdminAiUsageSummaryDTO>> GetSummaryAsync(DateOnly from, DateOnly to)
+        {
+            ReturnResult<AdminAiUsageSummaryDTO> returnResult = new();
+            try
+            {
+                returnResult = await _aiWorkerClient.GetSummaryAsync(from, to);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error($"[AiUsageLogService] GetSummaryAsync: {ex.Message}");
+                returnResult.Message = $"An error occurred while fetching AI usage summary: {ex.Message}";
+            }
+            return returnResult;
+        }
     }
 
 }

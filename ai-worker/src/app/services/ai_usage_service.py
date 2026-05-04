@@ -1,11 +1,19 @@
 import logging
+from datetime import date, timedelta
 
 from google.genai.types import GenerateContentResponse
-from sqlalchemy import func, select
+from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.models.ai_usage_log import AiUsageLog
-from src.app.schemas.ai_usage_log import AiUsageLogDTO, AiUsageLogPageResponse
+from src.app.schemas.ai_usage_log import (
+    AiUsageByDateDTO,
+    AiUsageByFeatureDTO,
+    AiUsageByModelDTO,
+    AiUsageLogDTO,
+    AiUsageLogPageResponse,
+    AiUsageSummaryResponse,
+)
 from src.app.schemas.dynamic_filter import PageRequest
 from src.app.utils.query_builder import build_filters, build_orders
 
@@ -111,4 +119,128 @@ class AiUsageService:
             total=total,
             page=page,
             page_size=page_size,
+        )
+
+    # ── Summary ───────────────────────────────────────────────────────────────
+
+    async def get_summary(
+        self,
+        from_date: date,
+        to_date: date,
+    ) -> AiUsageSummaryResponse:
+        """
+        Return aggregated token usage for the given inclusive date range.
+        Runs four sequential queries (grand totals + three GROUP BY breakdowns).
+        """
+        # Exclusive upper bound: created_at < to_date + 1 day
+        upper_bound = to_date + timedelta(days=1)
+
+        # ── Grand totals ──────────────────────────────────────────────────────
+        totals_stmt = select(
+            func.count().label("total_calls"),
+            func.coalesce(func.sum(AiUsageLog.input_tokens), 0).label("total_input_tokens"),
+            func.coalesce(func.sum(AiUsageLog.output_tokens), 0).label("total_output_tokens"),
+            func.coalesce(func.sum(AiUsageLog.total_tokens), 0).label("total_tokens"),
+        ).where(
+            AiUsageLog.created_at >= from_date,
+            AiUsageLog.created_at < upper_bound,
+        )
+        totals_row = (await self._db.execute(totals_stmt)).one()
+
+        # ── By model ──────────────────────────────────────────────────────────
+        by_model_stmt = (
+            select(
+                AiUsageLog.model_used.label("model"),
+                func.count().label("call_count"),
+                func.coalesce(func.sum(AiUsageLog.input_tokens), 0).label("input_tokens"),
+                func.coalesce(func.sum(AiUsageLog.output_tokens), 0).label("output_tokens"),
+                func.coalesce(func.sum(AiUsageLog.total_tokens), 0).label("total_tokens"),
+            )
+            .where(
+                AiUsageLog.created_at >= from_date,
+                AiUsageLog.created_at < upper_bound,
+            )
+            .group_by(AiUsageLog.model_used)
+            .order_by(func.count().desc())
+        )
+        by_model_rows = (await self._db.execute(by_model_stmt)).all()
+
+        # ── By feature ────────────────────────────────────────────────────────
+        by_feature_stmt = (
+            select(
+                AiUsageLog.feature_name.label("feature"),
+                func.count().label("call_count"),
+                func.coalesce(func.sum(AiUsageLog.input_tokens), 0).label("input_tokens"),
+                func.coalesce(func.sum(AiUsageLog.output_tokens), 0).label("output_tokens"),
+                func.coalesce(func.sum(AiUsageLog.total_tokens), 0).label("total_tokens"),
+            )
+            .where(
+                AiUsageLog.created_at >= from_date,
+                AiUsageLog.created_at < upper_bound,
+            )
+            .group_by(AiUsageLog.feature_name)
+            .order_by(func.count().desc())
+        )
+        by_feature_rows = (await self._db.execute(by_feature_stmt)).all()
+
+        # ── By date (daily) ───────────────────────────────────────────────────
+        by_date_stmt = (
+            select(
+                cast(AiUsageLog.created_at, Date).label("date"),
+                func.count().label("call_count"),
+                func.coalesce(func.sum(AiUsageLog.input_tokens), 0).label("input_tokens"),
+                func.coalesce(func.sum(AiUsageLog.output_tokens), 0).label("output_tokens"),
+                func.coalesce(func.sum(AiUsageLog.total_tokens), 0).label("total_tokens"),
+            )
+            .where(
+                AiUsageLog.created_at >= from_date,
+                AiUsageLog.created_at < upper_bound,
+            )
+            .group_by(cast(AiUsageLog.created_at, Date))
+            .order_by(cast(AiUsageLog.created_at, Date).asc())
+        )
+        by_date_rows = (await self._db.execute(by_date_stmt)).all()
+
+        logger.debug(
+            "AiUsageService.get_summary: from=%s to=%s total_calls=%d",
+            from_date,
+            to_date,
+            totals_row.total_calls,
+        )
+
+        return AiUsageSummaryResponse(
+            total_calls=totals_row.total_calls,
+            total_input_tokens=totals_row.total_input_tokens,
+            total_output_tokens=totals_row.total_output_tokens,
+            total_tokens=totals_row.total_tokens,
+            by_model=[
+                AiUsageByModelDTO(
+                    model=r.model,
+                    call_count=r.call_count,
+                    input_tokens=r.input_tokens,
+                    output_tokens=r.output_tokens,
+                    total_tokens=r.total_tokens,
+                )
+                for r in by_model_rows
+            ],
+            by_feature=[
+                AiUsageByFeatureDTO(
+                    feature=r.feature,
+                    call_count=r.call_count,
+                    input_tokens=r.input_tokens,
+                    output_tokens=r.output_tokens,
+                    total_tokens=r.total_tokens,
+                )
+                for r in by_feature_rows
+            ],
+            by_date=[
+                AiUsageByDateDTO(
+                    date=str(r.date),
+                    call_count=r.call_count,
+                    input_tokens=r.input_tokens,
+                    output_tokens=r.output_tokens,
+                    total_tokens=r.total_tokens,
+                )
+                for r in by_date_rows
+            ],
         )

@@ -149,6 +149,12 @@ namespace platform_core_service.Business.Services
             var result = new ReturnResult<bool>();
             try
             {
+                if (!_userContext.IsAdmin)
+                {
+                    result.Message = "Only Admins can change user roles";
+                    return result;
+                }
+
                 if (userId == _userContext.UserId)
                 {
                     result.Message = "Admins cannot change their own role";
