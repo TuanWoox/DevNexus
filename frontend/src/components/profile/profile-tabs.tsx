@@ -10,8 +10,8 @@ interface ProfileTabsProps {
 export function ProfileTabs({ activeTab, setActiveTab, isOwnProfile, isPrivate }: ProfileTabsProps) {
     const allTabs = [
         { id: "overview", label: "Overview" },
-        { id: "post", label: "Post" },
-        { id: "qa-post", label: "QA Post" },
+        { id: "post", label: "Posts" },
+        { id: "qa-post", label: "Q&A" },
         { id: "saved", label: "Saved" },
     ];
 
@@ -26,16 +26,20 @@ export function ProfileTabs({ activeTab, setActiveTab, isOwnProfile, isPrivate }
     });
 
     return (
-        <div className="px-4 md:px-8 max-w-5xl mx-auto w-full mt-4 border-b">
-            <nav className="flex space-x-8 overflow-x-auto no-scrollbar" aria-label="Tabs">
+        <div className="px-4 md:px-10 max-w-5xl mx-auto w-full">
+            <nav className="flex gap-1 overflow-x-auto no-scrollbar border-t border-gray-300 dark:border-gray-700" aria-label="Profile tabs">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
-                        onClick={() => setActiveTab(tab.id as any)}
-                        className={`border-b-2 py-4 px-1 text-base font-semibold cursor-pointer whitespace-nowrap transition-colors ${activeTab === tab.id
-                            ? "border-primary text-primary"
-                            : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-                            }`}
+                        onClick={() => setActiveTab(tab.id as "overview" | "post" | "qa-post" | "saved")}
+                        className={`
+                            relative mt-1 px-4 py-3 text-base font-semibold whitespace-nowrap
+                            cursor-pointer transition-colors duration-150 rounded-t-md
+                            ${activeTab === tab.id
+                                ? "border-b-2 border-primary text-primary"
+                                : "text-muted-foreground hover:text-heading hover:bg-muted/50"
+                            }
+                        `}
                     >
                         {tab.label}
                     </button>

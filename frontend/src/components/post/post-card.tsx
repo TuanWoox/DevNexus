@@ -11,17 +11,23 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { PostActionsDropdown } from "./post-actions-dropdown";
 
+import { useHasMounted } from "@/hooks/use-has-mounted";
+
 interface PostCardProps {
     post: SelectPostDTO | SelectQAPostDTO;
 }
 
 export function PostCard({ post }: PostCardProps) {
+    const hasMounted = useHasMounted();
     const { user } = useSelector((state: RootState) => state.auth);
     const isQaPost = 'answerCount' in post;
     const basePath = isQaPost ? '/questions' : '/post';
 
     const author = post.author;
-    const isAuthor = user?.profileId === post.authorId;
+    // Auth state is client-side only (Redux), so we gate it with hasMounted to ensure 
+    // the server and client initial render match perfectly.
+    const isAuthor = hasMounted && user?.profileId === post.authorId;
+
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(post.id);
 
     const handleVote = (e: React.MouseEvent, isUpvote: boolean) => {
@@ -29,6 +35,8 @@ export function PostCard({ post }: PostCardProps) {
         updateVote({ isUpvote });
     };
 
+    // Note: Dates can cause hydration mismatches if server and client have different locales.
+    // We use suppressHydrationWarning on the element where this is rendered.
     const formattedDate = new Date(post.dateCreated).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
@@ -40,18 +48,18 @@ export function PostCard({ post }: PostCardProps) {
             {/* Header: Author & Options */}
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3 relative z-10">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
+                    <Link href={`/profile/${post.authorId}`} className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
                         {author?.avatarUrl ? (
-                            <Image src={author.avatarUrl} alt={author.fullName} fill className="object-cover" />
+                            <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
                         ) : (
                             <span className="text-primary font-bold">{author?.fullName?.charAt(0) || 'U'}</span>
                         )}
-                    </div>
+                    </Link>
                     <div className="flex flex-col">
-                        <Link href={`/profile/${post.authorId}`} className="text-sm font-bold text-heading hover:text-primary transition-colors">
+                        <Link href={`/profile/${post.authorId}`} className="text-sm font-semibold text-heading hover:text-primary transition-colors">
                             {author?.fullName || 'Unknown'}
                         </Link>
-                        <span className="text-xs text-muted-foreground">{formattedDate}</span>
+                        <span className="text-xs font-semibold text-muted-foreground" suppressHydrationWarning>{formattedDate}</span>
                     </div>
                 </div>
 
@@ -64,18 +72,18 @@ export function PostCard({ post }: PostCardProps) {
             </div>
 
             {/* Content Wrap in Link */}
-            <Link href={`${basePath}/${post.id}`} className="block mt-1 group after:absolute after:inset-0">
+            <Link href={`${basePath}/${post.id}`} className="block group after:absolute after:inset-0">
                 <h2 className="text-lg sm:text-xl font-bold text-heading transition-colors line-clamp-2 leading-tight">
                     {post.title}
                 </h2>
             </Link>
-            <div className="mt-2.5 text-sm sm:text-base text-body line-clamp-3 leading-relaxed relative z-10">
+            <div className="text-sm sm:text-base text-body line-clamp-3 leading-relaxed relative z-10">
                 <MarkdownViewer source={post.content} />
             </div>
 
             {/* Tags */}
             {post.tagNames && post.tagNames.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-1.5">
+                <div className="flex flex-wrap gap-2">
                     {post.tagNames.map((tag) => (
                         <span key={tag} className="badge-emerald relative z-10">
                             #{tag}

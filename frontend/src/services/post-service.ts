@@ -23,6 +23,16 @@ export const postService = {
         return data.result ?? { data: [], page: payload };
     },
 
+    getPostsByProfileId: async (profileId: string, payload: Page<string>): Promise<PagedData<SelectPostDTO, string>> => {
+        const { data } = await api.post<ReturnResult<PagedData<SelectPostDTO, string>>>(`/Posts/profile/${profileId}/paging`, payload);
+        return data.result ?? { data: [], page: payload };
+    },
+
+    getOverviewByProfileId: async (profileId: string, payload: Page<string>): Promise<PagedData<SelectPostDTO, string>> => {
+        const { data } = await api.post<ReturnResult<PagedData<SelectPostDTO, string>>>(`/Posts/profile/${profileId}/overview/paging`, payload);
+        return data.result ?? { data: [], page: payload };
+    },
+
     updatePost: async (updatePostDTO: UpdatePostDTO): Promise<SelectPostDTO> => {
         const { data } = await api.put<ReturnResult<SelectPostDTO>>('/Posts', updatePostDTO);
         return data.result;

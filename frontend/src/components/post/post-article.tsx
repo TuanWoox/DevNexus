@@ -126,39 +126,22 @@ export default function PostArticle({ postId, isQAPost }: Props) {
 
     return (
         <article className="bg-card sm:rounded-xl sm:border border-default sm:shadow-sm sm:mx-6 overflow-hidden">
-            <div className="p-4 sm:p-6">
-                {/* Tags */}
-                {post.tagNames.length !== 0 && (
-                    <div className="flex flex-wrap gap-2 mb-3">
-                        {post.tagNames?.map((tag) => (
-                            <span key={tag} className="badge-emerald px-2.5 py-1 text-xs rounded-md">
-                                {tag}
-                            </span>
-                        ))}
-                    </div>
-                )}
-
-
-                {/* Title */}
-                <h1 className="text-2xl sm:text-3xl font-bold text-heading leading-tight mb-3">
-                    {post.title}
-                </h1>
-
+            <div className="p-3 sm:px-5 flex flex-col gap-3">
                 {/* Author Info */}
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
+                        <Link href={`/profile/${post.authorId}`} className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
                             {author?.avatarUrl ? (
-                                <Image src={author.avatarUrl} alt={author.fullName} fill className="object-cover" />
+                                <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
                             ) : (
                                 <span className="text-primary font-bold">{author?.fullName?.charAt(0) || 'U'}</span>
                             )}
-                        </div>
+                        </Link>
                         <div className="flex flex-col">
-                            <Link href={`/profile/${post.authorId}`} className="text-sm sm:text-base font-semibold text-heading hover:text-primary transition-colors">
+                            <Link href={`/profile/${post.authorId}`} className="text-sm font-semibold text-heading hover:text-primary transition-colors">
                                 {author?.fullName || 'Unknown'}
                             </Link>
-                            <span className="text-xs text-muted-foreground flex items-center gap-2">
+                            <span className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
                                 {formattedDate}
                                 {author?.techStacks && author.techStacks.length > 0 && (
                                     <>
@@ -180,10 +163,26 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                     />
                 </div>
 
+                {/* Title */}
+                <h1 className="text-2xl sm:text-3xl font-bold text-heading leading-tight">
+                    {post.title}
+                </h1>
+
                 {/* Content */}
                 <div className="text-body text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
                     <MarkdownViewer source={post.content} />
                 </div>
+
+                {/* Tags */}
+                {post.tagNames.length !== 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        {post.tagNames?.map((tag) => (
+                            <span key={tag} className="badge-emerald px-2.5 py-1 text-xs rounded-md">
+                                {tag}
+                            </span>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Action Bar */}

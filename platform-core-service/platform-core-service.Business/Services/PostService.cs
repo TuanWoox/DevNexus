@@ -264,6 +264,45 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
+        public async Task<ReturnResult<PagedData<SelectPostDTO, string>>> GetPostAndQAByProfileId(Page<string> page, string profileId)
+        {
+            var result = new ReturnResult<PagedData<SelectPostDTO, string>>();
+            try
+            {
+                // Step 1: Get current user profile
+                if (string.IsNullOrEmpty(profileId))
+                {
+                    result.Message = "User profile not found";
+                    return result;
+                }
+
+                // Step 2: Build query — only concrete Post rows (exclude QAPost subtype)
+                var query = _context.Posts
+                    // .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Where(p => p.AuthorId == profileId)
+                    .Include(p => p.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
+                    .AsNoTracking()
+                    .AsQueryable();
+
+                // Step 3: Get paged results
+                result.Result = await _postRepository.GetPagingAsync<Page<string>, SelectPostDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCommentCountForListAsync(result.Result.Data.ToList());
+                }
+
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while retrieving posts: {ex.Message}";
+            }
+            return result;
+        }
+
         public async Task<ReturnResult<SelectPostDTO>> UpdateAsync(UpdatePostDTO updateDTO)
         {
             var result = new ReturnResult<SelectPostDTO>();

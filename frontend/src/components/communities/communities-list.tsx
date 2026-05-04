@@ -8,6 +8,7 @@ import { CommunityCard } from "./community-card";
 import { ExploreHeader, SORT_OPTIONS, SortOption } from "./explore-header";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { FilterOperator } from "@/constants/filterOperator";
 
 export function CommunitiesList() {
     const [pageNumber, setPageNumber] = useState(0);
@@ -34,7 +35,7 @@ export function CommunitiesList() {
                 prop: "Name",
                 value: appliedSearch,
                 filterType: FilterType.Text,
-                filterOperator: 0,
+                filterOperator: FilterOperator.Contains,
                 dynamicProperty: "",
                 delimiter: ""
             }

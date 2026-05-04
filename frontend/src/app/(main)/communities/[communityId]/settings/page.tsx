@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useEffect, useMemo } from "react";
 import { SortOrderType } from "@/constants/sortOrderType";
 import { FilterType } from "@/constants/filterType";
+import { FilterOperator } from "@/constants/filterOperator";
 
 const CommunitySettingsPage = () => {
     const params = useParams();
@@ -37,7 +38,7 @@ const CommunitySettingsPage = () => {
                 prop: "ModeratorId",
                 value: user.profileId,
                 filterType: FilterType.Text,
-                filterOperator: 0,
+                filterOperator: FilterOperator.Equal,
                 dynamicProperty: "",
                 delimiter: ""
             }

@@ -173,6 +173,41 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
+        public async Task<ReturnResult<PagedData<SelectQAPostDTO, string>>> GetPageAsyncByProfileId(Page<string> page, string profileId)
+        {
+            var result = new ReturnResult<PagedData<SelectQAPostDTO, string>>();
+            try
+            {
+                if (string.IsNullOrEmpty(profileId))
+                {
+                    result.Message = "User profile not found";
+                    return result;
+                }
+
+                var query = _dbContext.Posts
+                    .OfType<QAPost>()
+                    .Where(q => q.AuthorId == profileId)
+                    .Include(q => q.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
+                    .AsNoTracking()
+                    .AsQueryable();
+
+                result.Result = await _qaPostRepository.GetPagingAsync<Page<string>, SelectQAPostDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCommentCountForListAsync(result.Result.Data.ToList());
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while retrieving posts: {ex.Message}";
+            }
+            return result;
+        }
+
         public async Task<ReturnResult<SelectQAPostDTO>> UpdateAsync(UpdateQAPostDTO updateDTO)
         {
             var result = new ReturnResult<SelectQAPostDTO>();

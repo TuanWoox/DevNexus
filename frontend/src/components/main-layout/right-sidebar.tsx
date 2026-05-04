@@ -10,7 +10,7 @@ const trendingTags = [
 
 export function RightSidebar() {
     return (
-        <aside className="hidden xl:block w-80 sticky top-0 h-screen py-6 pl-6 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <aside className="hidden xl:block w-80 sticky top-0 h-screen py-6 px-6 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <div className="card-ai p-5 mb-6">
                 <div className="flex items-center gap-2 mb-3">
                     <Sparkles className="h-4 w-4 text-emerald-500" />

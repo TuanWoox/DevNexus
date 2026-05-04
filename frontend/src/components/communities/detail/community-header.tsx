@@ -13,6 +13,7 @@ import { CommunityMediaUploadModal } from "./community-media-upload-modal";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { FilterType } from "@/constants/filterType";
+import { FilterOperator } from "@/constants/filterOperator";
 
 interface CommunityHeaderProps {
     community: SelectCommunityDTO;
@@ -33,7 +34,7 @@ export function CommunityHeader({ community }: CommunityHeaderProps) {
                 prop: "ModeratorId",
                 value: user.profileId,
                 filterType: FilterType.Text,
-                filterOperator: 0,
+                filterOperator: FilterOperator.Equal,
                 dynamicProperty: "",
                 delimiter: ""
             }
@@ -55,7 +56,7 @@ export function CommunityHeader({ community }: CommunityHeaderProps) {
         <div className="relative w-full bg-card border-b shadow-sm">
             {/* Cover Photo */}
             <div
-                className={`relative h-48 md:h-64 w-full bg-gradient-to-r from-primary/20 to-primary/5 transition-opacity ${hasAccess ? 'group cursor-pointer' : ''}`}
+                className={`relative h-48 md:h-64 w-full bg-linear-to-r from-primary/20 to-primary/5 transition-opacity ${hasAccess ? 'group cursor-pointer' : ''}`}
                 onClick={() => { if (hasAccess) setIsUploadModalOpen(true) }}
             >
                 {community.communityCoverPhotoUrl ? (

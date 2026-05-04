@@ -1,8 +1,6 @@
 'use client'
 
-import { useTheme } from 'next-themes'
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
     Hexagon,
@@ -13,25 +11,8 @@ import {
     Bell,
     Plus,
     Sparkles,
-    User,
-    LogOut,
-    Moon,
-    Sun,
-    Settings,
-    ChevronDown,
-    Loader2
 } from 'lucide-react'
-import { useSelector } from 'react-redux'
-import { RootState } from '@/store/store'
-import useLogout from '@/hooks/auth-hooks/use-logout'
-import { useGetProfileById } from '@/hooks/profile-hooks/use-get-profile-by-id'
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { SidebarUserMenu } from './sidebar-user-menu'
 
 const menuItems = [
     { name: 'Home', href: '/feed', icon: Home },
@@ -43,19 +24,10 @@ const menuItems = [
 
 export function LeftSidebar() {
     const pathname = usePathname()
-    const { theme, setTheme } = useTheme()
-
-    const { user } = useSelector((state: RootState) => state.auth)
-    const { data: userProfile } = useGetProfileById(user?.profileId as string);
-    const { logout, isLoggingOut } = useLogout()
-
-    const toggleTheme = () => {
-        setTheme(theme === 'dark' ? 'light' : 'dark')
-    }
 
     return (
-        <aside className="hidden sm:flex flex-col sticky top-0 h-screen py-6 border-r border-default sm:w-16 lg:w-64 sm:px-2 lg:px-0 lg:pr-6">
-            <Link href="/feed" className="flex items-center gap-3 mb-6 px-3">
+        <aside className="hidden sm:flex flex-col sticky top-0 h-screen py-6 border-r border-gray-300 dark:border-gray-800 shadow-[2px_0_15px_-3px_rgba(0,0,0,0.07)] dark:shadow-[2px_0_15px_-3px_rgba(0,0,0,0.4)] z-10 sm:w-16 lg:w-64 sm:px-2 lg:px-6">
+            <Link href="/feed" className="flex items-center gap-3 mb-6 px-3 justify-center lg:justify-start">
                 <div className="relative">
                     <Hexagon className="h-7 w-7 sm:h-8 sm:w-8 animate-pulse text-primary" />
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -82,7 +54,7 @@ export function LeftSidebar() {
                             `}
                         >
                             <item.icon className="h-6 w-6 shrink-0" />
-                            <span className="hidden lg:block text-base">
+                            <span className="hidden lg:block text-base font-medium">
                                 {item.name}
                             </span>
                         </Link>
@@ -103,74 +75,15 @@ export function LeftSidebar() {
                 </Link>
             </div>
 
+            {/*
+             * SidebarUserMenu is isolated into its own component.
+             * It contains all Radix DropdownMenu + theme/auth state.
+             * Isolating it prevents those Radix ID counters from affecting
+             * sibling subtrees (e.g. PostActionsDropdown in the feed/profile pages)
+             * which would cause hydration mismatches.
+             */}
             <div className="mt-auto pt-4">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <button suppressHydrationWarning className="flex justify-center lg:justify-start items-center gap-3 p-2 w-full rounded-xl hover:bg-subtle transition-colors group">
-                            <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
-                                {userProfile?.avatarUrl ? (
-                                    <Image src={userProfile.avatarUrl} alt={userProfile.fullName} fill className="object-cover" />
-                                ) : (
-                                    <span className="text-primary font-bold">{userProfile?.fullName?.charAt(0) || 'U'}</span>
-                                )}
-                            </div>
-                            <div className="hidden lg:flex flex-col text-left flex-1 overflow-hidden">
-                                <span className="text-sm font-bold text-heading truncate">{userProfile?.fullName || 'username'}</span>
-                                <span className="text-xs text-muted-foreground truncate">{user?.roles || 'Role'}</span>
-                            </div>
-                            <ChevronDown className="hidden lg:block w-4 h-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                        </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent side="top" align="center" sideOffset={8} className="w-52 bg-card border border-default rounded-xl shadow-elevated p-2 flex flex-col gap-1 z-50">
-                        <DropdownMenuItem asChild>
-                            <Link
-                                href="/profile"
-                                className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer"
-                            >
-                                <User className="w-5 h-5 shrink-0" />
-                                <span className="text-sm font-medium">View Profile</span>
-                            </Link>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem asChild>
-                            <Link
-                                href="/settings"
-                                className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer"
-                            >
-                                <Settings className="w-5 h-5 shrink-0" />
-                                <span className="text-sm font-medium">Settings</span>
-                            </Link>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                            onClick={toggleTheme}
-                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer"
-                        >
-                            {theme === 'dark' ? <Moon className="w-5 h-5 shrink-0" /> : <Sun className="w-5 h-5 shrink-0" />}
-                            <span className="text-sm font-medium flex-1">Display Mode</span>
-                            <div className={`w-8 h-4 flex rounded-full items-center px-0.5 transition-colors ${theme === 'dark' ? 'bg-primary' : 'bg-muted'}`}>
-                                <div className={`w-3 h-3 rounded-full bg-white transform transition-transform ${theme === 'dark' ? 'translate-x-4' : 'translate-x-0'}`} />
-                            </div>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuSeparator className="bg-default my-1" />
-
-                        <DropdownMenuItem
-                            onClick={() => logout()}
-                            disabled={isLoggingOut}
-                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors cursor-pointer disabled:opacity-50"
-                        >
-                            {isLoggingOut ? (
-                                <Loader2 className="w-5 h-5 animate-spin shrink-0" />
-                            ) : (
-                                <LogOut className="w-5 h-5 shrink-0" />
-                            )}
-                            <span className="text-sm font-medium">
-                                {isLoggingOut ? "Logging out..." : "Log Out"}
-                            </span>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <SidebarUserMenu />
             </div>
         </aside>
     )
