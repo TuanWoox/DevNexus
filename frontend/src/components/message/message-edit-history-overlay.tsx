@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useMessageEditHistory } from "@/features/messages/hooks/messages/use-message-edit-history";
 import { toRelativeTime } from "@/features/messages/utils/message-service.helper";
+import type { ReturnResult } from "@/types/common/return-result";
+import type { PagedData, MessageEditHistory } from "@/features/messages/types/contracts";
 
 interface Props {
     messageId: number;
@@ -25,7 +27,9 @@ export function MessageEditHistoryOverlay({ messageId, open, onClose }: Props) {
         return () => observer.disconnect();
     }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-    const history = data?.pages.flatMap(p => p.result?.data ?? []) ?? [];
+    const history = data?.pages.flatMap(
+        (p) => (p as ReturnResult<PagedData<number, MessageEditHistory>>).result?.data ?? []
+    ) ?? [];
 
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>

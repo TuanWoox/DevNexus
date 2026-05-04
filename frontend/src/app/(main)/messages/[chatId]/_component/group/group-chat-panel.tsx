@@ -39,6 +39,19 @@ export function GroupChatPanel({ selectedChat }: GroupChatPanelProps) {
         };
     }, [selectedChat.Id, socketRef, isConnected]);
 
+    useEffect(() => {
+        const socket = socketRef.current;
+        if (!socket || !isConnected) return;
+        const handleRemoved = (payload: Record<string, unknown>) => {
+            const removedId = (payload?.ProfileId ?? payload?.profileId) as string | undefined;
+            if (removedId === currentProfileId) {
+                router.push("/messages");
+            }
+        };
+        socket.on("member-removed", handleRemoved);
+        return () => { socket.off("member-removed", handleRemoved); };
+    }, [socketRef, isConnected, currentProfileId, router]);
+
     const handleBack = () => router.push("/messages");
 
     if (isLoading) {

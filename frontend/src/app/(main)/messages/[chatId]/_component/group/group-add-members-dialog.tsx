@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Search, Loader2, X, Check } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,16 @@ export function GroupAddMembersDialog({ open, onClose, chatId }: GroupAddMembers
     const { data: existingMembers } = useGroupMembers(chatId);
     const addMembers = useAddMembers(chatId);
 
-    const existingIds = existingMembers?.map((m) => m.ProfileId) ?? [];
+    // Stable ref so searchProfiles doesn't recreate on every render
+    const existingIds = useMemo(
+        () => existingMembers?.map((m) => m.ProfileId) ?? [],
+        [existingMembers]
+    );
+    const existingIdsRef = useRef(existingIds);
+    existingIdsRef.current = existingIds;
+
+    const selectedRef = useRef(selected);
+    selectedRef.current = selected;
 
     const searchProfiles = useCallback(async (q: string) => {
         if (q.trim().length < 1) {
@@ -42,16 +51,16 @@ export function GroupAddMembersDialog({ open, onClose, chatId }: GroupAddMembers
         }
         setIsSearching(true);
         try {
-            const res = await profileService.searchProfiles(q, existingIds);
+            const res = await profileService.searchProfiles(q, existingIdsRef.current);
             if (res.result) {
-                setResults(res.result.filter((p) => !selected.find((s) => s.Id === p.Id)));
+                setResults(res.result.filter((p) => !selectedRef.current.find((s) => s.Id === p.Id)));
             }
         } catch {
             setResults([]);
         } finally {
             setIsSearching(false);
         }
-    }, [existingIds, selected]);
+    }, []); // stable — reads latest values via refs
 
     useEffect(() => {
         const timer = setTimeout(() => {

@@ -14,6 +14,7 @@ export function useUpdateGroup(chatId: string) {
                 toast.error(data.message);
             } else {
                 queryClient.invalidateQueries({ queryKey: ["messages", "chats"] });
+                queryClient.invalidateQueries({ queryKey: messagingQueryKeys.chatById(chatId) });
             }
         },
     });

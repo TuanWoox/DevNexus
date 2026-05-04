@@ -5,12 +5,12 @@ import { messagingQueryKeys } from "../messaging-query-keys";
 export const useMessageEditHistory = (messageId: number, enabled: boolean) => {
     return useInfiniteQuery({
         queryKey: messagingQueryKeys.messageEditHistory(messageId),
-        queryFn: ({ pageParam }) =>
+        queryFn: ({ pageParam }: { pageParam: number | undefined }) =>
             messageService.getMessageEditHistory(messageId, {
                 size: 20,
-                indexPaging: pageParam as number | undefined,
+                indexPaging: pageParam,
             }),
-        initialPageParam: undefined,
+        initialPageParam: undefined as number | undefined,
         getNextPageParam: (lastPage) => {
             const data = lastPage.result?.data;
             if (!data?.length || data.length < 20) return undefined;

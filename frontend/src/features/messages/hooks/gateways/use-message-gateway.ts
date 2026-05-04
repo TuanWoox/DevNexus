@@ -143,6 +143,7 @@ export function useMessageGateway() {
             const targetTab = payload.IsArchived ? "archived" : payload.IsRequested ? "request" : "main";
 
             queryClient.invalidateQueries({ queryKey: messagingQueryKeys.chat(sourceTab) });
+            queryClient.invalidateQueries({ queryKey: messagingQueryKeys.chatById(payload.ChatId) });
             if (sourceTab !== targetTab) {
                 queryClient.invalidateQueries({ queryKey: messagingQueryKeys.chat(targetTab) });
                 if (window.location.pathname.includes(payload.ChatId)) {
@@ -164,27 +165,53 @@ export function useMessageGateway() {
         });
 
         // Group events — invalidate relevant queries so UI stays in sync
-        socket.on("group-updated", () => {
+        socket.on("group-updated", (payload: { ChatId?: string }) => {
             queryClient.invalidateQueries({ queryKey: ["messages", "chats"] });
+            if (payload?.ChatId) {
+                queryClient.invalidateQueries({ queryKey: messagingQueryKeys.chatById(payload.ChatId) });
+            }
         });
 
-        socket.on("member-added", () => {
+        socket.on("member-added", (payload: { ChatId?: string }) => {
             queryClient.invalidateQueries({ queryKey: ["messages", "chats"] });
             queryClient.invalidateQueries({ queryKey: ["messages", "groupMembers"] });
+            if (payload?.ChatId) {
+                queryClient.invalidateQueries({ queryKey: messagingQueryKeys.chatById(payload.ChatId) });
+            }
         });
 
-        socket.on("member-removed", () => {
+        socket.on("member-removed", (payload: Record<string, unknown>) => {
+            // Accept any casing the backend might send
+            const chatId = (payload?.ChatId ?? payload?.chatId) as string | undefined;
+            const removedId = (payload?.ProfileId ?? payload?.profileId ?? payload?.removedProfileId) as string | undefined;
+
             queryClient.invalidateQueries({ queryKey: ["messages", "chats"] });
             queryClient.invalidateQueries({ queryKey: ["messages", "groupMembers"] });
+            queryClient.removeQueries({ queryKey: ["messages", "chatById"] });
+            if (chatId) {
+                queryClient.removeQueries({ queryKey: messagingQueryKeys.messagesInsideChat(chatId) });
+            }
+
+            // If the removed user is the current user, navigate away
+            const isSelf = removedId === currentProfileId;
+            if (isSelf && chatId && window.location.pathname.includes(chatId)) {
+                router.push("/messages");
+            }
         });
 
-        socket.on("role-changed", () => {
+        socket.on("role-changed", (payload: { ChatId?: string }) => {
             queryClient.invalidateQueries({ queryKey: ["messages", "groupMembers"] });
+            if (payload?.ChatId) {
+                queryClient.invalidateQueries({ queryKey: messagingQueryKeys.chatById(payload.ChatId) });
+            }
         });
 
-        socket.on("ownership-transferred", () => {
+        socket.on("ownership-transferred", (payload: { ChatId?: string }) => {
             queryClient.invalidateQueries({ queryKey: ["messages", "chats"] });
             queryClient.invalidateQueries({ queryKey: ["messages", "groupMembers"] });
+            if (payload?.ChatId) {
+                queryClient.invalidateQueries({ queryKey: messagingQueryKeys.chatById(payload.ChatId) });
+            }
         });
 
         socket.on("disconnect", () => {

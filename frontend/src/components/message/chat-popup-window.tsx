@@ -13,6 +13,7 @@ import { useSocket } from "@/features/messages/context/socket-context";
 import { useChatWindows } from "@/features/messages/context/chat-windows-context";
 import { MessageThread } from "@/components/message/message-thread";
 import { MessageComposer } from "@/components/message/message-composer";
+import { RequestBanner } from "@/components/message/request-banner";
 import { ChatPopupHeader } from "@/components/message/chat-popup-header";
 import { ChatAvatarSection } from "@/app/(main)/messages/[chatId]/_component/chat-avatar-section";
 import { MediaSection } from "@/app/(main)/messages/[chatId]/_component/media-section";
@@ -70,6 +71,7 @@ export function ChatPopupWindow({ chatId }: Props) {
     const title = getTitle(chat, currentProfileId);
     const avatarUrl = getAvatarUrl(chat, currentProfileId);
     const mySetting = chat.ChatSettings?.[0];
+    const isRequested = mySetting?.IsRequested ?? false;
 
     return (
         <>
@@ -100,6 +102,10 @@ export function ChatPopupWindow({ chatId }: Props) {
                             detailOpen ? "-translate-x-full" : "translate-x-0"
                         )}
                     >
+                        {isRequested && (
+                            <RequestBanner chat={chat} currentProfileId={currentProfileId} />
+                        )}
+
                         <div className="flex-1 min-h-0 overflow-hidden">
                             {msgsLoading ? (
                                 <div className="flex h-full items-center justify-center">
@@ -126,6 +132,7 @@ export function ChatPopupWindow({ chatId }: Props) {
                                 currentProfileId={currentProfileId}
                                 editingMessage={editingMessage}
                                 onCancelEdit={() => setEditingMessage(null)}
+                                disabled={isRequested}
                             />
                         </div>
                     </div>
