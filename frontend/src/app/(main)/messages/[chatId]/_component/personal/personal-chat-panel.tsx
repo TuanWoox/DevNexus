@@ -6,12 +6,14 @@ import { PersonalChatHeader } from "./personal-chat-header";
 import { MessageThread } from "@/components/message/message-thread";
 import { MessageComposer } from "@/components/message/message-composer";
 import { RequestBanner } from "@/components/message/request-banner";
+import { BlockBanner } from "@/components/message/block-banner";
 import { ChatDetailPanel } from "../chat-detail-panel";
 import { Chat, Message } from "@/features/messages/types/contracts";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
-import { getProfileId } from "@/features/messages/utils/message-service.helper";
+import { getProfileId, getOtherProfileId, getTitle } from "@/features/messages/utils/message-service.helper";
 import { useMessageList } from "@/features/messages/hooks/messages/use-message-list";
+import { useBlockStatus } from "@/hooks/block-hooks/use-block-status";
 import { useState, useEffect } from "react";
 import { useSocket } from "@/features/messages/context/socket-context";
 
@@ -29,6 +31,9 @@ export function PersonalChatPanel({ selectedChat }: PersonalChatPanelProps) {
     const { socketRef, isConnected } = useSocket();
 
     const isRequested = selectedChat.ChatSettings?.[0]?.IsRequested ?? false;
+    const otherProfileId = getOtherProfileId(selectedChat, currentProfileId);
+    const { data: blockStatus } = useBlockStatus(otherProfileId);
+    const isBlocked = (blockStatus?.iBlockedThem || blockStatus?.theyBlockedMe) ?? false;
 
     useEffect(() => {
         const socket = socketRef.current;
@@ -60,6 +65,16 @@ export function PersonalChatPanel({ selectedChat }: PersonalChatPanelProps) {
 
                 <RequestBanner chat={selectedChat} currentProfileId={currentProfileId} />
 
+                {!isRequested && otherProfileId && (blockStatus?.iBlockedThem || blockStatus?.theyBlockedMe) && (
+                    <BlockBanner
+                        iBlockedThem={blockStatus.iBlockedThem}
+                        theyBlockedMe={blockStatus.theyBlockedMe}
+                        blockId={blockStatus.blockId}
+                        otherProfileId={otherProfileId}
+                        otherName={getTitle(selectedChat, currentProfileId)}
+                    />
+                )}
+
                 <MessageThread
                     messages={messages}
                     currentProfileId={currentProfileId}
@@ -78,7 +93,7 @@ export function PersonalChatPanel({ selectedChat }: PersonalChatPanelProps) {
                         currentProfileId={currentProfileId}
                         editingMessage={editingMessage}
                         onCancelEdit={() => setEditingMessage(null)}
-                        disabled={isRequested}
+                        disabled={isRequested || isBlocked}
                     />
                 </div>
             </div>

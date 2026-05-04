@@ -214,6 +214,34 @@ export function useMessageGateway() {
             }
         });
 
+        socket.on("profile-blocked", (payload: { OwnerId: string; BlockedProfileId: string }) => {
+            if (currentProfileId === payload.OwnerId) {
+                // I blocked them — refetch to get the new blockId
+                queryClient.invalidateQueries({ queryKey: ["blockStatus", payload.BlockedProfileId] });
+            } else if (currentProfileId === payload.BlockedProfileId) {
+                // They blocked me — update cache directly since API won't reflect this
+                queryClient.setQueryData(
+                    ["blockStatus", payload.OwnerId],
+                    (old: { iBlockedThem: boolean; blockId: string | null; theyBlockedMe: boolean } | undefined) =>
+                        old ? { ...old, theyBlockedMe: true } : { iBlockedThem: false, blockId: null, theyBlockedMe: true }
+                );
+            }
+        });
+
+        socket.on("profile-unblocked", (payload: { OwnerId: string; BlockedProfileId: string }) => {
+            if (currentProfileId === payload.OwnerId) {
+                // I unblocked them — refetch
+                queryClient.invalidateQueries({ queryKey: ["blockStatus", payload.BlockedProfileId] });
+            } else if (currentProfileId === payload.BlockedProfileId) {
+                // They unblocked me
+                queryClient.setQueryData(
+                    ["blockStatus", payload.OwnerId],
+                    (old: { iBlockedThem: boolean; blockId: string | null; theyBlockedMe: boolean } | undefined) =>
+                        old ? { ...old, theyBlockedMe: false } : { iBlockedThem: false, blockId: null, theyBlockedMe: false }
+                );
+            }
+        });
+
         socket.on("disconnect", () => {
             setIsConnected(false);
         });

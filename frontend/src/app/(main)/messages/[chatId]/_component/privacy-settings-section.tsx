@@ -1,21 +1,29 @@
 "use client";
 
-import { Pin, BellOff, Bell, Archive, UserPlus, LogOut, Loader2 } from "lucide-react";
+import { Pin, BellOff, Bell, Archive, UserPlus, LogOut, Loader2, ShieldBan } from "lucide-react";
 import { Chat } from "@/features/messages/types/contracts";
 import { useUpdateChatSetting } from "@/features/messages/hooks/chatsettings/use-update-chat-setting";
 import { useLeaveGroup } from "@/features/messages/hooks/groups/use-leave-group";
-import { toast } from "sonner";
+import { useBlockStatus } from "@/hooks/block-hooks/use-block-status";
+import { useBlockProfile } from "@/hooks/block-hooks/use-block-profile";
+import { useUnblockProfile } from "@/hooks/block-hooks/use-unblock-profile";
+import { getOtherProfileId } from "@/features/messages/utils/message-service.helper";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 
 interface PrivacySettingsSectionProps {
     chat: Chat;
     onBack?: () => void;
+    currentProfileId?: string;
 }
 
-export function PrivacySettingsSection({ chat, onBack }: PrivacySettingsSectionProps) {
+export function PrivacySettingsSection({ chat, onBack, currentProfileId = "" }: PrivacySettingsSectionProps) {
     const updateChatSetting = useUpdateChatSetting();
     const leaveGroup = useLeaveGroup(chat.Id, onBack);
+    const otherProfileId = !chat.IsGroup ? getOtherProfileId(chat, currentProfileId) : null;
+    const { data: blockStatus } = useBlockStatus(otherProfileId);
+    const blockProfile = useBlockProfile(otherProfileId ?? "");
+    const unblockProfile = useUnblockProfile(blockStatus?.blockId ?? null, otherProfileId ?? "");
 
     const mySetting = useMemo(() => {
         return chat?.ChatSettings?.[0];
@@ -156,6 +164,26 @@ export function PrivacySettingsSection({ chat, onBack }: PrivacySettingsSectionP
                             </div>
                             <span className="text-sm font-medium text-foreground">Accept request</span>
                         </div>
+                    </button>
+                )}
+
+                {!chat.IsGroup && otherProfileId && (
+                    <button
+                        type="button"
+                        onClick={() => blockStatus?.iBlockedThem ? unblockProfile.mutate() : blockProfile.mutate()}
+                        disabled={blockProfile.isPending || unblockProfile.isPending}
+                        className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors duration-150 hover:bg-destructive/10 disabled:opacity-50"
+                    >
+                        <div className="shrink-0 h-9 w-9 rounded-full bg-destructive/10 flex items-center justify-center">
+                            {(blockProfile.isPending || unblockProfile.isPending) ? (
+                                <Loader2 className="h-4 w-4 text-destructive animate-spin" />
+                            ) : (
+                                <ShieldBan className="h-4 w-4 text-destructive" />
+                            )}
+                        </div>
+                        <span className="text-sm font-medium text-destructive">
+                            {blockStatus?.iBlockedThem ? "Unblock user" : "Block user"}
+                        </span>
                     </button>
                 )}
 

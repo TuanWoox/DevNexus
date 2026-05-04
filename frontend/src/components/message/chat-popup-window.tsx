@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RootState } from "@/store/store";
-import { getProfileId, getTitle, getAvatarUrl } from "@/features/messages/utils/message-service.helper";
+import { getProfileId, getTitle, getAvatarUrl, getOtherProfileId } from "@/features/messages/utils/message-service.helper";
+import { useBlockStatus } from "@/hooks/block-hooks/use-block-status";
 import { useChatById } from "@/features/messages/hooks/chats/use-chat-by-id";
 import { useMessageList } from "@/features/messages/hooks/messages/use-message-list";
 import { useSocket } from "@/features/messages/context/socket-context";
@@ -14,6 +15,7 @@ import { useChatWindows } from "@/features/messages/context/chat-windows-context
 import { MessageThread } from "@/components/message/message-thread";
 import { MessageComposer } from "@/components/message/message-composer";
 import { RequestBanner } from "@/components/message/request-banner";
+import { BlockBanner } from "@/components/message/block-banner";
 import { ChatPopupHeader } from "@/components/message/chat-popup-header";
 import { ChatAvatarSection } from "@/app/(main)/messages/[chatId]/_component/chat-avatar-section";
 import { MediaSection } from "@/app/(main)/messages/[chatId]/_component/media-section";
@@ -72,6 +74,9 @@ export function ChatPopupWindow({ chatId }: Props) {
     const avatarUrl = getAvatarUrl(chat, currentProfileId);
     const mySetting = chat.ChatSettings?.[0];
     const isRequested = mySetting?.IsRequested ?? false;
+    const otherProfileId = !chat.IsGroup ? getOtherProfileId(chat, currentProfileId) : null;
+    const { data: blockStatus } = useBlockStatus(otherProfileId);
+    const isBlocked = !chat.IsGroup && ((blockStatus?.iBlockedThem || blockStatus?.theyBlockedMe) ?? false);
 
     return (
         <>
@@ -106,6 +111,16 @@ export function ChatPopupWindow({ chatId }: Props) {
                             <RequestBanner chat={chat} currentProfileId={currentProfileId} />
                         )}
 
+                        {!isRequested && otherProfileId && (blockStatus?.iBlockedThem || blockStatus?.theyBlockedMe) && (
+                            <BlockBanner
+                                iBlockedThem={blockStatus.iBlockedThem}
+                                theyBlockedMe={blockStatus.theyBlockedMe}
+                                blockId={blockStatus.blockId}
+                                otherProfileId={otherProfileId}
+                                otherName={title}
+                            />
+                        )}
+
                         <div className="flex-1 min-h-0 overflow-hidden">
                             {msgsLoading ? (
                                 <div className="flex h-full items-center justify-center">
@@ -132,7 +147,7 @@ export function ChatPopupWindow({ chatId }: Props) {
                                 currentProfileId={currentProfileId}
                                 editingMessage={editingMessage}
                                 onCancelEdit={() => setEditingMessage(null)}
-                                disabled={isRequested}
+                                disabled={isRequested || isBlocked}
                             />
                         </div>
                     </div>
@@ -164,6 +179,7 @@ export function ChatPopupWindow({ chatId }: Props) {
                         <PrivacySettingsSection
                             chat={chat}
                             onBack={() => { closeChat(chatId); router.push("/messages"); }}
+                            currentProfileId={currentProfileId}
                         />
 
                         {mySetting && (

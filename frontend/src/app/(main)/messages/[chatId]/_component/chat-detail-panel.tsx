@@ -87,7 +87,7 @@ export function ChatDetailPanel({ chat, open, onClose, currentProfileId, onBack 
 
                     <div className="border-t border-border/60" />
 
-                    <PrivacySettingsSection chat={chat} onBack={onBack} />
+                    <PrivacySettingsSection chat={chat} onBack={onBack} currentProfileId={currentProfileId} />
 
                     <div className="border-t border-border/60" />
 

@@ -51,6 +51,12 @@ export function getProfileId(rawProfileId?: string): string {
     return rawProfileId || "";
 }
 
+export function getOtherProfileId(chat: Chat, currentProfileId: string): string | null {
+    if (chat.IsGroup) return null;
+    const other = chat.Members.find(m => m.MemberId !== currentProfileId);
+    return other?.MemberId ?? null;
+}
+
 
 
 export function formatTime(isoDate: string): string {
