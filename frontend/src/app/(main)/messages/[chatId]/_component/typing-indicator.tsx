@@ -1,1 +1,1 @@
-export { TypingIndicator } from "@/features/messages/components/typing-indicator";
+export { TypingIndicator } from "@/components/message/typing-indicator";

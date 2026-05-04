@@ -1,8 +1,8 @@
 "use client";
 
 import { useChatWindows } from "@/features/messages/context/chat-windows-context";
-import { ChatPopupWindow } from "./chat-popup-window";
-import { ChatHead } from "./chat-head";
+import { ChatPopupWindow } from "@/components/message/chat-popup-window";
+import { ChatHead } from "@/components/message/chat-head";
 
 const WINDOW_W = 340;
 const WINDOW_GAP = 12;

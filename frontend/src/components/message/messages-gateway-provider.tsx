@@ -4,8 +4,8 @@ import { ReactNode } from "react";
 import { useMessageGateway } from "@/features/messages/hooks/gateways/use-message-gateway";
 import { SocketContext } from "@/features/messages/context/socket-context";
 import { ChatWindowsProvider } from "@/features/messages/context/chat-windows-context";
-import { NotificationHost } from "./notification-host";
-import { ChatWindowsHost } from "./chat-windows-host";
+import { NotificationHost } from "@/components/message/notification-host";
+import { ChatWindowsHost } from "@/components/message/chat-windows-host";
 
 export function MessagesGatewayProvider({ children }: { children: ReactNode }) {
     const { socketRef, isConnected } = useMessageGateway();

@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useId, useRef, useState } from "react";
-import { Paperclip, Send, X, Play, Pencil } from "lucide-react";
+import { Paperclip, Send, X, Play, Pencil, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -26,9 +26,10 @@ interface MessageComposerProps {
     currentProfileId: string;
     editingMessage: Message | null;
     onCancelEdit: () => void;
+    disabled?: boolean;
 }
 
-export function MessageComposer({ selectedChat, messages, currentProfileId, editingMessage, onCancelEdit }: MessageComposerProps) {
+export function MessageComposer({ selectedChat, messages, currentProfileId, editingMessage, onCancelEdit, disabled }: MessageComposerProps) {
     const createMessage = useCreateMessage();
     const updateMessage = useUpdateMessage();
     const markAsRead = useMarkMessageAsRead();
@@ -110,6 +111,15 @@ export function MessageComposer({ selectedChat, messages, currentProfileId, edit
     const canSend = hasContent && !isSending && !createMessage.isPending;
 
     if (!selectedChat) return null;
+
+    if (disabled) {
+        return (
+            <div className="flex items-center justify-center gap-2 py-3 text-xs text-muted-foreground">
+                <Lock className="h-3.5 w-3.5 shrink-0" />
+                Accept the request to send a message
+            </div>
+        );
+    }
 
     const handleFocus = () => {
         if (!selectedChat || !messages.length) return;

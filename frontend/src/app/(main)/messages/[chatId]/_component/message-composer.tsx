@@ -1,1 +1,1 @@
-export { MessageComposer } from "@/features/messages/components/message-composer";
+export { MessageComposer } from "@/components/message/message-composer";

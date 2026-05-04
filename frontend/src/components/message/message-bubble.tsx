@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toRelativeTime, getInitials, getMediaUrl } from "@/features/messages/utils/message-service.helper";
 import { Check, Download, FileText, FileArchive, MoreVertical, Trash2, Pencil } from "lucide-react";
-import { MediaLightbox } from "./media-lightbox";
-import { ReadReceiptOverlay } from "./read-receipt-overlay";
+import { MediaLightbox } from "@/components/message/media-lightbox";
+import { ReadReceiptOverlay } from "@/components/message/read-receipt-overlay";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useDeleteMessage } from "@/features/messages/hooks/messages/use-delete-message";
 import { useUndoDeleteMessage } from "@/features/messages/hooks/messages/use-undo-delete-message";
-import { MessageEditHistoryOverlay } from "./message-edit-history-overlay";
+import { MessageEditHistoryOverlay } from "@/components/message/message-edit-history-overlay";
 
 const MAX_VISIBLE_AVATARS = 3;
 

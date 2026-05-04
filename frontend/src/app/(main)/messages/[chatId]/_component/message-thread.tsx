@@ -1,1 +1,1 @@
-export { MessageThread } from "@/features/messages/components/message-thread";
+export { MessageThread } from "@/components/message/message-thread";

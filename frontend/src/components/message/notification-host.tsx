@@ -14,16 +14,17 @@ export function NotificationHost() {
         const handler = (e: Event) => {
             if (isOnMessagesPage) return;
             const message = (e as CustomEvent<Message>).detail;
+            const isMuted = message?.Chat?.ChatSettings?.[0]?.IsMuted ?? false;
             const existing = windows.find(w => w.chatId === message.ChatId);
 
             if (!existing) {
-                // New chat — open window
-                openChat(message.ChatId);
+                // No window yet — open only if not muted
+                if (!isMuted) openChat(message.ChatId);
             } else if (existing.state === "minimized") {
-                // Already minimized — just increment badge, don't pop up
+                // Already minimized — always increment badge regardless of mute
                 incrementUnread(message.ChatId);
             }
-            // state === "open" — message appends into thread automatically, nothing to do
+            // state === "open" — message appends into thread automatically
         };
         window.addEventListener("new-message-notification", handler);
         return () => window.removeEventListener("new-message-notification", handler);

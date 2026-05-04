@@ -95,11 +95,14 @@ export function useMessageGateway() {
             const isFromSelf = message.SenderId === currentProfileId;
             const settings = message?.Chat?.ChatSettings?.[0];
 
-            if (!isFromSelf && !settings?.IsMuted && !settings?.IsArchived && !settings?.IsRequested) {
-                if (audioRef.current) {
+            if (!isFromSelf && !settings?.IsArchived && !settings?.IsRequested) {
+                // Play sound only if not muted
+                if (!settings?.IsMuted && audioRef.current) {
                     audioRef.current.currentTime = 0;
                     audioRef.current.play().catch(() => { });
                 }
+                // Always dispatch so NotificationHost can handle minimized unread count
+                // even when muted — NotificationHost checks IsMuted before opening windows
                 window.dispatchEvent(new CustomEvent("new-message-notification", { detail: message }));
             }
 

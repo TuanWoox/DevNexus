@@ -1,1 +1,1 @@
-export { MessageBubble } from "@/features/messages/components/message-bubble";
+export { MessageBubble } from "@/components/message/message-bubble";

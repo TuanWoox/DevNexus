@@ -1,1 +1,1 @@
-export { ReadReceiptOverlay } from "@/features/messages/components/read-receipt-overlay";
+export { ReadReceiptOverlay } from "@/components/message/read-receipt-overlay";

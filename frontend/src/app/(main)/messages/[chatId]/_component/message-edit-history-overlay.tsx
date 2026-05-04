@@ -1,1 +1,1 @@
-export { MessageEditHistoryOverlay } from "@/features/messages/components/message-edit-history-overlay";
+export { MessageEditHistoryOverlay } from "@/components/message/message-edit-history-overlay";

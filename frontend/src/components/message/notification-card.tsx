@@ -5,12 +5,12 @@ import { X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/features/messages/utils/message-service.helper";
-import type { NotificationItem } from "./notification-host";
+import type { Message } from "@/features/messages/types/contracts";
 
 const DISMISS_AFTER = 5000;
 
 interface Props {
-    item: NotificationItem;
+    item: { message: Message };
     onDismiss: () => void;
     onClick: () => void;
 }

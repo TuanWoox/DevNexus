@@ -3,8 +3,9 @@
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { PersonalChatHeader } from "./personal-chat-header";
-import { MessageThread } from "@/features/messages/components/message-thread";
-import { MessageComposer } from "@/features/messages/components/message-composer";
+import { MessageThread } from "@/components/message/message-thread";
+import { MessageComposer } from "@/components/message/message-composer";
+import { RequestBanner } from "@/components/message/request-banner";
 import { ChatDetailPanel } from "../chat-detail-panel";
 import { Chat, Message } from "@/features/messages/types/contracts";
 import { useSelector } from "react-redux";
@@ -27,6 +28,8 @@ export function PersonalChatPanel({ selectedChat }: PersonalChatPanelProps) {
 
     const { socketRef, isConnected } = useSocket();
 
+    const isRequested = selectedChat.ChatSettings?.[0]?.IsRequested ?? false;
+
     useEffect(() => {
         const socket = socketRef.current;
         if (!socket || !isConnected) return;
@@ -48,13 +51,14 @@ export function PersonalChatPanel({ selectedChat }: PersonalChatPanelProps) {
 
     return (
         <div className="flex h-full overflow-hidden relative">
-            {/* Chat content */}
             <div className="flex h-full flex-1 flex-col overflow-hidden min-w-0">
                 <PersonalChatHeader
                     detail={selectedChat}
                     onBack={handleBack}
                     onTogglePanel={() => setIsPanelOpen((prev) => !prev)}
                 />
+
+                <RequestBanner chat={selectedChat} currentProfileId={currentProfileId} />
 
                 <MessageThread
                     messages={messages}
@@ -74,11 +78,11 @@ export function PersonalChatPanel({ selectedChat }: PersonalChatPanelProps) {
                         currentProfileId={currentProfileId}
                         editingMessage={editingMessage}
                         onCancelEdit={() => setEditingMessage(null)}
+                        disabled={isRequested}
                     />
                 </div>
             </div>
 
-            {/* Detail panel */}
             <ChatDetailPanel
                 chat={selectedChat}
                 open={isPanelOpen}

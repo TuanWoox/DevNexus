@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { MessageBubble } from "./message-bubble";
-import { TypingIndicator } from "./typing-indicator";
+import { MessageBubble } from "@/components/message/message-bubble";
+import { TypingIndicator } from "@/components/message/typing-indicator";
 import { Message } from "@/features/messages/types/contracts";
 import { cn } from "@/lib/utils";
 

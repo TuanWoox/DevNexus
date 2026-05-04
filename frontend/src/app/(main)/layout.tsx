@@ -2,7 +2,7 @@ import { LeftSidebar } from '@/components/main-layout/left-sidebar'
 import { RightSidebar } from '@/components/main-layout/right-sidebar'
 import { MobileHeader } from '@/components/main-layout/mobile-header'
 import { MobileNav } from '@/components/main-layout/mobile-nav'
-import { MessagesGatewayProvider } from '@/features/messages/components/messages-gateway-provider'
+import { MessagesGatewayProvider } from '@/components/message/messages-gateway-provider'
 
 export default function MainLayout({
     children,

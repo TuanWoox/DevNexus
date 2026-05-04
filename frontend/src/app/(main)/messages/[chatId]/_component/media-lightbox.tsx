@@ -1,1 +1,1 @@
-export { MediaLightbox } from "@/features/messages/components/media-lightbox";
+export { MediaLightbox } from "@/components/message/media-lightbox";
