@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
 type WindowState = "open" | "minimized";
@@ -28,15 +28,16 @@ export function ChatWindowsProvider({ children }: { children: ReactNode }) {
     const [windows, setWindows] = useState<ChatWindowEntry[]>([]);
     const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
     const pathname = usePathname();
+    const isMessagesPage = pathname.startsWith("/messages");
 
-    useEffect(() => {
-        if (pathname.startsWith("/messages")) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setWindows([]);
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setUnreadCounts({});
-        }
-    }, [pathname]);
+    const activeWindows = useMemo(
+        () => isMessagesPage ? [] : windows,
+        [isMessagesPage, windows],
+    );
+    const activeUnreadCounts = useMemo(
+        () => isMessagesPage ? {} : unreadCounts,
+        [isMessagesPage, unreadCounts],
+    );
 
     const openChat = useCallback((chatId: string) => {
         setWindows(prev => {
@@ -70,10 +71,10 @@ export function ChatWindowsProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const isOpen = useCallback((chatId: string) =>
-        windows.some(w => w.chatId === chatId), [windows]);
+        activeWindows.some(w => w.chatId === chatId), [activeWindows]);
 
     return (
-        <ChatWindowsContext.Provider value={{ windows, unreadCounts, openChat, closeChat, minimizeChat, restoreChat, incrementUnread, isOpen }}>
+        <ChatWindowsContext.Provider value={{ windows: activeWindows, unreadCounts: activeUnreadCounts, openChat, closeChat, minimizeChat, restoreChat, incrementUnread, isOpen }}>
             {children}
         </ChatWindowsContext.Provider>
     );

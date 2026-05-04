@@ -166,11 +166,11 @@ export function MessageBubble({
     const { mutate: deleteMessage } = useDeleteMessage();
     const { mutate: undoDeleteMessage } = useUndoDeleteMessage();
 
+    const [mountedAt] = useState(() => Date.now());
     const createdAt = new Date(message.DateCreated).getTime();
     const canEdit = useMemo(
-        () => Date.now() - createdAt < 5 * 60 * 1000 && !!message.Content,
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [createdAt, message.Content],
+        () => mountedAt - createdAt < 5 * 60 * 1000 && !!message.Content,
+        [mountedAt, createdAt, message.Content],
     );
 
     return (

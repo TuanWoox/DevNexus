@@ -1,11 +1,12 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2, UserX } from "lucide-react";
 import { InitiateChatPanel } from "./_component/initiate-chat-panel";
 import { useProfileById } from "@/features/messages/hooks/chats/use-profile-by-id";
 
-export default function NewChatPage() {
+function NewChatContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const profileId = searchParams.get("profileId");
@@ -46,4 +47,12 @@ export default function NewChatPage() {
     }
 
     return <InitiateChatPanel targetProfile={profile} />;
+}
+
+export default function NewChatPage() {
+    return (
+        <Suspense fallback={<div className="flex h-full items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
+            <NewChatContent />
+        </Suspense>
+    );
 }
