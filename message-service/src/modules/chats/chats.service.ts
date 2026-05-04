@@ -1,7 +1,7 @@
 import { Injectable, Scope } from '@nestjs/common';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
-import { Chat, Profile } from 'src/generated/prisma/client';
+import { Chat, Profile, Prisma } from 'src/generated/prisma/client';
 import { PrismaService } from '../prisma-database/prisma.service';
 import { UserContextService } from '../auth/userContext.service';
 import { ProfilesService } from '../profiles/profiles.service';
@@ -126,66 +126,287 @@ export class ChatsService {
     return returnResult;
   }
 
-  async getPaging(page: Page<string>) {
+  async getPaging(page: Page<string>, type: string = "") {
     const returnResult = new ReturnResult<PagedData<string, Chat>>();
+
     try {
       const profileId = this.userContext.getProfileId();
+      if (page.size > 30) page.size = 30;
 
-      const chats = await this.prismaService.chat.findMany({
-        where: {
-          Members: {
-            some: {
-              MemberId: profileId
-            }
-          }
+      const isDefaultType = type !== "archived" && type !== "request";
+
+      const chatSettingWhere: Prisma.ChatSettingWhereInput = {
+        ProfileId: profileId,
+        ...(type === "archived"
+          ? { IsArchived: true }
+          : type === "request"
+            ? { IsRequested: true }
+            : { IsArchived: false, IsRequested: false }),
+      };
+
+      const includeClause = {
+        Members: {
+          // do NOT filter out current user — frontend needs own member entry to emit typing events
+          include: {
+            Member: { select: { FullName: true, AvatarUrl: true } },
+          },
         },
-        include: {
-          Members: true
+        ChatSettings: {
+          where: { ProfileId: { equals: profileId } },
         },
-        skip: page.size * (page.pageNumber - 1),
-        take: page.size,
-        orderBy: [
-          { DateModified: 'desc' },
-          { DateCreated: 'desc' }
-        ]
-      });
+        Messages: {
+          orderBy: { DateCreated: "desc" } as const,
+          take: 1,
+          include: {
+            Sender: { select: { FullName: true, AvatarUrl: true } },
+            ReadReceipts: {
+              // where: { ReaderId: { equals: profileId } },
+              include: {
+                Reader: { select: { FullName: true, AvatarUrl: true } },
+              },
+            },
+            Medias: true
+          },
+        },
+      };
 
-      if (chats.length > 0) {
-        const profileIds = [
-          ...new Set(
-            chats
-              .filter(chat => !chat.IsGroup)
-              .flatMap(chat => chat.Members.map(x => x.MemberId).filter(x => x !== profileId))
-          )
-        ];
+      const collected: any[] = [];
+      let pinnedChatId: string | null = null;
 
-        if (profileIds.length > 0) {
-          const profiles = (await this.profileService.findProfiles(profileIds)).Result;
+      // On page 1 for default type, fetch the pinned chat first
+      if (page.pageNumber === 1 && isDefaultType) {
+        const pinnedChat = await this.prismaService.chat.findFirst({
+          where: {
+            Members: { some: { MemberId: profileId } },
+            ChatSettings: {
+              some: {
+                ...chatSettingWhere,
+                IsPinned: true,
+              },
+            },
+          },
+          include: includeClause,
+        });
 
-          if (profiles?.length) {
-            const profileMap = new Map(profiles.map(p => [p.Id, p]));
-
-            for (const chat of chats) {
-              if (!chat.IsGroup) {
-                const otherMemberId = chat.Members.find(x => x.MemberId !== profileId)?.MemberId;
-                const profile = otherMemberId ? profileMap.get(otherMemberId) : undefined;
-                if (profile) {
-                  chat.Name = profile.FullName;
-                  chat.ChatPictureUrl = profile.AvatarUrl;
-                }
-              }
-            }
-          }
+        if (pinnedChat) {
+          collected.push(pinnedChat);
+          pinnedChatId = pinnedChat.Id;
         }
       }
 
-      returnResult.Result = { page, data: chats };
+      // For page 2+, find the pinned chat ID to exclude it
+      if (page.pageNumber > 1 && isDefaultType) {
+        const pinnedSetting = await this.prismaService.chatSetting.findFirst({
+          where: {
+            ProfileId: profileId,
+            IsPinned: true,
+            IsArchived: false,
+            IsRequested: false,
+          },
+          select: { ChatId: true },
+        });
+        if (pinnedSetting) pinnedChatId = pinnedSetting.ChatId;
+      }
+
+      const remainingSize = page.size - collected.length;
+      let skip = page.pageNumber === 1 ? 0 : remainingSize * (page.pageNumber - 2) + page.size - (pinnedChatId ? 1 : 0);
+      let iterations = 0;
+
+      while (collected.length < page.size && iterations < 10) {
+        iterations++;
+
+        const batch = await this.prismaService.chat.findMany({
+          where: {
+            Members: { some: { MemberId: profileId } },
+            ChatSettings: { some: chatSettingWhere },
+            ...(pinnedChatId && { Id: { not: pinnedChatId } }),
+          },
+          include: includeClause,
+          orderBy: [{ DateModified: "desc" }, { DateCreated: "desc" }],
+          skip,
+          take: page.size,
+        });
+
+        if (batch.length === 0) break;
+
+        for (const chat of batch) {
+          const setting = chat.ChatSettings[0];
+
+          if (setting?.DeleteUpToMessageId != null) {
+            const latestMessage = chat.Messages[0];
+            if (!latestMessage || latestMessage.Id <= setting.DeleteUpToMessageId) continue;
+          }
+
+          collected.push(chat);
+          if (collected.length >= page.size) break;
+        }
+
+        skip += batch.length;
+      }
+
+      returnResult.Result = { page, data: collected };
+    } catch (ex) {
+      console.log(ex);
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+    }
+    return returnResult;
+  }
+
+  async getChatById(chatId: string) {
+    const returnResult = new ReturnResult<Chat>();
+    try {
+      const profileId = this.userContext.getProfileId();
+
+      const chat = await this.prismaService.chat.findFirst({
+        where: {
+          Id: chatId,
+          Members: { some: { MemberId: profileId } },
+        },
+        include: {
+          Members: {
+            // do NOT filter out current user — frontend needs own member entry to emit typing events
+            include: {
+              Member: { select: { FullName: true, AvatarUrl: true } },
+            },
+          },
+          ChatSettings: {
+            where: { ProfileId: { equals: profileId } },
+          },
+          Messages: {
+            orderBy: { DateCreated: 'desc' as const },
+            take: 1,
+            include: {
+              Sender: { select: { FullName: true, AvatarUrl: true } },
+              ReadReceipts: {
+                where: { ReaderId: { equals: profileId } },
+                include: {
+                  Reader: { select: { FullName: true, AvatarUrl: true } },
+                },
+              },
+              Medias: true,
+            },
+          },
+        },
+      });
+
+      if (!chat) {
+        returnResult.Message = 'Chat not found or access denied';
+        return returnResult;
+      }
+
+      returnResult.Result = chat;
     } catch (ex) {
       returnResult.Message = ex instanceof Error ? ex.message : String(ex);
     }
     return returnResult;
   }
 
+  async searchContactsAndGroups(page: Page<string>) {
+    const returnResult = new ReturnResult<PagedData<string, Chat>>();
+
+    try {
+      const profileId = this.userContext.getProfileId();
+      const query = page.selected?.[0]?.trim() ?? '';
+
+      if (!query) {
+        returnResult.Result = { page: { ...page, totalElements: 0 }, data: [] };
+        return returnResult;
+      }
+
+      if (page.size > 30) page.size = 30;
+
+      // Same include as getPaging so frontend gets the full Chat shape
+      const includeClause = {
+        Members: {
+          include: {
+            Member: { select: { FullName: true, AvatarUrl: true } },
+          },
+        },
+        ChatSettings: {
+          where: { ProfileId: { equals: profileId } },
+        },
+        Messages: {
+          orderBy: { DateCreated: 'desc' as const },
+          take: 1,
+          include: {
+            Sender: { select: { FullName: true, AvatarUrl: true } },
+            ReadReceipts: {
+              where: { ReaderId: { not: profileId } },
+              include: {
+                Reader: { select: { FullName: true, AvatarUrl: true } },
+              },
+            },
+            Medias: true,
+          },
+        },
+      };
+
+      const contactWhere: any = {
+        IsGroup: false,
+        AND: [
+          { Members: { some: { MemberId: profileId } } },
+          {
+            Members: {
+              some: {
+                MemberId: { not: profileId },
+                Member: {
+                  FullName: { contains: query, mode: 'insensitive' },
+                },
+              },
+            },
+          },
+        ],
+      };
+
+      const groupWhere = {
+        IsGroup: true,
+        Members: { some: { MemberId: profileId } },
+        Name: { contains: query, mode: 'insensitive' as const },
+      };
+
+      // Count totals for cross-source pagination
+      const contactCount = await this.prismaService.chat.count({ where: contactWhere });
+      const groupCount = await this.prismaService.chat.count({ where: groupWhere });
+      const totalElements = contactCount + groupCount;
+
+      const offset = ((page.pageNumber ?? 1) - 1) * page.size;
+      const allResults: any[] = [];
+
+      // Fetch contacts if offset falls within contact range
+      if (offset < contactCount) {
+        const take = Math.min(page.size, contactCount - offset);
+        const batch = await this.prismaService.chat.findMany({
+          where: contactWhere,
+          include: includeClause,
+          orderBy: [{ DateModified: 'desc' }, { DateCreated: 'desc' }],
+          skip: offset,
+          take,
+        });
+        allResults.push(...batch);
+      }
+
+      // Fill remaining from groups
+      const remaining = page.size - allResults.length;
+      if (remaining > 0) {
+        const groupOffset = Math.max(0, offset - contactCount);
+        const batch = await this.prismaService.chat.findMany({
+          where: groupWhere,
+          include: includeClause,
+          orderBy: [{ DateModified: 'desc' }, { DateCreated: 'desc' }],
+          skip: groupOffset,
+          take: remaining,
+        });
+        allResults.push(...batch);
+      }
+
+      returnResult.Result = { page: { ...page, totalElements }, data: allResults };
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+    }
+    return returnResult;
+  }
+
+  //Private helper function
   getGroupName(profiles: Profile[]): string {
     const lastNames = profiles
       .map(p => {

@@ -27,15 +27,24 @@ const useLogin = () => {
                         user: parsedData.user
                     }));
 
-                    // secure: true blocks cookie storage on plain http://localhost in all modern browsers.
-                    // Only set Secure flag when the page is served over HTTPS (production).
-                    const isSecureContext = typeof window !== 'undefined' && window.location.protocol === 'https:';
-                    const cookieOptions = { expires: 15, secure: isSecureContext, sameSite: 'strict' as const };
+                    // Detect if running under HTTPS (production)
+                    const isSecureContext =
+                        typeof window !== "undefined" &&
+                        window.location.protocol === "https:";
+
+                    // Balanced config for both Docker (HTTP) and production (HTTPS)
+                    const cookieOptions = {
+                        expires: 7, // keep shorter for better control
+                        secure: isSecureContext,
+                        sameSite: "lax" as const
+                    };
+
                     Cookies.set("accessToken", data.result.accessToken, cookieOptions);
                     Cookies.set("refreshToken", data.result.refreshToken, cookieOptions);
+
                     toast.success("Login successfully!");
 
-                    const callbackUrl = searchParams.get('callbackUrl') || '/feed';
+                    const callbackUrl = searchParams.get("callbackUrl") || "/feed";
                     router.push(callbackUrl);
                 }
             }
@@ -46,7 +55,7 @@ const useLogin = () => {
         login: loginMutation.mutate,
         isAuthenticating: loginMutation.isPending,
         authenError: loginMutation.error
-    }
-}
+    };
+};
 
 export default useLogin;

@@ -116,6 +116,9 @@ model Message {
   ChatId    String
   Chat      Chat     @relation(fields: [ChatId], references: [Id])
 
+  IsDeleted    Boolean   @default(false)
+  IsEdited     Boolean   @default(false)
+
   DateCreated  DateTime? @default(now())
   DateModified DateTime? @updatedAt
 
@@ -123,6 +126,17 @@ model Message {
 
   Medias       Media[]
   ReadReceipts MessageReadReceipt[]
+  EditHistory  MessageEditHistory[]
+}
+
+model MessageEditHistory {
+  Id        Int      @id @default(autoincrement())
+  MessageId Int
+  Message   Message  @relation(fields: [MessageId], references: [Id])
+  Content   String   @db.Text
+  EditedAt  DateTime @default(now())
+
+  @@index([MessageId, Id])
 }
 
 // Many-to-many: one message can be read by many profiles,

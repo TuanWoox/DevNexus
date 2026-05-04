@@ -21,9 +21,10 @@ export interface FilterMapping {
 
 export interface Page<T> {
     size: number;
-    pageNumber: number;
-    totalElements: number;
+    pageNumber?: number;
+    totalElements?: number;
     orders?: OrderMapping[];
     filter?: FilterMapping[];
     selected?: T[];
+    indexPaging?: number;
 }

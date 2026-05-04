@@ -1,10 +1,12 @@
-import { Controller, Patch, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { ChatsettingsService } from './chatsettings.service';
 import type { UpdateChatSettingDTO, UpdateNickName } from './dto/update-chatsetting-dto';
 import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
 import { ChatSetting } from 'src/generated/prisma/client';
+import { AuthGuard } from '../auth/auth.guard';
 
 @Controller('chatsettings')
+@UseGuards(AuthGuard)
 export class ChatsettingsController {
     constructor(private readonly chatsettingsService: ChatsettingsService) { }
 

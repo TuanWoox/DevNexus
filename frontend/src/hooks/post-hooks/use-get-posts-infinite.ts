@@ -38,6 +38,7 @@ export function useGetPostsInfinite(
         getNextPageParam: (lastPage) => {
             if (!lastPage) return undefined;
             const { pageNumber, size, totalElements } = lastPage.page;
+            if (pageNumber == null || totalElements == null) return undefined;
             const loaded = (pageNumber + 1) * size;
             return loaded < totalElements ? pageNumber + 1 : undefined;
         },

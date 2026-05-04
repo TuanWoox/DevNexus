@@ -31,6 +31,7 @@ export function MobileHeader() {
                 </button> */}
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default">
                     {userProfile?.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img src={userProfile.avatarUrl} alt={userProfile.fullName} className="w-full h-full object-cover" />
                     ) : (
                         <span className="text-primary font-bold">{userProfile?.fullName?.charAt(0) || 'U'}</span>

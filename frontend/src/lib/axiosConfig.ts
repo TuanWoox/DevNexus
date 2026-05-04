@@ -99,7 +99,7 @@ api.interceptors.response.use(
         if (newTokens.refreshToken) {
           Cookies.set('refreshToken', newTokens.refreshToken, cookieOptions);
         }
-        
+
         // Cập nhật Redux ngay lập tức để giao diện (Navbar, ...) không bị chớp hay lỗi
         const parsedData = parseUserFromToken(newTokens.accessToken, false);
         if (parsedData) {
@@ -137,7 +137,7 @@ api.interceptors.response.use(
 
     // Các lỗi HTTP khác (400, 403, 500)
     if (error.response?.data?.message) {
-      toast.error(error.response.data.message);
+      toast.error(error.response.data.message as string);
     }
 
     return Promise.reject(error);

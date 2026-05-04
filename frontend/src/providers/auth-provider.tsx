@@ -24,6 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     refreshToken: refreshToken ?? null,
                     user: parsedData.user
                 }));
+
             } else {
                 // Token lỗi hoặc hết hạn mà KHÔNG CÓ refreshToken
                 dispatch(clearToken());
