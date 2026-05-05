@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import { AdminSidebar } from '@/components/admin/admin-sidebar'
-import { AdminHeader } from '@/components/admin/admin-header'
 
 const ALLOWED_ROLES = ['Admin', 'Moderator']
 
@@ -38,12 +37,9 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen flex bg-page">
       <AdminSidebar />
-      <div className="flex flex-col flex-1 min-w-0">
-        <AdminHeader />
-        <main className="flex-1 p-6 overflow-auto">
-          {children}
-        </main>
-      </div>
+      <main className="flex-1 p-6 overflow-auto min-w-0">
+        {children}
+      </main>
     </div>
   )
 }

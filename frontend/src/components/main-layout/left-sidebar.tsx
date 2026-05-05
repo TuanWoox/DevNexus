@@ -19,7 +19,8 @@ import {
     Sun,
     Settings,
     ChevronDown,
-    Loader2
+    Loader2,
+    ShieldCheck,
 } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
@@ -141,6 +142,18 @@ export function LeftSidebar() {
                                 <span className="text-sm font-medium">Settings</span>
                             </Link>
                         </DropdownMenuItem>
+
+                        {(user?.roles?.includes('Admin') || user?.roles?.includes('Moderator')) && (
+                            <DropdownMenuItem asChild>
+                                <Link
+                                    href="/admin/dashboard"
+                                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer"
+                                >
+                                    <ShieldCheck className="w-5 h-5 shrink-0" />
+                                    <span className="text-sm font-medium">Admin Dashboard</span>
+                                </Link>
+                            </DropdownMenuItem>
+                        )}
 
                         <DropdownMenuItem
                             onClick={toggleTheme}

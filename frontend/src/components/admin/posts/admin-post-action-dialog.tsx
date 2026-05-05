@@ -56,9 +56,9 @@ export function AdminPostActionDialog({
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            variant={isApprove ? 'default' : 'destructive'}
+            variant={isApprove ? 'custom' : 'destructive'}
             onClick={onConfirm}
-            className={isApprove ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : undefined}
+            className={isApprove ? 'btn-emerald' : undefined}
           >
             {isApprove ? 'Approve' : 'Reject'}
           </AlertDialogAction>

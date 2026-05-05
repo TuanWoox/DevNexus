@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { AdminQueueEntryDTO } from '@/types/admin/admin-queue-entry-dto';
 import { ModerationResolveDialog } from './moderation-resolve-dialog';
 
@@ -106,20 +107,25 @@ export function ModerationQueueTable({
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-2">
-                    <button
+                    <Button
+                      type="button"
+                      variant="custom"
+                      size="xs"
+                      className="btn-emerald"
                       onClick={() => openDialog(entry, 'approve')}
                       aria-label={`Approve: ${entry.postTitle}`}
-                      className="rounded-md px-3 py-1.5 text-xs font-semibold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
                     >
                       Approve
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="xs"
                       onClick={() => openDialog(entry, 'reject')}
                       aria-label={`Reject: ${entry.postTitle}`}
-                      className="rounded-md px-3 py-1.5 text-xs font-semibold bg-destructive text-destructive-foreground hover:opacity-90 transition-opacity"
                     >
                       Reject
-                    </button>
+                    </Button>
                   </div>
                 </td>
               </tr>

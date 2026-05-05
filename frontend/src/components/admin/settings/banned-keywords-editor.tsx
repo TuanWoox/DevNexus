@@ -2,6 +2,7 @@
 
 import { useState, useEffect, KeyboardEvent } from 'react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface BannedKeywordsEditorProps {
   initialKeywords: string[];
@@ -63,7 +64,7 @@ export function BannedKeywordsEditor({ initialKeywords, onSave, isSaving }: Bann
         {draft.map((keyword) => (
           <span
             key={keyword}
-            className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground"
+            className="badge-default inline-flex items-center gap-1"
           >
             {keyword}
             <button
@@ -89,34 +90,38 @@ export function BannedKeywordsEditor({ initialKeywords, onSave, isSaving }: Bann
           disabled={isSaving}
           className="max-w-xs"
         />
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           onClick={addKeyword}
           disabled={isSaving || !inputValue.trim()}
-          className="rounded-md border border-default px-3 py-1.5 text-xs font-semibold hover:bg-card transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Add
-        </button>
+        </Button>
       </div>
 
       {/* Action bar */}
       <div className="flex items-center gap-3">
-        <button
+        <Button
           type="button"
+          variant="custom"
+          size="sm"
+          className="btn-primary"
           onClick={() => onSave(draft)}
           disabled={isSaving || !hasChanges}
-          className="rounded-md bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isSaving ? 'Saving…' : 'Save Changes'}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={handleCancel}
           disabled={isSaving || !hasChanges}
-          className="rounded-md border border-default px-4 py-1.5 text-xs font-semibold hover:bg-card transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Cancel
-        </button>
+        </Button>
         {hasChanges && (
           <span className="text-xs text-amber-500 font-medium">Unsaved changes</span>
         )}

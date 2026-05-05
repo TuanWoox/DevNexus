@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { AdminPostDTO } from '@/types/admin/admin-post-dto';
 import { ModerationStatusBadge } from './moderation-status-badge';
 import { AdminPostActionDialog } from './admin-post-action-dialog';
@@ -109,22 +110,27 @@ export function AdminPostsTable({
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-2">
                     {post.moderationStatus !== 'Approved' && (
-                      <button
+                      <Button
+                        type="button"
+                        variant="custom"
+                        size="xs"
+                        className="btn-emerald"
                         onClick={() => openDialog(post, 'approve')}
                         aria-label={`Approve: ${post.title}`}
-                        className="rounded-md px-3 py-1.5 text-xs font-semibold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
                       >
                         Approve
-                      </button>
+                      </Button>
                     )}
                     {post.moderationStatus !== 'Flagged' && (
-                      <button
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="xs"
                         onClick={() => openDialog(post, 'reject')}
                         aria-label={`Reject: ${post.title}`}
-                        className="rounded-md px-3 py-1.5 text-xs font-semibold bg-destructive text-destructive-foreground hover:opacity-90 transition-opacity"
                       >
                         Reject
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </td>

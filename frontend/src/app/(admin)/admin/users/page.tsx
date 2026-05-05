@@ -4,9 +4,41 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
+import { Skeleton } from '@/components/ui/skeleton';
 import { AdminUsersTable } from '@/components/admin/users/admin-users-table';
 import { useGetAdminUsers } from '@/hooks/admin/use-get-admin-users';
 import { Page } from '@/types/common/page';
+
+const SKELETON_COLS = 5;
+
+function UsersTableSkeleton() {
+  return (
+    <div className="overflow-x-auto rounded-md border border-default">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-default bg-card">
+            {Array.from({ length: SKELETON_COLS }).map((_, i) => (
+              <th key={i} className="px-4 py-3">
+                <Skeleton className="h-4 w-20" />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <tr key={i} className="border-b border-default last:border-0">
+              {Array.from({ length: SKELETON_COLS }).map((__, j) => (
+                <td key={j} className="px-4 py-3">
+                  <Skeleton className="h-5 w-full" />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -28,7 +60,7 @@ export default function UserManagementPage() {
   const [pageNumber, setPageNumber] = useState(0);
   const page = buildPage(pageNumber);
 
-  const { data, isLoading, isError } = useGetAdminUsers(page);
+  const { data, isLoading, isError, refetch } = useGetAdminUsers(page);
 
   const users = data?.data ?? [];
   const totalElements = data?.page.totalElements ?? 0;
@@ -43,11 +75,15 @@ export default function UserManagementPage() {
       {isError ? (
         <div className="flex flex-col items-center gap-3 py-16 text-sm text-muted-foreground">
           <p>Something went wrong. Try refreshing the page.</p>
+          <button
+            onClick={() => refetch()}
+            className="btn-ghost text-xs"
+          >
+            Retry
+          </button>
         </div>
       ) : isLoading ? (
-        <div className="flex flex-col items-center gap-3 py-16 text-sm text-muted-foreground">
-          <p>Loading users…</p>
-        </div>
+        <UsersTableSkeleton />
       ) : (
         <>
           <AdminUsersTable users={users} />
@@ -61,14 +97,14 @@ export default function UserManagementPage() {
                 <button
                   onClick={() => setPageNumber((p) => Math.max(0, p - 1))}
                   disabled={pageNumber <= 0}
-                  className="rounded-md border border-default px-3 py-1.5 text-xs font-semibold hover:bg-card disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="btn-ghost text-xs disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setPageNumber((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={pageNumber >= totalPages - 1}
-                  className="rounded-md border border-default px-3 py-1.5 text-xs font-semibold hover:bg-card disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="btn-ghost text-xs disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>

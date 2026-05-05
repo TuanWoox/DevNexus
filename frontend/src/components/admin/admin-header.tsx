@@ -107,21 +107,12 @@ export function AdminHeader() {
           </SheetContent>
         </Sheet>
 
-        <span className="text-sm text-muted-foreground font-semibold uppercase tracking-wide">
-          Admin Console
-        </span>
       </div>
 
       {/* Right: user info + logout */}
       <div className="flex items-center gap-4">
         {/* Role badge */}
-        <span
-          className={`badge text-xs font-semibold px-2 py-0.5 rounded-full ${
-            isAdmin
-              ? 'bg-primary/10 text-primary'
-              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-          }`}
-        >
+        <span className={isAdmin ? 'badge-default' : 'badge-amber'}>
           {primaryRole}
         </span>
 

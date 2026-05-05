@@ -1,6 +1,7 @@
 'use client';
 
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { SelectTagDTO } from '@/types/admin/admin-tag-dto';
 
 interface AdminTagsTableProps {
@@ -13,7 +14,7 @@ interface AdminTagsTableProps {
 export function AdminTagsTable({ tags, isLoading, onEdit, onDelete }: AdminTagsTableProps) {
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-default overflow-hidden">
+      <div className="overflow-x-auto rounded-lg border border-default overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="border-b border-default bg-card">
@@ -25,9 +26,9 @@ export function AdminTagsTable({ tags, isLoading, onEdit, onDelete }: AdminTagsT
           <tbody>
             {Array.from({ length: 5 }).map((_, i) => (
               <tr key={i} className="border-b border-default last:border-0">
-                <td className="px-4 py-3"><Skeleton className="h-10 w-32" /></td>
-                <td className="px-4 py-3"><Skeleton className="h-10 w-16" /></td>
-                <td className="px-4 py-3"><Skeleton className="h-10 w-28" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-5 w-32" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-5 w-16" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-5 w-28" /></td>
               </tr>
             ))}
           </tbody>
@@ -45,7 +46,7 @@ export function AdminTagsTable({ tags, isLoading, onEdit, onDelete }: AdminTagsT
   }
 
   return (
-    <div className="rounded-lg border border-default overflow-hidden">
+    <div className="overflow-x-auto rounded-lg border border-default overflow-hidden">
       <table className="w-full">
         <thead>
           <tr className="border-b border-default bg-card">
@@ -63,19 +64,23 @@ export function AdminTagsTable({ tags, isLoading, onEdit, onDelete }: AdminTagsT
                 <td className="px-4 py-3 text-sm text-foreground">{tag.postCount}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <button
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
                       onClick={() => onEdit(tag)}
-                      className="rounded-md border border-default px-3 py-1.5 text-xs font-semibold hover:bg-card transition-colors"
                     >
                       Edit
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="xs"
                       onClick={() => canDelete && onDelete(tag)}
                       disabled={!canDelete}
-                      className="rounded-md border border-destructive/50 px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       Delete
-                    </button>
+                    </Button>
                   </div>
                 </td>
               </tr>

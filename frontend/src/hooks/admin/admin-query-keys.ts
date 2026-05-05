@@ -26,6 +26,7 @@ export const adminQueryKeys = {
   aiUsage: {
     all: ['admin', 'ai-usage'] as const,
     summary: (from: string, to: string) => ['admin', 'ai-usage', 'summary', from, to] as const,
+    paging: (payload: Page<string>) => ['admin', 'ai-usage', 'paging', payload] as const,
   },
 
   settings: {

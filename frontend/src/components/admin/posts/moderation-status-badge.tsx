@@ -1,10 +1,10 @@
 import { ModerationStatus } from '@/types/admin/admin-post-dto';
 
 const statusClasses: Record<ModerationStatus, string> = {
-  Pending: 'bg-yellow-100 text-yellow-800',
-  Approved: 'bg-green-100 text-green-800',
-  Flagged: 'bg-red-100 text-red-800',
-  InReview: 'bg-orange-100 text-orange-800',
+  Pending: 'badge-amber',
+  Approved: 'badge-emerald',
+  Flagged: 'badge-red',
+  InReview: 'badge-default',
 };
 
 interface ModerationStatusBadgeProps {
@@ -12,9 +12,9 @@ interface ModerationStatusBadgeProps {
 }
 
 export function ModerationStatusBadge({ status }: ModerationStatusBadgeProps) {
-  const classes = statusClasses[status] ?? 'bg-muted text-muted-foreground';
+  const classes = statusClasses[status] ?? 'badge-default';
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${classes}`}>
+    <span className={classes}>
       {status}
     </span>
   );

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { AdminTagsTable } from '@/components/admin/tags/admin-tags-table';
 import { CreateTagDialog } from '@/components/admin/tags/create-tag-dialog';
 import { EditTagDialog } from '@/components/admin/tags/edit-tag-dialog';
@@ -25,7 +24,7 @@ export default function TagManagementPage() {
   const [pageNumber, setPageNumber] = useState(0);
   const page = buildPage(pageNumber);
 
-  const { data, isLoading, isError } = useGetAdminTags(page);
+  const { data, isLoading, isError, refetch } = useGetAdminTags(page);
   const createMutation = useCreateTag();
   const updateMutation = useUpdateTag();
   const deleteMutation = useDeleteTag();
@@ -43,29 +42,25 @@ export default function TagManagementPage() {
 
   function handleCreate(name: string) {
     createMutation.mutate({ name }, {
-      onSuccess: () => { toast.success('Tag created'); setCreateOpen(false); },
-      onError: () => toast.error('Failed to create tag'),
+      onSuccess: () => setCreateOpen(false),
     });
   }
 
   function handleEdit(id: string, name: string) {
     updateMutation.mutate({ id, name }, {
-      onSuccess: () => { toast.success('Tag updated'); setEditTag(null); },
-      onError: () => toast.error('Failed to update tag'),
+      onSuccess: () => setEditTag(null),
     });
   }
 
   function handleDelete(tag: SelectTagDTO) {
     deleteMutation.mutate(tag.id, {
-      onSuccess: () => { toast.success('Tag deleted'); setDeleteTag(null); },
-      onError: () => toast.error('Failed to delete tag'),
+      onSuccess: () => setDeleteTag(null),
     });
   }
 
   function handleMerge(sourceTagId: string, targetTagId: string) {
     mergeMutation.mutate({ sourceTagId, targetTagId }, {
-      onSuccess: () => { toast.success('Tags merged successfully'); setMergeOpen(false); },
-      onError: () => toast.error('Failed to merge tags'),
+      onSuccess: () => setMergeOpen(false),
     });
   }
 
@@ -82,13 +77,13 @@ export default function TagManagementPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setMergeOpen(true)}
-            className="rounded-md border border-default px-3 py-1.5 text-xs font-semibold hover:bg-card transition-colors"
+            className="btn-ghost text-xs"
           >
             Merge Tags
           </button>
           <button
             onClick={() => setCreateOpen(true)}
-            className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+            className="btn-primary text-xs"
           >
             Create Tag
           </button>
@@ -98,6 +93,12 @@ export default function TagManagementPage() {
       {isError ? (
         <div className="flex flex-col items-center gap-3 py-16 text-sm text-muted-foreground">
           <p>Something went wrong. Try refreshing the page.</p>
+          <button
+            onClick={() => refetch()}
+            className="btn-ghost text-xs"
+          >
+            Retry
+          </button>
         </div>
       ) : (
         <>
@@ -115,14 +116,14 @@ export default function TagManagementPage() {
                 <button
                   onClick={() => setPageNumber((p) => Math.max(0, p - 1))}
                   disabled={pageNumber <= 0}
-                  className="rounded-md border border-default px-3 py-1.5 text-xs font-semibold hover:bg-card disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="btn-ghost text-xs disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setPageNumber((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={pageNumber >= totalPages - 1}
-                  className="rounded-md border border-default px-3 py-1.5 text-xs font-semibold hover:bg-card disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="btn-ghost text-xs disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>

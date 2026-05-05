@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { ModerationQueueTable } from '@/components/admin/moderation/moderation-queue-table';
 import { useGetModerationQueue } from '@/hooks/admin/use-get-moderation-queue';
 import { useApproveQueueEntry } from '@/hooks/admin/use-approve-queue-entry';
@@ -19,7 +18,7 @@ export default function ModerationQueuePage() {
   const [pageNumber, setPageNumber] = useState(0);
   const page = buildPage(pageNumber);
 
-  const { data, isLoading, isError } = useGetModerationQueue(page);
+  const { data, isLoading, isError, refetch } = useGetModerationQueue(page);
   const approveMutation = useApproveQueueEntry();
   const rejectMutation = useRejectQueueEntry();
 
@@ -29,23 +28,11 @@ export default function ModerationQueuePage() {
   const isPending = approveMutation.isPending || rejectMutation.isPending;
 
   function handleApprove(entry: AdminQueueEntryDTO, note?: string) {
-    approveMutation.mutate(
-      { id: entry.id, resolution: 'Approved', moderatorNote: note },
-      {
-        onSuccess: () => toast.success('Entry approved'),
-        onError: () => toast.error('Failed to approve entry'),
-      }
-    );
+    approveMutation.mutate({ id: entry.id, resolution: 'Approved', moderatorNote: note });
   }
 
   function handleReject(entry: AdminQueueEntryDTO, note?: string) {
-    rejectMutation.mutate(
-      { id: entry.id, resolution: 'Rejected', moderatorNote: note },
-      {
-        onSuccess: () => toast.success('Entry rejected'),
-        onError: () => toast.error('Failed to reject entry'),
-      }
-    );
+    rejectMutation.mutate({ id: entry.id, resolution: 'Rejected', moderatorNote: note });
   }
 
   return (
@@ -62,6 +49,12 @@ export default function ModerationQueuePage() {
       {isError ? (
         <div className="flex flex-col items-center gap-3 py-16 text-sm text-muted-foreground">
           <p>Something went wrong. Try refreshing the page.</p>
+          <button
+            onClick={() => refetch()}
+            className="btn-ghost text-xs"
+          >
+            Retry
+          </button>
         </div>
       ) : (
         <>
@@ -81,14 +74,14 @@ export default function ModerationQueuePage() {
                 <button
                   onClick={() => setPageNumber((p) => Math.max(0, p - 1))}
                   disabled={pageNumber <= 0}
-                  className="rounded-md border border-default px-3 py-1.5 text-xs font-semibold hover:bg-card disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="btn-ghost text-xs disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setPageNumber((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={pageNumber >= totalPages - 1}
-                  className="rounded-md border border-default px-3 py-1.5 text-xs font-semibold hover:bg-card disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="btn-ghost text-xs disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>

@@ -5,8 +5,12 @@ import { Page } from "@/types/common/page";
 import { ReturnResult } from "@/types/common/return-result";
 
 function unwrapBooleanResult(data: ReturnResult<boolean>): boolean {
-  if (!data.result) {
-    throw new Error(data.message || 'Admin user action failed');
+  if (data.message) {
+    throw new Error(data.message);
+  }
+
+  if (typeof data.result !== 'boolean') {
+    throw new Error('Admin user action returned an invalid response');
   }
 
   return data.result;

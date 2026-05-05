@@ -7,6 +7,7 @@ import { AdminProfileDTO } from '@/types/admin/admin-profile-dto';
 import { useSuspendUser } from '@/hooks/admin/use-suspend-user';
 import { useUnsuspendUser } from '@/hooks/admin/use-unsuspend-user';
 import { useUpdateUserRole } from '@/hooks/admin/use-update-user-role';
+import { Button } from '@/components/ui/button';
 import { SuspendUserDialog, UnsuspendUserDialog } from './suspend-user-dialog';
 import { UpdateRoleDialog } from './update-role-dialog';
 import { PenaltyPresetButtons } from './penalty-preset-buttons';
@@ -26,39 +27,19 @@ function formatDate(iso?: string): string {
 
 function RoleBadge({ role }: { role?: string }) {
   if (role === 'Admin') {
-    return (
-      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-800">
-        Admin
-      </span>
-    );
+    return <span className="badge-purple">Admin</span>;
   }
   if (role === 'Moderator') {
-    return (
-      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
-        Moderator
-      </span>
-    );
+    return <span className="badge-default">Moderator</span>;
   }
-  return (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700">
-      User
-    </span>
-  );
+  return <span className="badge-default">User</span>;
 }
 
 function StatusBadge({ isSuspended }: { isSuspended: boolean }) {
   if (isSuspended) {
-    return (
-      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800">
-        Suspended
-      </span>
-    );
+    return <span className="badge-red">Suspended</span>;
   }
-  return (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800">
-      Active
-    </span>
-  );
+  return <span className="badge-emerald">Active</span>;
 }
 
 type DialogState =
@@ -125,7 +106,7 @@ export function AdminUsersTable({ users }: AdminUsersTableProps) {
                   key={user.id}
                   className={`border-b border-default last:border-0 transition-colors ${
                     user.isSuspended
-                      ? 'bg-red-50 dark:bg-red-950/20'
+                      ? 'bg-destructive/5'
                       : 'hover:bg-card/50'
                   }`}
                 >
@@ -143,26 +124,33 @@ export function AdminUsersTable({ users }: AdminUsersTableProps) {
                       <div className="flex flex-col gap-1">
                         <div className="flex flex-wrap gap-1">
                           {user.isSuspended ? (
-                            <button
-                              className="text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-800 hover:bg-emerald-200 disabled:opacity-50 transition-colors"
+                            <Button
+                              type="button"
+                              variant="custom"
+                              size="xs"
+                              className="btn-emerald"
                               onClick={() => setDialog({ type: 'unsuspend', user })}
                             >
                               Unsuspend
-                            </button>
+                            </Button>
                           ) : (
-                            <button
-                              className="text-xs px-2 py-1 rounded bg-red-100 text-red-800 hover:bg-red-200 disabled:opacity-50 transition-colors"
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="xs"
                               onClick={() => setDialog({ type: 'suspend', user })}
                             >
                               Suspend
-                            </button>
+                            </Button>
                           )}
-                          <button
-                            className="text-xs px-2 py-1 rounded bg-card border border-default hover:bg-muted disabled:opacity-50 transition-colors"
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="xs"
                             onClick={() => setDialog({ type: 'role', user })}
                           >
                             Change Role
-                          </button>
+                          </Button>
                         </div>
                         <PenaltyPresetButtons user={user} />
                       </div>

@@ -86,7 +86,8 @@ export function UnsuspendUserDialog({
             Cancel
           </AlertDialogCancel>
           <AlertDialogAction
-            className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            variant="custom"
+            className="btn-emerald"
             onClick={() => onConfirm(user)}
             disabled={isPending}
           >

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { AdminPostsTable } from '@/components/admin/posts/admin-posts-table';
 import { useGetAdminPosts } from '@/hooks/admin/use-get-admin-posts';
 import { useForceApprovePost } from '@/hooks/admin/use-force-approve-post';
@@ -19,7 +18,7 @@ export default function ContentOversightPage() {
   const [pageNumber, setPageNumber] = useState(0);
   const page = buildPage(pageNumber);
 
-  const { data, isLoading, isError } = useGetAdminPosts(page);
+  const { data, isLoading, isError, refetch } = useGetAdminPosts(page);
   const approveMutation = useForceApprovePost();
   const rejectMutation = useForceRejectPost();
 
@@ -29,17 +28,11 @@ export default function ContentOversightPage() {
   const isPending = approveMutation.isPending || rejectMutation.isPending;
 
   function handleApprove(post: AdminPostDTO) {
-    approveMutation.mutate(post.id, {
-      onSuccess: () => toast.success('Post approved'),
-      onError: () => toast.error('Failed to approve post'),
-    });
+    approveMutation.mutate(post.id);
   }
 
   function handleReject(post: AdminPostDTO) {
-    rejectMutation.mutate(post.id, {
-      onSuccess: () => toast.success('Post rejected'),
-      onError: () => toast.error('Failed to reject post'),
-    });
+    rejectMutation.mutate(post.id);
   }
 
   return (
@@ -49,6 +42,12 @@ export default function ContentOversightPage() {
       {isError ? (
         <div className="flex flex-col items-center gap-3 py-16 text-sm text-muted-foreground">
           <p>Something went wrong. Try refreshing the page.</p>
+          <button
+            onClick={() => refetch()}
+            className="btn-ghost text-xs"
+          >
+            Retry
+          </button>
         </div>
       ) : (
         <>
@@ -68,14 +67,14 @@ export default function ContentOversightPage() {
                 <button
                   onClick={() => setPageNumber((p) => Math.max(0, p - 1))}
                   disabled={pageNumber <= 0}
-                  className="rounded-md border border-default px-3 py-1.5 text-xs font-semibold hover:bg-card disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="btn-ghost text-xs disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setPageNumber((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={pageNumber >= totalPages - 1}
-                  className="rounded-md border border-default px-3 py-1.5 text-xs font-semibold hover:bg-card disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="btn-ghost text-xs disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>
