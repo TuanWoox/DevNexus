@@ -16,6 +16,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useGetQAPostById } from '@/hooks/qa-post-hooks/use-get-qa-post-by-id';
 import { MarkdownViewer } from '../editor/markdown-viewer';
+import { WysiwygRenderer } from '../editor/wysiwyg-renderer';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 import { useRouter } from "next/navigation";
@@ -181,8 +182,12 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                 </div>
 
                 {/* Content */}
-                <div className="text-body text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
-                    <MarkdownViewer source={post.content} />
+                <div className="text-body text-sm sm:text-base leading-relaxed">
+                    {post.postType === 1 ? (
+                        <WysiwygRenderer html={post.content} />
+                    ) : (
+                        <MarkdownViewer source={post.content} />
+                    )}
                 </div>
             </div>
 

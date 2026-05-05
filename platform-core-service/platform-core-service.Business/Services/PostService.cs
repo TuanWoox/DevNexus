@@ -101,8 +101,11 @@ namespace platform_core_service.Business.Services
                 result.Result = _mapper.Map<SelectPostDTO>(savedPost);
 
                 // Step 8: Fire-and-forget — submit to AI moderation pipeline.
-                // Runs after response is already built; never blocks or throws to caller.
-                await _aiWorkerClient.SubmitForModerationAsync(post.Id, createDTO.Content);
+                // Strip HTML tags first so XLM-RoBERTa scores plain text, not markup noise.
+                var textForModeration = createDTO.PostType == PostType.WYSIWYG
+                    ? System.Text.RegularExpressions.Regex.Replace(createDTO.Content, "<[^>]*>", " ").Trim()
+                    : createDTO.Content;
+                await _aiWorkerClient.SubmitForModerationAsync(post.Id, textForModeration);
             }
             catch (Exception ex)
             {

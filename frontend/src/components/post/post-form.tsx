@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { useForm, Controller, useWatch } from 'react-hook-form'
-import { Sparkles, MessageSquare, HelpCircle, Tags as TagsIcon, Globe, PenTool, X, Send, AlertCircle, Save } from 'lucide-react'
+import { Sparkles, MessageSquare, HelpCircle, Tags as TagsIcon, Globe, PenTool, X, Send, AlertCircle, Save, FileText, LayoutTemplate } from 'lucide-react'
 import { MarkdownEditor } from '@/components/editor/markdown-editor'
+import { WysiwygEditor } from '@/components/editor/wysiwyg-editor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -42,14 +43,15 @@ export interface PostFormProps {
 export function PostForm({ initialData, isEditMode = false, fixedPostType }: PostFormProps) {
     const router = useRouter();
 
-    // Khởi tạo isQAPost từ fixedPostType hoặc từ initialData.postType
     const [isQAPost, setIsQAPost] = useState<boolean>(() => {
         if (fixedPostType === 'qa-post') return true;
         if (fixedPostType === 'post') return false;
         return false;
     });
 
-    const [tagInput, setTagInput] = useState('');
+    const [tagInput, setTagInput] = useState('')
+    // 0 = Markdown, 1 = WYSIWYG
+    const [editorType, setEditorType] = useState<0 | 1>(() => (initialData?.postType === 1 ? 1 : 0));
 
     const { mutate: createPost, isPending: isCreatingPost } = useCreatePost();
     const { mutate: createQAPost, isPending: isCreatingQAPost } = useCreateQAPost();
@@ -78,7 +80,6 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
 
     const selectedTags = useWatch({ control, name: 'tags' });
 
-    // Đồng bộ isQAPost vào react-hook-form nếu nó thay đổi (chỉ khi không bị lock fixedPostType)
     const handleSetIsQAPost = (value: boolean) => {
         if (fixedPostType) return;
         setIsQAPost(value);
@@ -114,7 +115,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
             id: initialData!.id,
             title: data.title,
             content: data.content,
-            postType: 0,
+            postType: editorType,
             slug,
             tagNames: data.tags
         };
@@ -134,7 +135,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
         const basePayload = {
             title: data.title,
             content: data.content,
-            postType: 0,
+            postType: editorType,
             slug,
             tagNames: data.tags,
             ...(data.communityId && data.communityId !== "" ? { communityId: data.communityId } : {})
@@ -180,7 +181,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
 
-                {/* 1. Post Type Selector (Ẩn trong chế độ Edit) */}
+                {/* 1. Post Type Selector */}
                 {!isEditMode && (
                     <div className="space-y-4">
                         <Label className="text-base font-semibold text-heading flex items-center gap-2">
@@ -188,7 +189,6 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                             Choose Post Type
                         </Label>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Normal Post Card */}
                             <div
                                 onClick={() => handleSetIsQAPost(false)}
                                 className={`cursor-pointer rounded-xl p-5 border-2 transition-all duration-200 ${!isQAPost
@@ -207,7 +207,6 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                                 </div>
                             </div>
 
-                            {/* Q&A Post Card */}
                             <div
                                 onClick={() => handleSetIsQAPost(true)}
                                 className={`cursor-pointer rounded-xl p-5 border-2 transition-all duration-200 ${isQAPost
@@ -291,8 +290,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                                 </div>
                             </div>
 
-                            {/* Community Dropdown (Ẩn trong Edit mode vì không thể sửa) */}
-                            {/* có thể cho hiện nhưng để disabled để user vẫn biết đc community chỉ là ko sửa đc */}
+                            {/* Community Dropdown */}
                             {!isEditMode && (
                                 <div className="space-y-3">
                                     <Label htmlFor="community" className="text-base font-semibold text-heading flex items-center gap-2">
@@ -320,12 +318,38 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                             )}
                         </div>
 
-                        {/* Markdown Editor */}
+                        {/* Editor Type Toggle + Body Content */}
                         <div className="space-y-3 pt-2">
-                            <Label className="text-base font-semibold text-heading flex items-center gap-2">
-                                <MessageSquare className="w-4 h-4 text-emerald-500" />
-                                Body Content <span className="text-destructive">*</span>
-                            </Label>
+                            <div className="flex items-center justify-between">
+                                <Label className="text-base font-semibold text-heading flex items-center gap-2">
+                                    <MessageSquare className="w-4 h-4 text-emerald-500" />
+                                    Body Content <span className="text-destructive">*</span>
+                                </Label>
+                                <div className="flex items-center gap-1 p-1 bg-subtle rounded-lg border border-default text-xs">
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditorType(0)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all ${editorType === 0
+                                            ? 'bg-card text-heading shadow-sm border border-default font-medium'
+                                            : 'text-muted-foreground hover:text-heading'
+                                            }`}
+                                    >
+                                        <FileText className="w-3.5 h-3.5" />
+                                        Markdown
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditorType(1)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all ${editorType === 1
+                                            ? 'bg-card text-heading shadow-sm border border-default font-medium'
+                                            : 'text-muted-foreground hover:text-heading'
+                                            }`}
+                                    >
+                                        <LayoutTemplate className="w-3.5 h-3.5" />
+                                        Rich Text
+                                    </button>
+                                </div>
+                            </div>
 
                             <Controller
                                 name="content"
@@ -337,11 +361,20 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                                 }}
                                 render={({ field }) => (
                                     <div className={`rounded-xl overflow-hidden border ${errors.content ? 'border-destructive shadow-sm' : 'border-default shadow-sm'} focus-within:ring-2 focus-within:ring-ring focus-within:border-ring transition-all`}>
-                                        <MarkdownEditor
-                                            value={field.value}
-                                            onChange={(val?: string) => field.onChange(val || '')}
-                                            height={400}
-                                        />
+                                        {editorType === 0 ? (
+                                            <MarkdownEditor
+                                                value={field.value}
+                                                onChange={(val?: string) => field.onChange(val || '')}
+                                                height={400}
+                                            />
+                                        ) : (
+                                            <WysiwygEditor
+                                                value={field.value}
+                                                onChange={(html) => field.onChange(html)}
+                                                placeholder="Write your post content..."
+                                                height={400}
+                                            />
+                                        )}
                                     </div>
                                 )}
                             />
