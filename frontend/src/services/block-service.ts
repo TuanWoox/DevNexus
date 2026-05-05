@@ -1,5 +1,6 @@
 import coreApi from "@/lib/axiosConfig";
 import type { ReturnResult } from "@/types/common/return-result";
+import { Page } from "@/types/common/page";
 
 export interface SelectProfileBlock {
     Id: string;
@@ -19,9 +20,16 @@ export const blockService = {
     },
 
     getMyBlocks: async (): Promise<SelectProfileBlock[]> => {
+        const page: Page<string> = {
+            pageNumber: 0,
+            size: 200,
+            totalElements: 0,
+            filter: [],
+            orders: [],
+            selected: []
+        }
         const { data } = await coreApi.post<ReturnResult<{ data: SelectProfileBlock[] }>>(
-            "/ProfileBlocks/paging",
-            { PageSize: 200, Selected: null, SortKey: null, SortOrder: null }
+            "/ProfileBlocks/paging", page
         );
         return (data.result as any)?.data ?? [];
     },
