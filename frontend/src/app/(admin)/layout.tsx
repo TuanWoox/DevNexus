@@ -1,32 +1,49 @@
-// Layout test lấy của auth qua
+'use client'
 
-import { Navbar } from '@/components/navbar'
-import { Footer } from '@/components/footer'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useSelector } from 'react-redux'
+import { RootState } from '@/store/store'
+import { AdminSidebar } from '@/components/admin/admin-sidebar'
+import { AdminHeader } from '@/components/admin/admin-header'
 
-export default function AuthLayout({
-    children,
+const ALLOWED_ROLES = ['Admin', 'Moderator']
+
+export default function AdminLayout({
+  children,
 }: {
-    children: React.ReactNode
+  children: React.ReactNode
 }) {
-    return (
-        <div className="min-h-screen flex flex-col bg-page relative">
+  const router = useRouter()
+  const { user, isAuthenticated, isInitialized } = useSelector((state: RootState) => state.auth)
 
-            {/* Background chung */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] blur-3xl opacity-20 bg-linear-to-br from-emerald-500 to-cyan-500 rounded-full" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] blur-3xl opacity-20 bg-linear-to-br from-indigo-500 to-purple-500 rounded-full" />
-            </div>
+  useEffect(() => {
+    if (!isInitialized) return
 
-            {/* Header */}
-            <Navbar />
+    if (!isAuthenticated) {
+      router.replace('/login')
+      return
+    }
+    const hasAccess = user?.roles?.some((r) => ALLOWED_ROLES.includes(r))
+    if (!hasAccess) {
+      router.replace('/unauthorized')
+    }
+  }, [isAuthenticated, isInitialized, user, router])
 
-            {/* Nội dung page */}
-            <main className="flex-1 flex items-center justify-center p-4 mt-5 mb-10 z-10 relative">
-                {children}
-            </main>
+  // Render nothing while redirecting or initializing
+  if (!isInitialized) return null
+  const hasAccess = isAuthenticated && user?.roles?.some((r) => ALLOWED_ROLES.includes(r))
+  if (!hasAccess) return null
 
-            {/* Footer */}
-            <Footer />
-        </div>
-    )
+  return (
+    <div className="min-h-screen flex bg-page">
+      <AdminSidebar />
+      <div className="flex flex-col flex-1 min-w-0">
+        <AdminHeader />
+        <main className="flex-1 p-6 overflow-auto">
+          {children}
+        </main>
+      </div>
+    </div>
+  )
 }

@@ -27,6 +27,7 @@ interface AuthState {
     refreshToken: string | null;
     isAuthenticated: boolean;
     user: User | null;
+    isInitialized: boolean;
 }
 
 /* =========================
@@ -72,6 +73,7 @@ const initialState: AuthState = {
     refreshToken: null,
     isAuthenticated: false,
     user: null,
+    isInitialized: false,
 };
 
 /* =========================
@@ -95,9 +97,13 @@ const authSlice = createSlice({
             state.refreshToken = null;
             state.isAuthenticated = false;
             state.user = null;
+            state.isInitialized = true;
         },
+        setInitialized: (state) => {
+            state.isInitialized = true;
+        }
     },
 });
 
-export const { setToken, clearToken } = authSlice.actions;
+export const { setToken, clearToken, setInitialized } = authSlice.actions;
 export default authSlice.reducer;
