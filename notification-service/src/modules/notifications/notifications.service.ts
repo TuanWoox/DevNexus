@@ -21,6 +21,9 @@ export class NotificationsService {
     if (page.size > 50) page.size = 50;
 
     const where: any = { RecipientId: profileId };
+    if (page.selected?.includes('unread')) {
+      where.IsRead = false;
+    }
     const skip = (page.pageNumber - 1) * page.size;
 
     const [data, totalElements] = await Promise.all([
