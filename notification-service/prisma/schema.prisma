@@ -1,0 +1,116 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Core Notification
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Notification {
+  Id              String           @id @default(uuid())
+  RecipientId     String           @db.VarChar(200)
+  Type            NotificationType
+  ActorId         String?          @db.VarChar(200)
+  ActorName       String?          @db.VarChar(200)
+  ActorAvatarUrl  String?          @db.VarChar(500)
+  EntityType      EntityType?
+  EntityId        String?          @db.VarChar(200)
+  EntityTitle     String?          @db.Text
+  EntityPreview   String?          @db.Text
+  Message         String           @db.Text
+  ActionUrl       String?          @db.VarChar(500)
+  IsRead          Boolean          @default(false)
+  ReadAt          DateTime?
+  GroupKey        String?          @db.VarChar(200)
+  AggregatedCount Int              @default(1)
+  DateCreated     DateTime         @default(now())
+  DateModified    DateTime         @updatedAt
+
+  @@index([RecipientId, IsRead, DateCreated])
+  @@index([GroupKey])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Global Kill Switch — 1 row per user
+// ─────────────────────────────────────────────────────────────────────────────
+
+model NotificationGlobalSetting {
+  Id               String   @id @default(uuid())
+  ProfileId        String   @unique @db.VarChar(200)
+  AllNotifications Boolean  @default(true)
+  DateCreated      DateTime @default(now())
+  DateModified     DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Per-Entity Mute — processor checks before creating notification, row exists = skip
+// ─────────────────────────────────────────────────────────────────────────────
+
+model NotificationMuteSetting {
+  Id          String           @id @default(uuid())
+  ProfileId   String           @db.VarChar(200)
+  EntityType  EntityType
+  EntityId    String           @db.VarChar(200)
+  Type        NotificationType
+  DateCreated DateTime         @default(now())
+
+  @@unique([ProfileId, EntityType, EntityId, Type])
+  @@index([ProfileId, EntityType, EntityId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum NotificationType {
+  // Voting
+  UPVOTE_POST
+  DOWNVOTE_POST
+  UPVOTE_ANSWER
+  DOWNVOTE_ANSWER
+  UPVOTE_COMMENT
+  DOWNVOTE_COMMENT
+
+  // Q&A
+  NEW_ANSWER
+  COMMENT_POST
+  COMMENT_ANSWER
+  REPLY_COMMENT
+  ANSWER_ACCEPTED
+
+  // Follow
+  FOLLOW_USER
+  FOLLOW_REQUEST
+  FOLLOW_ACCEPTED
+
+  // Community
+  COMMUNITY_INVITE
+  COMMUNITY_JOIN_REQUEST
+  COMMUNITY_POST
+  COMMUNITY_ROLE_CHANGE
+  COMMUNITY_BAN
+
+  // Messaging
+  NEW_MESSAGE
+  MESSAGE_REQUEST
+
+  // System
+  MODERATION_RESULT
+  REPUTATION_MILESTONE
+  SYSTEM_ANNOUNCEMENT
+}
+
+enum EntityType {
+  POST
+  COMMENT
+  ANSWER
+  COMMUNITY
+  PROFILE
+  MESSAGE
+}

@@ -44,8 +44,6 @@ async function bootstrap() {
   app.setGlobalPrefix("message-service/api");
 
   await app.listen(3001);
-
-  console.log("HTTP server running on :3001");
 }
 
 bootstrap().catch((err) => {
