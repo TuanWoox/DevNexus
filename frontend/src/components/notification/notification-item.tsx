@@ -4,7 +4,6 @@ import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Notification } from "@/features/notifications/types/contracts";
 import { useMarkAsRead } from "@/features/notifications/hooks/use-mark-as-read";
 import { useDeleteNotification } from "@/features/notifications/hooks/use-delete-notification";
@@ -33,18 +32,27 @@ export function NotificationItem({ notification, onClose }: Props) {
         <div
             onClick={handleClick}
             className={cn(
-                "flex items-start gap-3 p-3 hover:bg-subtle cursor-pointer transition-colors group relative",
+                "relative flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors group",
+                "hover:bg-subtle",
                 !notification.IsRead && "bg-primary/5",
             )}
         >
-            <Avatar className="h-10 w-10 shrink-0">
-                <AvatarImage src={notification.ActorAvatarUrl || undefined} alt={notification.ActorName ?? "User"} />
-                <AvatarFallback className="bg-primary/20 text-primary font-semibold text-sm">
+            {/* Unread indicator */}
+            {!notification.IsRead && (
+                <span className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+            )}
+
+            <Avatar className="h-10 w-10 shrink-0 border border-default">
+                <AvatarImage
+                    src={notification.ActorAvatarUrl || undefined}
+                    alt={notification.ActorName ?? "User"}
+                />
+                <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
                     {notification.ActorName?.charAt(0)?.toUpperCase() ?? "U"}
                 </AvatarFallback>
             </Avatar>
 
-            <div className="flex-1 min-w-0 pr-8">
+            <div className="flex-1 min-w-0 pr-7">
                 <p className="text-sm text-body leading-relaxed">
                     {notification.Message}
                     {notification.AggregatedCount > 1 && (
@@ -53,14 +61,22 @@ export function NotificationItem({ notification, onClose }: Props) {
                         </span>
                     )}
                 </p>
-                <div className="flex items-center gap-2 mt-1">
-                    <p className="text-xs text-muted-foreground">
-                        {toRelativeTime(notification.DateCreated)}
+                {notification.EntityPreview && (
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                        {notification.EntityPreview}
                     </p>
+                )}
+                <div className="flex items-center gap-2 mt-1">
+                    <span
+                        className={cn(
+                            "text-xs",
+                            !notification.IsRead ? "text-primary font-medium" : "text-muted-foreground",
+                        )}
+                    >
+                        {toRelativeTime(notification.DateCreated)}
+                    </span>
                     {!notification.IsRead && (
-                        <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-semibold">
-                            New
-                        </Badge>
+                        <span className="text-xs font-semibold text-primary">• New</span>
                     )}
                 </div>
             </div>
@@ -73,7 +89,7 @@ export function NotificationItem({ notification, onClose }: Props) {
                     deleteNotif.mutate(notification.Id);
                 }}
                 disabled={deleteNotif.isPending}
-                className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
+                className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg hover:bg-destructive/10 hover:text-destructive"
                 aria-label="Delete notification"
             >
                 <Trash2 className="h-3.5 w-3.5" />

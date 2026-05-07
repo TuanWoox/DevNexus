@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { X, Bell, CheckCheck } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useNotificationsPaging } from "@/features/notifications/hooks/use-notifications-paging";
 import { useUnreadCount } from "@/features/notifications/hooks/use-unread-count";
@@ -42,125 +41,132 @@ export function NotificationPanel({ isOpen, onClose }: Props) {
     }, [isOpen, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
     return (
+        <>
+        {isOpen && (
+            <div
+                className="fixed top-0 right-0 bottom-0 left-118 z-39 bg-background/80 backdrop-blur-sm"
+                onClick={onClose}
+                aria-hidden="true"
+            />
+        )}
         <aside
             className={cn(
-                "fixed top-0 left-[72px] h-screen bg-card border-r border-default shadow-lg z-40 flex flex-col transition-all duration-300",
-                isOpen ? "w-[400px] opacity-100" : "w-0 opacity-0 pointer-events-none",
+                "fixed top-0 left-18 h-screen bg-card border-r border-default shadow-elevated z-40 flex flex-col transition-all duration-300",
+                isOpen ? "w-100 opacity-100" : "w-0 opacity-0 pointer-events-none",
             )}
         >
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 shrink-0">
-                <h2 className="text-xl font-bold text-heading">Notifications</h2>
+            <header className="flex items-center justify-between px-4 py-3 shrink-0 border-b border-default">
+                <h2 className="text-lg font-bold text-heading">Notifications</h2>
                 <Button
                     variant="ghost"
                     size="icon"
                     onClick={onClose}
                     aria-label="Close"
-                    className="h-8 w-8 rounded-lg"
+                    className="h-8 w-8 rounded-lg hover:bg-subtle"
                 >
                     <X className="h-4 w-4" />
                 </Button>
-            </div>
+            </header>
 
-            <Separator />
-
-            {/* Filter tabs */}
-            <div className="flex shrink-0 px-2 pt-2 gap-1">
-                <Button
-                    variant={filter === "all" ? "secondary" : "ghost"}
-                    size="sm"
+            <nav className="flex shrink-0 px-3 pt-3 gap-2" aria-label="Notification filters">
+                <button
                     onClick={() => setFilter("all")}
-                    className="flex-1 rounded-full font-semibold"
+                    className={cn(
+                        "flex-1 px-4 py-2 text-sm font-semibold rounded-lg transition-colors",
+                        filter === "all"
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:bg-subtle hover:text-heading",
+                    )}
                 >
                     All
-                </Button>
-                <Button
-                    variant={filter === "unread" ? "secondary" : "ghost"}
-                    size="sm"
+                </button>
+                <button
                     onClick={() => setFilter("unread")}
-                    className="flex-1 rounded-full font-semibold gap-1.5"
+                    className={cn(
+                        "flex-1 px-4 py-2 text-sm font-semibold rounded-lg transition-colors inline-flex items-center justify-center gap-1.5",
+                        filter === "unread"
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:bg-subtle hover:text-heading",
+                    )}
                 >
                     Unread
                     {unreadCount > 0 && (
-                        <Badge
-                            variant="destructive"
-                            className="h-5 min-w-5 px-1.5 text-[10px] font-bold rounded-full"
-                        >
+                        <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 text-[10px] font-bold rounded-full bg-destructive text-destructive-foreground">
                             {unreadCount > 99 ? "99+" : unreadCount}
-                        </Badge>
+                        </span>
                     )}
-                </Button>
-            </div>
+                </button>
+            </nav>
 
-            {/* Mark all as read */}
             {unreadCount > 0 && (
-                <div className="px-3 pt-2 pb-1 shrink-0">
+                <section className="px-3 pt-2 pb-1 shrink-0">
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => markAllAsRead.mutate()}
                         disabled={markAllAsRead.isPending}
-                        className="w-full justify-start gap-2 text-primary hover:text-primary"
+                        className="w-full justify-start gap-2 text-primary hover:text-primary hover:bg-primary/10"
                     >
                         <CheckCheck className="h-4 w-4" />
                         Mark all as read
                     </Button>
-                </div>
+                </section>
             )}
 
-            <Separator />
+            <Separator className="my-2" />
 
-            {/* List */}
-            <div className="overflow-y-auto flex-1">
+            <section className="overflow-y-auto flex-1">
                 {notifications.length === 0 && !isFetchingNextPage ? (
-                    <div className="flex flex-col items-center justify-center h-64 text-muted-foreground px-6 text-center">
-                        <div className="rounded-full bg-subtle p-4 mb-4">
+                    <figure className="flex flex-col items-center justify-center h-64 text-muted-foreground px-6 text-center">
+                        <span className="rounded-full bg-subtle p-4 mb-3 block">
                             <Bell className="h-10 w-10 opacity-50" />
-                        </div>
-                        <p className="text-sm font-medium text-heading">
-                            {filter === "unread" ? "You're all caught up" : "No notifications yet"}
-                        </p>
-                        <p className="text-xs mt-1">
-                            {filter === "unread"
-                                ? "New unread notifications will appear here."
-                                : "When you get notifications, they'll show up here."}
-                        </p>
-                    </div>
+                        </span>
+                        <figcaption>
+                            <p className="text-sm font-semibold text-heading">
+                                {filter === "unread" ? "You're all caught up" : "No notifications yet"}
+                            </p>
+                            <p className="text-xs mt-1">
+                                {filter === "unread"
+                                    ? "New unread notifications will appear here."
+                                    : "When you get notifications, they'll show up here."}
+                            </p>
+                        </figcaption>
+                    </figure>
                 ) : (
                     <>
                         {notifications.map(n => (
                             <NotificationItem key={n.Id} notification={n} onClose={onClose} />
                         ))}
                         {hasNextPage && (
-                            <div ref={sentinelRef} className="h-16 flex items-center justify-center">
+                            <p ref={sentinelRef} className="h-16 flex items-center justify-center">
                                 {isFetchingNextPage && (
-                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+                                    <span className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent block" />
                                 )}
-                            </div>
+                            </p>
                         )}
                         {!hasNextPage && notifications.length > 0 && (
-                            <div className="text-center py-4 text-xs text-muted-foreground">
+                            <p className="text-center py-4 text-xs text-muted-foreground">
                                 No more notifications
-                            </div>
+                            </p>
                         )}
                     </>
                 )}
-            </div>
+            </section>
 
             <Separator />
 
-            {/* Footer */}
-            <div className="p-3 shrink-0">
+            <footer className="p-3 shrink-0">
                 <Button
                     asChild
                     variant="ghost"
-                    className="w-full text-primary hover:text-primary font-semibold"
+                    className="w-full text-primary hover:text-primary hover:bg-primary/10 font-semibold"
                 >
                     <Link href="/notifications" onClick={onClose}>
                         View all notifications
                     </Link>
                 </Button>
-            </div>
+            </footer>
         </aside>
+        </>
     );
 }
