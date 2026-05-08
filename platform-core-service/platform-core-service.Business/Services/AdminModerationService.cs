@@ -41,6 +41,8 @@ namespace platform_core_service.Business.Services
                 // Only unresolved entries (ResolvedAt IS NULL) — i.e. waiting for human action
                 var query = _context.ModerationQueueEntries
                     .Where(e => e.ResolvedAt == null)
+                    .Include(e => e.Post)
+                        .ThenInclude(p => p.Author)
                     .AsNoTracking()
                     .AsQueryable();
 

@@ -146,11 +146,11 @@ export function LeftSidebar() {
                         {(user?.roles?.includes('Admin') || user?.roles?.includes('Moderator')) && (
                             <DropdownMenuItem asChild>
                                 <Link
-                                    href="/admin/dashboard"
+                                    href={user?.roles?.includes('Admin') ? '/admin/dashboard' : '/admin/moderation'}
                                     className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer"
                                 >
                                     <ShieldCheck className="w-5 h-5 shrink-0" />
-                                    <span className="text-sm font-medium">Admin Dashboard</span>
+                                    <span className="text-sm font-medium">Admin Workspace</span>
                                 </Link>
                             </DropdownMenuItem>
                         )}

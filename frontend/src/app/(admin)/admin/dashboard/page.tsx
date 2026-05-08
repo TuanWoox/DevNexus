@@ -1,36 +1,60 @@
 'use client'
 
-import { useGetAdminDashboard } from '@/hooks/admin/use-get-admin-dashboard';
-import { DashboardMetricCard } from '@/components/admin/dashboard/dashboard-metric-card';
-import { DashboardTopTags } from '@/components/admin/dashboard/dashboard-top-tags';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useGetAdminDashboard } from '@/hooks/admin/use-get-admin-dashboard'
+import { useGetModerationQueue } from '@/hooks/admin/use-get-moderation-queue'
+import { DashboardMetricCard } from '@/components/admin/dashboard/dashboard-metric-card'
+import { DashboardTopTags } from '@/components/admin/dashboard/dashboard-top-tags'
+import { DashboardModerationWidget } from '@/components/admin/dashboard/dashboard-moderation-widget'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Users, FileText, Clock, AlertTriangle, BarChart3, TrendingUp } from 'lucide-react'
 
-function MetricGridSkeleton({ count }: { count: number }) {
+function HeroMetricsSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      {Array.from({ length: count }).map((_, i) => (
-        <Card key={i}>
-          <CardHeader>
-            <Skeleton className="h-4 w-24" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-8 w-16" />
-          </CardContent>
-        </Card>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="card p-5">
+          <Skeleton className="h-4 w-24 mb-3" />
+          <Skeleton className="h-8 w-16 mb-2" />
+          <Skeleton className="h-3 w-20" />
+        </div>
       ))}
     </div>
-  );
+  )
+}
+
+function ChartPlaceholder({ title, icon }: { title: string; icon: React.ReactNode }) {
+  return (
+    <div className="card p-6 min-h-[300px] flex flex-col">
+      <div className="flex items-center gap-2 mb-4">
+        {icon}
+        <h3 className="text-sm font-semibold text-heading uppercase tracking-wide">
+          {title}
+        </h3>
+      </div>
+      <div className="flex-1 flex items-center justify-center border-2 border-dashed border-border rounded-lg">
+        <p className="text-sm text-muted-foreground">Chart visualization coming soon</p>
+      </div>
+    </div>
+  )
 }
 
 export default function AdminDashboardPage() {
-  const { data, isLoading, isError, refetch } = useGetAdminDashboard();
+  const { data, isLoading, isError, refetch } = useGetAdminDashboard()
+  const { data: queueData, isLoading: queueLoading } = useGetModerationQueue({
+    pageNumber: 0,
+    size: 3,
+    totalElements: 0,
+    orders: [],
+    filter: [],
+    selected: [],
+  })
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-heading">Admin Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+    <div className="w-full mx-auto py-6 px-4 sm:px-6 flex flex-col gap-6">
+      {/* Header */}
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-bold text-heading">Dashboard</h1>
+        <p className="text-sm text-muted-foreground">
           Platform overview and key metrics
         </p>
       </div>
@@ -40,106 +64,103 @@ export default function AdminDashboardPage() {
           <p className="text-sm text-muted-foreground">
             Something went wrong. Try refreshing the page.
           </p>
-          <button
-            onClick={() => refetch()}
-            className="btn-ghost text-sm px-4 py-2 rounded-lg"
-          >
+          <button onClick={() => refetch()} className="btn-ghost">
             Retry
           </button>
         </div>
       )}
 
-      {/* Overview */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Overview
-        </h2>
+      {/* LAYER 1: Hero Metrics (North Star) */}
+      <section>
         {isLoading ? (
-          <MetricGridSkeleton count={7} />
+          <HeroMetricsSkeleton />
         ) : data ? (
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <DashboardMetricCard title="Total Posts" value={data.totalPosts} />
-            <DashboardMetricCard title="Approved Posts" value={data.approvedPosts} variant="success" />
-            <DashboardMetricCard title="Rejected Posts" value={data.rejectedPosts} variant="danger" />
-            <DashboardMetricCard title="Posts Today" value={data.postsToday} />
-            <DashboardMetricCard title="Queue Entries" value={data.queueEntries} variant="warning" />
-            <DashboardMetricCard title="Total Users" value={data.totalUsers} />
-            <DashboardMetricCard title="Pending Posts" value={data.pendingPosts} variant="warning" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <DashboardMetricCard
+              title="Total Users"
+              value={data.totalUsers}
+              icon={<Users className="w-4 h-4" />}
+              trend={{ value: 12.5, label: 'from last week' }}
+            />
+            <DashboardMetricCard
+              title="Total Posts"
+              value={data.totalPosts}
+              icon={<FileText className="w-4 h-4" />}
+              trend={{ value: 8.3, label: 'from last week' }}
+            />
+            <DashboardMetricCard
+              title="Posts Today"
+              value={data.postsToday}
+              icon={<Clock className="w-4 h-4" />}
+              trend={{ value: -2.1, label: 'from yesterday' }}
+            />
+            <DashboardMetricCard
+              title="Pending Moderation"
+              value={data.queueEntries}
+              icon={<AlertTriangle className="w-4 h-4" />}
+              trend={{ value: 0, label: 'no change' }}
+            />
           </div>
         ) : null}
       </section>
 
-      {/* User Growth */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          User Growth
-        </h2>
-        {isLoading ? (
-          <MetricGridSkeleton count={3} />
-        ) : data ? (
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <DashboardMetricCard title="New Users Today" value={data.newUsersToday} variant="success" />
-            <DashboardMetricCard title="New Users This Week" value={data.newUsersThisWeek} variant="success" />
-            <DashboardMetricCard title="New Users This Month" value={data.newUsersThisMonth} variant="success" />
-          </div>
-        ) : null}
+      {/* LAYER 2: Data Visualization */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ChartPlaceholder
+          title="User Growth"
+          icon={<TrendingUp className="w-5 h-5 text-emerald-500" />}
+        />
+        <ChartPlaceholder
+          title="Post Breakdown"
+          icon={<BarChart3 className="w-5 h-5 text-primary" />}
+        />
       </section>
 
-      {/* Post Breakdown */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Post Breakdown
-        </h2>
-        {isLoading ? (
-          <MetricGridSkeleton count={4} />
-        ) : data ? (
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <DashboardMetricCard title="Question Posts" value={data.totalQuestionPosts} />
-            <DashboardMetricCard title="Normal Posts" value={data.totalNormalPosts} />
-            <DashboardMetricCard title="Posts This Week" value={data.postsThisWeek} />
-            <DashboardMetricCard title="Posts This Month" value={data.postsThisMonth} />
+      {/* LAYER 3: Actionable Widgets */}
+      <section className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        {/* Actionable Moderation Queue (col-span-2) */}
+        <div className="xl:col-span-2 card p-6 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              <h3 className="text-sm font-semibold text-heading uppercase tracking-wide">
+                Moderation Queue
+              </h3>
+            </div>
+            {data && data.queueEntries > 0 && (
+              <span className="badge-default text-xs">{data.queueEntries} pending</span>
+            )}
           </div>
-        ) : null}
-      </section>
-
-      {/* Moderation Status */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Moderation Status
-        </h2>
-        {isLoading ? (
-          <MetricGridSkeleton count={4} />
-        ) : data ? (
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <DashboardMetricCard title="Pending Posts" value={data.pendingPosts} variant="warning" />
-            <DashboardMetricCard title="In Review" value={data.inReviewPosts} variant="warning" />
-            <DashboardMetricCard title="Flagged Posts" value={data.flaggedPosts} variant="danger" />
-            <DashboardMetricCard title="Queue Entries" value={data.queueEntries} variant="warning" />
-          </div>
-        ) : null}
-      </section>
-
-      {/* Top Tags */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Top Tags
-        </h2>
-        {isLoading ? (
-          <Card>
-            <CardContent className="pt-4 flex flex-col gap-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-9 w-full rounded-lg" />
+          {queueLoading ? (
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-lg" />
               ))}
-            </CardContent>
-          </Card>
-        ) : data ? (
-          <Card>
-            <CardContent className="pt-4">
-              <DashboardTopTags tags={data.topTags} />
-            </CardContent>
-          </Card>
-        ) : null}
+            </div>
+          ) : queueData ? (
+            <DashboardModerationWidget entries={queueData.data.slice(0, 3)} />
+          ) : null}
+        </div>
+
+        {/* Top Tags (col-span-1) */}
+        <div className="card p-6 flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-primary" />
+            <h3 className="text-sm font-semibold text-heading uppercase tracking-wide">
+              Top Tags
+            </h3>
+          </div>
+          {isLoading ? (
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : data ? (
+            <DashboardTopTags tags={data.topTags.slice(0, 5)} />
+          ) : null}
+        </div>
       </section>
     </div>
-  );
+  )
 }

@@ -1,25 +1,24 @@
-import { AiUsageLogDTO } from '@/types/admin/ai-usage-dto';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { AiUsageLogDTO } from '@/types/admin/ai-usage-dto'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Sparkles } from 'lucide-react'
 
 interface AiUsageLogsTableProps {
-  logs: AiUsageLogDTO[];
-  isLoading: boolean;
-  pageNumber: number;
-  totalElements: number;
-  pageSize: number;
-  onPreviousPage: () => void;
-  onNextPage: () => void;
+  logs: AiUsageLogDTO[]
+  isLoading: boolean
+  pageNumber: number
+  totalElements: number
+  pageSize: number
+  onPreviousPage: () => void
+  onNextPage: () => void
 }
 
 function formatDate(iso?: string): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString();
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString()
 }
 
 function formatNumber(value?: number | null): string {
-  return (value ?? 0).toLocaleString();
+  return (value ?? 0).toLocaleString()
 }
 
 export function AiUsageLogsTable({
@@ -31,43 +30,46 @@ export function AiUsageLogsTable({
   onPreviousPage,
   onNextPage,
 }: AiUsageLogsTableProps) {
-  const canGoPrevious = pageNumber > 0;
-  const canGoNext = (pageNumber + 1) * pageSize < totalElements;
+  const canGoPrevious = pageNumber > 0
+  const canGoNext = (pageNumber + 1) * pageSize < totalElements
 
   return (
-    <Card>
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Raw Logs
-        </CardTitle>
+    <div className="card-ai">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 pt-4 pb-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-ai" />
+          <span className="text-base font-semibold text-heading uppercase tracking-wide">
+            Raw Logs
+          </span>
+        </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>{totalElements.toLocaleString()} total</span>
-          <Button type="button" variant="outline" size="sm" onClick={onPreviousPage} disabled={!canGoPrevious || isLoading}>
+          <button type="button" className="btn-ghost text-xs px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed" onClick={onPreviousPage} disabled={!canGoPrevious || isLoading}>
             Previous
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={onNextPage} disabled={!canGoNext || isLoading}>
+          </button>
+          <button type="button" className="btn-ghost text-xs px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed" onClick={onNextPage} disabled={!canGoNext || isLoading}>
             Next
-          </Button>
+          </button>
         </div>
-      </CardHeader>
-      <CardContent className="p-0">
+      </div>
+      <div className="p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="px-4 py-3 text-left font-semibold text-heading">Feature</th>
-                <th className="px-4 py-3 text-left font-semibold text-heading">Model</th>
-                <th className="px-4 py-3 text-right font-semibold text-heading">Input</th>
-                <th className="px-4 py-3 text-right font-semibold text-heading">Output</th>
-                <th className="px-4 py-3 text-right font-semibold text-heading">Total</th>
-                <th className="px-4 py-3 text-left font-semibold text-heading">User</th>
-                <th className="px-4 py-3 text-left font-semibold text-heading">Created</th>
+            <thead className="sticky top-0 bg-card z-10">
+              <tr className="border-b border-default">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-heading uppercase tracking-wide">Feature</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-heading uppercase tracking-wide">Model</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-heading uppercase tracking-wide">Input</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-heading uppercase tracking-wide">Output</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-heading uppercase tracking-wide">Total</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-heading uppercase tracking-wide">User</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-heading uppercase tracking-wide">Created</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 Array.from({ length: pageSize }).map((_, i) => (
-                  <tr key={i} className="border-b last:border-0">
+                  <tr key={i} className="border-b border-default last:border-0">
                     {Array.from({ length: 7 }).map((__, cell) => (
                       <td key={cell} className="px-4 py-3">
                         <Skeleton className="h-4 w-full" />
@@ -83,21 +85,29 @@ export function AiUsageLogsTable({
                 </tr>
               ) : (
                 logs.map((log) => (
-                  <tr key={log.id} className="border-b last:border-0">
-                    <td className="px-4 py-3 text-foreground">{log.feature_name ?? '—'}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{log.model_used ?? '—'}</td>
+                  <tr key={log.id} className="border-b border-default last:border-0 hover:bg-subtle transition-colors">
+                    <td className="px-4 py-3 text-foreground/85">
+                      <span className="font-mono">{log.feature_name ?? '—'}</span>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      <span className="font-mono">{log.model_used ?? '—'}</span>
+                    </td>
                     <td className="px-4 py-3 text-right text-muted-foreground">{formatNumber(log.input_tokens)}</td>
                     <td className="px-4 py-3 text-right text-muted-foreground">{formatNumber(log.output_tokens)}</td>
                     <td className="px-4 py-3 text-right text-muted-foreground">{formatNumber(log.total_tokens)}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{log.user_id ?? 'System'}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatDate(log.created_at)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      <span className="font-mono">{log.user_id ?? 'System'}</span>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      <span className="font-mono">{formatDate(log.created_at)}</span>
+                    </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         </div>
-      </CardContent>
-    </Card>
-  );
+      </div>
+    </div>
+  )
 }

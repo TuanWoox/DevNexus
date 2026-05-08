@@ -1,41 +1,63 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils'
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
-interface DashboardMetricCardProps {
-  title: string;
-  value: number;
-  description?: string;
-  variant?: 'default' | 'warning' | 'danger' | 'success';
+interface TrendProps {
+  value: number
+  label: string
 }
 
-const variantValueClass: Record<NonNullable<DashboardMetricCardProps['variant']>, string> = {
-  default: 'text-foreground',
-  warning: 'text-amber-500',
-  danger: 'text-destructive',
-  success: 'text-emerald-500',
-};
+interface DashboardMetricCardProps {
+  title: string
+  value: number
+  icon?: React.ReactNode
+  trend?: TrendProps
+}
+
+function TrendBadge({ trend }: { trend: TrendProps }) {
+  const isUp = trend.value > 0
+  const isDown = trend.value < 0
+  const formatted = Math.abs(trend.value).toFixed(1)
+
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-1 text-xs font-medium',
+        isUp && 'text-emerald-500',
+        isDown && 'text-destructive',
+        !isUp && !isDown && 'text-muted-foreground',
+      )}
+    >
+      {isUp ? (
+        <TrendingUp className="w-3 h-3" />
+      ) : isDown ? (
+        <TrendingDown className="w-3 h-3" />
+      ) : (
+        <Minus className="w-3 h-3" />
+      )}
+      <span>
+        {isUp ? '+' : isDown ? '-' : ''}
+        {formatted}% {trend.label}
+      </span>
+    </div>
+  )
+}
 
 export function DashboardMetricCard({
   title,
   value,
-  description,
-  variant = 'default',
+  icon,
+  trend,
 }: DashboardMetricCardProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm text-muted-foreground font-semibold uppercase tracking-wide">
+    <div className="card p-5 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className={cn('text-3xl font-semibold', variantValueClass[variant])}>
-          {value.toLocaleString()}
         </p>
-        {description && (
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
-        )}
-      </CardContent>
-    </Card>
-  );
+        {icon && <div className="text-muted-foreground">{icon}</div>}
+      </div>
+      <p className="text-3xl font-bold text-heading">{value.toLocaleString()}</p>
+      {trend && <TrendBadge trend={trend} />}
+    </div>
+  )
 }

@@ -1,104 +1,92 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { AdminTagsTable } from '@/components/admin/tags/admin-tags-table';
-import { CreateTagDialog } from '@/components/admin/tags/create-tag-dialog';
-import { EditTagDialog } from '@/components/admin/tags/edit-tag-dialog';
-import { DeleteTagDialog } from '@/components/admin/tags/delete-tag-dialog';
-import { MergeTagsDialog } from '@/components/admin/tags/merge-tags-dialog';
-import { useGetAdminTags } from '@/hooks/admin/use-get-admin-tags';
-import { useCreateTag } from '@/hooks/admin/use-create-tag';
-import { useUpdateTag } from '@/hooks/admin/use-update-tag';
-import { useDeleteTag } from '@/hooks/admin/use-delete-tag';
-import { useMergeTags } from '@/hooks/admin/use-merge-tags';
-import { SelectTagDTO } from '@/types/admin/admin-tag-dto';
-import { Page } from '@/types/common/page';
+import { useState } from 'react'
+import { AdminTagsTable } from '@/components/admin/tags/admin-tags-table'
+import { CreateTagDialog } from '@/components/admin/tags/create-tag-dialog'
+import { EditTagDialog } from '@/components/admin/tags/edit-tag-dialog'
+import { DeleteTagDialog } from '@/components/admin/tags/delete-tag-dialog'
+import { MergeTagsDialog } from '@/components/admin/tags/merge-tags-dialog'
+import { useGetAdminTags } from '@/hooks/admin/use-get-admin-tags'
+import { useCreateTag } from '@/hooks/admin/use-create-tag'
+import { useUpdateTag } from '@/hooks/admin/use-update-tag'
+import { useDeleteTag } from '@/hooks/admin/use-delete-tag'
+import { useMergeTags } from '@/hooks/admin/use-merge-tags'
+import { SelectTagDTO } from '@/types/admin/admin-tag-dto'
+import { Page } from '@/types/common/page'
 
-const DEFAULT_PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20
 
 function buildPage(pageNumber: number): Page<string> {
-  return { pageNumber, size: DEFAULT_PAGE_SIZE, totalElements: 0, orders: [], filter: [], selected: [] };
+  return { pageNumber, size: DEFAULT_PAGE_SIZE, totalElements: 0, orders: [], filter: [], selected: [] }
 }
 
 export default function TagManagementPage() {
-  const [pageNumber, setPageNumber] = useState(0);
-  const page = buildPage(pageNumber);
+  const [pageNumber, setPageNumber] = useState(0)
+  const page = buildPage(pageNumber)
 
-  const { data, isLoading, isError, refetch } = useGetAdminTags(page);
-  const createMutation = useCreateTag();
-  const updateMutation = useUpdateTag();
-  const deleteMutation = useDeleteTag();
-  const mergeMutation = useMergeTags();
+  const { data, isLoading, isError, refetch } = useGetAdminTags(page)
+  const createMutation = useCreateTag()
+  const updateMutation = useUpdateTag()
+  const deleteMutation = useDeleteTag()
+  const mergeMutation = useMergeTags()
 
-  const tags = data?.data ?? [];
-  const totalElements = data?.page.totalElements ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalElements / DEFAULT_PAGE_SIZE));
+  const tags = data?.data ?? []
+  const totalElements = data?.page.totalElements ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalElements / DEFAULT_PAGE_SIZE))
 
-  // Dialog state
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editTag, setEditTag] = useState<SelectTagDTO | null>(null);
-  const [deleteTag, setDeleteTag] = useState<SelectTagDTO | null>(null);
-  const [mergeOpen, setMergeOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editTag, setEditTag] = useState<SelectTagDTO | null>(null)
+  const [deleteTag, setDeleteTag] = useState<SelectTagDTO | null>(null)
+  const [mergeOpen, setMergeOpen] = useState(false)
 
   function handleCreate(name: string) {
-    createMutation.mutate({ name }, {
-      onSuccess: () => setCreateOpen(false),
-    });
+    createMutation.mutate({ name }, { onSuccess: () => setCreateOpen(false) })
   }
 
   function handleEdit(id: string, name: string) {
-    updateMutation.mutate({ id, name }, {
-      onSuccess: () => setEditTag(null),
-    });
+    updateMutation.mutate({ id, name }, { onSuccess: () => setEditTag(null) })
   }
 
   function handleDelete(tag: SelectTagDTO) {
-    deleteMutation.mutate(tag.id, {
-      onSuccess: () => setDeleteTag(null),
-    });
+    deleteMutation.mutate(tag.id, { onSuccess: () => setDeleteTag(null) })
   }
 
   function handleMerge(sourceTagId: string, targetTagId: string) {
-    mergeMutation.mutate({ sourceTagId, targetTagId }, {
-      onSuccess: () => setMergeOpen(false),
-    });
+    mergeMutation.mutate({ sourceTagId, targetTagId }, { onSuccess: () => setMergeOpen(false) })
   }
 
   const isAnyPending =
     createMutation.isPending ||
     updateMutation.isPending ||
     deleteMutation.isPending ||
-    mergeMutation.isPending;
+    mergeMutation.isPending
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-heading">Tag Management</h1>
+    <div className="w-full mx-auto py-4 sm:py-6 px-3 sm:px-6 flex flex-col gap-4 sm:gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-heading sm:text-2xl">Tag Management</h1>
+          <p className="text-xs text-muted-foreground mt-0.5 sm:text-sm sm:mt-1">Create, edit, and merge content tags</p>
+        </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setMergeOpen(true)}
-            className="btn-ghost text-xs"
-          >
-            Merge Tags
+          {!isLoading && (
+            <span className="badge-default text-xs sm:text-sm">{totalElements.toLocaleString()} tags</span>
+          )}
+          <button onClick={() => setMergeOpen(true)} className="btn-ghost text-xs sm:text-sm px-3 sm:px-4">
+            <span className="hidden sm:inline">Merge Tags</span>
+            <span className="sm:hidden">Merge</span>
           </button>
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="btn-primary text-xs"
-          >
-            Create Tag
+          <button onClick={() => setCreateOpen(true)} className="btn-primary text-xs sm:text-sm px-3 sm:px-4">
+            <span className="hidden sm:inline">Create Tag</span>
+            <span className="sm:hidden">Create</span>
           </button>
         </div>
       </div>
 
       {isError ? (
-        <div className="flex flex-col items-center gap-3 py-16 text-sm text-muted-foreground">
-          <p>Something went wrong. Try refreshing the page.</p>
-          <button
-            onClick={() => refetch()}
-            className="btn-ghost text-xs"
-          >
-            Retry
-          </button>
+        <div className="card p-4 sm:p-6 flex flex-col items-center gap-3">
+          <p className="text-xs sm:text-sm text-muted-foreground">Something went wrong. Try refreshing the page.</p>
+          <button onClick={() => refetch()} className="btn-ghost text-xs sm:text-sm">Retry</button>
         </div>
       ) : (
         <>
@@ -110,20 +98,20 @@ export default function TagManagementPage() {
           />
 
           {!isLoading && totalPages > 1 && (
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
               <span>Page {pageNumber + 1} of {totalPages}</span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setPageNumber((p) => Math.max(0, p - 1))}
                   disabled={pageNumber <= 0}
-                  className="btn-ghost text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="btn-ghost text-xs sm:text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setPageNumber((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={pageNumber >= totalPages - 1}
-                  className="btn-ghost text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="btn-ghost text-xs sm:text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>
@@ -164,5 +152,5 @@ export default function TagManagementPage() {
         isPending={mergeMutation.isPending}
       />
     </div>
-  );
+  )
 }

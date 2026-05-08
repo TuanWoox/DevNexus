@@ -17,6 +17,7 @@ namespace platform_core_service.Business.Mappings
             CreateMap<ProfileEntity, AdminProfileDTO>()
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.ApplicationUserId))
                 .ForMember(dest => dest.DisplayName, opt => opt.MapFrom(src => src.FullName))
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.ApplicationUser.Email))
                 .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.ApplicationUser.UserRoles.FirstOrDefault()!.Role.Name))
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.DateCreated))
                 .ForMember(dest => dest.PostCount, opt => opt.MapFrom(src => src.Posts.Count));

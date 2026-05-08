@@ -30,6 +30,7 @@ export const adminQueryKeys = {
   },
 
   settings: {
+    all: ['admin', 'settings'] as const,
     bannedKeywords: ['admin', 'settings', 'banned-keywords'] as const,
   },
 };

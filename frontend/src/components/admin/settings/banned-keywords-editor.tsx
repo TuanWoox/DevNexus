@@ -1,131 +1,146 @@
-'use client';
+'use client'
 
-import { useState, useEffect, KeyboardEvent } from 'react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect, KeyboardEvent } from 'react'
+import { X } from 'lucide-react'
+
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 
 interface BannedKeywordsEditorProps {
-  initialKeywords: string[];
-  onSave: (keywords: string[]) => void;
-  isSaving: boolean;
+  initialKeywords: string[]
+  onSave: (keywords: string[]) => void
+  isSaving: boolean
 }
 
+type SettingDataType = 'String' | 'Boolean' | 'Number' | 'Json'
+type SettingGroup = 'General' | 'Moderation' | 'Security' | 'AI Config'
+
+interface SettingFieldDefinition {
+  key: string
+  label: string
+  description: string
+  group: SettingGroup
+  dataType: SettingDataType
+  renderAs?: 'banned-keywords' | 'switch' | 'text' | 'number' | 'json'
+}
+
+export const moderationSettingFields: SettingFieldDefinition[] = [
+  {
+    key: 'banned_keywords',
+    label: 'Banned Keywords',
+    description: 'Posts containing these keywords will be held for manual review before publication.',
+    group: 'Moderation',
+    dataType: 'Json',
+    renderAs: 'banned-keywords',
+  },
+]
+
 export function BannedKeywordsEditor({ initialKeywords, onSave, isSaving }: BannedKeywordsEditorProps) {
-  const [draft, setDraft] = useState<string[]>(initialKeywords);
-  const [inputValue, setInputValue] = useState('');
+  const [draft, setDraft] = useState<string[]>(initialKeywords)
+  const [inputValue, setInputValue] = useState('')
 
   useEffect(() => {
-    setDraft(initialKeywords);
-  }, [initialKeywords]);
+    setDraft(initialKeywords)
+  }, [initialKeywords])
 
-  const hasChanges = JSON.stringify(draft) !== JSON.stringify(initialKeywords);
+  const hasChanges = JSON.stringify(draft) !== JSON.stringify(initialKeywords)
 
   function addKeyword() {
-    const trimmed = inputValue.trim().toLowerCase();
-    if (!trimmed) return;
-    if (draft.some((k) => k.toLowerCase() === trimmed)) {
-      setInputValue('');
-      return;
+    const trimmed = inputValue.trim().toLowerCase()
+    if (!trimmed) return
+    if (draft.some((keyword) => keyword.toLowerCase() === trimmed)) {
+      setInputValue('')
+      return
     }
-    setDraft((prev) => [...prev, trimmed]);
-    setInputValue('');
+    setDraft((prev) => [...prev, trimmed])
+    setInputValue('')
   }
 
   function removeKeyword(keyword: string) {
-    setDraft((prev) => prev.filter((k) => k !== keyword));
+    setDraft((prev) => prev.filter((item) => item !== keyword))
   }
 
-  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addKeyword();
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      addKeyword()
     }
   }
 
-  function handleCancel() {
-    setDraft(initialKeywords);
-    setInputValue('');
-  }
-
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-lg font-semibold text-heading">Banned Keywords</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Posts containing these keywords will be held for manual review.
-        </p>
-      </div>
+    <Card className="card card-hover gap-0 overflow-hidden">
+      <CardHeader className="border-b border-border px-6 py-5">
+        <CardTitle className="text-base font-semibold text-heading">Banned Keywords</CardTitle>
+        <CardDescription className="text-sm text-muted-foreground">
+          Posts containing these keywords will be held for manual review before publication.
+        </CardDescription>
+      </CardHeader>
 
-      {/* Chips */}
-      <div className="flex flex-wrap gap-2 min-h-[2.5rem]">
-        {draft.length === 0 && (
-          <span className="text-sm text-muted-foreground italic">No banned keywords.</span>
-        )}
-        {draft.map((keyword) => (
-          <span
-            key={keyword}
-            className="badge-default inline-flex items-center gap-1"
+      <CardContent className="space-y-5 px-6 py-5">
+        <div className="flex min-h-20 flex-wrap content-start gap-2 rounded-lg border-default bg-input p-3">
+          {draft.length === 0 ? (
+            <span className="text-sm text-muted-foreground">No banned keywords configured.</span>
+          ) : (
+            draft.map((keyword) => (
+              <Badge key={keyword} variant="secondary" className="badge-default gap-1.5 rounded-full py-1 pl-2.5 pr-1 font-mono text-xs">
+                <span>{keyword}</span>
+                <button
+                  type="button"
+                  onClick={() => removeKeyword(keyword)}
+                  disabled={isSaving}
+                  className="inline-flex size-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive hover:text-white disabled:pointer-events-none disabled:opacity-40"
+                  aria-label={`Remove ${keyword}`}
+                >
+                  <X className="size-3" aria-hidden="true" />
+                </button>
+              </Badge>
+            ))
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <Input
+            value={inputValue}
+            onChange={(event) => setInputValue(event.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Add keyword..."
+            disabled={isSaving}
+            className="input max-w-sm"
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={addKeyword}
+            disabled={isSaving || !inputValue.trim()}
+            className="btn-ghost"
           >
-            {keyword}
-            <button
-              type="button"
-              onClick={() => removeKeyword(keyword)}
-              disabled={isSaving}
-              className="ml-1 rounded-full hover:text-destructive transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              aria-label={`Remove ${keyword}`}
-            >
-              ×
-            </button>
-          </span>
-        ))}
-      </div>
+            Add
+          </Button>
+        </div>
+      </CardContent>
 
-      {/* Add input */}
-      <div className="flex items-center gap-2">
-        <Input
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Add keyword…"
-          disabled={isSaving}
-          className="max-w-xs"
-        />
+      <CardFooter className="justify-between border-t border-border bg-input/50 px-6 py-4">
+        <div className="text-xs text-muted-foreground">
+          {hasChanges ? 'Unsaved moderation changes' : 'Changes are saved explicitly.'}
+        </div>
         <Button
           type="button"
-          variant="secondary"
-          size="sm"
-          onClick={addKeyword}
-          disabled={isSaving || !inputValue.trim()}
-        >
-          Add
-        </Button>
-      </div>
-
-      {/* Action bar */}
-      <div className="flex items-center gap-3">
-        <Button
-          type="button"
-          variant="custom"
-          size="sm"
-          className="btn-primary"
           onClick={() => onSave(draft)}
           disabled={isSaving || !hasChanges}
+          className="btn-primary"
         >
-          {isSaving ? 'Saving…' : 'Save Changes'}
+          {isSaving ? 'Saving...' : 'Save Changes'}
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={handleCancel}
-          disabled={isSaving || !hasChanges}
-        >
-          Cancel
-        </Button>
-        {hasChanges && (
-          <span className="text-xs text-amber-500 font-medium">Unsaved changes</span>
-        )}
-      </div>
-    </div>
-  );
+      </CardFooter>
+    </Card>
+  )
 }

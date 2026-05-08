@@ -2,10 +2,13 @@ export interface AdminProfileDTO {
   id: string;
   userId: string;
   displayName: string;
-  role?: string;
+  email?: string | null;
+  avatarUrl?: string | null;
+  reputationPoints: number;
+  role?: string | null;
   isSuspended: boolean;
-  suspendedUntil?: string;
-  createdAt?: string;
+  suspendedUntil?: string | null;
+  createdAt?: string | null;
   postCount: number;
 }
 

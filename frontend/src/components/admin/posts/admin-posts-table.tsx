@@ -1,57 +1,91 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { AdminPostDTO } from '@/types/admin/admin-post-dto';
-import { ModerationStatusBadge } from './moderation-status-badge';
-import { AdminPostActionDialog } from './admin-post-action-dialog';
+import { useState } from 'react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { MoreHorizontal, CheckCircle2, XCircle, Copy, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { AdminPostDTO, ModerationStatus } from '@/types/admin/admin-post-dto'
+import { ModerationStatusBadge } from './moderation-status-badge'
+import { AdminPostActionDialog } from './admin-post-action-dialog'
+import { PostOverviewSheet } from './post-overview-sheet'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+type TabValue = 'all' | 'pending' | 'approved' | 'flagged' | 'inreview'
 
 interface AdminPostsTableProps {
-  posts: AdminPostDTO[];
-  isLoading: boolean;
-  onApprove: (post: AdminPostDTO) => void;
-  onReject: (post: AdminPostDTO) => void;
+  posts: AdminPostDTO[]
+  isLoading: boolean
+  onApprove: (post: AdminPostDTO) => void
+  onReject: (post: AdminPostDTO) => void
+}
+
+function mapPostType(type: string | number): string {
+  if (typeof type === 'number') return type === 0 ? 'Markdown' : type === 1 ? 'WYSIWYG' : 'Unknown'
+  return type === 'MarkDown' ? 'Markdown' : type === 'WYSIWYG' ? 'WYSIWYG' : String(type)
 }
 
 function formatDate(iso?: string): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-export function AdminPostsTable({
-  posts,
-  isLoading,
-  onApprove,
-  onReject,
-}: AdminPostsTableProps) {
+function tabCount(posts: AdminPostDTO[], tab: TabValue): number {
+  if (tab === 'all') return posts.length
+  const map: Record<Exclude<TabValue, 'all'>, ModerationStatus> = {
+    pending: 'Pending', approved: 'Approved', flagged: 'Flagged', inreview: 'InReview',
+  }
+  return posts.filter((p) => p.moderationStatus === map[tab]).length
+}
+
+function filterPosts(posts: AdminPostDTO[], tab: TabValue): AdminPostDTO[] {
+  if (tab === 'all') return posts
+  const map: Record<Exclude<TabValue, 'all'>, ModerationStatus> = {
+    pending: 'Pending', approved: 'Approved', flagged: 'Flagged', inreview: 'InReview',
+  }
+  return posts.filter((p) => p.moderationStatus === map[tab])
+}
+
+function AuthorCell({ author }: { author?: { fullName: string; id: string } }) {
+  if (!author) return <span className="text-xs text-muted-foreground">—</span>
+  const initials = author.fullName.slice(0, 2).toUpperCase()
+  return (
+    <div className="flex items-center gap-2">
+      <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+        <span className="text-[9px] font-bold text-primary">{initials}</span>
+      </div>
+      <span className="font-mono text-xs text-muted-foreground truncate max-w-[100px]">{author.fullName}</span>
+    </div>
+  )
+}
+
+export function AdminPostsTable({ posts, isLoading, onApprove, onReject }: AdminPostsTableProps) {
+  const [activeTab, setActiveTab] = useState<TabValue>('all')
+  const [sheetState, setSheetState] = useState<{ open: boolean; post: AdminPostDTO | null }>({
+    open: false, post: null,
+  })
   const [dialogState, setDialogState] = useState<{
-    open: boolean;
-    post: AdminPostDTO | null;
-    action: 'approve' | 'reject';
-  }>({ open: false, post: null, action: 'approve' });
+    open: boolean; post: AdminPostDTO | null; action: 'approve' | 'reject'
+  }>({ open: false, post: null, action: 'approve' })
 
+  function openSheet(post: AdminPostDTO) { setSheetState({ open: true, post }) }
+  function closeSheet() { setSheetState((s) => ({ ...s, open: false })) }
   function openDialog(post: AdminPostDTO, action: 'approve' | 'reject') {
-    setDialogState({ open: true, post, action });
+    setDialogState({ open: true, post, action })
   }
-
-  function closeDialog() {
-    setDialogState((prev) => ({ ...prev, open: false }));
-  }
-
+  function closeDialog() { setDialogState((s) => ({ ...s, open: false })) }
   function handleConfirm() {
-    if (!dialogState.post) return;
-    if (dialogState.action === 'approve') {
-      onApprove(dialogState.post);
-    } else {
-      onReject(dialogState.post);
-    }
-    closeDialog();
+    if (!dialogState.post) return
+    dialogState.action === 'approve' ? onApprove(dialogState.post) : onReject(dialogState.post)
+    closeDialog()
   }
+
+  const filtered = filterPosts(posts, activeTab)
 
   if (isLoading) {
     return (
@@ -60,85 +94,130 @@ export function AdminPostsTable({
           <Skeleton key={i} className="h-12 w-full rounded-md" />
         ))}
       </div>
-    );
-  }
-
-  if (posts.length === 0) {
-    return (
-      <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
-        No posts found.
-      </div>
-    );
+    )
   }
 
   return (
     <>
-      <div className="overflow-x-auto rounded-md border border-default">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-default bg-card">
-              <th className="px-4 py-3 text-left font-semibold text-heading">Title</th>
-              <th className="px-4 py-3 text-left font-semibold text-heading">Type</th>
-              <th className="px-4 py-3 text-left font-semibold text-heading">Author</th>
-              <th className="px-4 py-3 text-left font-semibold text-heading">Status</th>
-              <th className="px-4 py-3 text-left font-semibold text-heading">Votes</th>
-              <th className="px-4 py-3 text-left font-semibold text-heading">Created</th>
-              <th className="px-4 py-3 text-right font-semibold text-heading">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {posts.map((post) => (
-              <tr key={post.id} className="border-b border-default last:border-0 hover:bg-card/50 transition-colors">
-                <td className="px-4 py-3 max-w-[200px]">
-                  <p className="truncate text-foreground">{post.title}</p>
-                </td>
-                <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                  {post.postType}
-                </td>
-                <td className="px-4 py-3 max-w-[120px]">
-                  <p className="truncate text-muted-foreground">{post.authorName ?? '—'}</p>
-                </td>
-                <td className="px-4 py-3">
-                  <ModerationStatusBadge status={post.moderationStatus} />
-                </td>
-                <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                  ↑{post.upvoteCount} ↓{post.downvoteCount}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                  {formatDate(post.dateCreated)}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-2">
-                    {post.moderationStatus !== 'Approved' && (
-                      <Button
-                        type="button"
-                        variant="custom"
-                        size="xs"
-                        className="btn-emerald"
-                        onClick={() => openDialog(post, 'approve')}
-                        aria-label={`Approve: ${post.title}`}
-                      >
-                        Approve
-                      </Button>
-                    )}
-                    {post.moderationStatus !== 'Flagged' && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="xs"
-                        onClick={() => openDialog(post, 'reject')}
-                        aria-label={`Reject: ${post.title}`}
-                      >
-                        Reject
-                      </Button>
-                    )}
-                  </div>
-                </td>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
+        <TabsList>
+          {(['all', 'pending', 'approved', 'flagged', 'inreview'] as TabValue[]).map((tab) => (
+            <TabsTrigger key={tab} value={tab}>
+              {tab === 'inreview' ? 'In Review' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              <span className="ml-1.5 text-xs font-mono text-muted-foreground">
+                {tabCount(posts, tab)}
+              </span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
+      {filtered.length === 0 ? (
+        <div className="flex items-center justify-center py-16 text-sm text-muted-foreground bg-card border border-border rounded-xl">
+          No posts in this category.
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-border bg-card">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="px-4 py-3 text-left text-xs text-muted-foreground uppercase tracking-wider font-medium">Title</th>
+                <th className="px-4 py-3 text-left text-xs text-muted-foreground uppercase tracking-wider font-medium">Author</th>
+                <th className="px-4 py-3 text-left text-xs text-muted-foreground uppercase tracking-wider font-medium">Type</th>
+                <th className="px-4 py-3 text-left text-xs text-muted-foreground uppercase tracking-wider font-medium">Status</th>
+                <th className="px-4 py-3 text-left text-xs text-muted-foreground uppercase tracking-wider font-medium">Votes</th>
+                <th className="px-4 py-3 text-left text-xs text-muted-foreground uppercase tracking-wider font-medium">Created</th>
+                <th className="px-4 py-3 text-right text-xs text-muted-foreground uppercase tracking-wider font-medium">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {filtered.map((post) => (
+                <tr key={post.id} className="border-b border-border last:border-0 hover:bg-subtle transition-colors">
+                  <td className="px-4 py-3 max-w-[240px]">
+                    <button
+                      type="button"
+                      onClick={() => openSheet(post)}
+                      className="text-left truncate text-foreground/85 font-medium cursor-pointer hover:underline hover:text-primary transition-colors w-full block"
+                    >
+                      {post.title}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    <AuthorCell author={post.author ? { fullName: post.author.fullName, id: post.author.id } : undefined} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="badge-default font-mono text-xs">{post.entityType}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <ModerationStatusBadge status={post.moderationStatus} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+                      <span className="flex items-center gap-0.5">
+                        <ThumbsUp className="w-3 h-3" />{post.upvoteCount}
+                      </span>
+                      <span className="flex items-center gap-0.5">
+                        <ThumbsDown className="w-3 h-3" />{post.downvoteCount}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="font-mono text-xs text-muted-foreground">{formatDate(post.dateCreated)}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-subtle transition-colors"
+                            aria-label="Row actions"
+                          >
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openSheet(post)}>
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {post.moderationStatus !== 'Approved' && (
+                            <DropdownMenuItem onClick={() => openDialog(post, 'approve')}>
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                              Force Approve
+                            </DropdownMenuItem>
+                          )}
+                          {post.moderationStatus !== 'Flagged' && (
+                            <DropdownMenuItem variant="destructive" onClick={() => openDialog(post, 'reject')}>
+                              <XCircle className="w-4 h-4" />
+                              Force Reject
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(post.id).catch(() => {})}>
+                            <Copy className="w-4 h-4" />
+                            Copy Post ID
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {sheetState.post && (
+        <PostOverviewSheet
+          open={sheetState.open}
+          onClose={closeSheet}
+          post={sheetState.post}
+          onApprove={(p) => openDialog(p, 'approve')}
+          onReject={(p) => openDialog(p, 'reject')}
+        />
+      )}
 
       {dialogState.post && (
         <AdminPostActionDialog
@@ -150,5 +229,5 @@ export function AdminPostsTable({
         />
       )}
     </>
-  );
+  )
 }

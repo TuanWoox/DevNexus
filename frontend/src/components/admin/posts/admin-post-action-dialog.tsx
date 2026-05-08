@@ -44,11 +44,11 @@ export function AdminPostActionDialog({
 
         <div className="flex flex-col gap-3 py-2">
           <div className="flex flex-col gap-1">
-            <p className="text-sm font-semibold text-heading">Post</p>
+            <p className="text-sm font-semibold text-foreground">Post</p>
             <p className="text-sm text-muted-foreground line-clamp-2">{post.title}</p>
           </div>
           <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-heading">Current Status</p>
+            <p className="text-sm font-semibold text-foreground">Current Status</p>
             <ModerationStatusBadge status={post.moderationStatus} />
           </div>
         </div>

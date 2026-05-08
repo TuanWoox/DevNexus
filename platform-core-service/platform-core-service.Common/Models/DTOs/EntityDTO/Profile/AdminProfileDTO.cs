@@ -7,6 +7,9 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Profile
         public string Id { get; set; } = null!;
         public string UserId { get; set; } = null!;
         public string DisplayName { get; set; } = null!;
+        public string? Email { get; set; }
+        public string? AvatarUrl { get; set; }
+        public int ReputationPoints { get; set; }
         public string? Role { get; set; }
         public bool IsSuspended { get; set; }
         public DateTimeOffset? SuspendedUntil { get; set; }

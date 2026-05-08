@@ -1,9 +1,13 @@
+import { SelectPostAuthorDTO } from './admin-post-dto';
+
 export interface AdminQueueEntryDTO {
   id: string;
   postId: string;
   postTitle: string;
   postContent: string;
   authorId: string;
+  author: SelectPostAuthorDTO;
+  entityType: string;
   reason: string;
   tier1Score: number;
   tier2Reasoning: string;
@@ -15,6 +19,6 @@ export interface AdminQueueEntryDTO {
 
 export interface AdminQueueResolveDTO {
   id: string;
-  resolution: 'Approved' | 'Rejected';
+  resolution: 'Approved' | 'Flagged' | 'Rejected';
   moderatorNote?: string;
 }

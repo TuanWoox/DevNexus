@@ -56,17 +56,17 @@ export function ModerationResolveDialog({
 
         <div className="flex flex-col gap-3 py-2">
           <div className="flex flex-col gap-1">
-            <p className="text-sm font-semibold text-heading">Post</p>
+            <p className="text-sm font-semibold text-foreground">Post</p>
             <p className="text-sm text-muted-foreground line-clamp-2">{entry.postTitle}</p>
           </div>
           {entry.reason && (
             <div className="flex flex-col gap-1">
-              <p className="text-sm font-semibold text-heading">Reason</p>
+              <p className="text-sm font-semibold text-foreground">Reason</p>
               <p className="text-sm text-muted-foreground">{entry.reason}</p>
             </div>
           )}
           <div className="flex flex-col gap-1">
-            <label htmlFor="moderator-note" className="text-sm font-semibold text-heading">
+            <label htmlFor="moderator-note" className="text-sm font-semibold text-foreground">
               Moderator Note <span className="text-muted-foreground font-normal">(optional)</span>
             </label>
             <textarea
@@ -76,7 +76,7 @@ export function ModerationResolveDialog({
               maxLength={500}
               rows={3}
               placeholder="Add a note..."
-              className="w-full rounded-md border border-default bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+              className="w-full rounded-md border border-default bg-input px-3 py-2 text-sm text-foreground/85 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
             />
             <p className="text-xs text-muted-foreground text-right">{note.length}/500</p>
           </div>

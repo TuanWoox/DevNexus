@@ -15,6 +15,10 @@ namespace platform_core_service.Business.Mappings
                     opt => opt.MapFrom(src => src.Post.Content))
                 .ForMember(dest => dest.AuthorId,
                     opt => opt.MapFrom(src => src.Post.AuthorId))
+                .ForMember(dest => dest.Author,
+                    opt => opt.MapFrom(src => src.Post.Author))
+                .ForMember(dest => dest.EntityType,
+                    opt => opt.MapFrom(src => src.Post is platform_core_service.Common.Entities.DbEntities.QAPost ? "QA Post" : "Post"))
                 .ForMember(dest => dest.CreatedAt,
                     opt => opt.MapFrom(src => src.DateCreated ?? DateTimeOffset.MinValue));
         }

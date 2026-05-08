@@ -136,15 +136,22 @@ namespace platform_core_service.Business.Services
                     returnResult.Message = "Post ID is required";
                     return returnResult;
                 }
+                bool hasPrivilegedAccess = _userContext.IsAdmin || _userContext.IsModerator;
 
                 // Step 2: Load post with tags and author (public read)
-                var post = await _context.Posts
+                var query = _context.Posts
                     .Include(p => p.PostTags)
-                    .ThenInclude(pt => pt.Tag)
+                        .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
-                    .FirstOrDefaultAsync(p =>
-                        (p.Id == postId || p.Slug == postId)
-                        && p.ModerationStatus == ModerationStatus.Approved);
+                    .Where(p => p.Id == postId || p.Slug == postId);
+
+                // Apply ModerationStatus filter ONLY if the user is a standard user
+                if (!hasPrivilegedAccess)
+                {
+                    query = query.Where(p => p.ModerationStatus == ModerationStatus.Approved);
+                }
+
+                var post = await query.FirstOrDefaultAsync();
 
                 if (post == null)
                 {
@@ -152,14 +159,16 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                var accessCheck = await _socialGuardService.CheckVisibleContent(post.AuthorId, post.CommunityId);
-
-                if (!accessCheck.Result)
+                if (!hasPrivilegedAccess)
                 {
-                    returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
-                    return returnResult;
-                }
+                    var accessCheck = await _socialGuardService.CheckVisibleContent(post.AuthorId, post.CommunityId);
 
+                    if (!accessCheck.Result)
+                    {
+                        returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
+                        return returnResult;
+                    }
+                }
 
                 returnResult.Result = _mapper.Map<SelectPostDTO>(post);
                 await SetCurrentUserVoteAsync(returnResult.Result);

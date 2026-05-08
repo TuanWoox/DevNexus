@@ -6,7 +6,6 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
-  ShieldCheck,
   FileText,
   Users,
   Tag,
@@ -35,14 +34,15 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 const adminNavItems = [
-  { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, roles: ['Admin'] },
-  { name: 'Moderation Queue', href: '/admin/moderation', icon: ShieldCheck, roles: ['Admin', 'Moderator'] },
-  { name: 'Content Oversight', href: '/admin/posts', icon: FileText, roles: ['Admin', 'Moderator'] },
-  { name: 'User Management', href: '/admin/users', icon: Users, roles: ['Admin'] },
-  { name: 'Tag Management', href: '/admin/tags', icon: Tag, roles: ['Admin', 'Moderator'] },
-  { name: 'AI Usage', href: '/admin/ai-usage', icon: BrainCircuit, roles: ['Admin'] },
-  { name: 'Settings', href: '/admin/settings', icon: Settings, roles: ['Admin'] },
+  { name: 'Dashboard',       href: '/admin/dashboard', icon: LayoutDashboard, roles: ['Admin'] },
+  { name: 'Posts',           href: '/admin/posts',     icon: FileText,        roles: ['Admin', 'Moderator'] },
+  { name: 'User Management', href: '/admin/users',     icon: Users,           roles: ['Admin'] },
+  { name: 'Tag Management',  href: '/admin/tags',      icon: Tag,             roles: ['Admin', 'Moderator'] },
+  { name: 'AI Usage',        href: '/admin/ai-usage',  icon: BrainCircuit,    roles: ['Admin'] },
+  { name: 'Settings',        href: '/admin/settings',  icon: Settings,        roles: ['Admin'] },
 ]
+
+export { adminNavItems }
 
 export function AdminSidebar() {
   const pathname = usePathname()
@@ -52,27 +52,25 @@ export function AdminSidebar() {
   const { logout, isLoggingOut } = useLogout()
 
   const userRoles = user?.roles ?? []
+  const isAdmin = userRoles.includes('Admin')
+  const adminHomeHref = isAdmin ? '/admin/dashboard' : '/admin/posts'
   const visibleItems = adminNavItems.filter((item) =>
     item.roles.some((r) => userRoles.includes(r))
   )
 
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark')
-  }
-
   return (
     <aside className="hidden sm:flex flex-col sticky top-0 h-screen py-6 border-r border-default sm:w-16 lg:w-64 sm:px-2 lg:px-0 lg:pr-6">
-      {/* Logo */}
-      <Link href="/admin/dashboard" className="flex items-center gap-3 mb-6 px-3">
+      {/* Logo — matches main sidebar logo block */}
+      <Link href={adminHomeHref} className="flex items-center gap-3 mb-6 px-3">
         <div className="relative shrink-0">
           <Hexagon className="h-7 w-7 sm:h-8 sm:w-8 animate-pulse text-primary" />
           <div className="absolute inset-0 flex items-center justify-center">
-            <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500 dark:text-emerald-400" />
+            <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 dark:text-emerald-400 text-emerald-500" />
           </div>
         </div>
-        <div className="hidden lg:flex flex-col">
+        <div className="hidden lg:flex flex-col leading-none">
           <span className="text-2xl font-bold text-heading">DevNexus</span>
-          <span className="text-xs text-muted-foreground">Admin Console</span>
+          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Admin Console</span>
         </div>
       </Link>
 
@@ -98,26 +96,35 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      {/* User dropdown */}
+      {/* User section */}
       <div className="mt-auto pt-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button suppressHydrationWarning className="flex justify-center lg:justify-start items-center gap-3 p-2 w-full rounded-xl hover:bg-subtle transition-colors group">
+            <button
+              suppressHydrationWarning
+              className="flex justify-center lg:justify-start items-center gap-3 p-2 w-full rounded-xl hover:bg-subtle transition-colors group"
+            >
               <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
                 {userProfile?.avatarUrl ? (
                   <Image src={userProfile.avatarUrl} alt={userProfile.fullName} fill className="object-cover" />
                 ) : (
-                  <span className="text-primary font-bold text-sm">{userProfile?.fullName?.charAt(0) || 'A'}</span>
+                  <span className="text-primary font-bold">{userProfile?.fullName?.charAt(0) || 'A'}</span>
                 )}
               </div>
               <div className="hidden lg:flex flex-col text-left flex-1 overflow-hidden">
                 <span className="text-sm font-bold text-heading truncate">{userProfile?.fullName || 'Admin'}</span>
-                <span className="text-xs text-muted-foreground truncate">{user?.roles || 'Admin'}</span>
+                <span className="text-xs text-muted-foreground truncate">{userRoles.join(', ') || 'Admin'}</span>
               </div>
               <ChevronDown className="hidden lg:block w-4 h-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="center" sideOffset={8} className="w-52 bg-card border border-default rounded-xl shadow-elevated p-2 flex flex-col gap-1 z-50">
+          <DropdownMenuContent
+            side="top"
+            align="center"
+            sideOffset={8}
+            className="w-52 bg-card border border-default rounded-xl shadow-elevated p-2 flex flex-col gap-1 z-50"
+          >
+
             <DropdownMenuItem asChild>
               <Link
                 href="/profile"
@@ -149,10 +156,13 @@ export function AdminSidebar() {
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              onClick={toggleTheme}
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer"
             >
-              {theme === 'dark' ? <Moon className="w-5 h-5 shrink-0" /> : <Sun className="w-5 h-5 shrink-0" />}
+              {theme === 'dark'
+                ? <Moon className="w-5 h-5 shrink-0" />
+                : <Sun className="w-5 h-5 shrink-0" />
+              }
               <span className="text-sm font-medium flex-1">Display Mode</span>
               <div className={`w-8 h-4 flex rounded-full items-center px-0.5 transition-colors ${theme === 'dark' ? 'bg-primary' : 'bg-muted'}`}>
                 <div className={`w-3 h-3 rounded-full bg-white transform transition-transform ${theme === 'dark' ? 'translate-x-4' : 'translate-x-0'}`} />
@@ -166,14 +176,11 @@ export function AdminSidebar() {
               disabled={isLoggingOut}
               className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors cursor-pointer disabled:opacity-50"
             >
-              {isLoggingOut ? (
-                <Loader2 className="w-5 h-5 animate-spin shrink-0" />
-              ) : (
-                <LogOut className="w-5 h-5 shrink-0" />
-              )}
-              <span className="text-sm font-medium">
-                {isLoggingOut ? 'Logging out...' : 'Log Out'}
-              </span>
+              {isLoggingOut
+                ? <Loader2 className="w-5 h-5 animate-spin shrink-0" />
+                : <LogOut className="w-5 h-5 shrink-0" />
+              }
+              <span className="text-sm font-medium">{isLoggingOut ? 'Logging out...' : 'Log Out'}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

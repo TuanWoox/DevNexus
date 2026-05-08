@@ -12,9 +12,10 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Post
 
         public string Slug { get; set; } = null!;
         public PostType PostType { get; set; }
-        public string AuthorId { get; set; } = null!;
-        public string? AuthorName { get; set; }
+        public string EntityType { get; set; }
 
+        public string AuthorId { get; set; } = null!;
+        public SelectPostAuthorDTO Author { get; set; }
         public ModerationStatus ModerationStatus { get; set; }
 
         public int UpvoteCount { get; set; }

@@ -1,8 +1,8 @@
-import { AdminAiUsageSummaryDTO } from '@/types/admin/ai-usage-dto';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AdminAiUsageSummaryDTO } from '@/types/admin/ai-usage-dto'
+import { Sparkles } from 'lucide-react'
 
 interface AiUsageSummaryCardsProps {
-  summary: AdminAiUsageSummaryDTO;
+  summary: AdminAiUsageSummaryDTO
 }
 
 const metrics = (summary: AdminAiUsageSummaryDTO) => [
@@ -10,25 +10,26 @@ const metrics = (summary: AdminAiUsageSummaryDTO) => [
   { label: 'Input Tokens', value: summary.total_input_tokens },
   { label: 'Output Tokens', value: summary.total_output_tokens },
   { label: 'Total Tokens', value: summary.total_tokens },
-];
+]
 
 export function AiUsageSummaryCards({ summary }: AiUsageSummaryCardsProps) {
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {metrics(summary).map(({ label, value }) => (
-        <Card key={label}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground font-semibold uppercase tracking-wide">
-              {label}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold text-foreground">
-              {(value ?? 0).toLocaleString()}
-            </p>
-          </CardContent>
-        </Card>
+        <div key={label} className="card-ai p-4">
+          <div className="pb-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">
+                {label}
+              </p>
+              <Sparkles className="w-3.5 h-3.5 text-ai" />
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-heading">
+            {(value ?? 0).toLocaleString()}
+          </p>
+        </div>
       ))}
     </div>
-  );
+  )
 }

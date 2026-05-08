@@ -1,5 +1,8 @@
+using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Entities.Identities;
 using platform_core_service.Common.Interfaces.Contexts;
@@ -9,6 +12,8 @@ using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
+using ProfileEntity = platform_core_service.Common.Entities.DbEntities.Profile;
+
 
 namespace platform_core_service.Business.Services
 {
@@ -18,17 +23,23 @@ namespace platform_core_service.Business.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<ApplicationRole> _roleManager;
         private readonly IUserContext _userContext;
+        private readonly IMapper _mapper;
+        private readonly IRepository<ProfileEntity, string> _repository;
 
         public AdminUserService(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             RoleManager<ApplicationRole> roleManager,
-            IUserContext userContext)
+            IUserContext userContext,
+            IMapper mapper,
+            IRepository<ProfileEntity, string> repository)
         {
             _context = context;
             _userManager = userManager;
             _roleManager = roleManager;
             _userContext = userContext;
+            _mapper = mapper;
+            _repository = repository;
         }
 
         public async Task<ReturnResult<PagedData<AdminProfileDTO, string>>> GetAllUsersAsync(Page<string> page)
@@ -36,6 +47,7 @@ namespace platform_core_service.Business.Services
             var result = new ReturnResult<PagedData<AdminProfileDTO, string>>();
             try
             {
+                // 1. Build the base query with necessary Includes
                 var query = _context.Profiles
                     .Include(p => p.Posts)
                     .Include(p => p.ApplicationUser)
@@ -44,26 +56,7 @@ namespace platform_core_service.Business.Services
                     .AsNoTracking()
                     .AsQueryable();
 
-                page.FormatFilter(ref query);
-                page.FormatOrder(ref query);
-
-                var totalElements = await query.CountAsync();
-                var pagedQuery = query;
-
-                if (page.Size != -1)
-                {
-                    pagedQuery = pagedQuery
-                        .Skip(page.PageNumber * page.Size)
-                        .Take(page.Size);
-                }
-
-                var profiles = await pagedQuery.ToListAsync();
-
-                result.Result = new PagedData<AdminProfileDTO, string>(page)
-                {
-                    Data = profiles.Select(MapToAdminProfileDTO).ToList()
-                };
-                result.Result.Page.TotalElements = totalElements;
+                result.Result = await _repository.GetPagingAsync<Page<string>, AdminProfileDTO>(query, page);
             }
             catch (Exception ex)
             {
@@ -208,21 +201,6 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while updating role: {ex.Message}";
             }
             return result;
-        }
-
-        private static AdminProfileDTO MapToAdminProfileDTO(Profile profile)
-        {
-            return new AdminProfileDTO
-            {
-                Id = profile.Id,
-                UserId = profile.ApplicationUserId,
-                DisplayName = profile.FullName,
-                Role = profile.ApplicationUser?.UserRoles?.FirstOrDefault()?.Role?.Name,
-                IsSuspended = profile.IsSuspended,
-                SuspendedUntil = profile.SuspendedUntil,
-                CreatedAt = profile.DateCreated,
-                PostCount = profile.Posts?.Count ?? 0
-            };
         }
     }
 }
