@@ -1,9 +1,10 @@
-import { Controller, Post, Param, ParseIntPipe, UploadedFile, UseGuards, UseInterceptors, Body, HttpCode } from '@nestjs/common';
+import { Controller, Post, Delete, Patch, UploadedFile, UseGuards, UseInterceptors, Body, HttpCode, Param } from '@nestjs/common';
 import { MessagesService } from './messages.service';
 import { AuthGuard } from '../auth/auth.guard';
 import type { CreateMessageDto } from './dto/create-message.dto';
+import type { UpdateMessageDto } from './dto/update-message.dto';
 import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
-import { Message, MessageReadReceipt } from 'src/generated/prisma/client';
+import { Message, MessageReadReceipt, Media, MessageEditHistory } from 'src/generated/prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Page } from 'src/shared/dtos/paging/page';
 import type { PagedData } from 'src/shared/dtos/paging/pagedData';
@@ -12,7 +13,7 @@ import type { PagedData } from 'src/shared/dtos/paging/pagedData';
 @Controller('messages')
 @UseGuards(AuthGuard)
 export class MessagesController {
-  constructor(private readonly messagesService: MessagesService) {}
+  constructor(private readonly messagesService: MessagesService) { }
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
@@ -31,11 +32,11 @@ export class MessagesController {
     }
   }
 
-  @Post(':id/read')
+  @Post('read')
   async markAsRead(
-    @Param('id', ParseIntPipe) id: number,
+    @Body('chatId') chatId: string,
   ): Promise<ReturnResult<MessageReadReceipt>> {
-    return this.messagesService.markAsRead(id);
+    return this.messagesService.markAsRead(chatId);
   }
 
   @Post('paging/:chatId')
@@ -47,6 +48,68 @@ export class MessagesController {
     const returnResult = new ReturnResult<PagedData<number, Message>>();
     try {
       return await this.messagesService.getMessagePaging(chatId, page);
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+      return returnResult;
+    }
+  }
+
+  @Post('media/:chatId')
+  @HttpCode(200)
+  async chatMediaPaging(
+    @Param('chatId') chatId: string,
+    @Body() page: Page<string>,
+  ): Promise<ReturnResult<PagedData<string, Media>>> {
+    const returnResult = new ReturnResult<PagedData<string, Media>>();
+    try {
+      return await this.messagesService.getMediaPaging(chatId, page);
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+      return returnResult;
+    }
+  }
+
+  @Delete(':messageId')
+  async deleteMessage(
+    @Param('messageId') messageId: string,
+  ): Promise<ReturnResult<Message>> {
+    return this.messagesService.deleteMessage(parseInt(messageId, 10));
+  }
+
+  @Post(':messageId/undo-delete')
+  @HttpCode(200)
+  async undoDeleteMessage(
+    @Param('messageId') messageId: string,
+  ): Promise<ReturnResult<Message>> {
+    return this.messagesService.undoDeleteMessage(parseInt(messageId, 10));
+  }
+
+  @Patch(':messageId')
+  async updateMessage(
+    @Param('messageId') messageId: string,
+    @Body() dto: UpdateMessageDto,
+  ): Promise<ReturnResult<Message>> {
+    return this.messagesService.updateMessage(parseInt(messageId, 10), dto);
+  }
+
+  @Post(':messageId/edit-history')
+  @HttpCode(200)
+  async messageEditHistory(
+    @Param('messageId') messageId: string,
+    @Body() page: Page<number>,
+  ): Promise<ReturnResult<PagedData<number, MessageEditHistory>>> {
+    return this.messagesService.getMessageEditHistory(parseInt(messageId, 10), page);
+  }
+
+  @Post(':messageId/readers')
+  @HttpCode(200)
+  async messageReaders(
+    @Param('messageId') messageId: string,
+    @Body() page: Page<number>,
+  ): Promise<ReturnResult<PagedData<number, MessageReadReceipt>>> {
+    const returnResult = new ReturnResult<PagedData<number, MessageReadReceipt>>();
+    try {
+      return await this.messagesService.getMessageReaders(parseInt(messageId, 10), page);
     } catch (ex) {
       returnResult.Message = ex instanceof Error ? ex.message : String(ex);
       return returnResult;

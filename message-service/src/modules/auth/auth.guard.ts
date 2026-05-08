@@ -35,7 +35,7 @@ export class AuthGuard implements CanActivate {
 
     // 2. Try cookie
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const cookieToken = request.cookies?.['access_token'] as string | undefined;
+    const cookieToken = request.cookies?.['accessToken'] as string | undefined;
     if (cookieToken) {
       return cookieToken;
     }

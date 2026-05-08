@@ -1,10 +1,12 @@
-import { NestFactory } from "@nestjs/core";
+import { NestFactory, Reflector } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { AppModule } from "./app.module";
 import { mkdirSync } from "fs";
 import { join } from "path";
 import { ConfigService } from "@nestjs/config";
 import { platform } from "os";
+import { ClassSerializerInterceptor } from "@nestjs/common";
+import cookieParser from "cookie-parser";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -29,9 +31,21 @@ async function bootstrap() {
     console.error("✗ Failed to create upload directories", err);
   }
 
-  await app.listen(3000);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  app.use(cookieParser());
 
-  console.log("HTTP server running on :3000");
+  app.enableCors({
+    origin: ['http://localhost:3000'],
+    credentials: true,
+  });
+
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+  // Set global prefix for all routes
+  app.setGlobalPrefix("message-service/api");
+
+  await app.listen(3001);
+
+  console.log("HTTP server running on :3001");
 }
 
 bootstrap().catch((err) => {

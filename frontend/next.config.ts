@@ -16,6 +16,12 @@ const nextConfig: NextConfig = {
   output: "standalone",
   images: {
     remotePatterns: [
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "3001",
+        pathname: "/message-service/medias/**",
+      },
       // Local development API (HTTP)
       {
         protocol: 'http',

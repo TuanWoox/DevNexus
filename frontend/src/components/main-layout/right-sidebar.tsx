@@ -1,5 +1,8 @@
+"use client";
+
 import Link from 'next/link'
 import { Sparkles } from 'lucide-react'
+import { usePathname } from 'next/navigation'
 
 // TODO: fetch trending tags from API instead of using hardcoded mock data
 const trendingTags = [
@@ -9,6 +12,9 @@ const trendingTags = [
 ]
 
 export function RightSidebar() {
+    const pathname = usePathname();
+    if (pathname?.startsWith('/messages')) return null;
+
     return (
         <aside className="hidden xl:block w-80 sticky top-0 h-screen py-6 pl-6 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <div className="card-ai p-5 mb-6">
