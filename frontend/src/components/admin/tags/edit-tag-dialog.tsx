@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,21 +26,30 @@ export function EditTagDialog({ tag, open, onClose, onConfirm, isPending }: Edit
   const [name, setName] = useState('');
   const [error, setError] = useState('');
 
-  // Reset form when dialog opens with new tag
-  useEffect(() => {
-    if (open && tag) {
+  // Initialize name when dialog opens
+  const displayName = open && tag ? (name || tag.name) : name;
+
+  function handleOpenChange(isOpen: boolean) {
+    if (isOpen && tag) {
+      // Dialog opening - initialize with tag name
       setName(tag.name);
       setError('');
+    } else if (!isOpen) {
+      // Dialog closing - reset state
+      setName('');
+      setError('');
+      onClose();
     }
-  }, [open, tag]);
+  }
 
   function handleClose() {
+    setName('');
     setError('');
     onClose();
   }
 
   function handleSubmit() {
-    const trimmed = name.trim();
+    const trimmed = displayName.trim();
     if (!trimmed) {
       setError('Tag name is required');
       return;
@@ -52,7 +61,7 @@ export function EditTagDialog({ tag, open, onClose, onConfirm, isPending }: Edit
   if (!tag) return null;
 
   return (
-    <AlertDialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Edit Tag</AlertDialogTitle>
@@ -62,7 +71,7 @@ export function EditTagDialog({ tag, open, onClose, onConfirm, isPending }: Edit
           <Label htmlFor="edit-tag-name">Tag Name</Label>
           <Input
             id="edit-tag-name"
-            value={name}
+            value={displayName}
             onChange={(e) => { setName(e.target.value); setError(''); }}
             disabled={isPending}
           />
