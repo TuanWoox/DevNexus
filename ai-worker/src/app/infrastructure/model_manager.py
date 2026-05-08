@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Model identifiers
 # In Docker: /app/models/text-model (mounted from D:\Ai-Worker-Model\model\my-final-toxic-model)
 # Local development: D:\Learning\Fouth_Year\fine-tunning\my-final-toxic-model
-_TEXT_MODEL_ID = "/app/models/my-final-toxic-model" if os.path.exists("/app") else r"D:\ai-worker-store\model\my-final-toxic-model"
+_TEXT_MODEL_ID = "/app/models/my-final-toxic-model" if os.path.exists("/app") else r"D:\Learning\Fouth_Year\fine-tunning\my-final-toxic-model"
 _CLIP_MODEL_ID = "openai/clip-vit-base-patch32"
 
 # Toxicity label returned by the text model for the positive class

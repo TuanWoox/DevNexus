@@ -31,6 +31,7 @@ namespace platform_core_service.Business.Services
         private readonly ISocialGuardService _socialGuardService;
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IAiWorkerClient _aiWorkerClient;
+        private readonly IConfigurationService _configurationService;
 
         public PostService(
             ApplicationDbContext context,
@@ -39,7 +40,8 @@ namespace platform_core_service.Business.Services
             IRepository<PostEntity, string> postRepository,
             ISocialGuardService socialGuardService,
             IBackgroundJobClient backgroundJobClient,
-            IAiWorkerClient aiWorkerClient
+            IAiWorkerClient aiWorkerClient,
+            IConfigurationService configurationService
         )
         {
             _context = context;
@@ -49,6 +51,7 @@ namespace platform_core_service.Business.Services
             _socialGuardService = socialGuardService;
             _backgroundJobClient = backgroundJobClient;
             _aiWorkerClient = aiWorkerClient;
+            _configurationService = configurationService;
         }
 
         public async Task<ReturnResult<SelectPostDTO>> CreateAsync(CreatePostDTO createDTO)
@@ -62,6 +65,14 @@ namespace platform_core_service.Business.Services
                     result.Message = businessLogicResult.Message;
                     return result;
                 }
+
+                // Keyword filter: posts with banned keywords skip AI submission (stay Pending for human review)
+                var bannedKeywords = await GetBannedKeywordsAsync();
+                bool hasBannedKeyword = bannedKeywords.Any(k =>
+                    !string.IsNullOrEmpty(k) && (
+                        (createDTO.Content ?? "").Contains(k, StringComparison.OrdinalIgnoreCase) ||
+                        (createDTO.Title ?? "").Contains(k, StringComparison.OrdinalIgnoreCase)
+                    ));
 
                 // Step 3: Map DTO to entity
                 var post = _mapper.Map<PostEntity>(createDTO);
@@ -102,7 +113,9 @@ namespace platform_core_service.Business.Services
 
                 // Step 8: Fire-and-forget — submit to AI moderation pipeline.
                 // Runs after response is already built; never blocks or throws to caller.
-                await _aiWorkerClient.SubmitForModerationAsync(post.Id, createDTO.Content);
+                // Skip AI submission for banned-keyword posts — they stay Pending for human review.
+                if (!hasBannedKeyword)
+                    await _aiWorkerClient.SubmitForModerationAsync(post.Id, createDTO.Content);
             }
             catch (Exception ex)
             {
@@ -123,15 +136,22 @@ namespace platform_core_service.Business.Services
                     returnResult.Message = "Post ID is required";
                     return returnResult;
                 }
+                bool hasPrivilegedAccess = _userContext.IsAdmin || _userContext.IsModerator;
 
                 // Step 2: Load post with tags and author (public read)
-                var post = await _context.Posts
+                var query = _context.Posts
                     .Include(p => p.PostTags)
-                    .ThenInclude(pt => pt.Tag)
+                        .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
-                    .FirstOrDefaultAsync(p =>
-                        (p.Id == postId || p.Slug == postId));
-                // && p.ModerationStatus == ModerationStatus.Approved);
+                    .Where(p => p.Id == postId || p.Slug == postId);
+
+                // Apply ModerationStatus filter ONLY if the user is a standard user
+                if (!hasPrivilegedAccess)
+                {
+                    query = query.Where(p => p.ModerationStatus == ModerationStatus.Approved);
+                }
+
+                var post = await query.FirstOrDefaultAsync();
 
                 if (post == null)
                 {
@@ -139,14 +159,16 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                var accessCheck = await _socialGuardService.CheckVisibleContent(post.AuthorId, post.CommunityId);
-
-                if (!accessCheck.Result)
+                if (!hasPrivilegedAccess)
                 {
-                    returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
-                    return returnResult;
-                }
+                    var accessCheck = await _socialGuardService.CheckVisibleContent(post.AuthorId, post.CommunityId);
 
+                    if (!accessCheck.Result)
+                    {
+                        returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
+                        return returnResult;
+                    }
+                }
 
                 returnResult.Result = _mapper.Map<SelectPostDTO>(post);
                 await SetCurrentUserVoteAsync(returnResult.Result);
@@ -202,7 +224,7 @@ namespace platform_core_service.Business.Services
                 // Step 2: Build query — news feed shows only approved posts for all users
                 var query = _context.Posts
                     .Where(p => p.GetType() == typeof(PostEntity))
-                    // .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
@@ -239,7 +261,7 @@ namespace platform_core_service.Business.Services
                 // Step 2: Build query — only concrete Post rows (exclude QAPost subtype)
                 var query = _context.Posts
                     .Where(p => p.GetType() == typeof(PostEntity))
-                    // .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Where(p => p.AuthorId == profileId)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
@@ -333,6 +355,24 @@ namespace platform_core_service.Business.Services
                 result.Result = _mapper.Map<SelectPostDTO>(updatedPost);
                 await SetCurrentUserVoteAsync(result.Result);
 
+                // Step 10: Reset to Pending and re-submit for moderation.
+                // Edited content must pass the pipeline again before becoming visible.
+                // Banned-keyword check: posts with banned keywords skip AI submission (stay Pending for human review).
+                if (!string.IsNullOrWhiteSpace(updateDTO.Content))
+                {
+                    var bannedKeywords = await GetBannedKeywordsAsync();
+                    bool hasBannedKeyword = bannedKeywords.Any(k =>
+                        !string.IsNullOrEmpty(k) && (
+                            (updateDTO.Content ?? "").Contains(k, StringComparison.OrdinalIgnoreCase) ||
+                            (updateDTO.Title ?? "").Contains(k, StringComparison.OrdinalIgnoreCase)
+                        ));
+
+                    post.ModerationStatus = ModerationStatus.Pending;
+                    await _context.SaveChangesAsync();
+
+                    if (!hasBannedKeyword)
+                        await _aiWorkerClient.SubmitForModerationAsync(postId, updateDTO.Content);
+                }
             }
             catch (Exception ex)
             {
@@ -433,6 +473,15 @@ namespace platform_core_service.Business.Services
                 result.Result = 0;
             }
             return result;
+        }
+
+        private async Task<List<string>> GetBannedKeywordsAsync()
+        {
+            var settingResult = await _configurationService.GetOneByKeyAndGroup("BannedKeywords", "Moderation");
+            if (settingResult.Result == null || string.IsNullOrEmpty(settingResult.Result.Value))
+                return new List<string>();
+            try { return System.Text.Json.JsonSerializer.Deserialize<List<string>>(settingResult.Result.Value) ?? new List<string>(); }
+            catch { return new List<string>(); }
         }
 
         // Helper method to generate slug from title

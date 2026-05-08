@@ -34,7 +34,6 @@ export function Providers({ children }: ProvidersProps) {
         <AuthProvider>
           <QueryClientProvider client={queryClient}>
             {children}
-            {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} position="bottom" />}
             <Toaster richColors expand={false} position="top-right" closeButton />
           </QueryClientProvider>
         </AuthProvider>

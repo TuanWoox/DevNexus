@@ -839,8 +839,14 @@ namespace platform_core_service.Migrations
                     b.Property<bool>("IsPrivate")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsSuspended")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("ReputationPoints")
                         .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("SuspendedUntil")
+                        .HasColumnType("timestamp with time zone");
 
                     b.PrimitiveCollection<List<string>>("TechStacks")
                         .IsRequired()
