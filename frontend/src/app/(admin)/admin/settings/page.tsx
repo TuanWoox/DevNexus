@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { Edit, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { Edit, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useSelector } from 'react-redux'
 

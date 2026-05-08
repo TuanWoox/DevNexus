@@ -26,9 +26,13 @@ export function EditTagDialog({ tag, open, onClose, onConfirm, isPending }: Edit
   const [name, setName] = useState('');
   const [error, setError] = useState('');
 
+  // Reset form when dialog opens with new tag
   useEffect(() => {
-    if (tag) setName(tag.name);
-  }, [tag]);
+    if (open && tag) {
+      setName(tag.name);
+      setError('');
+    }
+  }, [open, tag]);
 
   function handleClose() {
     setError('');
