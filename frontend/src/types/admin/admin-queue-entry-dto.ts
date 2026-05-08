@@ -19,6 +19,6 @@ export interface AdminQueueEntryDTO {
 
 export interface AdminQueueResolveDTO {
   id: string;
-  resolution: 'Approved' | 'Flagged' | 'Rejected';
+  resolution: 'Approved' | 'Rejected';
   moderatorNote?: string;
 }

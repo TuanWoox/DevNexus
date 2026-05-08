@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +31,13 @@ export function UpdateRoleDialog({
   isPending,
 }: UpdateRoleDialogProps) {
   const [selectedRole, setSelectedRole] = useState<string>(user?.role ?? 'User');
+
+  const [prevUser, setPrevUser] = useState<AdminProfileDTO | null>(user);
+
+  if (user !== prevUser) {
+    setPrevUser(user);
+    setSelectedRole(user?.role ?? 'User');
+  }
 
   if (!user) return null;
 

@@ -33,6 +33,7 @@ namespace platform_core_service.Business.Services
                 // Admin sees ALL posts — no ModerationStatus filter, no type filter.
                 // IgnoreQueryFilters so soft-deleted posts are also visible if needed.
                 var query = _context.Posts
+                    .IgnoreQueryFilters()
                     .Include(p => p.Author)
                     .AsNoTracking()
                     .AsQueryable();
