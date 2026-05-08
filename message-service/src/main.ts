@@ -7,6 +7,7 @@ import { ConfigService } from "@nestjs/config";
 import { platform } from "os";
 import { ClassSerializerInterceptor } from "@nestjs/common";
 import cookieParser from "cookie-parser";
+import { InitialSyncService } from "./modules/initial-sync/initial-sync.service";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -42,6 +43,10 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   // Set global prefix for all routes
   app.setGlobalPrefix("message-service/api");
+
+  // Perform blocking initial sync
+  const syncService = app.get(InitialSyncService);
+  await syncService.performInitialSync();
 
   await app.listen(3001);
 }

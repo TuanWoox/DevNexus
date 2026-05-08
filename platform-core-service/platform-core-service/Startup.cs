@@ -1,4 +1,4 @@
-﻿using platform_core_service.Business.Repository;
+using platform_core_service.Business.Repository;
 using platform_core_service.Data;
 using platform_core_service.Infrastructures.Hangfire;
 using platform_core_service.Infrastructures.Service;

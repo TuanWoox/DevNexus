@@ -2,6 +2,7 @@ import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
+import { InitialSyncService } from './modules/initial-sync/initial-sync.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -16,6 +17,10 @@ async function bootstrap() {
 
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.setGlobalPrefix('notification-service/api');
+
+  // Perform blocking initial sync
+  const syncService = app.get(InitialSyncService);
+  await syncService.performInitialSync();
 
   await app.listen(3002);
 }

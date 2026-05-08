@@ -128,9 +128,7 @@ export class NotificationsService {
         const updated = await this.prisma.notification.update({
           where: { Id: existing.Id },
           data: {
-            ActorName: event.ActorName,
             ActorId: event.ActorId,
-            ActorAvatarUrl: event.ActorAvatarUrl,
             AggregatedCount: { increment: 1 },
             IsRead: false,
             ReadAt: null,
@@ -144,8 +142,6 @@ export class NotificationsService {
             RecipientId: recipientId,
             Type: event.EventType as NotificationType,
             ActorId: event.ActorId,
-            ActorName: event.ActorName,
-            ActorAvatarUrl: event.ActorAvatarUrl,
             EntityType: event.EntityType as EntityType,
             EntityId: event.EntityId,
             EntityTitle: event.EntityTitle,

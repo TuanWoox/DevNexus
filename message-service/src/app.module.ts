@@ -18,7 +18,7 @@ import { GroupChatsModule } from './modules/group-chats/group-chats.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-
+import { InitialSyncModule } from './modules/initial-sync/initial-sync.module';
 
 @Module({
   imports: [
@@ -30,6 +30,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     MessageChatGatewayModule,
     RabbitMqModule,
     MessageChatGatewayModule,
+    InitialSyncModule,
     SyncDataFromPlatformModule,
     PrismaDatabaseModule,
     AuthModule,

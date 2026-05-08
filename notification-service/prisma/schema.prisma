@@ -9,31 +9,70 @@ datasource db {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Core Profile
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Profile {
+  Id                String    @id
+  FullName          String    @db.VarChar(200)
+  AvatarUrl         String?   @db.VarChar(500)
+  BackgroundUrl     String?   @db.VarChar(500)
+  Bio               String?   @db.VarChar(500)
+  ReputationPoints  Int       @default(0)
+  TechStacks        String[]  @db.Text
+  IsPrivate         Boolean   @default(false)
+  ApplicationUserId String    @db.VarChar(200)
+  DateCreated       DateTime  @default(now())
+  DateModified      DateTime  @updatedAt
+  Deleted           Boolean   @default(false)
+  DateDeleted       DateTime?
+
+  // Relations
+  NotificationsReceived Notification[] @relation("NotificationRecipient")
+  NotificationsSent     Notification[] @relation("NotificationActor")
+
+  NotificationGlobalSetting NotificationGlobalSetting?
+  NotificationMuteSettings  NotificationMuteSetting[]
+
+  @@index([Id])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Core Notification
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Notification {
   Id              String           @id @default(uuid())
+
   RecipientId     String           @db.VarChar(200)
+  Recipient       Profile          @relation("NotificationRecipient", fields: [RecipientId], references: [Id])
+
   Type            NotificationType
+
   ActorId         String?          @db.VarChar(200)
-  ActorName       String?          @db.VarChar(200)
-  ActorAvatarUrl  String?          @db.VarChar(500)
+  Actor           Profile?         @relation("NotificationActor", fields: [ActorId], references: [Id])
+
   EntityType      EntityType?
   EntityId        String?          @db.VarChar(200)
+
   EntityTitle     String?          @db.Text
   EntityPreview   String?          @db.Text
+
   Message         String           @db.Text
   ActionUrl       String?          @db.VarChar(500)
+
   IsRead          Boolean          @default(false)
   ReadAt          DateTime?
+
   GroupKey        String?          @db.VarChar(200)
   AggregatedCount Int              @default(1)
+
   DateCreated     DateTime         @default(now())
   DateModified    DateTime         @updatedAt
 
   @@index([RecipientId, IsRead, DateCreated])
   @@index([GroupKey])
+  @@index([ActorId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -42,22 +81,31 @@ model Notification {
 
 model NotificationGlobalSetting {
   Id               String   @id @default(uuid())
+
   ProfileId        String   @unique @db.VarChar(200)
+  Profile          Profile  @relation(fields: [ProfileId], references: [Id])
+
   AllNotifications Boolean  @default(true)
+
   DateCreated      DateTime @default(now())
   DateModified     DateTime @updatedAt
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Per-Entity Mute — processor checks before creating notification, row exists = skip
+// Per-Entity Mute
 // ─────────────────────────────────────────────────────────────────────────────
 
 model NotificationMuteSetting {
   Id          String           @id @default(uuid())
+
   ProfileId   String           @db.VarChar(200)
+  Profile     Profile          @relation(fields: [ProfileId], references: [Id])
+
   EntityType  EntityType
   EntityId    String           @db.VarChar(200)
+
   Type        NotificationType
+
   DateCreated DateTime         @default(now())
 
   @@unique([ProfileId, EntityType, EntityId, Type])
