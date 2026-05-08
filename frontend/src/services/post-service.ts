@@ -33,6 +33,11 @@ export const postService = {
         return data.result ?? { data: [], page: payload };
     },
 
+    getPostsByCommunityId: async (communityId: string, payload: Page<string>): Promise<PagedData<SelectPostDTO, string>> => {
+        const { data } = await api.post<ReturnResult<PagedData<SelectPostDTO, string>>>(`/Posts/community/${communityId}/paging`, payload);
+        return data.result ?? { data: [], page: payload };
+    },
+
     updatePost: async (updatePostDTO: UpdatePostDTO): Promise<SelectPostDTO> => {
         const { data } = await api.put<ReturnResult<SelectPostDTO>>('/Posts', updatePostDTO);
         return data.result;

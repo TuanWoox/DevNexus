@@ -60,7 +60,14 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Step 5: Owner cannot add themselves as a moderator
+                // Step 4b: Owner is already the highest authority — cannot be made a Moderator
+                if (createDTO.ModeratorId == community.OwnerId)
+                {
+                    result.Message = "The owner has full privileges by default and does not need to become a moderator.";
+                    return result;
+                }
+
+                // Step 5: Owner cannot add themselves as a moderator (self-promote guard)
                 if (createDTO.ModeratorId == profileId)
                 {
                     result.Message = "The community owner cannot be added as a moderator";

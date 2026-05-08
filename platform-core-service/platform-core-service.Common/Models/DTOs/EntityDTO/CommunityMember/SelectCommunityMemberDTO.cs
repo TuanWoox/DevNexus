@@ -10,5 +10,6 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.CommunityMember
         public string ProfileId { get; set; } = null!;
         public SelectProfileDTO? Profile { get; set; }
         public DateTimeOffset? DateCreated { get; set; }
+        public bool IsOwner { get; set; } = false;
     }
 }

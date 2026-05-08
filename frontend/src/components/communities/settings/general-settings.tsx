@@ -29,7 +29,6 @@ export function GeneralSettings({ community }: GeneralSettingsProps) {
             name,
             description,
             isPrivate,
-            slug: community.slug,
             communityCoverPhotoUrl: community.communityCoverPhotoUrl
         };
         updateCommunity(payload);

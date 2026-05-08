@@ -55,6 +55,7 @@ export function EditProfileModal({ isOpen, onClose, currentProfile }: EditProfil
                 techStacks: currentProfile.techStacks || [],
                 isPrivate: currentProfile.isPrivate ?? true // Use true as default fallback as requested by user
             });
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setTechInput('');
         }
     }, [currentProfile, isOpen, reset]);

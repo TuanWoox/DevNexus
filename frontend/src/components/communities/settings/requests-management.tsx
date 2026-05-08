@@ -12,6 +12,9 @@ import { useState } from "react";
 import { Page } from "@/types/common/page";
 import { FilterType } from "@/constants/filterType";
 import { SortOrderType } from "@/constants/sortOrderType";
+import { FilterOperator } from "@/constants/filterOperator";
+import Link from "next/link";
+import Image from "next/image";
 
 interface RequestsManagementProps {
     community: SelectCommunityDTO;
@@ -21,7 +24,7 @@ export function RequestsManagement({ community }: RequestsManagementProps) {
     const [pageNumber, setPageNumber] = useState(0);
     const [searchQuery, setSearchQuery] = useState("");
     const [appliedSearch, setAppliedSearch] = useState("");
-    
+
     // Page model mapping
     const pagePayload: Page<string> = {
         size: 10,
@@ -41,7 +44,7 @@ export function RequestsManagement({ community }: RequestsManagementProps) {
                 prop: "Requester.FullName",
                 value: appliedSearch,
                 filterType: FilterType.Text,
-                filterOperator: 0,
+                filterOperator: FilterOperator.Contains,
                 dynamicProperty: "",
                 delimiter: ""
             }
@@ -74,8 +77,8 @@ export function RequestsManagement({ community }: RequestsManagementProps) {
             <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 max-w-md">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                        placeholder="Search by name..." 
+                    <Input
+                        placeholder="Search by name..."
                         className="pl-9"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -104,28 +107,50 @@ export function RequestsManagement({ community }: RequestsManagementProps) {
                             requests.map((req) => (
                                 <TableRow key={req.id} className="hover:bg-muted/30 transition-colors">
                                     <TableCell className="font-medium">
-                                        <div className="flex flex-col">
-                                            <span>{req.requester?.fullName || "Unknown User"}</span>
-                                            <span className="text-xs text-muted-foreground font-normal">@{req.requesterId.split('-')[0]}</span>
-                                        </div>
+                                        <Link
+                                            href={`/profile/${req.requesterId}`}
+                                            className="flex items-center gap-3 group w-fit"
+                                        >
+                                            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-muted shrink-0">
+                                                {req.requester?.avatarUrl ? (
+                                                    <Image
+                                                        src={req.requester.avatarUrl}
+                                                        alt={req.requester?.fullName ?? "Moderator"}
+                                                        fill
+                                                        unoptimized
+                                                        className="object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground font-medium">
+                                                        {(req.requester?.fullName ?? "?")[0].toUpperCase()}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="font-medium text-sm group-hover:text-primary transition-colors">
+                                                    {req.requester?.fullName || "Unknown User"}
+                                                </span>
+                                                <span className="text-xs text-muted-foreground font-mono">View profile →</span>
+                                            </div>
+                                        </Link>
                                     </TableCell>
                                     <TableCell>
                                         {req.dateCreated ? new Date(req.dateCreated).toLocaleDateString() : "N/A"}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
-                                            <Button 
-                                                size="sm" 
-                                                variant="outline" 
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
                                                 className="h-8 border-green-200 text-green-600 hover:text-green-700 hover:bg-green-50 hover:border-green-300"
                                                 onClick={() => approveRequest(req.id)}
                                                 disabled={isProcessing}
                                             >
                                                 <Check className="h-3.5 w-3.5 mr-1" /> Approve
                                             </Button>
-                                            <Button 
-                                                size="sm" 
-                                                variant="outline" 
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
                                                 className="h-8 border-red-200 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300"
                                                 onClick={() => rejectRequest(req.id)}
                                                 disabled={isProcessing}

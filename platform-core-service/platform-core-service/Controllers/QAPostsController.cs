@@ -85,6 +85,22 @@ namespace platform_core_service.Controllers
             return Ok(returnResult);
         }
 
+        [HttpPost("community/{communityId}/paging")]
+        public async Task<IActionResult> GetPagingByCommunityId([FromBody] Page<string> page, [TrimmedRequired] string communityId)
+        {
+            var returnResult = new ReturnResult<PagedData<SelectQAPostDTO, string>>();
+            try
+            {
+                returnResult = await _qaPostService.GetPageAsyncByCommunityId(page, communityId);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
+
         [HttpPut]
         public async Task<IActionResult> Update([FromBody] UpdateQAPostDTO updateDTO)
         {

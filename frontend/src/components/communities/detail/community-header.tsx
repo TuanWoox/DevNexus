@@ -1,63 +1,35 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { SelectCommunityDTO } from "@/types/community/select-community-dto";
 import Image from "next/image";
-import { Lock, Users, CalendarDays, ImageIcon, Settings } from "lucide-react";
-import { JoinButton } from "./join-button";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store/store";
-import { useGetCommunityModerators } from "@/hooks/community-moderators-hooks/use-get-community-moderators";
-import { SortOrderType } from "@/constants/sortOrderType";
+import { Lock, Users, CalendarDays, ImageIcon, Settings, Plus, Sparkles } from "lucide-react";
+import { CommunityActionButton } from "./community-action-button";
 import { CommunityMediaUploadModal } from "./community-media-upload-modal";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { FilterType } from "@/constants/filterType";
-import { FilterOperator } from "@/constants/filterOperator";
 
 interface CommunityHeaderProps {
     community: SelectCommunityDTO;
+    activeTab?: string;
 }
 
-export function CommunityHeader({ community }: CommunityHeaderProps) {
+export function CommunityHeader({ community, activeTab }: CommunityHeaderProps) {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-    const { user } = useSelector((state: RootState) => state.auth);
 
-    // Check if user is a moderator
-    const modPagePayload = useMemo(() => ({
-        size: 1,
-        pageNumber: 0,
-        totalElements: 0,
-        orders: [{ sort: "DateCreated", sortDir: SortOrderType.DESC, dynamicProperty: "", delimiter: "", dataType: "datetime" }],
-        filter: user?.profileId ? [
-            {
-                prop: "ModeratorId",
-                value: user.profileId,
-                filterType: FilterType.Text,
-                filterOperator: FilterOperator.Equal,
-                dynamicProperty: "",
-                delimiter: ""
-            }
-        ] : [],
-        selected: []
-    }), [user?.profileId]);
-
-    const { data: modData } = useGetCommunityModerators(community.id, modPagePayload);
-
-    const isOwner = user?.profileId === community.ownerId;
-    const isModerator = (modData?.data && modData.data.length > 0);
-    const hasAccess = isOwner || isModerator;
+    const role = community?.currentUserRole;
+    const hasManageAccess = role === "OWNER" || role === "MODERATOR";
 
     const formattedDate = community.dateCreated
         ? new Date(community.dateCreated).toLocaleDateString()
         : "N/A";
 
     return (
-        <div className="relative w-full bg-card border-b shadow-sm">
+        <div className="relative w-full">
             {/* Cover Photo */}
             <div
-                className={`relative h-48 md:h-64 w-full bg-linear-to-r from-primary/20 to-primary/5 transition-opacity ${hasAccess ? 'group cursor-pointer' : ''}`}
-                onClick={() => { if (hasAccess) setIsUploadModalOpen(true) }}
+                className={`relative h-48 md:h-64 w-full bg-linear-to-r from-primary/20 to-primary/5 transition-opacity ${hasManageAccess ? 'group cursor-pointer' : ''}`}
+                onClick={() => { if (hasManageAccess) setIsUploadModalOpen(true) }}
             >
                 {community.communityCoverPhotoUrl ? (
                     <Image
@@ -65,14 +37,14 @@ export function CommunityHeader({ community }: CommunityHeaderProps) {
                         alt={community.name}
                         fill
                         unoptimized
-                        className={`object-cover ${hasAccess ? 'transition-opacity group-hover:opacity-80' : ''}`}
+                        className={`object-cover ${hasManageAccess ? 'transition-opacity group-hover:opacity-80' : ''}`}
                     />
                 ) : (
                     <div className="absolute inset-0 flex items-center justify-center opacity-20">
                         <Users className="w-24 h-24 text-primary" />
                     </div>
                 )}
-                {hasAccess && (
+                {hasManageAccess && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="flex flex-col items-center text-white">
                             <ImageIcon className="w-10 h-10 mb-2" />
@@ -117,8 +89,18 @@ export function CommunityHeader({ community }: CommunityHeaderProps) {
 
                     {/* Action Buttons */}
                     <div className="w-full md:w-auto shrink-0 flex flex-col sm:flex-row md:flex-col gap-3">
-                        <JoinButton community={community} />
-                        {hasAccess && (
+                        {/* Create Post Button - Pre-filled with community info */}
+                        {(role === "OWNER" || role === "MODERATOR" || role === "MEMBER") && (
+                            <Button asChild className="btn-ai w-full text-white" size="lg">
+                                <Link href={`/post/create?communityId=${community.id}&communityName=${encodeURIComponent(community.name)}&communityIconUrl=${encodeURIComponent(community.communityCoverPhotoUrl || '')}${activeTab === 'qa' ? '&type=qa' : ''}`}>
+                                    {activeTab === 'qa' ? <Plus className="w-5 h-5 mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                                    {activeTab === 'qa' ? 'Ask Question' : 'Create Post'}
+                                </Link>
+                            </Button>
+                        )}
+
+                        <CommunityActionButton communityId={community.id} role={role} />
+                        {hasManageAccess && (
                             <Button asChild variant="outline" className="w-full" size="lg">
                                 <Link href={`/communities/${community.id}/settings`}>
                                     <Settings className="w-4 h-4 mr-2" />
@@ -130,7 +112,7 @@ export function CommunityHeader({ community }: CommunityHeaderProps) {
                 </div>
             </div>
 
-            {hasAccess && (
+            {hasManageAccess && (
                 <CommunityMediaUploadModal
                     isOpen={isUploadModalOpen}
                     onClose={() => setIsUploadModalOpen(false)}

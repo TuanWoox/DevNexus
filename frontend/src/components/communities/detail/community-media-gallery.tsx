@@ -27,10 +27,10 @@ export function CommunityMediaGallery({ communityId, onClose }: CommunityMediaGa
 
     const { mutate: setPrimaryMedia, isPending } = useSetPrimaryCommunityMedia();
 
-    const getMediaUrl = (id: string) => {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL_HTTP;
-        return `${apiUrl}/CommunityMedia/${id}`;
-    };
+    // const getMediaUrl = (id: string) => {
+    //     const apiUrl = process.env.NEXT_PUBLIC_API_URL_HTTP;
+    //     return `${apiUrl}/CommunityMedia/${id}`;
+    // };
 
     const handleConfirm = () => {
         if (!selectedMediaId) return;
@@ -79,7 +79,7 @@ export function CommunityMediaGallery({ communityId, onClose }: CommunityMediaGa
                             >
                                 <div className="absolute inset-0 bg-muted">
                                     <Image
-                                        src={getMediaUrl(media.id)}
+                                        src={media.url}
                                         alt="Cover selection"
                                         fill
                                         unoptimized

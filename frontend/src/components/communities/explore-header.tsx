@@ -50,7 +50,7 @@ export function ExploreHeader({
     };
 
     return (
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-8 fade-in">
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between fade-in">
             <div className="flex-1 flex gap-2 w-full max-w-md relative">
                 <Input
                     placeholder="Search communities..."

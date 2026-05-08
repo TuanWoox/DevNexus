@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.Contexts;
+using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.EntityDTO.QAPost;
@@ -24,13 +25,15 @@ namespace platform_core_service.Business.Services
         private readonly IMapper _mapper;
         private readonly IRepository<QAPost, string> _qaPostRepository;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly ISocialGuardService _socialGuardService;
 
         public QAPostService(
             ApplicationDbContext dbContext,
             IUserContext userContext,
             IMapper mapper,
             IRepository<QAPost, string> qaPostRepository, 
-            IBackgroundJobClient backgroundJobClient
+            IBackgroundJobClient backgroundJobClient,
+            ISocialGuardService socialGuardService
             )
         {
             _dbContext = dbContext;
@@ -38,6 +41,7 @@ namespace platform_core_service.Business.Services
             _mapper = mapper;
             _qaPostRepository = qaPostRepository;
             _backgroundJobClient = backgroundJobClient;
+            _socialGuardService = socialGuardService;
         }
 
         public async Task<ReturnResult<SelectQAPostDTO>> CreateAsync(CreateQAPostDTO createDTO)
@@ -94,6 +98,7 @@ namespace platform_core_service.Business.Services
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(q => q.Author)
+                    .Include(q => q.Community)
                     .FirstOrDefaultAsync(q => q.Id == qaPost.Id);
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(savedPost);
@@ -125,6 +130,7 @@ namespace platform_core_service.Business.Services
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(q => q.Author)
+                    .Include(q => q.Community)
                     .FirstOrDefaultAsync(q => q.Id == postId || q.Slug == postId);
 
                 if (qaPost == null)
@@ -149,12 +155,16 @@ namespace platform_core_service.Business.Services
             var result = new ReturnResult<PagedData<SelectQAPostDTO, string>>();
             try
             {
+                string currentProfileId = _userContext.ProfileId;
+
                 var query = _dbContext.Posts
                     .OfType<QAPost>()
+                    .Where(q => q.CommunityId == null || !q.Community.IsPrivate || q.Community.OwnerId == currentProfileId || q.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || q.Community.Members.Any(m => m.ProfileId == currentProfileId))
                     .Include(q => q.Answers)
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(q => q.Author)
+                    .Include(q => q.Community)
                     .AsQueryable();
 
                 result.Result = await _qaPostRepository.GetPagingAsync<Page<string>, SelectQAPostDTO>(query, page);
@@ -184,12 +194,16 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                string currentProfileId = _userContext.ProfileId;
+
                 var query = _dbContext.Posts
                     .OfType<QAPost>()
                     .Where(q => q.AuthorId == profileId)
+                    .Where(q => q.CommunityId == null || !q.Community.IsPrivate || q.Community.OwnerId == currentProfileId || q.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || q.Community.Members.Any(m => m.ProfileId == currentProfileId))
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(q => q.Author)
+                    .Include(q => q.Community)
                     .AsNoTracking()
                     .AsQueryable();
 
@@ -204,6 +218,50 @@ namespace platform_core_service.Business.Services
             {
                 DevNexusLogger.Instance.Debug(ex.Message);
                 result.Message = $"An error occurred while retrieving posts: {ex.Message}";
+            }
+            return result;
+        }
+
+        public async Task<ReturnResult<PagedData<SelectQAPostDTO, string>>> GetPageAsyncByCommunityId(Page<string> page, string communityId)
+        {
+            var result = new ReturnResult<PagedData<SelectQAPostDTO, string>>();
+            try
+            {
+                if (string.IsNullOrEmpty(communityId))
+                {
+                    result.Message = "Community ID is required";
+                    return result;
+                }
+
+                // Verify the caller has access to this community's content
+                var accessCheck = await _socialGuardService.CheckBelongToCommunity(communityId);
+                if (accessCheck.Message != null)
+                {
+                    result.Message = accessCheck.Message;
+                    return result;
+                }
+
+                var query = _dbContext.Posts
+                    .OfType<QAPost>()
+                    .Where(q => q.CommunityId == communityId)
+                    .Include(q => q.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
+                    .Include(q => q.Community)
+                    .AsNoTracking()
+                    .AsQueryable();
+
+                result.Result = await _qaPostRepository.GetPagingAsync<Page<string>, SelectQAPostDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCommentCountForListAsync(result.Result.Data.ToList());
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while retrieving community Q&A posts: {ex.Message}";
             }
             return result;
         }
@@ -243,6 +301,17 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                // Step 3b: If CommunityId is provided, validate user belongs to that community
+                if (!string.IsNullOrEmpty(updateDTO.CommunityId))
+                {
+                    var communityCheck = await _socialGuardService.CheckBelongToCommunity(updateDTO.CommunityId);
+                    if (communityCheck.Message != null)
+                    {
+                        result.Message = communityCheck.Message;
+                        return result;
+                    }
+                }
+
                 // Step 4: Apply DTO to entity
                 var oldSlug = qaPost.Slug;
                 _mapper.Map(updateDTO, qaPost);
@@ -277,6 +346,7 @@ namespace platform_core_service.Business.Services
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(q => q.Author)
+                    .Include(q => q.Community)
                     .FirstOrDefaultAsync(q => q.Id == postId);
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(updatedPost);

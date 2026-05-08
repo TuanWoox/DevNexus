@@ -3,6 +3,7 @@ import { Page } from "@/types/common/page";
 import { PagedData } from "@/types/common/paged-data";
 import { ReturnResult } from "@/types/common/return-result";
 import { CreateCommunityMediaDTO } from "@/types/community-media/create-community-media-dto";
+import { DisplayCommunityMediaDTO } from "@/types/community-media/display-community-media-dto";
 import { SelectCommunityMediaDTO } from "@/types/community-media/select-community-media-dto";
 import { UpdatePrimaryCommunityMediaDTO } from "@/types/community-media/update-primary-community-media-dto";
 
@@ -20,8 +21,8 @@ export const communityMediaService = {
         return response.data.result;
     },
 
-    getCommunityMediasWithPagination: async (communityId: string, payload: Page<string>): Promise<PagedData<SelectCommunityMediaDTO, string>> => {
-        const response = await api.post<ReturnResult<PagedData<SelectCommunityMediaDTO, string>>>(`/CommunityMedia/paging/${communityId}`, payload);
+    getCommunityMediasWithPagination: async (communityId: string, payload: Page<string>): Promise<PagedData<DisplayCommunityMediaDTO, string>> => {
+        const response = await api.post<ReturnResult<PagedData<DisplayCommunityMediaDTO, string>>>(`/CommunityMedia/paging/${communityId}`, payload);
         return response.data.result ?? { data: [], page: payload };
     },
 

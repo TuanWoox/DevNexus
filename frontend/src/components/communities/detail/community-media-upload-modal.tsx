@@ -27,8 +27,11 @@ export function CommunityMediaUploadModal({ isOpen, onClose, communityId }: Comm
     // Reset state when modal opens/closes
     useEffect(() => {
         if (isOpen) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setView('options');
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setSelectedFile(null);
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setPreviewUrl(null);
         }
     }, [isOpen]);

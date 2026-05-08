@@ -13,6 +13,8 @@ export const useJoinCommunity = () => {
             if (data) {
                 queryClient.invalidateQueries({ queryKey: communityMembersQueryKeys.lists() });
                 queryClient.invalidateQueries({ queryKey: communityQueryKeys.detail(communityId) });
+                queryClient.invalidateQueries({ queryKey: communityQueryKeys.lists() })
+                queryClient.invalidateQueries({ queryKey: communityMembersQueryKeys.myRole(communityId) });
                 toast.success("Successfully joined the community (or request sent if private).");
             }
         }

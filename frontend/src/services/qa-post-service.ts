@@ -27,6 +27,11 @@ export const qaPostService = {
         return data.result ?? { data: [], page: payload };
     },
 
+    getQAPostsByCommunityId: async (communityId: string, payload: Page<string>): Promise<PagedData<SelectQAPostDTO, string>> => {
+        const { data } = await api.post<ReturnResult<PagedData<SelectQAPostDTO, string>>>(`/QAPosts/community/${communityId}/paging`, payload);
+        return data.result ?? { data: [], page: payload };
+    },
+
     updateQAPost: async (updateQAPostDTO: UpdateQAPostDTO): Promise<SelectQAPostDTO> => {
         const { data } = await api.put<ReturnResult<SelectQAPostDTO>>('/QAPosts', updateQAPostDTO);
         return data.result;

@@ -8,4 +8,5 @@ export interface SelectCommunityDTO {
     isPrivate: boolean;
     dateCreated?: string;
     dateModified?: string;
+    currentUserRole: string;
 }

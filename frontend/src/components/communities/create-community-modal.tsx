@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ interface CreateCommunityModalProps {
 
 export function CreateCommunityModal({ isOpen, onClose }: CreateCommunityModalProps) {
     const { mutateAsync: createCommunity, isPending: isCreating } = useCreateCommunity();
-    const { mutate: uploadMedia, isPending: isUploading } = useCreateCommunityMedia();
+    const { mutate: uploadMedia } = useCreateCommunityMedia();
 
     // UI states
     const [step, setStep] = useState<1 | 2>(1);
@@ -34,9 +34,9 @@ export function CreateCommunityModal({ isOpen, onClose }: CreateCommunityModalPr
 
     const {
         register,
+        control,
         handleSubmit,
         setValue,
-        watch,
         reset,
         formState: { errors }
     } = useForm<CreateCommunityDTO>({
@@ -48,7 +48,7 @@ export function CreateCommunityModal({ isOpen, onClose }: CreateCommunityModalPr
         }
     });
 
-    const isPrivateValue = watch("isPrivate");
+    const isPrivateValue = useWatch({ control, name: 'isPrivate' });
 
     // Reset everything when dialog operates
     useEffect(() => {
@@ -277,7 +277,7 @@ export function CreateCommunityModal({ isOpen, onClose }: CreateCommunityModalPr
                         </>
                     ) : (
                         <>
-                            <Button variant="ghost" onClick={handleFinish}>
+                            <Button variant="ghost" onClick={onClose}>
                                 Skip for now
                             </Button>
                             <Button className="btn-ai text-white" onClick={handleFinish} disabled={!selectedFile}>

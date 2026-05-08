@@ -6,4 +6,5 @@ export interface SelectCommunityMemberDTO {
     profileId: string;
     profile?: SelectProfileDTO;
     dateCreated?: string;
+    isOwner?: boolean;
 }

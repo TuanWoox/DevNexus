@@ -10,10 +10,9 @@ interface ProfileContentProps {
     targetProfileId: string;
     isOwnProfile: boolean;
     isPrivate: boolean;
-    fullName: string;
 }
 
-export function ProfileContent({ activeTab, targetProfileId, isOwnProfile, isPrivate, fullName }: ProfileContentProps) {
+export function ProfileContent({ activeTab, targetProfileId, isOwnProfile, isPrivate }: ProfileContentProps) {
     const isPrivateAndNotOwner = !isOwnProfile && isPrivate;
 
     return (

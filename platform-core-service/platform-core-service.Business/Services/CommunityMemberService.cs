@@ -1,3 +1,4 @@
+using System.Linq;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
@@ -236,6 +237,38 @@ namespace platform_core_service.Business.Services
                     .AsQueryable();
 
                 result.Result = await _memberRepository.GetPagingAsync<Page<string>, SelectCommunityMemberDTO>(query, page);
+
+                // Step 3: Prepend owner's profile on the first page
+                if (page.PageNumber == 0 && result.Result?.Data != null)
+                {
+                    // Check for search filter (Profile.FullName)
+                    var searchTerm = page.Filter?.FirstOrDefault(f => f.Prop == "Profile.FullName")?.Value?.ToString();
+
+                    var community = await _context.Communities
+                        .Include(c => c.Owner)
+                        .FirstOrDefaultAsync(c => c.Id == communityId);
+
+                    if (community?.Owner != null)
+                    {
+                        // Only prepend if no search term OR owner's name matches the search term
+                        if (string.IsNullOrEmpty(searchTerm) || community.Owner.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var ownerAsMember = new SelectCommunityMemberDTO
+                            {
+                                Id = $"owner-{community.OwnerId}",
+                                CommunityId = communityId,
+                                ProfileId = community.OwnerId,
+                                Profile = _mapper.Map<Common.Models.DTOs.EntityDTO.Profile.SelectProfileDTO>(community.Owner),
+                                DateCreated = community.DateCreated,
+                                IsOwner = true
+                            };
+
+                            var dataList = result.Result.Data.ToList();
+                            dataList.Insert(0, ownerAsMember);
+                            result.Result.Data = dataList;
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -246,3 +279,4 @@ namespace platform_core_service.Business.Services
         }
     }
 }
+

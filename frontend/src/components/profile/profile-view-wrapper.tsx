@@ -20,9 +20,9 @@ export function ProfileViewWrapper({ profileId }: ProfileViewWrapperProps) {
     const [activeTab, setActiveTab] = useState<"overview" | "post" | "qa-post" | "saved">("overview");
 
     const { data: profile } = useGetProfileById(profileId);
-    if (!profile) return null;
-
     const { user } = useSelector((state: RootState) => state.auth);
+
+    if (!profile) return null;
     // Gate isOwnProfile with hasMounted to ensure server/client initial render match.
     // This prevents Radix ID shifts caused by conditional modal rendering.
     const isOwnProfile = hasMounted && user?.profileId === profile.id;
@@ -54,7 +54,6 @@ export function ProfileViewWrapper({ profileId }: ProfileViewWrapperProps) {
                 targetProfileId={profile.id}
                 isOwnProfile={isOwnProfile}
                 isPrivate={profile.isPrivate}
-                fullName={profile.fullName}
             />
         </div>
     );

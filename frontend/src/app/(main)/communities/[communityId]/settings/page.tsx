@@ -10,57 +10,30 @@ import { BansManagement } from "@/components/communities/settings/bans-managemen
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Settings, Users, Settings2, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store/store";
-import { useGetCommunityModerators } from "@/hooks/community-moderators-hooks/use-get-community-moderators";
 import { toast } from "sonner";
-import { useEffect, useMemo } from "react";
-import { SortOrderType } from "@/constants/sortOrderType";
-import { FilterType } from "@/constants/filterType";
-import { FilterOperator } from "@/constants/filterOperator";
+import { useEffect } from "react";
 
 const CommunitySettingsPage = () => {
     const params = useParams();
     const communityId = params.communityId as string;
     const router = useRouter();
 
-    const { user } = useSelector((state: RootState) => state.auth);
     const { data: community, isLoading: isCommunityLoading, isError } = useGetCommunityById(communityId);
 
-    // Check if user is a moderator
-    const modPagePayload = useMemo(() => ({
-        size: 1,
-        pageNumber: 0,
-        totalElements: 0,
-        orders: [{ sort: "DateCreated", sortDir: SortOrderType.DESC, dynamicProperty: "", delimiter: "", dataType: "datetime" }],
-        filter: user?.profileId ? [
-            {
-                prop: "ModeratorId",
-                value: user.profileId,
-                filterType: FilterType.Text,
-                filterOperator: FilterOperator.Equal,
-                dynamicProperty: "",
-                delimiter: ""
-            }
-        ] : [],
-        selected: []
-    }), [user?.profileId]);
+    const role = community?.currentUserRole;
+    const isOwner = role === "OWNER";
+    const isModerator = role === "MODERATOR";
+    const hasAccess = isOwner || isModerator;
 
-    const { data: modData, isLoading: isModLoading } = useGetCommunityModerators(communityId, modPagePayload);
-
+    // Guard: redirect if neither owner nor moderator once data is loaded
     useEffect(() => {
-        if (!isCommunityLoading && !isModLoading && community && user) {
-            const isOwner = community.ownerId === user.profileId;
-            const isModerator = (modData?.data && modData.data.length > 0);
-
-            if (!isOwner && !isModerator) {
-                toast.error("You do not have permission to access community settings.");
-                router.push(`/communities/${communityId}`);
-            }
+        if (!isCommunityLoading && role && !hasAccess) {
+            toast.error("You do not have permission to access community settings.");
+            router.push(`/communities/${communityId}`);
         }
-    }, [isCommunityLoading, isModLoading, community, user, modData, router, communityId]);
+    }, [isCommunityLoading, role, hasAccess, router, communityId]);
 
-    if (isCommunityLoading || isModLoading) {
+    if (isCommunityLoading) {
         return (
             <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
                 <div className="flex items-center gap-4">
@@ -78,21 +51,7 @@ const CommunitySettingsPage = () => {
         );
     }
 
-    if (isError || !community || !user) {
-        return (
-            <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-3xl">⚠️</div>
-                <p className="text-lg font-medium text-muted-foreground">Community not found or an error occurred.</p>
-                <Button variant="outline" onClick={() => router.back()}>Go Back</Button>
-            </div>
-        );
-    }
-
-    // Double check before rendering
-    const isOwner = community.ownerId === user.profileId;
-    const isModerator = (modData?.data && modData.data.length > 0);
-
-    if (!isOwner && !isModerator) return null;
+    if (isError || !community || !hasAccess) return null;
 
     return (
         <div className="min-h-screen bg-page pb-12">
@@ -119,18 +78,22 @@ const CommunitySettingsPage = () => {
                 </div>
 
                 {/* Main Content Layout */}
-                <Tabs defaultValue="general" className="flex flex-col gap-8 fade-in">
+                <Tabs defaultValue={isOwner ? "general" : "requests"} className="flex flex-col gap-8 fade-in">
 
-                    {/* Sidebar Tabs */}
+                    {/* Tab List — owner sees all 4, moderator only sees Requests + Bans */}
                     <div className="border-b">
                         <TabsList className="flex flex-row justify-start h-auto bg-transparent p-0 w-full gap-2 overflow-x-auto pb-4 shrink-0 no-scrollbar">
-                            <TabsTrigger
-                                value="general"
-                                className="w-max shrink-0 flex items-center gap-3 justify-start px-4 py-2.5 text-left rounded-lg hover:bg-primary/10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-none transition-colors dark:data-[state=active]:text-primary whitespace-nowrap"
-                            >
-                                <Settings2 className="h-4 w-4" />
-                                General Settings
-                            </TabsTrigger>
+
+                            {/* Owner-only tabs */}
+                            {isOwner && (
+                                <TabsTrigger
+                                    value="general"
+                                    className="w-max shrink-0 flex items-center gap-3 justify-start px-4 py-2.5 text-left rounded-lg hover:bg-primary/10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-none transition-colors dark:data-[state=active]:text-primary whitespace-nowrap"
+                                >
+                                    <Settings2 className="h-4 w-4" />
+                                    General Settings
+                                </TabsTrigger>
+                            )}
 
                             <TabsTrigger
                                 value="requests"
@@ -140,13 +103,16 @@ const CommunitySettingsPage = () => {
                                 Membership Requests
                             </TabsTrigger>
 
-                            <TabsTrigger
-                                value="moderators"
-                                className="w-max shrink-0 flex items-center gap-3 justify-start px-4 py-2.5 text-left rounded-lg hover:bg-primary/10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-none transition-colors dark:data-[state=active]:text-primary whitespace-nowrap"
-                            >
-                                <ShieldCheck className="h-4 w-4" />
-                                Moderators
-                            </TabsTrigger>
+                            {/* Owner-only tabs */}
+                            {isOwner && (
+                                <TabsTrigger
+                                    value="moderators"
+                                    className="w-max shrink-0 flex items-center gap-3 justify-start px-4 py-2.5 text-left rounded-lg hover:bg-primary/10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-none transition-colors dark:data-[state=active]:text-primary whitespace-nowrap"
+                                >
+                                    <ShieldCheck className="h-4 w-4" />
+                                    Moderators
+                                </TabsTrigger>
+                            )}
 
                             <TabsTrigger
                                 value="bans"
@@ -158,20 +124,21 @@ const CommunitySettingsPage = () => {
                         </TabsList>
                     </div>
 
-
                     {/* Tab Content Areas */}
                     <div className="flex-1">
                         <div className="bg-card border border-border/50 rounded-2xl p-6 sm:p-8 shadow-xs relative overflow-hidden">
                             {/* Subtle gradient background effect for card */}
                             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none translate-x-1/2 -translate-y-1/2" />
 
-                            <TabsContent value="general" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-                                <div className="mb-8 border-b pb-4">
-                                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">General Information</h2>
-                                    <p className="text-sm sm:text-base text-muted-foreground mt-1">Update your community's identity and privacy configurations.</p>
-                                </div>
-                                <GeneralSettings community={community} />
-                            </TabsContent>
+                            {isOwner && (
+                                <TabsContent value="general" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                                    <div className="mb-8 border-b pb-4">
+                                        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">General Information</h2>
+                                        <p className="text-sm sm:text-base text-muted-foreground mt-1">Update your community's identity and privacy configurations.</p>
+                                    </div>
+                                    <GeneralSettings community={community} />
+                                </TabsContent>
+                            )}
 
                             <TabsContent value="requests" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
                                 <div className="mb-8 border-b pb-4">
@@ -183,15 +150,17 @@ const CommunitySettingsPage = () => {
                                 <RequestsManagement community={community} />
                             </TabsContent>
 
-                            <TabsContent value="moderators" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-                                <div className="mb-8 border-b pb-4">
-                                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                                        Moderators Management
-                                    </h2>
-                                    <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage users who have administrative access to this community.</p>
-                                </div>
-                                <ModeratorsManagement community={community} />
-                            </TabsContent>
+                            {isOwner && (
+                                <TabsContent value="moderators" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                                    <div className="mb-8 border-b pb-4">
+                                        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                                            Moderators Management
+                                        </h2>
+                                        <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage users who have administrative access to this community.</p>
+                                    </div>
+                                    <ModeratorsManagement community={community} />
+                                </TabsContent>
+                            )}
 
                             <TabsContent value="bans" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
                                 <div className="mb-8 border-b pb-4">

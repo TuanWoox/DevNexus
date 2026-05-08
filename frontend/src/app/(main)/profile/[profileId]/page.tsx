@@ -25,8 +25,7 @@ async function getProfile(id: string): Promise<SelectProfileDTO | null> {
 }
 
 export async function generateMetadata(
-    { params }: Props,
-    parent: ResolvingMetadata
+    { params }: Props
 ): Promise<Metadata> {
     const resolvedParams = await params;
     const profile = await getProfile(resolvedParams.profileId);

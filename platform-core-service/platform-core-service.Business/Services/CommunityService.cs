@@ -8,6 +8,7 @@ using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Community;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using CommunityEntity = platform_core_service.Common.Entities.DbEntities.Community;
@@ -114,6 +115,22 @@ namespace platform_core_service.Business.Services
                 }
 
                 result.Result = _mapper.Map<SelectCommunityDTO>(community);
+
+                // Step 4: Populate CurrentUserRole
+                if (result.Result != null && !string.IsNullOrEmpty(profileId))
+                {
+                    //var communityId = result.Result.Id;
+                    if (await _context.Communities.AnyAsync(c => c.Id == communityId && c.OwnerId == profileId))
+                        result.Result.CurrentUserRole = "OWNER";
+                    else if (await _context.CommunityModerators.AnyAsync(m => m.CommunityId == communityId && m.ModeratorId == profileId))
+                        result.Result.CurrentUserRole = "MODERATOR";
+                    else if (await _context.CommunityMembers.AnyAsync(m => m.CommunityId == communityId && m.ProfileId == profileId))
+                        result.Result.CurrentUserRole = "MEMBER";
+                    else if (await _context.CommunityMembershipRequests.AnyAsync(r => r.CommunityId == communityId && r.RequesterId == profileId))
+                        result.Result.CurrentUserRole = "PENDING";
+                    else
+                        result.Result.CurrentUserRole = "GUEST";
+                }
             }
             catch (Exception ex)
             {
@@ -123,7 +140,7 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
-        public async Task<ReturnResult<PagedData<SelectCommunityDTO, string>>> GetPageAsync(Page<string> page)
+        public async Task<ReturnResult<PagedData<SelectCommunityDTO, string>>> GetPageAsync(CommunityPageRequest request)
         {
             var result = new ReturnResult<PagedData<SelectCommunityDTO, string>>();
             try
@@ -136,18 +153,130 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Step 2: Build query for caller's communities, excluding ones they are banned from
+                // Step 2: Always exclude communities the user is banned from
                 var bannedCommunityIds = await _context.CommunityBans
                     .Where(b => b.BannedProfileId == profileId)
                     .Select(b => b.CommunityId)
                     .ToListAsync();
 
-                var query = _context.Communities
-                    .Where(c => c.OwnerId == profileId && !bannedCommunityIds.Contains(c.Id))
-                    .AsQueryable();
+                IQueryable<CommunityEntity> query;
+
+                switch (request.FetchMode)
+                {
+                    case CommunityFetchMode.EXPLORE:
+                    {
+                        // Communities the user has NOT joined (exclude owned, moderated, and member communities)
+                        var userCommunityIds = await _context.CommunityMembers
+                            .Where(m => m.ProfileId == profileId)
+                            .Select(m => m.CommunityId)
+                            .ToListAsync();
+
+                        var moderatedIds = await _context.CommunityModerators
+                            .Where(m => m.ModeratorId == profileId)
+                            .Select(m => m.CommunityId)
+                            .ToListAsync();
+
+                        var allUserCommunityIds = userCommunityIds
+                            .Union(moderatedIds)
+                            .Distinct()
+                            .ToList();
+
+                        query = _context.Communities
+                            .Where(c => !bannedCommunityIds.Contains(c.Id))
+                            .Where(c => c.OwnerId != profileId && !allUserCommunityIds.Contains(c.Id));
+                        break;
+                    }
+
+                    case CommunityFetchMode.YOURS:
+                    {
+                        // Communities the user owns, moderates, OR is a member of (merged MANAGED + JOINED)
+                        var memberOfIds = await _context.CommunityMembers
+                            .Where(m => m.ProfileId == profileId)
+                            .Select(m => m.CommunityId)
+                            .ToListAsync();
+
+                        var moderatedIds = await _context.CommunityModerators
+                            .Where(m => m.ModeratorId == profileId)
+                            .Select(m => m.CommunityId)
+                            .ToListAsync();
+
+                        var allRelatedIds = memberOfIds
+                            .Union(moderatedIds)
+                            .Distinct()
+                            .ToList();
+
+                        query = _context.Communities
+                            .Where(c => !bannedCommunityIds.Contains(c.Id))
+                            .Where(c => c.OwnerId == profileId || allRelatedIds.Contains(c.Id));
+                        break;
+                    }
+
+                    case CommunityFetchMode.ALL:
+                    {
+                        // All communities the user is not banned from
+                        query = _context.Communities
+                            .Where(c => !bannedCommunityIds.Contains(c.Id));
+                        break;
+                    }
+
+                    default:
+                        result.Message = "Invalid FetchMode";
+                        return result;
+                }
 
                 // Step 3: Get paged results
-                result.Result = await _communityRepository.GetPagingAsync<Page<string>, SelectCommunityDTO>(query, page);
+                result.Result = await _communityRepository.GetPagingAsync<CommunityPageRequest, SelectCommunityDTO>(query, request);
+
+                // Step 4: Populate CurrentUserRole for each community in the page (batch query — no N+1)
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    var communityIds = result.Result.Data.Select(c => c.Id).ToList();
+
+                    // Batch 1: Communities where user is Owner
+                    var ownedIds = await _context.Communities
+                        .Where(c => communityIds.Contains(c.Id) && c.OwnerId == profileId)
+                        .Select(c => c.Id)
+                        .ToListAsync();
+
+                    // Batch 2: Communities where user is Moderator
+                    var moderatorIds = await _context.CommunityModerators
+                        .Where(m => communityIds.Contains(m.CommunityId) && m.ModeratorId == profileId)
+                        .Select(m => m.CommunityId)
+                        .ToListAsync();
+
+                    // Batch 3: Communities where user is Member
+                    var memberIds = await _context.CommunityMembers
+                        .Where(m => communityIds.Contains(m.CommunityId) && m.ProfileId == profileId)
+                        .Select(m => m.CommunityId)
+                        .ToListAsync();
+
+                    // Batch 4: Communities where user has a Pending membership request
+                    var pendingIds = await _context.CommunityMembershipRequests
+                        .Where(r => communityIds.Contains(r.CommunityId) && r.RequesterId == profileId)
+                        .Select(r => r.CommunityId)
+                        .ToListAsync();
+
+                    // Build lookup sets for O(1) checks
+                    var ownedSet = new HashSet<string>(ownedIds);
+                    var moderatorSet = new HashSet<string>(moderatorIds);
+                    var memberSet = new HashSet<string>(memberIds);
+                    var pendingSet = new HashSet<string>(pendingIds);
+
+                    // Assign role for each DTO in memory — no per-item DB calls
+                    foreach (var dto in result.Result.Data)
+                    {
+                        if (ownedSet.Contains(dto.Id))
+                            dto.CurrentUserRole = "OWNER";
+                        else if (moderatorSet.Contains(dto.Id))
+                            dto.CurrentUserRole = "MODERATOR";
+                        else if (memberSet.Contains(dto.Id))
+                            dto.CurrentUserRole = "MEMBER";
+                        else if (pendingSet.Contains(dto.Id))
+                            dto.CurrentUserRole = "PENDING";
+                        else
+                            dto.CurrentUserRole = "GUEST";
+                    }
+                }
             }
             catch (Exception ex)
             {

@@ -1,5 +1,6 @@
 import api from "@/lib/axiosConfig";
 import { Page } from "@/types/common/page";
+import { CommunityPageRequest } from "@/types/common/community-page-request";
 import { PagedData } from "@/types/common/paged-data";
 import { ReturnResult } from "@/types/common/return-result";
 import { CreateCommunityDTO } from "@/types/community/create-community-dto";
@@ -17,9 +18,16 @@ export const communityService = {
         return data.result;
     },
 
+    // Legacy: kept for backward compat, defaults to no mode filter on backend
     getCommunitiesWithPagination: async (payload: Page<string>): Promise<PagedData<SelectCommunityDTO, string>> => {
         const { data } = await api.post<ReturnResult<PagedData<SelectCommunityDTO, string>>>('/Communities/paging', payload);
         return data.result ?? { data: [], page: payload };
+    },
+
+    // Mode-aware paging (EXPLORE / YOURS)
+    getCommunitiesByMode: async (request: CommunityPageRequest): Promise<PagedData<SelectCommunityDTO, string>> => {
+        const { data } = await api.post<ReturnResult<PagedData<SelectCommunityDTO, string>>>('/Communities/paging', request);
+        return data.result ?? { data: [], page: request };
     },
 
     updateCommunity: async (updateCommunityDTO: UpdateCommunityDTO): Promise<SelectCommunityDTO> => {
