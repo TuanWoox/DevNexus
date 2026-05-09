@@ -44,7 +44,7 @@ export class RabbitMQService implements OnModuleInit {
         const exchange = 'devnexus_sync';
         await this.channel.assertExchange(exchange, 'fanout', { durable: true });
 
-        const { queue } = await this.channel.assertQueue('', { exclusive: true });
+        const { queue } = await this.channel.assertQueue('message_service_sync_queue', { durable: true });
         await this.channel.bindQueue(queue, exchange, '');
 
         await this.channel.consume(queue, (msg) => {

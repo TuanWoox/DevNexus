@@ -4,6 +4,9 @@ import amqp, { Channel, ConsumeMessage } from 'amqplib';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationGateway } from '../websocket/notification.gateway';
 import { NotificationEventDTO } from '../../shared/dtos/NotificationEventDTO';
+import { ProfileSyncService } from '../profile-sync/profile-sync.service';
+import { PublishMessageBusDTO } from '../../shared/dtos/helper/PublishMessageBusDTO';
+import { MessageBusEntityEnum } from '../../utils/enums/MessageBusEnum';
 
 @Injectable()
 export class RabbitMQService implements OnModuleInit {
@@ -14,6 +17,7 @@ export class RabbitMQService implements OnModuleInit {
     private readonly configService: ConfigService,
     private readonly notificationsService: NotificationsService,
     private readonly notificationGateway: NotificationGateway,
+    private readonly profileSyncService: ProfileSyncService,
   ) { }
 
   async onModuleInit() {
@@ -36,6 +40,13 @@ export class RabbitMQService implements OnModuleInit {
 
     this.channel = await connection.createChannel();
 
+    await this.subscribeToNotifications();
+    await this.subscribeToSync();
+
+    this.logger.log('RabbitMQ consumers ready');
+  }
+
+  private async subscribeToNotifications() {
     const exchange = 'devnexus_notifications';
     await this.channel.assertExchange(exchange, 'fanout', { durable: true });
 
@@ -43,13 +54,28 @@ export class RabbitMQService implements OnModuleInit {
     await this.channel.bindQueue(queue, exchange, '');
 
     await this.channel.consume(queue, (msg) => {
-      void this.onConsume(msg);
+      void this.onConsumeNotification(msg);
     });
 
-    this.logger.log('RabbitMQ consumer ready — listening on devnexus_notifications');
+    this.logger.log('Subscribed to devnexus_notifications');
   }
 
-  private async onConsume(msg: ConsumeMessage | null) {
+  private async subscribeToSync() {
+    const exchange = 'devnexus_sync';
+    await this.channel.assertExchange(exchange, 'fanout', { durable: true });
+
+    // Using a named, durable queue to prevent data loss on service restart
+    const { queue } = await this.channel.assertQueue('notification_service_sync_queue', { durable: true });
+    await this.channel.bindQueue(queue, exchange, '');
+
+    await this.channel.consume(queue, (msg) => {
+      void this.onConsumeSync(msg);
+    });
+
+    this.logger.log('Subscribed to devnexus_sync');
+  }
+
+  private async onConsumeNotification(msg: ConsumeMessage | null) {
     if (!msg) return;
 
     try {
@@ -75,6 +101,27 @@ export class RabbitMQService implements OnModuleInit {
       this.channel.ack(msg);
     } catch (error) {
       this.logger.error('Error processing notification event:', error);
+      this.channel.nack(msg, false, false);
+    }
+  }
+
+  private async onConsumeSync(msg: ConsumeMessage | null) {
+    if (!msg) return;
+
+    try {
+      const data = JSON.parse(msg.content.toString()) as PublishMessageBusDTO<any>;
+
+      switch (data.MessageBusEntityEnum) {
+        case MessageBusEntityEnum.Profile:
+          await this.profileSyncService.eventDrive(data);
+          break;
+        default:
+          this.logger.log(`[Sync] Unhandled entity: ${data.MessageBusEntityEnum}`);
+      }
+
+      this.channel.ack(msg);
+    } catch (error) {
+      this.logger.error('Error processing sync event:', error);
       this.channel.nack(msg, false, false);
     }
   }
