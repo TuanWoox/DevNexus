@@ -20,6 +20,7 @@ export const useGetCommunitiesByModeInfinite = (
         getNextPageParam: (lastPage) => {
             if (!lastPage || !lastPage.page) return undefined;
             const { pageNumber, size, totalElements } = lastPage.page;
+            if (pageNumber === undefined || size === undefined || totalElements === undefined) return undefined;
             const loaded = (pageNumber + 1) * size;
             return loaded < totalElements ? pageNumber + 1 : undefined;
         },
