@@ -235,7 +235,7 @@ namespace platform_core_service.Business.Services
                         p.Community.OwnerId == currentProfileId || // User is the community's owner
                         p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || // User is Moderator
                         p.Community.Members.Any(m => m.ProfileId == currentProfileId) // User is Member
-                    )                    
+                    )
                     .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)

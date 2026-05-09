@@ -23,6 +23,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useHasMounted } from '@/hooks/use-has-mounted'
+import { cn } from '@/lib/utils'
 
 /**
  * SidebarUserMenu — Client Component isolated to contain all
@@ -32,7 +33,7 @@ import { useHasMounted } from '@/hooks/use-has-mounted'
  * deterministic position in the tree on both server and client,
  * preventing hydration mismatches in downstream components.
  */
-export function SidebarUserMenu() {
+export function SidebarUserMenu({ isCollapsed }: { isCollapsed?: boolean }) {
     const hasMounted = useHasMounted()
     const { theme, setTheme } = useTheme()
 
@@ -50,13 +51,18 @@ export function SidebarUserMenu() {
     // from getting mismatched IDs.
     if (!hasMounted || isPending) {
         return (
-            <div className="flex justify-center lg:justify-start items-center gap-3 p-2 w-full rounded-xl">
+            <div className={cn(
+                "flex items-center gap-3 p-2 w-full rounded-xl",
+                isCollapsed ? "justify-center" : "justify-center lg:justify-start"
+            )}>
                 <div className="w-9 h-9 rounded-full bg-muted animate-pulse flex items-center justify-center shrink-0 border border-default">
                 </div>
-                <div className="hidden lg:flex flex-col text-left flex-1 overflow-hidden gap-1">
-                    <div className="h-3.5 w-20 bg-muted rounded animate-pulse" />
-                    <div className="h-3 w-14 bg-muted rounded animate-pulse" />
-                </div>
+                {!isCollapsed && (
+                    <div className="hidden lg:flex flex-col text-left flex-1 overflow-hidden gap-1">
+                        <div className="h-3.5 w-20 bg-muted rounded animate-pulse" />
+                        <div className="h-3 w-14 bg-muted rounded animate-pulse" />
+                    </div>
+                )}
             </div>
         )
     }
@@ -64,7 +70,10 @@ export function SidebarUserMenu() {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <button className="flex justify-center lg:justify-start items-center gap-3 p-2 w-full rounded-xl hover:bg-subtle transition-colors group">
+                <button className={cn(
+                    "flex items-center gap-3 p-2 w-full rounded-xl hover:bg-subtle transition-colors group",
+                    isCollapsed ? "justify-center" : "justify-center lg:justify-start"
+                )}>
                     <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
                         {userProfile?.avatarUrl ? (
                             <Image src={userProfile.avatarUrl} alt={userProfile.fullName} fill unoptimized className="object-cover" />
@@ -72,11 +81,15 @@ export function SidebarUserMenu() {
                             <span className="text-primary font-bold">{userProfile?.fullName?.charAt(0) || 'U'}</span>
                         )}
                     </div>
-                    <div className="hidden lg:flex flex-col text-left flex-1 overflow-hidden">
-                        <span className="text-sm font-semibold text-heading truncate">{userProfile?.fullName || 'username'}</span>
-                        <span className="text-xs font-semibold text-muted-foreground truncate">{user?.roles || 'Role'}</span>
-                    </div>
-                    <ChevronDown className="hidden lg:block w-4 h-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                    {!isCollapsed && (
+                        <>
+                            <div className="flex flex-col text-left flex-1 overflow-hidden">
+                                <span className="text-sm font-semibold text-heading truncate">{userProfile?.fullName || 'username'}</span>
+                                <span className="text-xs font-semibold text-muted-foreground truncate">{user?.roles || 'Role'}</span>
+                            </div>
+                            <ChevronDown className="block w-4 h-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                        </>
+                    )}
                 </button>
             </DropdownMenuTrigger>
 

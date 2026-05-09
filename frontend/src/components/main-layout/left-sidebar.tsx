@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -30,17 +30,34 @@ export function LeftSidebar() {
     const pathname = usePathname()
     const [isCollapsed, setIsCollapsed] = useState(true)
 
+    useEffect(() => {
+        // Thiết lập trạng thái ban đầu dựa trên kích thước màn hình
+        const isLargeScreen = window.matchMedia('(min-width: 1024px)').matches
+        setIsCollapsed(!isLargeScreen)
+
+        // Xử lý sự kiện resize
+        const handleResize = () => {
+            const isLarge = window.matchMedia('(min-width: 1024px)').matches
+            if (!isLarge) {
+                setIsCollapsed(true)
+            }
+        }
+
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
+
     return (
         <aside
             className={cn(
-                "relative hidden sm:flex flex-col sticky top-0 h-screen py-4 border-r border-default transition-all duration-300",
+                `hidden sm:flex flex-col sticky top-0 h-screen py-4 px-2 border-r border-default transition-all duration-300`,
                 isCollapsed ? "w-18" : "w-60",
             )}
         >
             {/* Collapse toggle — pinned on the right border line */}
             <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className="absolute -right-3 top-5 z-50 flex items-center justify-center w-6 h-6 rounded-full bg-card border border-default text-muted-foreground hover:text-heading hover:bg-subtle transition-colors shadow-sm"
+                className="absolute -right-3 top-5 z-50 flex items-center justify-center w-6 h-6 rounded-full bg-card border border-default text-muted-foreground hover:text-heading hover:bg-subtle transition-colors shadow-sm cursor-pointer"
                 aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
@@ -82,7 +99,7 @@ export function LeftSidebar() {
                             title={isCollapsed ? item.name : undefined}
                             className={cn(
                                 "flex items-center gap-4 rounded-xl transition-colors group",
-                                isCollapsed ? "justify-center mx-2 py-3" : "mx-2 px-3 py-3",
+                                isCollapsed ? "justify-center py-3" : "px-3 py-3",
                                 isActive
                                     ? 'bg-primary/10 text-primary font-medium'
                                     : 'text-muted-foreground hover:bg-subtle hover:text-primary',
@@ -90,7 +107,7 @@ export function LeftSidebar() {
                         >
                             <item.icon className="h-6 w-6 shrink-0" />
                             {!isCollapsed && (
-                                <span className="text-base truncate">
+                                <span className="text-base truncate font-medium">
                                     {item.name}
                                 </span>
                             )}
@@ -99,12 +116,12 @@ export function LeftSidebar() {
                 })}
             </nav>
 
-            <div className={cn("mt-3", isCollapsed ? "mx-2" : "mx-3")}>
+            <div className={cn("mt-3")}>
                 <Link
                     href="/post/create"
                     className={cn(
-                        "btn-ai h-auto flex items-center gap-3 rounded-xl transition-colors",
-                        isCollapsed ? "justify-center p-3" : "px-4 py-3",
+                        "btn-ai justify-start flex items-center gap-4 rounded-xl transition-colors group",
+                        isCollapsed ? "justify-center py-3" : "px-3 py-3",
                     )}
                     title={isCollapsed ? "Create Post" : undefined}
                 >
@@ -113,7 +130,7 @@ export function LeftSidebar() {
                     ) : (
                         <>
                             <Sparkles className="h-5 w-5 shrink-0" />
-                            <span className="text-base font-semibold">Create Post</span>
+                            <span className="text-base truncate font-semibold">Create Post</span>
                         </>
                     )}
                 </Link>
