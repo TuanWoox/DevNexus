@@ -48,16 +48,21 @@ export class RabbitMQService implements OnModuleInit {
 
   private async subscribeToNotifications() {
     const exchange = 'devnexus_notifications';
-    await this.channel.assertExchange(exchange, 'fanout', { durable: true });
+
+    // change fanout → topic
+    await this.channel.assertExchange(exchange, 'topic', { durable: true });
 
     const { queue } = await this.channel.assertQueue('notification_service_queue', { durable: true });
-    await this.channel.bindQueue(queue, exchange, '');
+
+    const routingKey = 'notifications.*'; // adjust as needed
+
+    await this.channel.bindQueue(queue, exchange, routingKey);
 
     await this.channel.consume(queue, (msg) => {
       void this.onConsumeNotification(msg);
     });
 
-    this.logger.log('Subscribed to devnexus_notifications');
+    this.logger.log(`Subscribed to ${exchange} with key ${routingKey}`);
   }
 
   private async subscribeToSync() {
