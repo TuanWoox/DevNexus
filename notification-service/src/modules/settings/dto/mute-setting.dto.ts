@@ -3,11 +3,11 @@ import { NotificationEventEnum, EntityTypeEnum } from '../../../shared/enums/Not
 
 export class MuteSettingDto {
   @IsEnum(EntityTypeEnum)
-  EntityType: EntityTypeEnum;
+  EntityType!: EntityTypeEnum;
 
   @IsString()
-  EntityId: string;
+  EntityId!: string;
 
   @IsEnum(NotificationEventEnum)
-  Type: NotificationEventEnum;
+  Type!: NotificationEventEnum;
 }

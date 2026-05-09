@@ -44,11 +44,11 @@ export function NotificationItem({ notification, onClose }: Props) {
 
             <Avatar className="h-10 w-10 shrink-0 border border-default">
                 <AvatarImage
-                    src={notification.ActorAvatarUrl || undefined}
-                    alt={notification.ActorName ?? "User"}
+                    src={notification.Actor?.AvatarUrl || "/images/default-avatar.webp"}
+                    alt={notification.Actor?.FullName ?? "User"}
                 />
                 <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
-                    {notification.ActorName?.charAt(0)?.toUpperCase() ?? "U"}
+                    {notification.Actor?.FullName?.charAt(0)?.toUpperCase() ?? "U"}
                 </AvatarFallback>
             </Avatar>
 

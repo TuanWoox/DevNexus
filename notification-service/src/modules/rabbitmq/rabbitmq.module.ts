@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { RabbitMQService } from './rabbitmq.service';
-import { NotificationsModule } from '../notifications/notifications.module';
-import { NotificationGatewayModule } from '../websocket/notification-gateway.module';
 import { ProfileSyncModule } from '../profile-sync/profile-sync.module';
+import { PrismaDatabaseModule } from '../prisma-database/prisma-database.module';
+import { NotificationGatewayModule } from '../websocket/notification-gateway.module';
 
 @Module({
-  imports: [NotificationsModule, NotificationGatewayModule, ProfileSyncModule],
+  imports: [PrismaDatabaseModule, NotificationGatewayModule, ProfileSyncModule],
   providers: [RabbitMQService],
+  exports: [RabbitMQService],
 })
-export class RabbitMQModule {}
+export class RabbitMQModule { }

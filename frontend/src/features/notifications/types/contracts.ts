@@ -3,8 +3,7 @@ export interface Notification {
     RecipientId: string;
     Type: string;
     ActorId?: string;
-    ActorName?: string;
-    ActorAvatarUrl?: string;
+    Actor: Actor
     EntityType?: string;
     EntityId?: string;
     EntityTitle?: string;
@@ -17,4 +16,10 @@ export interface Notification {
     AggregatedCount: number;
     DateCreated: string;
     DateModified: string;
+}
+
+
+export interface Actor {
+    FullName: string,
+    AvatarUrl?: string,
 }

@@ -13,11 +13,15 @@ namespace background_job_worker.Jobs
 {
     public class PublishMessageBackgroundJobs : IPublishMessageBackgroundJobs
     {
-        private IMessageBusClient _messageBusClient;
+        private readonly IMessageBusClient _defaultClient;
+        private readonly IMessageBusClient _notificationClient;
 
-        public PublishMessageBackgroundJobs(IMessageBusClient messageBusClient)
+        public PublishMessageBackgroundJobs(
+        [FromKeyedServices("default")] IMessageBusClient defaultClient,
+        [FromKeyedServices("notification")] IMessageBusClient notificationClient)
         {
-            _messageBusClient = messageBusClient;
+            _defaultClient = defaultClient;
+            _notificationClient = notificationClient;
         }
         public async Task PublishEntity<TEntity>(TEntity entity, MessageBusEnum messageBus, MessageBusEntityEnum messageBusEntity)
         {
@@ -27,7 +31,18 @@ namespace background_job_worker.Jobs
                 MessageBusEnum = messageBus,
                 MessageBusEntityEnum = messageBusEntity
             };
-            await _messageBusClient.PublishEntity(newPublish);
+            await _defaultClient.PublishEntity(newPublish);
+        }
+
+        public async Task PublicNotification<TEntity>(TEntity entity, string routingKey)
+        {
+            var newPublish = new PublishMessageBusDTO<TEntity>
+            {
+                Entity = entity,
+                MessageBusEnum = MessageBusEnum.Create,
+                MessageBusEntityEnum = MessageBusEntityEnum.Notification
+            };
+            await _notificationClient.PublishEntity(newPublish, routingKey);
         }
     }
 }

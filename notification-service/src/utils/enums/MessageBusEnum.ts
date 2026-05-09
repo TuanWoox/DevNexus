@@ -1,12 +1,13 @@
 export enum MessageBusEnum {
-    Create = 'Create',
-    Update = 'Update',
-    Delete = 'Delete',
+    Create = 0,
+    Update = 1,
+    Delete = 2,
+    BulkDelete = 3,
 }
 
 export enum MessageBusEntityEnum {
-    Profile = 'Profile',
-    ProfileBlock = 'ProfileBlock',
-    UserFollow = 'UserFollow',
-    Notification = 'Notification'
+    Profile = 0,
+    UserFollow = 1,
+    ProfileBlock = 2,
+    Notification = 3,
 }

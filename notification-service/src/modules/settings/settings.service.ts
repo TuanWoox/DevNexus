@@ -1,7 +1,7 @@
 import { Injectable, Scope } from '@nestjs/common';
 import { PrismaService } from '../prisma-database/prisma.service';
 import { MuteSettingDto } from './dto/mute-setting.dto';
-import { EntityType, NotificationType } from '../../generated/prisma/client';
+import { EntityTypeEnum, NotificationEventEnum } from '../../shared/enums/NotificationEventEnum';
 import { ReturnResult } from '../../shared/dtos/ReturnResult';
 import { UserContextService } from '../auth/userContext.service';
 
@@ -10,7 +10,7 @@ export class SettingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly userContext: UserContextService,
-  ) {}
+  ) { }
 
   async getGlobalSetting(): Promise<ReturnResult<{ AllNotifications: boolean }>> {
     const returnResult = new ReturnResult<{ AllNotifications: boolean }>();
@@ -36,8 +36,8 @@ export class SettingsService {
     return returnResult;
   }
 
-  async getMutes(): Promise<ReturnResult<Array<{ EntityType: EntityType; EntityId: string; Type: NotificationType; DateCreated: Date }>>> {
-    const returnResult = new ReturnResult<Array<{ EntityType: EntityType; EntityId: string; Type: NotificationType; DateCreated: Date }>>();
+  async getMutes(): Promise<ReturnResult<Array<{ EntityType: EntityTypeEnum; EntityId: string; Type: NotificationEventEnum; DateCreated: Date }>>> {
+    const returnResult = new ReturnResult<Array<{ EntityType: EntityTypeEnum; EntityId: string; Type: NotificationEventEnum; DateCreated: Date }>>();
     const profileId = this.userContext.getProfileId();
 
     returnResult.Result = await this.prisma.notificationMuteSetting.findMany({
@@ -55,17 +55,17 @@ export class SettingsService {
       where: {
         ProfileId_EntityType_EntityId_Type: {
           ProfileId: profileId,
-          EntityType: dto.EntityType as EntityType,
+          EntityType: dto.EntityType,
           EntityId: dto.EntityId,
-          Type: dto.Type as NotificationType,
+          Type: dto.Type,
         },
       },
       update: {},
       create: {
         ProfileId: profileId,
-        EntityType: dto.EntityType as EntityType,
+        EntityType: dto.EntityType,
         EntityId: dto.EntityId,
-        Type: dto.Type as NotificationType,
+        Type: dto.Type,
       },
     });
     returnResult.Result = true;
@@ -79,9 +79,9 @@ export class SettingsService {
     await this.prisma.notificationMuteSetting.deleteMany({
       where: {
         ProfileId: profileId,
-        EntityType: dto.EntityType as EntityType,
+        EntityType: dto.EntityType,
         EntityId: dto.EntityId,
-        Type: dto.Type as NotificationType,
+        Type: dto.Type,
       },
     });
     returnResult.Result = true;
