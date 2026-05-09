@@ -16,11 +16,11 @@ import { InitialSyncModule } from './modules/initial-sync/initial-sync.module';
     }),
     PrismaDatabaseModule,
     InitialSyncModule,
+    NotificationGatewayModule,
     AuthModule,
     NotificationsModule,
     SettingsModule,
     RabbitMQModule,
-    NotificationGatewayModule,
   ],
 })
 export class AppModule {}

@@ -47,12 +47,12 @@ model Notification {
   RecipientId     String           @db.VarChar(200)
   Recipient       Profile          @relation("NotificationRecipient", fields: [RecipientId], references: [Id])
 
-  Type            NotificationType
+  Type            Int
 
   ActorId         String?          @db.VarChar(200)
   Actor           Profile?         @relation("NotificationActor", fields: [ActorId], references: [Id])
 
-  EntityType      EntityType?
+  EntityType      Int?
   EntityId        String?          @db.VarChar(200)
 
   EntityTitle     String?          @db.Text
@@ -101,10 +101,10 @@ model NotificationMuteSetting {
   ProfileId   String           @db.VarChar(200)
   Profile     Profile          @relation(fields: [ProfileId], references: [Id])
 
-  EntityType  EntityType
+  EntityType  Int
   EntityId    String           @db.VarChar(200)
 
-  Type        NotificationType
+  Type        Int
 
   DateCreated DateTime         @default(now())
 
@@ -113,52 +113,5 @@ model NotificationMuteSetting {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Enums
+// Enums (now using Int in models to match C# numeric enums)
 // ─────────────────────────────────────────────────────────────────────────────
-
-enum NotificationType {
-  // Voting
-  UPVOTE_POST
-  DOWNVOTE_POST
-  UPVOTE_ANSWER
-  DOWNVOTE_ANSWER
-  UPVOTE_COMMENT
-  DOWNVOTE_COMMENT
-
-  // Q&A
-  NEW_ANSWER
-  COMMENT_POST
-  COMMENT_ANSWER
-  REPLY_COMMENT
-  ANSWER_ACCEPTED
-
-  // Follow
-  FOLLOW_USER
-  FOLLOW_REQUEST
-  FOLLOW_ACCEPTED
-
-  // Community
-  COMMUNITY_INVITE
-  COMMUNITY_JOIN_REQUEST
-  COMMUNITY_POST
-  COMMUNITY_ROLE_CHANGE
-  COMMUNITY_BAN
-
-  // Messaging
-  NEW_MESSAGE
-  MESSAGE_REQUEST
-
-  // System
-  MODERATION_RESULT
-  REPUTATION_MILESTONE
-  SYSTEM_ANNOUNCEMENT
-}
-
-enum EntityType {
-  POST
-  COMMENT
-  ANSWER
-  COMMUNITY
-  PROFILE
-  MESSAGE
-}

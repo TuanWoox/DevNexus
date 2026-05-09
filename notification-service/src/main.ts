@@ -22,6 +22,7 @@ async function bootstrap() {
   const syncService = app.get(InitialSyncService);
   await syncService.performInitialSync();
 
+
   await app.listen(3002);
 }
 
