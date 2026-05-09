@@ -2,8 +2,7 @@ import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import amqp, { Channel, ConsumeMessage } from 'amqplib';
 import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationGateway } from '../websocket/notification.gateway';
-import { NotificationEventDTO } from '../../shared/dtos/NotificationEventDTO';
+import { NotiicationCreatedEntity } from '../../shared/dtos/NotificationEventDTO';
 import { ProfileSyncService } from '../profile-sync/profile-sync.service';
 import { PublishMessageBusDTO } from '../../shared/dtos/helper/PublishMessageBusDTO';
 import { MessageBusEntityEnum } from '../../utils/enums/MessageBusEnum';
@@ -16,7 +15,6 @@ export class RabbitMQService implements OnModuleInit {
   constructor(
     private readonly configService: ConfigService,
     private readonly notificationsService: NotificationsService,
-    private readonly notificationGateway: NotificationGateway,
     private readonly profileSyncService: ProfileSyncService,
   ) { }
 
@@ -84,24 +82,16 @@ export class RabbitMQService implements OnModuleInit {
     if (!msg) return;
 
     try {
-      const event = JSON.parse(msg.content.toString()) as NotificationEventDTO;
-      const created = await this.notificationsService.createFromEvent(event);
+      const data = JSON.parse(msg.content.toString()) as PublishMessageBusDTO<NotiicationCreatedEntity>;
 
-      // Emit real-time to each recipient
-      for (const notification of created) {
-        //After created => event to user
-        this.notificationGateway.emitToUser(
-          notification.RecipientId as string,
-          'notification:new',
-          notification,
-        );
-        //After created => event to user about the unread count
-        this.notificationGateway.emitToUser(
-          notification.RecipientId as string,
-          'notification:unread-count',
-          await this.notificationsService.getUnreadCountForUser(notification.RecipientId as string),
-        );
+      switch (data.MessageBusEntityEnum) {
+        case MessageBusEntityEnum.Notification:
+          await this.notificationsService.createFromEvent(data);
+          break;
+        default:
+          this.logger.log(`[Sync] Unhandled entity: ${data.MessageBusEntityEnum}`);
       }
+
 
       this.channel.ack(msg);
     } catch (error) {

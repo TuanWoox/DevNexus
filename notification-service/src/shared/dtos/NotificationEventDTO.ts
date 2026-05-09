@@ -1,10 +1,8 @@
 import { NotificationEventEnum, EntityTypeEnum } from '../enums/NotificationEventEnum';
 
-export interface NotificationEventDTO {
+export interface NotiicationCreatedEntity {
   EventType: NotificationEventEnum;
   ActorId: string;
-  ActorName: string;
-  ActorAvatarUrl: string;
   RecipientId: string | string[];
   EntityType: EntityTypeEnum;
   EntityId: string;
@@ -12,4 +10,5 @@ export interface NotificationEventDTO {
   EntityPreview?: string;
   ActionUrl: string;
   Timestamp: string;
+  Message?: string;
 }
