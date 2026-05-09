@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using platform_core_service.Common.Utils.Enums;
 using System.Globalization;
 using System.Reflection;
@@ -81,6 +81,13 @@ namespace platform_core_service.Common.Utils.Extensions
                 throw new ArgumentNullException(nameof(principal));
 
             return principal.IsInRole(RoleEnum.Admin.ToString());
+        }
+        public static bool IsModeratorRole(this ClaimsPrincipal principal)
+        {
+            if (principal == null)
+                throw new ArgumentNullException(nameof(principal));
+
+            return principal.IsInRole(RoleEnum.Moderator.ToString());
         }
         public static DateRangeFilter GetDateTimeByQuarter(int quarter)
         {

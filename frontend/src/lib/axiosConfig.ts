@@ -137,7 +137,7 @@ api.interceptors.response.use(
 
     // Các lỗi HTTP khác (400, 403, 500)
     if (error.response?.data?.message) {
-      toast.error(error.response.data.message);
+      toast.error(error.response.data.message as string);
     }
 
     return Promise.reject(error);

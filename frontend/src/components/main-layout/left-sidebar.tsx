@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -11,7 +12,10 @@ import {
     Bell,
     Plus,
     Sparkles,
+    ChevronLeft,
+    ChevronRight,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { SidebarUserMenu } from './sidebar-user-menu'
 
 const menuItems = [
@@ -24,54 +28,94 @@ const menuItems = [
 
 export function LeftSidebar() {
     const pathname = usePathname()
+    const [isCollapsed, setIsCollapsed] = useState(true)
 
     return (
-        <aside className="hidden sm:flex flex-col sticky top-0 h-screen py-6 border-r border-gray-300 dark:border-gray-800 shadow-[2px_0_15px_-3px_rgba(0,0,0,0.07)] dark:shadow-[2px_0_15px_-3px_rgba(0,0,0,0.4)] z-10 sm:w-16 lg:w-64 sm:px-2 lg:px-6">
-            <Link href="/feed" className="flex items-center gap-3 mb-6 px-3 justify-center lg:justify-start">
-                <div className="relative">
-                    <Hexagon className="h-7 w-7 sm:h-8 sm:w-8 animate-pulse text-primary" />
+        <aside
+            className={cn(
+                "relative hidden sm:flex flex-col sticky top-0 h-screen py-4 border-r border-default transition-all duration-300",
+                isCollapsed ? "w-18" : "w-60",
+            )}
+        >
+            {/* Collapse toggle — pinned on the right border line */}
+            <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="absolute -right-3 top-5 z-50 flex items-center justify-center w-6 h-6 rounded-full bg-card border border-default text-muted-foreground hover:text-heading hover:bg-subtle transition-colors shadow-sm"
+                aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+                {isCollapsed ? (
+                    <ChevronRight className="w-3 h-3" />
+                ) : (
+                    <ChevronLeft className="w-3 h-3" />
+                )}
+            </button>
+
+            {/* Header: logo */}
+            <Link
+                href="/feed"
+                className={cn(
+                    "flex items-center gap-3 mb-6",
+                    isCollapsed ? "justify-center px-0" : "px-4",
+                )}
+            >
+                <div className="relative shrink-0">
+                    <Hexagon className="h-8 w-8 animate-pulse text-primary" />
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 dark:text-emerald-400 text-emerald-500" />
+                        <Sparkles className="h-4 w-4 dark:text-emerald-400 text-emerald-500" />
                     </div>
                 </div>
-                <span className="text-2xl font-bold text-heading hidden lg:block">
-                    DevNexus
-                </span>
+                {!isCollapsed && (
+                    <span className="text-2xl font-bold text-heading truncate">
+                        DevNexus
+                    </span>
+                )}
             </Link>
 
-            <nav className="flex flex-col gap-2">
+            <nav className="flex flex-col gap-0.5">
                 {menuItems.map((item) => {
                     const isActive = pathname.startsWith(item.href)
                     return (
                         <Link
                             key={item.name}
                             href={item.href}
-                            className={`flex justify-center lg:justify-start items-center gap-4 p-3 rounded-xl transition-colors group
-                                ${isActive
+                            title={isCollapsed ? item.name : undefined}
+                            className={cn(
+                                "flex items-center gap-4 rounded-xl transition-colors group",
+                                isCollapsed ? "justify-center mx-2 py-3" : "mx-2 px-3 py-3",
+                                isActive
                                     ? 'bg-primary/10 text-primary font-medium'
-                                    : 'text-muted-foreground hover:bg-subtle hover:text-primary'
-                                }
-                            `}
+                                    : 'text-muted-foreground hover:bg-subtle hover:text-primary',
+                            )}
                         >
                             <item.icon className="h-6 w-6 shrink-0" />
-                            <span className="hidden lg:block text-base font-medium">
-                                {item.name}
-                            </span>
+                            {!isCollapsed && (
+                                <span className="text-base truncate">
+                                    {item.name}
+                                </span>
+                            )}
                         </Link>
                     )
                 })}
             </nav>
 
-            <div className="mt-4">
+            <div className={cn("mt-3", isCollapsed ? "mx-2" : "mx-3")}>
                 <Link
                     href="/post/create"
-                    className="btn-ai w-full p-3 flex justify-center lg:justify-start lg:px-4 lg:py-3 h-auto"
+                    className={cn(
+                        "btn-ai h-auto flex items-center gap-3 rounded-xl transition-colors",
+                        isCollapsed ? "justify-center p-3" : "px-4 py-3",
+                    )}
+                    title={isCollapsed ? "Create Post" : undefined}
                 >
-                    <Plus className="h-6 w-6 lg:hidden" />
-                    <Sparkles className="h-5 w-5 hidden lg:block shrink-0" />
-                    <span className="hidden lg:block text-base font-semibold">
-                        Create Post
-                    </span>
+                    {isCollapsed ? (
+                        <Plus className="h-6 w-6 shrink-0" />
+                    ) : (
+                        <>
+                            <Sparkles className="h-5 w-5 shrink-0" />
+                            <span className="text-base font-semibold">Create Post</span>
+                        </>
+                    )}
                 </Link>
             </div>
 
@@ -83,7 +127,7 @@ export function LeftSidebar() {
              * which would cause hydration mismatches.
              */}
             <div className="mt-auto pt-4">
-                <SidebarUserMenu />
+                <SidebarUserMenu isCollapsed={isCollapsed} />
             </div>
         </aside>
     )

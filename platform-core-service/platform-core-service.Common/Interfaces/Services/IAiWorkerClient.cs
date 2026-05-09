@@ -1,3 +1,7 @@
+using platform_core_service.Common.Models.DTOs.EntityDTO.AiUsageLog;
+using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.Paging;
+
 namespace platform_core_service.Common.Interfaces.Services
 {
     /// <summary>
@@ -13,5 +17,7 @@ namespace platform_core_service.Common.Interfaces.Services
         /// <param name="postId">The ID of the post to moderate.</param>
         /// <param name="textContent">The full markdown/text body of the post.</param>
         Task SubmitForModerationAsync(string postId, string textContent);
+        Task<ReturnResult<AiUsageLogPageResponseDTO>> GetPageAiUsageLogsAsync(Page<string> page);
+        Task<ReturnResult<AdminAiUsageSummaryDTO>> GetSummaryAsync(DateOnly from, DateOnly to);
     }
 }

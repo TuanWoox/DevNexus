@@ -6,4 +6,5 @@ agents
 get-shit-done
 *.http
 gsd-file-manifest.json
+.clinerules.agent
 .clinerules

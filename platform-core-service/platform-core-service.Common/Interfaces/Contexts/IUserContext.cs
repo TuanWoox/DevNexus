@@ -4,6 +4,7 @@ namespace platform_core_service.Common.Interfaces.Contexts
     {
         string UserId { get; }
         bool IsAdmin { get; }
+        bool IsModerator { get; }
         string UserName { get; }
         string Email { get; }
         string ProfileId { get; }

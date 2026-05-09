@@ -1,7 +1,7 @@
 import { accountService } from "@/services/account-service";
 import { clearToken } from "@/store/slices/auth-slice";
 import { ReturnResult } from "@/types/common/return-result";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
@@ -11,6 +11,7 @@ import Cookies from "js-cookie";
 const useLogout = () => {
     const dispatch = useDispatch();
     const router = useRouter();
+    const queryClient = useQueryClient();
 
     const logoutMutation = useMutation<ReturnResult<boolean>, AxiosError>({
         mutationFn: () => {
@@ -23,7 +24,7 @@ const useLogout = () => {
             Cookies.remove("accessToken");
             Cookies.remove("refreshToken");
             dispatch(clearToken());
-            
+            queryClient.clear();
             toast.success("Logout successfully!");
             router.push('/login');
         }

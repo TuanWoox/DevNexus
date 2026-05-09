@@ -14,6 +14,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bullmq';
 import { MessagesModule } from './modules/messages/messages.module';
 import { MediasModule } from './modules/medias/medias.module';
+import { GroupChatsModule } from './modules/group-chats/group-chats.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -21,6 +22,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
+    // ConfigModule MUST be first — it loads .env vars that other modules depend on
+    ConfigModule.forRoot({
+      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+      isGlobal: true,
+    }),
     MessageChatGatewayModule,
     RabbitMqModule,
     MessageChatGatewayModule,
@@ -35,14 +41,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     ProfilechatsModule,
     MessagesModule,
     MediasModule,
+    GroupChatsModule,
     MulterModule.register({
-      storage: memoryStorage()
+      storage: memoryStorage(),
+      limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB
+      },
     }),
     ScheduleModule.forRoot(),
-    ConfigModule.forRoot({
-      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
-      isGlobal: true,
-    }),
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({

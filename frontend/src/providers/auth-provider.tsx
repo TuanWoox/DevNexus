@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
-import { setToken, clearToken, parseUserFromToken } from '@/store/slices/auth-slice';
+import { setToken, clearToken, setInitialized, parseUserFromToken } from '@/store/slices/auth-slice';
 import Cookies from 'js-cookie';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -24,6 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     refreshToken: refreshToken ?? null,
                     user: parsedData.user
                 }));
+                dispatch(setInitialized());
             } else {
                 // Token lỗi hoặc hết hạn mà KHÔNG CÓ refreshToken
                 dispatch(clearToken());

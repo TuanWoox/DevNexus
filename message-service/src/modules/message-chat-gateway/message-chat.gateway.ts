@@ -1,9 +1,11 @@
 import { Logger } from '@nestjs/common';
 import {
     ConnectedSocket,
+    MessageBody,
     OnGatewayConnection,
     OnGatewayDisconnect,
     OnGatewayInit,
+    SubscribeMessage,
     WebSocketGateway,
     WebSocketServer,
 } from '@nestjs/websockets';
@@ -42,6 +44,7 @@ export class MessageChatGateway
 
             if (payload) {
                 this.logger.log(`Client connected: ${client.id}`);
+                (client.data as { profileId: string }).profileId = payload.profileId as string;
                 this.clientConnect(payload?.profileId as string, client.id);
             } else {
                 client.disconnect();
@@ -101,6 +104,53 @@ export class MessageChatGateway
             }
         }
         return undefined;
+    }
+
+    @SubscribeMessage('join-chat')
+    async handleJoinChat(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { chatId: string },
+    ) {
+        await client.join(`chat:${data.chatId}`);
+    }
+
+    @SubscribeMessage('leave-chat')
+    async handleLeaveChat(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { chatId: string },
+    ) {
+        await client.leave(`chat:${data.chatId}`);
+    }
+
+    @SubscribeMessage('typing-start')
+    handleTypingStart(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { chatId: string; FullName: string; AvatarUrl: string | null },
+    ) {
+        const profileId = (client.data as { profileId: string }).profileId;
+        // exclude all sockets of the sender — a user can be logged in on multiple devices,
+        // client.to(room) only excludes the current socket, other devices of the same user would still receive
+        const allSenderSockets = this.connections.get(profileId) ?? [];
+        client.to(`chat:${data.chatId}`).except(allSenderSockets).emit('typing-start', {
+            chatId: data.chatId,
+            profileId,
+            FullName: data.FullName,
+            AvatarUrl: data.AvatarUrl,
+        });
+    }
+
+    @SubscribeMessage('typing-stop')
+    handleTypingStop(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { chatId: string },
+    ) {
+        const profileId = (client.data as { profileId: string }).profileId;
+        // same multi-device exclusion as typing-start
+        const allSenderSockets = this.connections.get(profileId) ?? [];
+        client.to(`chat:${data.chatId}`).except(allSenderSockets).emit('typing-stop', {
+            chatId: data.chatId,
+            profileId,
+        });
     }
 
     emitToUsers(profileIds: string[], event: string, data: unknown): void {

@@ -18,14 +18,15 @@ const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password'
 
 // Routes cần bảo vệ + role tương ứng
 // roles: [] = cần đăng nhập (bất kỳ role), roles: ['Admin'] = chỉ Admin
+// More specific admin routes must be declared before the general /admin rule.
 const routeRules = [
+    {
+        pathMatch: /^\/admin\/(moderation|posts|tags)(\/.*)?$/,
+        roles: ['Admin', 'Moderator'],
+    },
     {
         pathMatch: /^\/admin/,
         roles: ['Admin'],
-    },
-    {
-        pathMatch: /^\/moderation/,
-        roles: ['Admin', 'Moderator'],
     },
     {
         pathMatch: /^\/(feed|post|questions|communities|messages|notifications|profile)/,
