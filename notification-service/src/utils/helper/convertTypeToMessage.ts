@@ -14,6 +14,8 @@ export function convertTypeToMessage(event: NotificationMessageSource, actor: st
         [NotificationEventEnum.DOWNVOTE_ANSWER]: `${a} downvoted your answer`,
         [NotificationEventEnum.UPVOTE_COMMENT]: `${a} upvoted your comment`,
         [NotificationEventEnum.DOWNVOTE_COMMENT]: `${a} downvoted your comment`,
+        [NotificationEventEnum.UPVOTE_QUESTION]: `${a} upvoted your question ${title}`,
+        [NotificationEventEnum.DOWNVOTE_QUESTION]: `${a} downvoted your question ${title}`,
         [NotificationEventEnum.NEW_ANSWER]: `${a} answered your question ${title}`,
         [NotificationEventEnum.COMMENT_POST]: `${a} commented on your post ${title}`,
         [NotificationEventEnum.COMMENT_ANSWER]: `${a} commented on your answer`,

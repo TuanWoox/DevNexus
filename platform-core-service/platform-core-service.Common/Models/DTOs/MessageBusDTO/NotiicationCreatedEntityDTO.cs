@@ -42,6 +42,8 @@ namespace platform_core_service.Common.Models.DTOs.MessageBusDTO
         DOWNVOTE_ANSWER,
         UPVOTE_COMMENT,
         DOWNVOTE_COMMENT,
+        UPVOTE_QUESTION,
+        DOWNVOTE_QUESTION,
 
         // Q&A Interactions
         NEW_ANSWER,
@@ -75,10 +77,12 @@ namespace platform_core_service.Common.Models.DTOs.MessageBusDTO
     public enum NotificationEntityType
     {
         POST,
+        QUESTION,
         COMMENT,
         ANSWER,
         COMMUNITY,
         PROFILE,
-        MESSAGE
+        MESSAGE,
+
     }
 }
