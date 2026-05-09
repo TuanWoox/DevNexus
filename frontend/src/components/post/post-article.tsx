@@ -6,6 +6,7 @@ import {
     MessageSquare,
     Bookmark,
     Share2,
+    Globe,
 } from 'lucide-react';
 import { useGetPostById } from '@/hooks/post-hooks';
 import { useGetCommentsByPostId } from '@/hooks/comment-hooks/use-get-comments-by-post-id';
@@ -20,6 +21,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 import { useRouter } from "next/navigation";
 import { PostActionsDropdown } from './post-actions-dropdown';
+import { SelectPostDTO } from '@/types/post/select-post-dto';
 
 interface Props {
     postId: string;
@@ -37,6 +39,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     const isAuthor = user?.profileId === post?.authorId;
 
     const author = post?.author;
+    const community = (post as SelectPostDTO)?.community;
 
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(postId);
 
@@ -66,21 +69,8 @@ export default function PostArticle({ postId, isQAPost }: Props) {
         return (
             <article className="bg-card sm:rounded-xl sm:border border-default sm:shadow-sm sm:mx-6 overflow-hidden">
                 <div className="p-4 sm:p-6">
-                    {/* Skeleton cho Tags */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                        <Skeleton className="h-6 w-16 rounded-md" />
-                        <Skeleton className="h-6 w-20 rounded-md" />
-                        <Skeleton className="h-6 w-14 rounded-md" />
-                    </div>
-
-                    {/* Skeleton cho Title (2 dòng) */}
-                    <div className="space-y-3 mb-6">
-                        <Skeleton className="h-8 sm:h-10 w-3/4" />
-                        <Skeleton className="h-8 sm:h-10 w-1/2" />
-                    </div>
-
                     {/* Skeleton cho Author Info */}
-                    <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                             <Skeleton className="w-10 h-10 sm:w-12 sm:h-12 rounded-full" />
                             <div className="space-y-2">
@@ -91,13 +81,26 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                         <Skeleton className="w-9 h-9 rounded-full" />
                     </div>
 
+                    {/* Skeleton cho Title (2 dòng) */}
+                    <div className="space-y-3 mb-4">
+                        <Skeleton className="h-8 sm:h-10 w-3/4" />
+                        <Skeleton className="h-8 sm:h-10 w-1/2" />
+                    </div>
+
                     {/* Skeleton cho Content (Nhiều dòng) */}
-                    <div className="space-y-3">
+                    <div className="space-y-3 mb-4">
                         <Skeleton className="h-4 w-full" />
                         <Skeleton className="h-4 w-full" />
                         <Skeleton className="h-4 w-11/12" />
                         <Skeleton className="h-4 w-full" />
                         <Skeleton className="h-4 w-4/5" />
+                    </div>
+
+                    {/* Skeleton cho Tags */}
+                    <div className="flex flex-wrap gap-2">
+                        <Skeleton className="h-6 w-16 rounded-md" />
+                        <Skeleton className="h-6 w-20 rounded-md" />
+                        <Skeleton className="h-6 w-14 rounded-md" />
                     </div>
                 </div>
 
@@ -120,56 +123,86 @@ export default function PostArticle({ postId, isQAPost }: Props) {
         return <div className="p-6 text-center text-muted-foreground">Post doesn&apos;t exist.</div>;
     }
 
-    const formattedDate = new Date(post.dateCreated).toLocaleDateString('en-US', {
+    const formattedDate = new Date(post.dateModified).toLocaleDateString('en-US', {
         day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 
     return (
         <article className="bg-card sm:rounded-xl sm:border border-default sm:shadow-sm sm:mx-6 overflow-hidden">
-            <div className="p-4 sm:p-6">
-                {/* Tags */}
-                {post.tagNames.length !== 0 && (
-                    <div className="flex flex-wrap gap-2 mb-3">
-                        {post.tagNames?.map((tag) => (
-                            <span key={tag} className="badge-emerald px-2.5 py-1 text-xs rounded-md">
-                                {tag}
-                            </span>
-                        ))}
-                    </div>
-                )}
-
-
-                {/* Title */}
-                <h1 className="text-2xl sm:text-3xl font-bold text-heading leading-tight mb-3">
-                    {post.title}
-                </h1>
-
-                {/* Author Info */}
-                <div className="flex items-center justify-between mb-3">
+            <div className="p-3 sm:px-5 flex flex-col gap-3">
+                {/* Header: Community/Author & Options */}
+                <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
-                            {author?.avatarUrl ? (
-                                <Image src={author.avatarUrl} alt={author.fullName} fill className="object-cover" />
-                            ) : (
-                                <span className="text-primary font-bold">{author?.fullName?.charAt(0) || 'U'}</span>
-                            )}
-                        </div>
-                        <div className="flex flex-col">
-                            <Link href={`/profile/${post.authorId}`} className="text-sm sm:text-base font-semibold text-heading hover:text-primary transition-colors">
-                                {author?.fullName || 'Unknown'}
-                            </Link>
-                            <span className="text-xs text-muted-foreground flex items-center gap-2">
-                                {formattedDate}
-                                {author?.techStacks && author.techStacks.length > 0 && (
-                                    <>
-                                        <span className="w-1 h-1 rounded-full bg-muted-foreground/50 hidden sm:block"></span>
-                                        <span className="truncate max-w-30 sm:max-w-50 hidden sm:block">
-                                            {author.techStacks.join(', ')}
-                                        </span>
-                                    </>
-                                )}
-                            </span>
-                        </div>
+                        {community ? (
+                            <>
+                                <div className="relative">
+                                    <Link href={`/communities/${community.id}`} className="block w-10 h-10 rounded-lg overflow-hidden border border-default bg-primary/10 relative">
+                                        {community.communityCoverPhotoUrl ? (
+                                            <Image src={community.communityCoverPhotoUrl} alt={community.name} fill unoptimized className="object-cover" />
+                                        ) : (
+                                            <div className="flex items-center justify-center h-full">
+                                                <Globe className="w-5 h-5 text-primary" />
+                                            </div>
+                                        )}
+                                    </Link>
+                                    <Link href={`/profile/${post.authorId}`} className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-card bg-page overflow-hidden">
+                                        {author?.avatarUrl ? (
+                                            <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full bg-primary/20 flex items-center justify-center">
+                                                <span className="text-[10px] font-bold text-primary">{author?.fullName?.charAt(0) || 'U'}</span>
+                                            </div>
+                                        )}
+                                    </Link>
+                                </div>
+                                <div className="flex flex-col">
+                                    <Link href={`/communities/${community.id}`} className="text-sm font-bold text-heading hover:underline transition-colors truncate max-w-[150px] sm:max-w-[300px]">
+                                        {community.name}
+                                    </Link>
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                                        <Link href={`/profile/${post.authorId}`} className="font-semibold hover:underline text-muted-foreground transition-colors truncate max-w-[120px]">
+                                            {author?.fullName || 'Unknown'}
+                                        </Link>
+                                        <span>•</span>
+                                        <span suppressHydrationWarning>{formattedDate}</span>
+                                        {author?.techStacks && author.techStacks.length > 0 && (
+                                            <>
+                                                <span className="w-1 h-1 rounded-full bg-muted-foreground/50 hidden sm:block"></span>
+                                                <span className="truncate max-w-30 sm:max-w-50 hidden sm:block">
+                                                    {author.techStacks.join(', ')}
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <Link href={`/profile/${post.authorId}`} className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
+                                    {author?.avatarUrl ? (
+                                        <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
+                                    ) : (
+                                        <span className="text-primary font-bold">{author?.fullName?.charAt(0) || 'U'}</span>
+                                    )}
+                                </Link>
+                                <div className="flex flex-col">
+                                    <Link href={`/profile/${post.authorId}`} className="text-sm font-semibold text-heading hover:text-primary transition-colors">
+                                        {author?.fullName || 'Unknown'}
+                                    </Link>
+                                    <span className="text-xs font-semibold text-muted-foreground flex items-center gap-2 mt-0.5">
+                                        {formattedDate}
+                                        {author?.techStacks && author.techStacks.length > 0 && (
+                                            <>
+                                                <span className="w-1 h-1 rounded-full bg-muted-foreground/50 hidden sm:block"></span>
+                                                <span className="truncate max-w-30 sm:max-w-50 hidden sm:block">
+                                                    {author.techStacks.join(', ')}
+                                                </span>
+                                            </>
+                                        )}
+                                    </span>
+                                </div>
+                            </>
+                        )}
                     </div>
                     {/* Post Actions Dropdown (Edit / Delete / Follow / Report) */}
                     <PostActionsDropdown
@@ -180,10 +213,26 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                     />
                 </div>
 
+                {/* Title */}
+                <h1 className="text-2xl sm:text-3xl font-bold text-heading leading-tight">
+                    {post.title}
+                </h1>
+
                 {/* Content */}
                 <div className="text-body text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
                     <MarkdownViewer source={post.content} />
                 </div>
+
+                {/* Tags */}
+                {post.tagNames.length !== 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        {post.tagNames?.map((tag) => (
+                            <span key={tag} className="badge-emerald px-2.5 py-1 text-xs rounded-md">
+                                {tag}
+                            </span>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Action Bar */}

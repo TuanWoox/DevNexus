@@ -13,5 +13,12 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Community
         public bool IsPrivate { get; set; }
         public DateTimeOffset? DateCreated { get; set; }
         public DateTimeOffset? DateModified { get; set; }
+
+        /// <summary>
+        /// The current user's role in this community.
+        /// Populated server-side in GetPageAsync to avoid N+1 queries.
+        /// Values: "OWNER", "MODERATOR", "MEMBER", "PENDING", "GUEST"
+        /// </summary>
+        public string? CurrentUserRole { get; set; }
     }
 }

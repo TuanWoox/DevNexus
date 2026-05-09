@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useForm, Controller, useWatch } from 'react-hook-form'
-import { Sparkles, MessageSquare, HelpCircle, Tags as TagsIcon, Globe, PenTool, X, Send, AlertCircle, Save } from 'lucide-react'
+import { Sparkles, MessageSquare, HelpCircle, Tags as TagsIcon, Globe, PenTool, X, Send, AlertCircle, Save, ChevronDown } from 'lucide-react'
 import { MarkdownEditor } from '@/components/editor/markdown-editor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,6 +17,8 @@ import { CreateQAPostDTO } from '@/types/qa-post/create-qa-post-dto'
 import { UpdatePostDTO } from '@/types/post/update-post-dto'
 import { UpdateQAPostDTO } from '@/types/qa-post/update-qa-post-dto'
 import { useRouter } from 'next/navigation'
+import { CommunitySelectModal } from './community-select-modal'
+import Image from 'next/image'
 
 export type PostFormData = {
     title: string;
@@ -28,12 +30,14 @@ export type PostFormData = {
 
 export interface PostFormProps {
     initialData?: {
-        id: string;
-        title: string;
-        content: string;
-        postType: number;
-        tags: string[];
+        id?: string;
+        title?: string;
+        content?: string;
+        postType?: number;
+        tags?: string[];
         communityId?: string;
+        communityName?: string;
+        communityIconUrl?: string;
     };
     isEditMode?: boolean;
     fixedPostType?: 'post' | 'qa-post';
@@ -50,6 +54,11 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
     });
 
     const [tagInput, setTagInput] = useState('');
+    const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
+    const [selectedComm, setSelectedComm] = useState({
+        name: initialData?.communityName || '',
+        iconUrl: initialData?.communityIconUrl || ''
+    });
 
     const { mutate: createPost, isPending: isCreatingPost } = useCreatePost();
     const { mutate: createQAPost, isPending: isCreatingQAPost } = useCreateQAPost();
@@ -77,10 +86,10 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
     })
 
     const selectedTags = useWatch({ control, name: 'tags' });
+    const communityId = useWatch({ control, name: 'communityId' });
 
     // Đồng bộ isQAPost vào react-hook-form nếu nó thay đổi (chỉ khi không bị lock fixedPostType)
     const handleSetIsQAPost = (value: boolean) => {
-        if (fixedPostType) return;
         setIsQAPost(value);
     };
 
@@ -99,6 +108,11 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
         setValue('tags', selectedTags.filter(tag => tag !== tagToRemove), { shouldValidate: true })
     }
 
+    const handleCommunitySelect = (id: string, name: string, iconUrl?: string) => {
+        setValue('communityId', id, { shouldValidate: true });
+        setSelectedComm({ name, iconUrl: iconUrl || '' });
+    };
+
     const onSubmit = (data: PostFormData) => {
         const slug = data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 
@@ -116,7 +130,8 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
             content: data.content,
             postType: 0,
             slug,
-            tagNames: data.tags
+            tagNames: data.tags,
+            communityId: initialData?.communityId || undefined
         };
 
         if (isQAPost) {
@@ -191,7 +206,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                             {/* Normal Post Card */}
                             <div
                                 onClick={() => handleSetIsQAPost(false)}
-                                className={`cursor-pointer rounded-xl p-5 border-2 transition-all duration-200 ${!isQAPost
+                                className={`cursor-pointer rounded-lg p-5 border-2 transition-all duration-200 ${!isQAPost
                                     ? 'border-emerald-500 bg-emerald-500/5 shadow-ai-md'
                                     : 'border-default bg-card hover:border-emerald-500/50 hover:bg-subtle'
                                     }`}
@@ -210,7 +225,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                             {/* Q&A Post Card */}
                             <div
                                 onClick={() => handleSetIsQAPost(true)}
-                                className={`cursor-pointer rounded-xl p-5 border-2 transition-all duration-200 ${isQAPost
+                                className={`cursor-pointer rounded-lg p-5 border-2 transition-all duration-200 ${isQAPost
                                     ? 'border-primary bg-primary/5 shadow-primary'
                                     : 'border-default bg-card hover:border-primary/50 hover:bg-subtle'
                                     }`}
@@ -242,7 +257,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                             <Input
                                 id="title"
                                 placeholder={!isQAPost ? "What's on your mind? Be descriptive..." : "What is your programming question? Be specific..."}
-                                className={`text-sm py-6 bg-page input focus:bg-card transition-colors ${errors.title ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                className={`text-sm py-6 bg-page border-2 focus:bg-card transition-colors ${errors.title ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                                 {...register('title', {
                                     required: "Title is required",
                                     minLength: { value: 3, message: "Title must be at least 3 characters" },
@@ -265,7 +280,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                                     <TagsIcon className="w-4 h-4 text-indigo-500" />
                                     Tags <span className="text-xs font-normal text-dimmed">(Max 5)</span>
                                 </Label>
-                                <div className="p-2 min-h-13.5 border border-default rounded-lg bg-page flex flex-wrap gap-2 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20 transition-all items-center">
+                                <div className="p-2 min-h-13.5 border-2 border-default input bg-page flex flex-wrap gap-2 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20 transition-all items-center">
                                     {selectedTags?.map((tag) => (
                                         <span key={tag} className="badge-emerald animate-scale-in">
                                             {tag}
@@ -299,26 +314,38 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                                         <Globe className="w-4 h-4 text-blue-500" />
                                         Community
                                     </Label>
-                                    <div className="relative">
-                                        <select
-                                            id="community"
-                                            className="input bg-page appearance-none min-h-13.5 w-full cursor-pointer flex items-center hover:border-ring/50 transition-colors"
-                                            {...register('communityId')}
+                                    <div className="relative group">
+                                        <div
+                                            onClick={() => setIsCommunityModalOpen(true)}
+                                            className={`input bg-page min-h-13.5 w-full cursor-pointer flex items-center justify-between px-4 hover:border-primary/50 transition-all active:scale-[0.99] border-2 ${communityId ? 'border-primary/20 bg-primary/5' : 'border-default'
+                                                }`}
                                         >
-                                            <option value="" disabled>Select a community...</option>
-                                            <option value="react-js">React JS</option>
-                                            <option value="next-js">Next.js</option>
-                                            <option value="typescript">TypeScript</option>
-                                            <option value="backend">Backend Mastery</option>
-                                            <option value="general">General Programming</option>
-                                        </select>
-                                        <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted-foreground">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 overflow-hidden">
+                                                    {selectedComm.iconUrl ? (
+                                                        <Image src={selectedComm.iconUrl} alt={selectedComm.name} width={32} height={32} unoptimized className="object-cover" />
+                                                    ) : (
+                                                        <Globe className={`w-4 h-4 ${communityId ? 'text-primary' : 'text-muted-foreground'}`} />
+                                                    )}
+                                                </div>
+                                                <span className={`truncate ${communityId ? "font-bold text-heading" : "text-muted-foreground"}`}>
+                                                    {selectedComm.name || "Select a community..."}
+                                                </span>
+                                            </div>
+                                            <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-300 ${isCommunityModalOpen ? 'rotate-180' : ''}`} />
                                         </div>
+                                        <input type="hidden" {...register('communityId')} />
                                     </div>
                                 </div>
                             )}
                         </div>
+
+                        <CommunitySelectModal
+                            isOpen={isCommunityModalOpen}
+                            onClose={() => setIsCommunityModalOpen(false)}
+                            onSelect={handleCommunitySelect}
+                            selectedId={communityId}
+                        />
 
                         {/* Markdown Editor */}
                         <div className="space-y-3 pt-2">
@@ -336,7 +363,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                                     maxLength: { value: 50000, message: "Content cannot exceed 50000 characters" }
                                 }}
                                 render={({ field }) => (
-                                    <div className={`rounded-xl overflow-hidden border ${errors.content ? 'border-destructive shadow-sm' : 'border-default shadow-sm'} focus-within:ring-2 focus-within:ring-ring focus-within:border-ring transition-all`}>
+                                    <div className={`rounded-lg overflow-hidden border ${errors.content ? 'border-destructive shadow-sm' : 'border-default shadow-sm'} focus-within:ring-2 focus-within:ring-ring focus-within:border-ring transition-all`}>
                                         <MarkdownEditor
                                             value={field.value}
                                             onChange={(val?: string) => field.onChange(val || '')}
@@ -360,7 +387,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                     <Button
                         type="button"
                         variant="custom"
-                        className="btn-secondary text-sm px-6 py-2 h-auto"
+                        className="btn-secondary px-6 py-2 h-auto"
                         disabled={isPending}
                         onClick={() => router.back()}
                     >

@@ -7,7 +7,7 @@ import { useGetPostById } from '@/hooks/post-hooks'
 export default function EditPostPage() {
     const params = useParams();
     const postId = params.postId as string;
-    
+
     const { data: post, isLoading } = useGetPostById(postId);
 
     if (isLoading) return (
@@ -28,6 +28,7 @@ export default function EditPostPage() {
         content: post.content,
         postType: post.postType,
         tags: post.tagNames || [],
+        communityId: post.communityId || undefined
     };
 
     return <PostForm isEditMode initialData={initialData} fixedPostType="post" />

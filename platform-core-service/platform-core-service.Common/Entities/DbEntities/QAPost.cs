@@ -11,4 +11,4 @@ namespace platform_core_service.Common.Entities.DbEntities
         [JsonIgnore]
         public List<QAMedia> QAMedias { get; set; } = [];
     }
-}
+}

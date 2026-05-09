@@ -15,7 +15,7 @@ export default function PostHeader() {
                     className="flex items-center gap-2 text-muted-foreground hover:text-heading transition-colors text-lg font-medium truncate"
                 >
                     <ArrowLeft className="w-5 h-5" />
-                    Post
+                    Back
                 </button>
             </div>
 
@@ -26,7 +26,7 @@ export default function PostHeader() {
                     className="flex items-center gap-2 text-muted-foreground hover:text-heading transition-colors w-fit text-lg font-medium"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    Back to Posts
+                    Back
                 </button>
             </div>
         </>

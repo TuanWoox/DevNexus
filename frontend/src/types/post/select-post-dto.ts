@@ -7,6 +7,13 @@ export interface SelectPostAuthorDTO {
     techStacks: string[];
 }
 
+export interface SelectPostCommunityDTO {
+    id: string;
+    name: string;
+    slug: string;
+    communityCoverPhotoUrl?: string;
+}
+
 export interface SelectPostDTO {
     id: string;
     title: string;
@@ -20,6 +27,8 @@ export interface SelectPostDTO {
     commentCount: number;
     tagNames: string[];
     dateCreated: string;
-    dateModified?: string;
+    dateModified: string;
     currentUserVote?: boolean | null; // null = no vote, true = upvoted, false = downvoted
+    communityId?: string;
+    community?: SelectPostCommunityDTO;
 }

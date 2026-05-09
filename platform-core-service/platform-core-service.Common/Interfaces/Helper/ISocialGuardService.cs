@@ -1,4 +1,4 @@
-﻿using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using System;
 using System.Collections.Generic;
