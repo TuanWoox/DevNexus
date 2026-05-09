@@ -53,10 +53,14 @@ export function CreateCommunityModal({ isOpen, onClose }: CreateCommunityModalPr
     // Reset everything when dialog operates
     useEffect(() => {
         if (isOpen) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setStep(1);
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setCreatedCommunityId(null);
             reset();
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setSelectedFile(null);
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setPreviewUrl(null);
         }
     }, [isOpen, reset]);

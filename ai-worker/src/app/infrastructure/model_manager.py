@@ -23,7 +23,18 @@ logger = logging.getLogger(__name__)
 # Model identifiers
 # In Docker: /app/models/text-model (mounted from D:\Ai-Worker-Model\model\my-final-toxic-model)
 # Local development: D:\Learning\Fouth_Year\fine-tunning\my-final-toxic-model
-_TEXT_MODEL_ID = "/app/models/my-final-toxic-model" if os.path.exists("/app") else r"D:\Learning\Fouth_Year\fine-tunning\my-final-toxic-model"
+_expected_local_path = "/app/models/my-final-toxic-model" if os.path.exists("/app") else r"D:\Learning\Fouth_Year\fine-tunning\my-final-toxic-model"
+
+# Kiểm tra xem đường dẫn đó có thực sự tồn tại model không
+
+if os.path.exists(_expected_local_path):
+    _TEXT_MODEL_ID = _expected_local_path
+    logger.info(f"Đã tìm thấy model local. Đang load model từ: {_TEXT_MODEL_ID}")
+else:
+    # Nếu không tìm thấy, fallback về model mặc định trên Hugging Face
+    _TEXT_MODEL_ID = "unitary/multilingual-toxic-xlm-roberta"
+    logger.warning(f"Không tìm thấy model fine-tuned tại '{_expected_local_path}'. Sẽ tải model default: {_TEXT_MODEL_ID}")
+    
 _CLIP_MODEL_ID = "openai/clip-vit-base-patch32"
 
 # Toxicity label returned by the text model for the positive class
@@ -96,12 +107,12 @@ class AIModelManager:
             return
 
         # Verify model path exists
-        if not os.path.exists(_TEXT_MODEL_ID):
-            raise RuntimeError(
-                f"Text model path not found: {_TEXT_MODEL_ID}\n"
-                f"Expected directory with config.json, pytorch_model.bin, tokenizer.json, etc.\n"
-                f"Available at {_TEXT_MODEL_ID}: {os.listdir(os.path.dirname(_TEXT_MODEL_ID)) if os.path.exists(os.path.dirname(_TEXT_MODEL_ID)) else 'parent dir not found'}"
-            )
+        # if not os.path.exists(_TEXT_MODEL_ID):
+        #     raise RuntimeError(
+        #         f"Text model path not found: {_TEXT_MODEL_ID}\n"
+        #         f"Expected directory with config.json, pytorch_model.bin, tokenizer.json, etc.\n"
+        #         f"Available at {_TEXT_MODEL_ID}: {os.listdir(os.path.dirname(_TEXT_MODEL_ID)) if os.path.exists(os.path.dirname(_TEXT_MODEL_ID)) else 'parent dir not found'}"
+        #     )
 
         logger.info("Loading XLM-RoBERTa toxicity model from: %s on device: %s …", _TEXT_MODEL_ID, self._device)
         try:

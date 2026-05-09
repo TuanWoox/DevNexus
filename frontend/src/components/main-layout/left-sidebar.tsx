@@ -33,12 +33,14 @@ export function LeftSidebar() {
     useEffect(() => {
         // Thiết lập trạng thái ban đầu dựa trên kích thước màn hình
         const isLargeScreen = window.matchMedia('(min-width: 1024px)').matches
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setIsCollapsed(!isLargeScreen)
 
         // Xử lý sự kiện resize
         const handleResize = () => {
             const isLarge = window.matchMedia('(min-width: 1024px)').matches
             if (!isLarge) {
+                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setIsCollapsed(true)
             }
         }
