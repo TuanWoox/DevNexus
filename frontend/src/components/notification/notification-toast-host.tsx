@@ -1,17 +1,30 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { Notification } from "@/features/notifications/types/contracts";
+import { NotificationEventEnum } from "@/features/notifications/types/enums";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { FollowRequestOverlay } from "./follow-request-overlay";
 
 export function NotificationToastHost() {
     const pathname = usePathname();
     const router = useRouter();
     const isOnNotificationsPage = pathname.startsWith("/notifications");
+    const [activeOverlay, setActiveOverlay] = useState<NotificationEventEnum | null>(null);
+
+    const handleViewClick = (notification: Notification, toastId: string | number) => {
+        toast.dismiss(toastId);
+
+        if (notification.Type === NotificationEventEnum.FOLLOW_REQUEST) {
+            setActiveOverlay(NotificationEventEnum.FOLLOW_REQUEST);
+        } else if (notification.ActionUrl) {
+            router.push(notification.ActionUrl);
+        }
+    };
 
     useEffect(() => {
         const handler = (e: Event) => {
@@ -37,18 +50,15 @@ export function NotificationToastHost() {
                                 <div className="flex-1 text-sm text-foreground/90 leading-snug line-clamp-2">
                                     {notification.Message}
                                 </div>
-                                {notification.ActionUrl ? (
+                                {(notification.Type === NotificationEventEnum.FOLLOW_REQUEST || notification.ActionUrl) && (
                                     <Button
                                         size="xs"
-                                        onClick={() => {
-                                            router.push(notification.ActionUrl!);
-                                            toast.dismiss(t);
-                                        }}
+                                        onClick={() => handleViewClick(notification, t)}
                                         type="button"
                                     >
                                         View
                                     </Button>
-                                ) : null}
+                                )}
                             </CardContent>
                         </Card>
                     );
@@ -64,5 +74,14 @@ export function NotificationToastHost() {
         return () => window.removeEventListener("new-notification", handler);
     }, [isOnNotificationsPage, router]);
 
-    return null;
+    return (
+        <>
+            {activeOverlay === NotificationEventEnum.FOLLOW_REQUEST && (
+                <FollowRequestOverlay
+                    open={true}
+                    onClose={() => setActiveOverlay(null)}
+                />
+            )}
+        </>
+    );
 }

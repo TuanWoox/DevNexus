@@ -1,13 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { Trash2, BellOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Notification } from "@/features/notifications/types/contracts";
+import { NotificationEventEnum } from "@/features/notifications/types/enums";
 import { useMarkAsRead } from "@/features/notifications/hooks/use-mark-as-read";
 import { useDeleteNotification } from "@/features/notifications/hooks/use-delete-notification";
 import { useAddMute } from "@/features/notifications/hooks/settings";
+import { FollowRequestOverlay } from "./follow-request-overlay";
 import { toRelativeTime } from "@/features/messages/utils/message-service.helper";
 import { cn } from "@/lib/utils";
 
@@ -21,9 +24,18 @@ export function NotificationItem({ notification, onClose }: Props) {
     const markAsRead = useMarkAsRead();
     const deleteNotif = useDeleteNotification();
     const addMute = useAddMute();
+    const [activeOverlay, setActiveOverlay] = useState<NotificationEventEnum | null>(null);
 
     const handleClick = () => {
         if (!notification.IsRead) markAsRead.mutate(notification.Id);
+
+        // Special handling for FOLLOW_REQUEST - show overlay instead of navigate
+        if (notification.Type === NotificationEventEnum.FOLLOW_REQUEST) {
+            setActiveOverlay(NotificationEventEnum.FOLLOW_REQUEST);
+            return;
+        }
+
+        // Regular notifications - navigate
         if (notification.ActionUrl) {
             router.push(notification.ActionUrl);
             onClose();
@@ -114,6 +126,13 @@ export function NotificationItem({ notification, onClose }: Props) {
             >
                 <Trash2 className="h-3.5 w-3.5" />
             </Button>
+
+            {activeOverlay === NotificationEventEnum.FOLLOW_REQUEST && (
+                <FollowRequestOverlay
+                    open={true}
+                    onClose={() => setActiveOverlay(null)}
+                />
+            )}
         </div>
     );
 }
