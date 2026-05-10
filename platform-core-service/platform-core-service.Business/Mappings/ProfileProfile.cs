@@ -2,6 +2,7 @@ using AutoMapper;
 using ProfileEntity = platform_core_service.Common.Entities.DbEntities.Profile;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Profile;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
+using platform_core_service.Common.Models.DTOs.MicroserviceSyncDTO;
 
 namespace platform_core_service.Business.Mappings
 {
@@ -22,6 +23,7 @@ namespace platform_core_service.Business.Mappings
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.DateCreated))
                 .ForMember(dest => dest.PostCount, opt => opt.MapFrom(src => src.Posts.Count));
             CreateMap<ProfileEntity, ProfilePublishDTO>();
+            CreateMap<ProfileEntity, ProfileSyncDTO>();
         }
     }
 }

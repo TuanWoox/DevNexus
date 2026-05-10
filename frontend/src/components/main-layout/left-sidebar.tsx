@@ -38,18 +38,22 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
+import { useUnreadCount } from "@/features/notifications/hooks/use-unread-count";
+import { NotificationPanel } from "@/components/notification/notification-panel";
+
 const menuItems = [
     { name: 'Home', href: '/feed', icon: Home },
     { name: 'Q&A', href: '/questions', icon: HelpCircle },
     { name: 'Communities', href: '/communities', icon: Users },
     { name: 'Messages', href: '/messages', icon: MessageSquare },
-    { name: 'Notifications', href: '/notifications', icon: Bell },
 ]
 
 export function LeftSidebar() {
     const pathname = usePathname()
     const [isCollapsed, setIsCollapsed] = useState(true)
+    const [isPanelOpen, setIsPanelOpen] = useState(false)
     const { theme, setTheme } = useTheme()
+    const { data: unreadCount = 0 } = useUnreadCount()
 
     const { user } = useSelector((state: RootState) => state.auth)
     const { data: userProfile } = useGetProfileById(user?.profileId as string);
@@ -60,10 +64,11 @@ export function LeftSidebar() {
     }
 
     return (
+        <>
         <aside
             className={cn(
                 "relative hidden sm:flex flex-col sticky top-0 h-screen py-4 border-r border-default transition-all duration-300",
-                isCollapsed ? "w-18" : "w-60",
+                isPanelOpen ? "w-18" : (isCollapsed ? "w-18" : "w-60"),
             )}
         >
             {/* Collapse toggle — pinned on the right border line */}
@@ -127,6 +132,31 @@ export function LeftSidebar() {
                     )
                 })}
             </nav>
+
+            {/* Notification Bell */}
+            <button
+                onClick={() => setIsPanelOpen(!isPanelOpen)}
+                className={cn(
+                    "relative flex items-center gap-4 rounded-xl transition-colors group mx-2 py-3",
+                    isPanelOpen || isCollapsed ? "justify-center" : "px-3",
+                    isPanelOpen
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'text-muted-foreground hover:bg-subtle hover:text-primary',
+                )}
+                title={isPanelOpen || isCollapsed ? "Notifications" : undefined}
+            >
+                <div className="relative">
+                    <Bell className="h-6 w-6 shrink-0" />
+                    {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-destructive text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                    )}
+                </div>
+                {!isPanelOpen && !isCollapsed && (
+                    <span className="text-base truncate">Notifications</span>
+                )}
+            </button>
 
             <div className={cn("mt-3", isCollapsed ? "mx-2" : "mx-3")}>
                 <Link
@@ -237,5 +267,9 @@ export function LeftSidebar() {
                 </DropdownMenu>
             </div>
         </aside>
+
+        {/* Notification Panel - sibling to sidebar */}
+        <NotificationPanel isOpen={isPanelOpen} onClose={() => setIsPanelOpen(false)} />
+        </>
     )
 }

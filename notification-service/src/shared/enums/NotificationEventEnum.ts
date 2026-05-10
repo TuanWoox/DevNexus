@@ -1,0 +1,46 @@
+export enum NotificationEventEnum {
+  // Voting
+  UPVOTE_POST = 0,
+  DOWNVOTE_POST = 1,
+  UPVOTE_ANSWER = 2,
+  DOWNVOTE_ANSWER = 3,
+  UPVOTE_COMMENT = 4,
+  DOWNVOTE_COMMENT = 5,
+
+  // Q&A
+  NEW_ANSWER = 6,
+  COMMENT_POST = 7,
+  COMMENT_ANSWER = 8,
+  REPLY_COMMENT = 9,
+  ANSWER_ACCEPTED = 10,
+
+  // Follow
+  FOLLOW_USER = 11,
+  FOLLOW_REQUEST = 12,
+  FOLLOW_ACCEPTED = 13,
+
+  // Community
+  COMMUNITY_INVITE = 14,
+  COMMUNITY_JOIN_REQUEST = 15,
+  COMMUNITY_POST = 16,
+  COMMUNITY_ROLE_CHANGE = 17,
+  COMMUNITY_BAN = 18,
+
+  // Messaging
+  NEW_MESSAGE = 19,
+  MESSAGE_REQUEST = 20,
+
+  // System
+  MODERATION_RESULT = 21,
+  REPUTATION_MILESTONE = 22,
+  SYSTEM_ANNOUNCEMENT = 23,
+}
+
+export enum EntityTypeEnum {
+  POST = 0,
+  COMMENT = 1,
+  ANSWER = 2,
+  COMMUNITY = 3,
+  PROFILE = 4,
+  MESSAGE = 5,
+}

@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class RabbitMQService implements OnModuleInit {
-    private channel: Channel;
+    private channel!: Channel;
 
     constructor(
         private readonly profileSyncService: ProfilesyncService,
@@ -28,7 +28,7 @@ export class RabbitMQService implements OnModuleInit {
             try {
                 connection = await amqp.connect(rabbitUrl);
                 break;
-            } catch (err) {
+            } catch {
                 console.error(`RabbitMQ connection failed, retrying in 5s... (${retries} attempts left)`);
                 retries -= 1;
                 await new Promise(res => setTimeout(res, 5000));
@@ -39,12 +39,13 @@ export class RabbitMQService implements OnModuleInit {
             throw new Error('Could not connect to RabbitMQ');
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         this.channel = await connection.createChannel();
 
         const exchange = 'devnexus_sync';
         await this.channel.assertExchange(exchange, 'fanout', { durable: true });
 
-        const { queue } = await this.channel.assertQueue('', { exclusive: true });
+        const { queue } = await this.channel.assertQueue('message_service_sync_queue', { durable: true });
         await this.channel.bindQueue(queue, exchange, '');
 
         await this.channel.consume(queue, (msg) => {

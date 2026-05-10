@@ -58,6 +58,7 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IAdminTagService, AdminTagService>();
             services.AddScoped<IAiUsageLogService, AiUsageLogService>();
 
+            services.AddScoped<IMicroserviceSyncService, MicroserviceSyncService>();
             // AiWorkerClient uses IHttpClientFactory — must register with AddHttpClient
             services.AddHttpClient<IAiWorkerClient, AiWorkerClient>();
             // Register the Redis connection multiplexer as a singleton service

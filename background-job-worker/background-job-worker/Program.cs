@@ -45,7 +45,8 @@ builder.Services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
 
 // ── Services ──────────────────────────────────────────────────────────────────
 builder.Services.TryAddScoped<IConfigurationService, ConfigurationService>();
-builder.Services.AddSingleton<IMessageBusClient, MessageBusClient>();
+builder.Services.AddKeyedSingleton<IMessageBusClient, MessageBusClient>("default");
+builder.Services.AddKeyedSingleton<IMessageBusClient, NotificationMessageBusClient>("notification");
 
 // ── Background Jobs ───────────────────────────────────────────────────────────
 builder.Services.TryAddScoped<IEmailBackgroundJobs, EmailBackgroundJobs>();

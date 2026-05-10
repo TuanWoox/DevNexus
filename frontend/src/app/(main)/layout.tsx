@@ -3,6 +3,7 @@ import { RightSidebar } from '@/components/main-layout/right-sidebar'
 import { MobileHeader } from '@/components/main-layout/mobile-header'
 import { MobileNav } from '@/components/main-layout/mobile-nav'
 import { MessagesGatewayProvider } from '@/components/message/messages-gateway-provider'
+import { NotificationGatewayProvider } from '@/components/notification/notification-gateway-provider'
 
 export default function MainLayout({
     children,
@@ -11,7 +12,8 @@ export default function MainLayout({
 }) {
     return (
         <MessagesGatewayProvider>
-            <div className="min-h-screen bg-page text-body flex justify-center">
+            <NotificationGatewayProvider>
+                <div className="min-h-screen bg-page text-body flex justify-center">
                 <div className="w-full flex">
 
                     {/* CỘT 1: LEFT SIDEBAR */}
@@ -33,7 +35,8 @@ export default function MainLayout({
                 {/* MOBILE BOTTOM NAVIGATION */}
                 <MobileNav />
 
-            </div>
+                </div>
+            </NotificationGatewayProvider>
         </MessagesGatewayProvider>
     )
 }

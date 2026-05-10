@@ -37,12 +37,12 @@ namespace platform_core_service.Business.MessageBus
                 DevNexusLogger.Instance.Error(ex);
             }
         }
-        public async Task SendMessage(string message)
+        public async Task SendMessage(string message, string? routingKey = null)
         {
             var body = Encoding.UTF8.GetBytes(message);
             await _channel.BasicPublishAsync(exchange: "devnexus_sync", routingKey: string.Empty, body: body);
         }
-        public async Task PublishEntity<TEntity>(PublishMessageBusDTO<TEntity> publishEntity)
+        public async Task PublishEntity<TEntity>(PublishMessageBusDTO<TEntity> publishEntity, string? routingKey = null)
         {
             var message = JsonSerializer.Serialize(publishEntity);
             await SendMessage(message);
