@@ -1,10 +1,10 @@
 export interface Notification {
     Id: string;
     RecipientId: string;
-    Type: string;
+    Type: number;
     ActorId?: string;
     Actor: Actor
-    EntityType?: string;
+    EntityType?: number;
     EntityId?: string;
     EntityTitle?: string;
     EntityPreview?: string;

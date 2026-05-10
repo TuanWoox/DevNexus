@@ -1,12 +1,13 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { Trash2, BellOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Notification } from "@/features/notifications/types/contracts";
 import { useMarkAsRead } from "@/features/notifications/hooks/use-mark-as-read";
 import { useDeleteNotification } from "@/features/notifications/hooks/use-delete-notification";
+import { useAddMute } from "@/features/notifications/hooks/settings";
 import { toRelativeTime } from "@/features/messages/utils/message-service.helper";
 import { cn } from "@/lib/utils";
 
@@ -19,12 +20,24 @@ export function NotificationItem({ notification, onClose }: Props) {
     const router = useRouter();
     const markAsRead = useMarkAsRead();
     const deleteNotif = useDeleteNotification();
+    const addMute = useAddMute();
 
     const handleClick = () => {
         if (!notification.IsRead) markAsRead.mutate(notification.Id);
         if (notification.ActionUrl) {
             router.push(notification.ActionUrl);
             onClose();
+        }
+    };
+
+    const handleMute = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (notification.EntityType !== undefined && notification.EntityId !== undefined) {
+            addMute.mutate({
+                EntityType: notification.EntityType,
+                EntityId: notification.EntityId,
+                Type: notification.Type,
+            });
         }
     };
 
@@ -76,6 +89,18 @@ export function NotificationItem({ notification, onClose }: Props) {
                 </div>
             </div>
 
+            {notification.EntityType !== undefined && notification.EntityId !== undefined && (
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleMute}
+                    disabled={addMute.isPending}
+                    className="absolute top-2 right-10 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg hover:bg-muted"
+                    aria-label="Mute notification"
+                >
+                    <BellOff className="h-3.5 w-3.5" />
+                </Button>
+            )}
             <Button
                 variant="ghost"
                 size="icon"
