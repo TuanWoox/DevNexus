@@ -9,6 +9,14 @@ const services = [
   {
     source: "/plat-form-core-service",
     destination: env.INTERNAL_PLATFORM_CORE_SERVICE_API_URL ?? "",
+  },
+  {
+    source: "/message-service",
+    destination: env.INTERNAL_MESSAGE_SERVICE_API_URL ?? "",
+  },
+  {
+    source: "/notification-service",
+    destination: env.INTERNAL_NOTIFICATION_SERVICE_API_URL ?? "",
   }
 ];
 

@@ -7,7 +7,6 @@ import { InitialSyncService } from './modules/initial-sync/initial-sync.service'
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   app.use(cookieParser());
 
   app.enableCors({
@@ -16,7 +15,7 @@ async function bootstrap() {
   });
 
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
-  app.setGlobalPrefix('notification-service/api');
+  app.setGlobalPrefix('api');
 
   // Perform blocking initial sync
   const syncService = app.get(InitialSyncService);
