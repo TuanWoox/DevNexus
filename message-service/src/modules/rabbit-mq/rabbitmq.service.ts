@@ -84,4 +84,23 @@ export class RabbitMQService implements OnModuleInit {
             this.channel.nack(msg, false, false);
         }
     }
+
+    async publish(exchange: string, routingKey: string, message: any) {
+        try {
+            // Assert the notifications exchange (creates if doesn't exist)
+            await this.channel.assertExchange(exchange, 'topic', {
+                durable: true,
+            });
+
+            const messageBuffer = Buffer.from(JSON.stringify(message));
+            this.channel.publish(exchange, routingKey, messageBuffer, {
+                persistent: true,
+            });
+            
+            console.log(`Published message to ${exchange} with routing key ${routingKey}`);
+        } catch (error) {
+            console.error(`Failed to publish message to ${exchange}:`, error);
+            throw error;
+        }
+    }
 }

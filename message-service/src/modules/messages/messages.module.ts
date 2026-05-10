@@ -5,9 +5,19 @@ import { ProfileblocksModule } from '../profileblocks/profileblocks.module';
 import { MediasModule } from '../medias/medias.module';
 import { MessageChatGatewayModule } from '../message-chat-gateway/message-chat-gateway.module';
 import { ChatsQueryModule } from '../chats/chats-query.module';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
-  imports: [ProfileblocksModule, MediasModule, MessageChatGatewayModule, ChatsQueryModule],
+  imports: [
+    ProfileblocksModule, 
+    MediasModule, 
+    MessageChatGatewayModule, 
+    ChatsQueryModule,
+    BullModule.registerQueue({
+      name: 'chatsetting',
+      prefix: 'chatsetting'
+    }),
+  ],
   controllers: [MessagesController],
   providers: [MessagesService],
   exports: [MessagesService],

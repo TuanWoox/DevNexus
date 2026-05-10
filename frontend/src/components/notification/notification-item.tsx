@@ -55,11 +55,6 @@ export function NotificationItem({ notification, onClose }: Props) {
             <div className="flex-1 min-w-0 pr-7">
                 <p className="text-sm text-body leading-relaxed">
                     {notification.Message}
-                    {notification.AggregatedCount > 1 && (
-                        <span className="ml-1 text-primary font-semibold">
-                            and {notification.AggregatedCount - 1} other{notification.AggregatedCount > 2 ? "s" : ""}
-                        </span>
-                    )}
                 </p>
                 {notification.EntityPreview && (
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">

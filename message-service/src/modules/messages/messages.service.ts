@@ -1,4 +1,6 @@
 import { Injectable, Scope } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { PrismaService } from '../prisma-database/prisma.service';
 import { UserContextService } from '../auth/userContext.service';
 import { ReturnResult } from 'src/shared/dtos/helper/ReturnResult';
@@ -23,7 +25,30 @@ export class MessagesService {
     private readonly mediasService: MediasService,
     private readonly gateway: MessageChatGateway,
     private readonly chatsQueryService: ChatsQueryService,
+    @InjectQueue('chatsetting') private readonly chatSettingQueue: Queue,
   ) { }
+
+  private async enqueueMessageNotification(
+    chatId: string,
+    senderId: string,
+    messageContent: string
+  ) {
+    await this.chatSettingQueue.add(
+      'sendMessageNotification',
+      {
+        chatId,
+        senderId,
+        messageContent,
+      },
+      {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000,
+        },
+      }
+    );
+  }
 
   async createMessage(createEntity: CreateMessageDto, file?: Express.Multer.File) {
     const returnResult = new ReturnResult<Message>();
@@ -72,6 +97,32 @@ export class MessagesService {
         });
         if (file) {
           await this.mediasService.handleUpload(file, createMessage.Id);
+        }
+
+        // Only enqueue notification for the FIRST message in a request chat
+        // Check if this is a request AND if this is the first message (chat just created)
+        const chatSetting = await this.prismaService.chatSetting.findFirst({
+          where: {
+            ChatId: createEntity.ChatId,
+            ProfileId: { not: profileId },
+            IsRequested: true  // Only if it's a request
+          }
+        });
+
+        if (chatSetting) {
+          // Check if this is the first message in the chat
+          const messageCount = await this.prismaService.message.count({
+            where: { ChatId: createEntity.ChatId }
+          });
+
+          // Only send notification for the first message (chat creation)
+          if (messageCount === 1) {
+            await this.enqueueMessageNotification(
+              createEntity.ChatId,
+              profileId,
+              createEntity.Content
+            );
+          }
         }
       }
 
