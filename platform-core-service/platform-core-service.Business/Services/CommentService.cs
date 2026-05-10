@@ -1,11 +1,15 @@
 using AutoMapper;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
+using platform_core_service.Common.Entities.DbEntities;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Answer;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Comment;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
@@ -19,17 +23,20 @@ namespace platform_core_service.Business.Services
         private readonly IMapper _mapper;
         private readonly IUserContext _userContext;
         private readonly IRepository<CommentEntity, string> _commentRepository;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
         public CommentService(
             ApplicationDbContext context,
             IMapper mapper,
             IUserContext userContext,
-            IRepository<CommentEntity, string> commentRepository)
+            IRepository<CommentEntity, string> commentRepository,
+            IBackgroundJobClient backgroundJobClient)
         {
             _context = context;
             _mapper = mapper;
             _userContext = userContext;
             _commentRepository = commentRepository;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<ReturnResult<SelectCommentDTO>> CreateAsync(CreateCommentDTO createDTO)
@@ -49,7 +56,7 @@ namespace platform_core_service.Business.Services
                 var hasPost = !string.IsNullOrEmpty(createDTO.PostId);
                 var hasAnswer = !string.IsNullOrEmpty(createDTO.AnswerId);
                 var hasReply = !string.IsNullOrEmpty(createDTO.ReplyToCommentId);
-                
+
                 if (hasPost && hasAnswer)
                 {
                     result.Message = "Comment cannot be associated with both a Post and an Answer";
@@ -89,6 +96,13 @@ namespace platform_core_service.Business.Services
                         return result;
                     }
 
+                    // Stricter one-level threading: cannot reply to comments on answers
+                    if (!string.IsNullOrEmpty(parentComment.AnswerId))
+                    {
+                        result.Message = "Cannot reply to comments on answers (one-level threading only)";
+                        return result;
+                    }
+
                     // Inherit PostId/AnswerId from parent comment
                     createDTO.PostId = parentComment.PostId;
                     createDTO.AnswerId = parentComment.AnswerId;
@@ -106,8 +120,17 @@ namespace platform_core_service.Business.Services
                 // Step 7: Return mapped DTO with includes
                 var savedComment = await _context.Comments
                     .Include(c => c.Author)
+                    .Include(c => c.Post)
+                    .Include(c => c.Answer)
+                        .ThenInclude(a => a.QAPost)
+                    .Include(c => c.ReplyToComment)
                     .Include(c => c.Replies)
                     .FirstOrDefaultAsync(c => c.Id == comment.Id);
+
+                if (savedComment != null)
+                {
+                    await PublishCommentNotificationsAsync(comment.Id, profileId, savedComment);
+                }
 
                 result.Result = _mapper.Map<SelectCommentDTO>(savedComment);
             }
@@ -461,6 +484,136 @@ namespace platform_core_service.Business.Services
                 .FirstOrDefaultAsync();
 
             dto.CurrentUserVote = vote;
+        }
+
+        private static string? GetPreview(string? content)
+        {
+            if (string.IsNullOrEmpty(content))
+            {
+                return content;
+            }
+
+            return content.Substring(0, Math.Min(200, content.Length));
+        }
+
+        private void EnqueueNotification(NotiicationCreatedEntityDTO notificationEvent, string routingKey)
+        {
+            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                x => x.PublicNotification(notificationEvent, routingKey));
+        }
+
+        private void PublishCommentNotification(
+            NotificationEventType eventType,
+            string recipientId,
+            string actorId,
+            string commentId,
+            string? entityTitle,
+            string? entityPreview,
+            string actionUrl)
+        {
+            var notificationEvent = new NotiicationCreatedEntityDTO
+            {
+                EventType = eventType,
+                ActorId = actorId,
+                RecipientId = recipientId,
+                EntityType = NotificationEntityType.COMMENT,
+                EntityId = commentId,
+                EntityTitle = entityTitle,
+                EntityPreview = entityPreview,
+                ActionUrl = actionUrl
+            };
+
+            EnqueueNotification(notificationEvent, "notifications.comment");
+        }
+
+        private Task PublishCommentNotificationsAsync(string commentId, string actorId, CommentEntity savedComment)
+        {
+            // CASE 1: Reply to comment on Post/Question (one-level threading)
+            if (!string.IsNullOrEmpty(savedComment.ReplyToCommentId))
+            {
+                var rootPost = savedComment.Post;
+                var isQuestion = rootPost is QAPost;
+                var actionUrl = isQuestion
+                    ? $"/questions/{rootPost?.Id}#comment-{commentId}"
+                    : $"/post/{rootPost?.Id}#comment-{commentId}";
+
+                // 1) Notify parent comment author
+                var parentCommentAuthorId = savedComment.ReplyToComment?.AuthorId;
+                if (!string.IsNullOrEmpty(parentCommentAuthorId) && parentCommentAuthorId != actorId)
+                {
+                    PublishCommentNotification(
+                        eventType: NotificationEventType.REPLY_COMMENT,
+                        recipientId: parentCommentAuthorId,
+                        actorId: actorId,
+                        commentId: commentId,
+                        entityTitle: rootPost?.Title,
+                        entityPreview: GetPreview(savedComment.Content),
+                        actionUrl: actionUrl);
+                }
+
+                // 2) Notify post/question author (if different from actor and from parent comment author)
+                var postAuthorId = rootPost?.AuthorId;
+                if (!string.IsNullOrEmpty(postAuthorId)
+                    && postAuthorId != actorId
+                    && postAuthorId != parentCommentAuthorId)
+                {
+                    PublishCommentNotification(
+                        eventType: isQuestion ? NotificationEventType.COMMENT_QUESTION : NotificationEventType.COMMENT_POST,
+                        recipientId: postAuthorId,
+                        actorId: actorId,
+                        commentId: commentId,
+                        entityTitle: rootPost?.Title,
+                        entityPreview: GetPreview(savedComment.Content),
+                        actionUrl: actionUrl);
+                }
+
+                return Task.CompletedTask;
+            }
+
+            // CASE 2: Comment on an answer
+            if (!string.IsNullOrEmpty(savedComment.AnswerId))
+            {
+                var recipientId = savedComment.Answer?.AuthorId;
+                var rootPost = savedComment.Answer?.QAPost;
+
+                if (!string.IsNullOrEmpty(recipientId) && recipientId != actorId && rootPost != null)
+                {
+                    PublishCommentNotification(
+                        eventType: NotificationEventType.COMMENT_ANSWER,
+                        recipientId: recipientId,
+                        actorId: actorId,
+                        commentId: commentId,
+                        entityTitle: rootPost.Title,
+                        entityPreview: GetPreview(savedComment.Content),
+                        actionUrl: $"/questions/{rootPost.Id}#comment-{commentId}");
+                }
+
+                return Task.CompletedTask;
+            }
+
+            // CASE 3: Comment on a post (or question)
+            {
+                var rootPost = savedComment.Post;
+                var recipientId = rootPost?.AuthorId;
+                var isQuestion = rootPost is QAPost;
+                var actionUrl = isQuestion
+                    ? $"/questions/{rootPost?.Id}#comment-{commentId}"
+                    : $"/post/{rootPost?.Id}#comment-{commentId}";
+
+                if (!string.IsNullOrEmpty(recipientId) && recipientId != actorId)
+                {
+                    PublishCommentNotification(
+                        eventType: isQuestion ? NotificationEventType.COMMENT_QUESTION : NotificationEventType.COMMENT_POST,
+                        recipientId: recipientId,
+                        actorId: actorId,
+                        commentId: commentId,
+                        entityTitle: rootPost?.Title,
+                        entityPreview: GetPreview(savedComment.Content),
+                        actionUrl: actionUrl);
+                }
+
+                return Task.CompletedTask;
+            }
         }
     }
 }

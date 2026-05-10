@@ -36,6 +36,9 @@ export enum NotificationEventEnum {
   MODERATION_RESULT = 23,
   REPUTATION_MILESTONE = 24,
   SYSTEM_ANNOUNCEMENT = 25,
+
+  // Q&A (additional)
+  COMMENT_QUESTION = 26,
 }
 
 export enum EntityTypeEnum {
