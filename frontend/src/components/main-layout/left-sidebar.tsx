@@ -165,6 +165,7 @@ export function LeftSidebar() {
             <NotificationPanel
                 isOpen={isPanelOpen}
                 onClose={() => setIsPanelOpen(false)}
+                sidebarCollapsed={isCollapsed}
             />
         </>
     )
