@@ -11,6 +11,8 @@ import { useUpdateMessage } from "@/features/messages/hooks/messages/use-update-
 import { useSocket } from "@/features/messages/context/socket-context";
 import { Chat, Message } from "@/features/messages/types/contracts";
 import { toast } from "sonner";
+import { CodeBlockInsertDialog } from './code-block-insert-dialog';
+import { ComposerToolbar } from './composer-toolbar';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
@@ -36,6 +38,7 @@ export function MessageComposer({ selectedChat, messages, currentProfileId, edit
     const { socketRef } = useSocket();
     const [value, setValue] = useState("");
     const [isSending, setIsSending] = useState(false);
+    const [codeDialogOpen, setCodeDialogOpen] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -48,6 +51,39 @@ export function MessageComposer({ selectedChat, messages, currentProfileId, edit
     const isVideo = selectedFile?.type.startsWith("video/");
 
     const currentMember = selectedChat?.Members?.find(m => m.MemberId === currentProfileId);
+
+    const insertCodeBlock = (language: string, code: string) => {
+        const codeBlock = `\n\`\`\`${language}\n${code}\n\`\`\`\n`;
+        setValue(prev => prev + codeBlock);
+        textareaRef.current?.focus();
+    };
+
+    const insertInlineCode = () => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selectedText = value.substring(start, end);
+
+        if (selectedText) {
+            // Wrap selection
+            const newValue = value.substring(0, start) + `\`${selectedText}\`` + value.substring(end);
+            setValue(newValue);
+            setTimeout(() => {
+                textarea.setSelectionRange(start + selectedText.length + 2, start + selectedText.length + 2);
+                textarea.focus();
+            }, 0);
+        } else {
+            // Insert template
+            const newValue = value.substring(0, start) + '``' + value.substring(end);
+            setValue(newValue);
+            setTimeout(() => {
+                textarea.setSelectionRange(start + 1, start + 1);
+                textarea.focus();
+            }, 0);
+        }
+    };
 
     const emitTypingStop = useCallback(() => {
         if (!selectedChat) return;
@@ -176,6 +212,21 @@ export function MessageComposer({ selectedChat, messages, currentProfileId, edit
             onCancelEdit();
             return;
         }
+
+        // Ctrl+Shift+C - Insert code block
+        if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+            e.preventDefault();
+            setCodeDialogOpen(true);
+            return;
+        }
+
+        // Ctrl+E - Insert inline code
+        if (e.ctrlKey && e.key === 'e') {
+            e.preventDefault();
+            insertInlineCode();
+            return;
+        }
+
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             submit();
@@ -185,7 +236,8 @@ export function MessageComposer({ selectedChat, messages, currentProfileId, edit
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setValue(e.target.value);
         e.target.style.height = "auto";
-        e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+        const newHeight = Math.min(e.target.scrollHeight, 120);
+        e.target.style.height = newHeight + "px";
         emitTyping();
     };
 
@@ -272,7 +324,12 @@ export function MessageComposer({ selectedChat, messages, currentProfileId, edit
                 </div>
             )}
 
-            <div className="flex items-end gap-1.5">
+            <ComposerToolbar
+                onCodeBlockClick={() => setCodeDialogOpen(true)}
+                disabled={createMessage.isPending || isSending}
+            />
+
+            <div className="flex items-end gap-1.5 mt-1.5">
                 <Textarea
                     ref={textareaRef}
                     value={value}
@@ -285,9 +342,8 @@ export function MessageComposer({ selectedChat, messages, currentProfileId, edit
                     className={cn(
                         "min-h-10 flex-1 resize-none border-0 bg-transparent p-0 text-sm shadow-none",
                         "focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60",
-                        "overflow-y-auto leading-relaxed py-1.5",
+                        "overflow-y-auto! leading-relaxed py-1.5 max-h-30!",
                     )}
-                    style={{ maxHeight: "120px" }}
                 />
 
                 <input
@@ -326,6 +382,12 @@ export function MessageComposer({ selectedChat, messages, currentProfileId, edit
                     <Send className="h-4 w-4" />
                 </Button>
             </div>
+
+            <CodeBlockInsertDialog
+                open={codeDialogOpen}
+                onClose={() => setCodeDialogOpen(false)}
+                onInsert={insertCodeBlock}
+            />
         </form>
     );
 }
