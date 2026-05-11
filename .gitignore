@@ -8,3 +8,6 @@ get-shit-done
 gsd-file-manifest.json
 .clinerules.agent
 .clinerules
+.vscode
+.claude
+dump.rdb

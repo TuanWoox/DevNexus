@@ -36,9 +36,17 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Comment
     public class SelectCommentAuthorDTO
     {
         public string Id { get; set; } = null!;
+        public string FullName { get; set; }
+        public string? AvatarUrl { get; set; }
 
-        public string FullName { get; set; } = null!;
+        public string? BackgroundUrl { get; set; }
 
-        public string AvatarUrl { get; set; } = null!;
+        public string Bio { get; set; }
+
+        public int ReputationPoints { get; set; }
+
+        public List<string> TechStacks { get; set; } = new List<string>();
+
+        public bool IsPrivate { get; set; }
     }
 }

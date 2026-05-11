@@ -21,6 +21,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 import { useRouter } from "next/navigation";
 import { PostActionsDropdown } from './post-actions-dropdown';
+import { ProfileHoverCard } from '@/components/profile/profile-hover-card';
 import { SelectPostDTO } from '@/types/post/select-post-dto';
 
 interface Props {
@@ -145,24 +146,28 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                                             </div>
                                         )}
                                     </Link>
-                                    <Link href={`/profile/${post.authorId}`} className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-card bg-page overflow-hidden">
-                                        {author?.avatarUrl ? (
-                                            <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full bg-primary/20 flex items-center justify-center">
-                                                <span className="text-[10px] font-bold text-primary">{author?.fullName?.charAt(0) || 'U'}</span>
-                                            </div>
-                                        )}
-                                    </Link>
+                                    <ProfileHoverCard profileId={post.authorId} author={author}>
+                                        <Link href={`/profile/${post.authorId}`} className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-card bg-page overflow-hidden">
+                                            {author?.avatarUrl ? (
+                                                <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full bg-primary/20 flex items-center justify-center">
+                                                    <span className="text-[10px] font-bold text-primary">{author?.fullName?.charAt(0) || 'U'}</span>
+                                                </div>
+                                            )}
+                                        </Link>
+                                    </ProfileHoverCard>
                                 </div>
                                 <div className="flex flex-col">
                                     <Link href={`/communities/${community.id}`} className="text-sm font-bold text-heading hover:underline transition-colors truncate max-w-[150px] sm:max-w-[300px]">
                                         {community.name}
                                     </Link>
                                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                                        <Link href={`/profile/${post.authorId}`} className="font-semibold hover:underline text-muted-foreground transition-colors truncate max-w-[120px]">
-                                            {author?.fullName || 'Unknown'}
-                                        </Link>
+                                        <ProfileHoverCard profileId={post.authorId} author={author}>
+                                            <Link href={`/profile/${post.authorId}`} className="font-semibold hover:underline text-muted-foreground transition-colors truncate max-w-[120px]">
+                                                {author?.fullName || 'Unknown'}
+                                            </Link>
+                                        </ProfileHoverCard>
                                         <span>•</span>
                                         <span suppressHydrationWarning>{formattedDate}</span>
                                         {author?.techStacks && author.techStacks.length > 0 && (
@@ -178,17 +183,21 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                             </>
                         ) : (
                             <>
-                                <Link href={`/profile/${post.authorId}`} className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
-                                    {author?.avatarUrl ? (
-                                        <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
-                                    ) : (
-                                        <span className="text-primary font-bold">{author?.fullName?.charAt(0) || 'U'}</span>
-                                    )}
-                                </Link>
-                                <div className="flex flex-col">
-                                    <Link href={`/profile/${post.authorId}`} className="text-sm font-semibold text-heading hover:text-primary transition-colors">
-                                        {author?.fullName || 'Unknown'}
+                                <ProfileHoverCard profileId={post.authorId} author={author}>
+                                    <Link href={`/profile/${post.authorId}`} className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
+                                        {author?.avatarUrl ? (
+                                            <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
+                                        ) : (
+                                            <span className="text-primary font-bold">{author?.fullName?.charAt(0) || 'U'}</span>
+                                        )}
                                     </Link>
+                                </ProfileHoverCard>
+                                <div className="flex flex-col">
+                                    <ProfileHoverCard profileId={post.authorId} author={author}>
+                                        <Link href={`/profile/${post.authorId}`} className="text-sm font-semibold text-heading hover:text-primary transition-colors">
+                                            {author?.fullName || 'Unknown'}
+                                        </Link>
+                                    </ProfileHoverCard>
                                     <span className="text-xs font-semibold text-muted-foreground flex items-center gap-2 mt-0.5">
                                         {formattedDate}
                                         {author?.techStacks && author.techStacks.length > 0 && (

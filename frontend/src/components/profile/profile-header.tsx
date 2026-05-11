@@ -76,31 +76,11 @@ export function ProfileHeader({ profile, isOwnProfile }: ProfileHeaderProps) {
                             </div>
                         )}
                     </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-2 mb-2">
-                        {isOwnProfile && (
-                            <Button
-                                variant="custom"
-                                size="default"
-                                onClick={() => setIsEditModalOpen(true)}
-                                className="btn-secondary font-semibold px-5 border-2"
-                            >
-                                <EditIcon className="w-4 h-4 mr-2" />
-                                Edit Profile
-                            </Button>
-                        )}
-                    </div>
                 </div>
             </div>
 
             {isOwnProfile && (
                 <>
-                    <EditProfileModal
-                        isOpen={isEditModalOpen}
-                        onClose={() => setIsEditModalOpen(false)}
-                        currentProfile={profile}
-                    />
                     <ProfileMediaUploadModal
                         isOpen={isAvatarModalOpen}
                         onClose={() => setIsAvatarModalOpen(false)}
@@ -115,6 +95,10 @@ export function ProfileHeader({ profile, isOwnProfile }: ProfileHeaderProps) {
                     />
                 </>
             )}
+
         </>
     );
 }
+
+
+

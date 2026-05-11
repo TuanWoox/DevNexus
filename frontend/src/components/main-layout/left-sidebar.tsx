@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -27,27 +27,29 @@ const menuItems = [
     { name: 'Messages', href: '/messages', icon: MessageSquare },
 ]
 
+function subscribeToDesktopMedia(callback: () => void) {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+    mediaQuery.addEventListener('change', callback)
+    return () => mediaQuery.removeEventListener('change', callback)
+}
+
+function getDesktopSnapshot() {
+    return window.matchMedia('(min-width: 1024px)').matches
+}
+
+function getServerDesktopSnapshot() {
+    return false
+}
+
 export function LeftSidebar() {
     const pathname = usePathname()
 
-    const [isCollapsed, setIsCollapsed] = useState(() => {
-        if (typeof window === 'undefined') return true
-        return !window.matchMedia('(min-width: 1024px)').matches
-    })
+    const isDesktop = useSyncExternalStore(subscribeToDesktopMedia, getDesktopSnapshot, getServerDesktopSnapshot)
+    const [isManuallyCollapsed, setIsManuallyCollapsed] = useState(false)
     const [isPanelOpen, setIsPanelOpen] = useState(false)
+    const isCollapsed = !isDesktop || isManuallyCollapsed
 
     const { data: unreadCount = 0 } = useUnreadCount()
-
-    useEffect(() => {
-        const mediaQuery = window.matchMedia('(min-width: 1024px)')
-
-        const handleChange = (event: MediaQueryListEvent) => {
-            if (!event.matches) setIsCollapsed(true)
-        }
-
-        mediaQuery.addEventListener('change', handleChange)
-        return () => mediaQuery.removeEventListener('change', handleChange)
-    }, [])
 
     return (
         <>
@@ -59,7 +61,7 @@ export function LeftSidebar() {
             >
                 {/* Collapse toggle */}
                 <button
-                    onClick={() => setIsCollapsed((prev) => !prev)}
+                    onClick={() => setIsManuallyCollapsed((prev) => !prev)}
                     className="absolute -right-3 top-5 z-50 flex items-center justify-center w-6 h-6 rounded-full bg-card border border-default text-muted-foreground hover:text-heading hover:bg-subtle transition-colors shadow-sm"
                 >
                     {isCollapsed ? (
