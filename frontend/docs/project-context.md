@@ -580,335 +580,71 @@ interface User {
 
 ---
 
-## 5.6 Styling & UI Guidelines
+## 5.6 Frontend Styling & Design System
 
-### 5.6.1 Architecture Overview
-
-The styling system is built on **four layers** defined in `src/styles/globals.css` (≈925 lines). The AI MUST understand this hierarchy:
-
-```
-Layer 1 — shadcn/ui CSS Variables  (@layer base :root / .dark)
-Layer 2 — Base element styles      (@layer base — body, headings, scrollbars)
-Layer 3 — DevNexus @utility classes (Tailwind v4 @utility — cards, buttons, badges, inputs)
-Layer 4 — Animations               (@layer utilities — keyframes, stagger)
-```
-
-**RULE:** New styles MUST slot into the correct layer. Do NOT add arbitrary CSS outside this structure.
-
-### 5.6.2 CSS Variable System — Mandatory Token Usage
-
-All colors are defined as **HSL triplets without the `hsl()` wrapper** (shadcn convention). Tailwind reads them as `hsl(var(--variable))`.
-
-**Core semantic tokens (MUST use these, never raw hex):**
-
-| Token | Light Value | Tailwind Class | Purpose |
-|---|---|---|---|
-| `--background` | `210 40% 98%` | `bg-background` | Page background |
-| `--foreground` | `222 47% 11%` | `text-foreground` | Primary text |
-| `--card` | `0 0% 100%` | `bg-card` | Card/panel surface |
-| `--primary` | `239 84% 67%` | `bg-primary`, `text-primary` | Brand accent (indigo) |
-| `--secondary` | `210 40% 96%` | `bg-secondary` | Subtle background |
-| `--muted` | `210 40% 96%` | `bg-muted` | Muted surfaces |
-| `--muted-foreground` | `215 16% 47%` | `text-muted-foreground` | Secondary text |
-| `--destructive` | `0 84% 60%` | `text-destructive` | Errors, danger |
-| `--border` | `214 32% 91%` | `border-border` | All borders |
-| `--ring` | `239 84% 67%` | `ring-ring` | Focus rings |
-| `--accent` | `239 100% 97%` | `bg-accent` | Highlighted areas |
-
-**Brand extras (mapped in `@theme` block):**
-
-| Token | Tailwind Class | Purpose |
-|---|---|---|
-| `--color-ai-from` / `--color-ai-to` | `from-ai-from to-ai-to` | AI gradient (emerald→cyan) |
-| `--color-ai-glow` | — | Glow effect base color |
-| `--color-brand-500` | `text-brand-500` | Indigo brand |
-
-**Shadow tokens:**
-
-| Token | Tailwind Class | Purpose |
-|---|---|---|
-| `--shadow-card` | `shadow-card` | Subtle card shadow |
-| `--shadow-elevated` | `shadow-elevated` | Dropdown/popover shadow |
-| `--shadow-ai` | `shadow-ai` | Emerald glow effect |
-| `--shadow-ai-md` | `shadow-ai-md` | Medium AI glow |
-| `--shadow-primary` | `shadow-primary` | Indigo glow effect |
-
-### 5.6.3 Dark Mode — Exact Pattern
-
-Dark mode is implemented via the `next-themes` library with the **class strategy**. The CSS uses:
-
-```css
-@custom-variant dark (&:is(.dark *));
-```
-
-**RULES:**
-1. The `.dark` class is toggled on `<html>` by `next-themes`. Do NOT manually toggle classes or use `prefers-color-scheme`.
-2. All dark-mode overrides in `globals.css` use `.dark { ... }` for CSS variables and `&:is(.dark *)` inside `@utility` blocks.
-3. In component JSX, use Tailwind's `dark:` prefix for conditional dark styling: `dark:text-slate-300 text-slate-700`.
-4. CSS variables automatically switch between light/dark — so `bg-background`, `text-foreground`, `border-default`, etc. are **inherently theme-aware**. Prefer them over manual `dark:` overrides.
-5. `<html>` and `<body>` both have `suppressHydrationWarning` — this is **required** for `next-themes` and MUST NOT be removed.
-
-### 5.6.4 Custom @utility Classes — The Design System
-
-The codebase defines a comprehensive set of `@utility` classes in `globals.css`. These are **first-class Tailwind utilities** and MUST be used instead of composing equivalent styles ad-hoc.
-
-#### Surface Utilities
-| Class | Maps To | Use When |
-|---|---|---|
-| `bg-page` | `hsl(var(--background))` | Full-page backgrounds |
-| `bg-card` | `hsl(var(--card))` | Card/panel content areas |
-| `bg-subtle` | `hsl(var(--secondary))` | Subtle background sections |
-| `bg-input` | `hsl(var(--muted))` | Input field backgrounds |
-
-#### Text Utilities
-| Class | Maps To | Use When |
-|---|---|---|
-| `text-heading` | `hsl(var(--foreground))` | Headings, titles, strong text |
-| `text-body` | `hsl(var(--foreground) / 0.85)` | Body paragraphs, content |
-| `text-muted` | `hsl(var(--muted-foreground))` | Secondary/metadata text |
-| `text-dimmed` | `hsl(var(--muted-foreground) / 0.7)` | Tertiary/caption text |
-| `text-ai-gradient` | Emerald→Cyan gradient clip | AI feature labels |
-| `text-primary-gradient` | Indigo→Violet gradient clip | Brand accent text |
-
-#### Border Utilities
-| Class | Maps To | Use When |
-|---|---|---|
-| `border-default` | `hsl(var(--border))` | Standard borders |
-| `border-strong` | `hsl(var(--border) / 0.7)` | Emphasized borders |
-| `border-ai` | `rgb(16 185 129 / 0.3)` | AI-themed borders |
-
-#### Card Utilities
-| Class | Behavior |
-|---|---|
-| `card` | White/dark surface + border + radius-xl + color transitions |
-| `card-hover` | Adds hover: elevated border + shadow |
-| `card-ai` | AI-themed card with emerald border + glow |
-
-#### Button Utilities
-| Class | Style |
-|---|---|
-| `btn-primary` | Solid indigo background |
-| `btn-secondary` | Transparent with border |
-| `btn-ghost` | Transparent with border, muted hover |
-| `btn-ai` | Emerald→Cyan gradient + glow shadow |
-| `btn-ai-purple` | Purple→Indigo gradient |
-| `btn-danger` | Destructive red background |
-
-**RULE:** Always use these utility classes (e.g., `className="btn-ai"`) instead of rebuilding the same styles inline. These classes include `:hover`, `:active`, `:disabled`, and dark mode handling.
-
-#### Badge Utilities
-| Class | Color Theme |
-|---|---|
-| `badge-default` | Indigo (tech tags) |
-| `badge-emerald` | Green (content tags, status) |
-| `badge-amber` | Yellow/orange (warnings) |
-| `badge-red` | Red (errors, critical) |
-| `badge-purple` | Purple (premium, special) |
-| `badge-ai` | Gradient pill (AI features) |
-
-All badge classes include dark-mode overrides via `&:is(.dark *)` internally.
-
-#### Other Utilities
-| Class | Purpose |
-|---|---|
-| `input` | Styled text input with focus ring |
-| `divider` | Horizontal rule with theme-aware color |
-| `skeleton` | Loading placeholder with pulse animation |
-| `focus-ring` | Consistent focus-visible outline |
-| `glow-ai` / `glow-ai-lg` / `glow-primary` | Box-shadow glow effects |
-| `code-block` / `code-block-header` / `code-content` | Styled code blocks |
-
-### 5.6.5 shadcn/ui Component Library
-
-The project uses **shadcn/ui** (style: `radix-nova`) with Radix UI primitives. Available components in `src/components/ui/`:
-
-| Component | File | Usage |
-|---|---|---|
-| `Button` | `button.tsx` | Use `variant` prop (`ghost`, `custom`, etc.) + DevNexus utility overrides |
-| `Card` / `CardContent` | `card.tsx` | Structural card wrapper |
-| `Input` | `input.tsx` | Form text inputs |
-| `Label` | `label.tsx` | Form labels |
-| `Skeleton` | `skeleton.tsx` | Loading placeholders |
-| `DropdownMenu` | `dropdown-menu.tsx` | Context menus, action menus |
-| `Sheet` | `sheet.tsx` | Mobile slide-out panels |
-| `Accordion` | `accordion.tsx` | Collapsible sections |
-| `AlertDialog` | `alert-dialog.tsx` | Confirmation modals |
-
-**RULES:**
-1. Use shadcn/ui components for primitives. Do NOT install or import Material UI, Ant Design, Chakra, or other component libraries.
-2. When shadcn `variant` props are insufficient, override with DevNexus utility classes: `className="btn-ai"` or `className="btn-ghost"`.
-3. Add new shadcn components via `npx shadcn@latest add <component>`. They auto-install to `src/components/ui/`.
-
-### 5.6.6 Component Styling Patterns (Extracted from Codebase)
-
-**Pattern 1: Composing custom utilities with Tailwind modifiers**
-```tsx
-// ✅ CORRECT — combine DevNexus utility with Tailwind spacing/layout
-<div className="card card-hover p-3 sm:px-5 flex flex-col gap-3">
-```
-
-**Pattern 2: Conditional class strings for interactive states**
-```tsx
-// ✅ CORRECT — ternary for vote active state using Tailwind color classes
-className={`p-1.5 sm:p-2 rounded-full hover:bg-page transition-colors
-    ${post.currentUserVote === true
-        ? 'text-emerald-500'
-        : 'text-muted-foreground hover:text-emerald-500'
-    }`}
-```
-
-**Pattern 3: Responsive design with mobile-first breakpoints**
-```tsx
-// ✅ CORRECT — mobile-first: base → sm → md → lg
-<span className="text-sm font-medium hidden sm:block">Comments</span>
-<div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full">
-```
-
-**Pattern 4: Skeleton loading that mirrors final layout**
-```tsx
-// ✅ CORRECT — skeleton matches the exact layout structure of the loaded state
-<div className="flex gap-3 sm:gap-4">
-    <Skeleton className="w-8 h-8 sm:w-10 sm:h-10 rounded-full shrink-0" />
-    <div className="flex-1">
-        <Skeleton className="h-4 w-24 sm:w-32" />
-    </div>
-</div>
-```
-
-**Pattern 5: Animations from the design system**
-```tsx
-// ✅ CORRECT — use globals.css animation classes
-<div className="animate-in fade-in slide-in-from-bottom-2">  // tw-animate-css
-<div className="animate-fade-in-up">                         // custom keyframe
-```
-
-### 5.6.7 Allowed Tailwind Color Palette
-
-Beyond the CSS variable tokens, the codebase uses these **specific Tailwind palette colors** for semantic purposes:
-
-| Color | Purpose | Used In |
-|---|---|---|
-| `emerald-500` / `emerald-400` | Upvote active, AI accent | Vote buttons, AI features |
-| `rose-500` | Downvote active | Vote buttons |
-| `slate-300`–`slate-800` | Neutral grays for borders, scrollbars, nav text | Scrollbar, navbar, subtle UI |
-| `indigo-*` | Brand color palette (via `--color-brand-*`) | Badges, brand elements |
-| `cyan-400` / `cyan-500` | AI gradient endpoint | AI gradient text/buttons |
-
-**RULE:** When using Tailwind palette colors directly (not via CSS variables), stick to the colors already established above. Do NOT introduce new arbitrary colors like `teal-600`, `orange-300`, `pink-500`, etc. without explicit approval.
+> **⚠️ ALL frontend styling details have been consolidated into `devnexus-setup-guide.md`.**
+>
+> Do NOT use this section. Instead, refer to the complete guide at `docs/devnexus-setup-guide.md` for:
+> - CSS variable system and token usage
+> - Custom utility classes (`btn-ai`, `card-ai`, `badge-*`, etc.)
+> - Dark mode implementation
+> - Component patterns and styling conventions
+> - Anti-patterns and what NOT to do
 
 ---
 
-## 5.7 Styling Anti-Patterns — NEVER Do These
+## 6. 🎨 Frontend UI/UX Design System
 
-### Anti-Pattern S1: Using raw hex/RGB values instead of design tokens
+> **⚠️ CRITICAL — ALL FRONTEND TASKS MUST FOLLOW THIS SECTION EXACTLY**
 
-```tsx
-// ❌ WRONG — hardcoded hex color
-<div className="bg-[#1e293b] text-[#f1f5f9]">
+### 6.1 Design System Authority
 
-// ❌ WRONG — arbitrary Tailwind color not in the design system
-<p style={{ color: '#6366f1' }}>
+The complete frontend design system (colors, components, utilities, animations, and best practices) is documented in **`devnexus-setup-guide.md`** in the `/docs/` folder.
 
-// ✅ CORRECT — use CSS variable-backed utilities
-<div className="bg-card text-foreground">
-// or use the custom DevNexus utilities:
-<div className="bg-page text-heading">
-```
+**MANDATORY DIRECTIVE:** For ANY frontend code generation, modification, or review task — whether it's:
+- Building pages (`/feed`, `/admin`, `/profile`, etc.)
+- Creating components (cards, buttons, forms, modals)
+- Adding admin or moderator interfaces
+- Implementing AI features
+- Styling any user-facing element
 
-### Anti-Pattern S2: Rebuilding button/badge/card styles inline
+**The agent MUST:**
 
-```tsx
-// ❌ WRONG — recreating btn-ai from scratch
-<button className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-400 to-cyan-400 text-white px-3 py-1.5 text-sm font-medium shadow-lg hover:opacity-90">
+1. **Read `devnexus-setup-guide.md` first.** This guide contains the authoritative design system, CSS variable architecture, and all custom Tailwind utilities.
 
-// ✅ CORRECT — use the pre-built @utility class
-<button className="btn-ai">
+2. **Never use generic Tailwind colors or hardcoded hex values.** Only use:
+   - CSS variable-backed utilities: `bg-background`, `bg-card`, `text-foreground`, `text-muted`, `border-border`, etc.
+   - Custom utility classes: `bg-page`, `card`, `card-hover`, `card-ai`, `btn-primary`, `btn-ghost`, `btn-ai`, `badge-default`, `badge-emerald`, etc.
+   - The exact color palette defined in the setup guide (indigo for primary, emerald-cyan for AI features, red for admin, purple for moderators).
 
-// ❌ WRONG — recreating badge styles
-<span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+3. **Never use inline `style` attributes** for colors, borders, backgrounds, or shadows. All styling must come from Tailwind classes and the design token system defined in `globals.css`.
 
-// ✅ CORRECT
-<span className="badge-emerald">
-```
+4. **Never compose button, card, or badge styles ad-hoc** from multiple Tailwind utilities. Always use the pre-built utility classes (`btn-ai`, `card-ai`, `badge-red`, etc.) defined in the setup guide.
 
-### Anti-Pattern S3: Using inline `style` attributes
+5. **Enforce dark mode via CSS variables, not manual `dark:` overrides.** Surfaces (`bg-page`, `bg-card`, `bg-input`) and text (`text-heading`, `text-body`, `text-muted`) automatically switch between themes because they reference CSS variables that have separate light/dark values.
 
-```tsx
-// ❌ WRONG — inline styles bypass the design system and break dark mode
-<div style={{ backgroundColor: '#1e1b4b', padding: '16px', borderRadius: '12px' }}>
+### 6.2 Core Design Principles
 
-// ✅ CORRECT — Tailwind utilities + design tokens
-<div className="bg-card p-4 rounded-xl">
-```
+- **Semantic tokens over arbitrary colors:** All colors map to meaningful CSS variables (`--background`, `--primary`, `--destructive`, etc.) that can be easily updated globally.
+- **Pre-built utilities > ad-hoc composition:** The design system provides `btn-ai`, `card-ai`, `badge-red`, `glow-ai`, etc. — use these instead of rebuilding the same styles repeatedly.
+- **Mandatory Sparkles icon on all AI features:** Every AI button, panel, or feature MUST include a `<Sparkles>` icon from `lucide-react`.
+- **Font-mono for technical elements:** ALL tech tags, @usernames, code snippets, file paths, and version numbers MUST use `font-mono` class.
+- **Role-based badge colors:** Admin users display `badge-red` with `<Shield>` icon; Moderators display `badge-purple` with `<Shield>` icon.
 
-The ONLY acceptable use of inline `style` is for truly dynamic values computed at runtime (e.g., `style={{ width: `${percentage}%` }}`).
+### 6.3 When in Doubt
 
-### Anti-Pattern S4: Using `dark:` prefix when CSS variables already handle theming
+If you encounter a styling question or are unsure which class to use:
 
-```tsx
-// ❌ WRONG — redundant dark: override for a token that already switches
-<div className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
+1. **Check the Quick Reference table in `devnexus-setup-guide.md`, Section 12** — it lists all common scenarios (page bg, card bg, buttons, badges, etc.) and the exact class to use.
+2. **Review the complete example component in Section 7 of the setup guide** — it shows a fully compliant post card with all patterns applied correctly.
+3. **If the class doesn't exist in the guide, DO NOT invent it.** Instead, check if an existing utility can be combined with standard Tailwind modifiers, or ask for clarification before proceeding.
 
-// ✅ CORRECT — these tokens auto-switch between themes
-<div className="bg-card border-default">
+### 6.4 Enforcement
 
-// ✅ ACCEPTABLE — dark: prefix for colors NOT covered by CSS variables
-<span className="dark:text-slate-300 text-slate-700">
-```
+- **Code review must verify all styling adheres to this design system.** Any use of hex colors, arbitrary Tailwind values, inline styles, or non-standard utility classes should be flagged and rejected.
+- **Agents must cite the specific section or table from `devnexus-setup-guide.md`** when justifying styling choices.
+- **No exceptions:** Even for one-off components or rapid prototyping, the design system must be followed strictly. Consistency across the entire frontend is non-negotiable.
 
-### Anti-Pattern S5: Excessive arbitrary Tailwind values
+---
 
-```tsx
-// ❌ WRONG — arbitrary pixel values that break the spacing scale
-<div className="w-[347px] h-[61px] mt-[13px] p-[7px]">
-
-// ✅ CORRECT — use the Tailwind spacing scale or custom tokens
-<div className="w-88 h-16 mt-3 p-2">
-// The design system defines custom spacings: --spacing-18 (4.5rem), --spacing-88 (22rem), --spacing-128 (32rem)
-```
-
-Arbitrary values (`[...]` syntax) are acceptable ONLY for:
-- `max-w-*` for content width constraints (e.g., `max-w-30`)
-- `w-*` on fixed-size UI chrome like sheet panels (e.g., `w-75`)
-- Values that genuinely don't exist in the spacing scale
-
-### Anti-Pattern S6: Introducing new component libraries or icon sets
-
-```tsx
-// ❌ WRONG — importing a different icon library
-import { FaHeart } from 'react-icons/fa';
-import { HeartIcon } from '@heroicons/react/solid';
-
-// ✅ CORRECT — lucide-react is the only icon library
-import { Heart } from 'lucide-react';
-
-// ❌ WRONG — importing a different component library
-import { Modal } from '@chakra-ui/react';
-import { Button } from 'antd';
-
-// ✅ CORRECT — use shadcn/ui components
-import { AlertDialog } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-```
-
-### Anti-Pattern S7: Uncontrolled z-index escalation
-
-```tsx
-// ❌ WRONG — arbitrary high z-index values
-<div className="fixed top-0 z-[9999]">
-<div className="absolute z-[999]">
-
-// ✅ CORRECT — use the standard Tailwind z-index scale contextually
-<div className="fixed top-0 z-40">  // sticky navbars/sidebars
-<div className="absolute z-10">     // local component stacking
-```
-
-**z-index Scale (enforced):**
-
-| Range | Purpose | Examples |
-|---|---|---|
-| `z-10` / `z-20` | Local component stacking (dropdowns within a card, overlapping elements) | `PostActionsDropdown`, inline popovers |
-| `z-30` / `z-40` | Sticky navigation, sidebars, fixed headers | `<header className="sticky top-0 z-50">` (navbar) |
-| `z-50` | Global overlays — modals, toasts, sheets | `Toaster`, `AlertDialog`, `Sheet` |
-
-**RULE:** Never use arbitrary `z-[999]` or `z-[9999]` values. If a component is being hidden behind another, fix the stacking context — do not escalate the z-index.
+**Reference:** Consult `devnexus-setup-guide.md` (in `/docs/`) for the complete design system, CSS variable architecture, and implementation patterns. This file is your authoritative source for all frontend styling decisions.

@@ -61,3 +61,42 @@ export async function serverPost<T>(
 
     return json.result;
 }
+
+export async function serverGet<T>(
+    path: string,
+    options: { auth?: boolean; cache?: RequestCache } = { auth: true, cache: 'no-store' }
+): Promise<T> {
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+    };
+
+    if (options.auth) {
+        const cookieStore = await cookies();
+        const accessToken = cookieStore.get('accessToken')?.value;
+        if (accessToken) {
+            headers['Authorization'] = `Bearer ${accessToken}`;
+        }
+    }
+
+    const res = await fetch(`${getBaseUrl()}${path}`, {
+        method: 'GET',
+        headers,
+        cache: options.cache,
+    });
+
+    if (!res.ok) {
+        throw new Error(`serverGet ${res.status}: ${path}`);
+    }
+
+    const json: ReturnResult<T> = await res.json();
+
+    if (json.message) {
+        throw new Error(json.message);
+    }
+
+    if (json.result === null || json.result === undefined) {
+        throw new Error(`serverGet: null result from ${path} — backend contract violation`);
+    }
+
+    return json.result;
+}

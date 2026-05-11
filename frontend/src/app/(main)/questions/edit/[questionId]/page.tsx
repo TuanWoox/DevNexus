@@ -7,7 +7,7 @@ import { useGetQAPostById } from '@/hooks/qa-post-hooks/use-get-qa-post-by-id'
 export default function EditQAPostPage() {
     const params = useParams();
     const questionId = params.questionId as string;
-    
+
     const { data: post, isLoading } = useGetQAPostById(questionId);
 
     if (isLoading) return (
@@ -28,6 +28,7 @@ export default function EditQAPostPage() {
         content: post.content,
         postType: post.postType,
         tags: post.tagNames || [],
+        communityId: post.communityId || undefined
     };
 
     return <PostForm isEditMode initialData={initialData} fixedPostType="qa-post" />

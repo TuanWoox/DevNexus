@@ -1,0 +1,10 @@
+.agent
+.planning/*
+.cursorrules
+.planning/STATE.md
+agents
+get-shit-done
+*.http
+gsd-file-manifest.json
+.clinerules.agent
+.clinerules

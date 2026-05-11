@@ -2,6 +2,7 @@ using AutoMapper;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using PostEntity = platform_core_service.Common.Entities.DbEntities.Post;
 using ProfileEntity = platform_core_service.Common.Entities.DbEntities.Profile;
+using CommunityEntity = platform_core_service.Common.Entities.DbEntities.Community;
 
 namespace platform_core_service.Business.Mappings
 {
@@ -25,10 +26,15 @@ namespace platform_core_service.Business.Mappings
                 .ForMember(dest => dest.TagNames,
                     opt => opt.MapFrom(src => src.PostTags.Select(pt => pt.Tag.Name).ToList()))
                 .ForMember(dest => dest.Author,
-                    opt => opt.MapFrom(src => src.Author));
+                    opt => opt.MapFrom(src => src.Author))
+                .ForMember(dest => dest.Community,
+                    opt => opt.MapFrom(src => src.Community));
 
             // Profile -> SelectPostAuthorDTO
             CreateMap<ProfileEntity, SelectPostAuthorDTO>();
+
+            // Community -> SelectPostCommunityDTO
+            CreateMap<CommunityEntity, SelectPostCommunityDTO>();
 
             CreateMap<PostEntity, SelectPartialPost>();
         }

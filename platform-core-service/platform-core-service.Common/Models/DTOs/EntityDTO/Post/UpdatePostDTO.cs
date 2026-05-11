@@ -23,6 +23,12 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Post
 
         public List<string>? TagNames { get; set; }
 
+        /// <summary>
+        /// Optional: Community ID to move/associate this post with a community.
+        /// If provided, the service validates the user belongs to that community.
+        /// </summary>
+        public string? CommunityId { get; set; }
+
         // Optional: IDs of pre-uploaded media to link to this post on update
         public List<string>? MediaIds { get; set; }
     }

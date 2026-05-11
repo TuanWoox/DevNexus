@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { Hexagon, Sparkles, Search } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
@@ -29,10 +30,9 @@ export function MobileHeader() {
                 {/* <button className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
                     {user?.userName?.charAt(0).toUpperCase() || 'U'}
                 </button> */}
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default">
+                <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default">
                     {userProfile?.avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={userProfile.avatarUrl} alt={userProfile.fullName} className="w-full h-full object-cover" />
+                        <Image src={userProfile.avatarUrl} alt={userProfile.fullName} fill className="object-cover" unoptimized />
                     ) : (
                         <span className="text-primary font-bold">{userProfile?.fullName?.charAt(0) || 'U'}</span>
                     )}

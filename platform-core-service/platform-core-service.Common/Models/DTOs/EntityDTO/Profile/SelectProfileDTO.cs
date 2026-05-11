@@ -17,5 +17,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Profile
         public int ReputationPoints { get; set; }
 
         public List<string> TechStacks { get; set; }
+
+        public bool IsPrivate { get; set; }
     }
 }

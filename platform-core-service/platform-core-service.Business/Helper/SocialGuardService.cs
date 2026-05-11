@@ -98,19 +98,50 @@ namespace platform_core_service.Business.Helper
             ReturnResult<bool> returnResult = new();
             try
             {
-                // Two lightweight AnyAsync queries instead of loading the full entity graph
-                var communityExists = await _dbContext.Communities
-                                                      .AsNoTracking()
-                                                      .AnyAsync(x => x.Id == communityId);
-                if (!communityExists)
+                var profileId = _userContext.ProfileId;
+
+                // Step 1: Verify community exists
+                //var communityExists = await _dbContext.Communities
+                //                                      .AsNoTracking()
+                //                                      .AnyAsync(x => x.Id == communityId);
+                var community = await _dbContext.Communities.FindAsync(communityId);
+                if (community == null)
                 {
                     returnResult.Message = "Community not found";
                     return returnResult;
                 }
 
+                // If the community is public => everyone can view it's content
+                if (!community.IsPrivate)
+                {
+                    returnResult.Result = true;
+                    return returnResult;
+                }
+
+                // Step 2: Owner always has access — check first to avoid false FORBIDDEN
+                var isOwner = await _dbContext.Communities
+                                              .AsNoTracking()
+                                              .AnyAsync(c => c.Id == communityId && c.OwnerId == profileId);
+                if (isOwner)
+                {
+                    returnResult.Result = true;
+                    return returnResult;
+                }
+
+                // Step 3: Moderators have access
+                var isModerator = await _dbContext.CommunityModerators
+                                                  .AsNoTracking()
+                                                  .AnyAsync(m => m.CommunityId == communityId && m.ModeratorId == profileId);
+                if (isModerator)
+                {
+                    returnResult.Result = true;
+                    return returnResult;
+                }
+
+                // Step 4: Regular members have access
                 var isMember = await _dbContext.CommunityMembers
                                                .AsNoTracking()
-                                               .AnyAsync(x => x.CommunityId == communityId && x.ProfileId == _userContext.ProfileId);
+                                               .AnyAsync(x => x.CommunityId == communityId && x.ProfileId == profileId);
                 if (!isMember)
                 {
                     returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;

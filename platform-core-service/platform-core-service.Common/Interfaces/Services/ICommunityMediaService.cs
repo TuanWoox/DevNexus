@@ -8,7 +8,7 @@ namespace platform_core_service.Common.Interfaces.Services
     public interface ICommunityMediaService
     {
         Task<string> GetById([TrimmedRequired] string Id);
-        Task<ReturnResult<PagedData<SelectCommunityMediaDTO, string>>> GetPaging([TrimmedRequired] string communityId, Page<string> page);
+        Task<ReturnResult<PagedData<DisplayCommunityMediaDTO, string>>> GetPaging([TrimmedRequired] string communityId, Page<string> page);
         Task<ReturnResult<SelectCommunityMediaDTO>> Create(CreateCommunityMediaDTO createCommunityMedia);
         Task<ReturnResult<SelectCommunityMediaDTO>> UpdatePrimary(UpdatePrimaryCommunityMediaDTO updatePrimaryCommunityMedia);
         Task<ReturnResult<bool>> Delete([TrimmedRequired] string id);

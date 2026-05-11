@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTheme } from 'next-themes'
 import Link from 'next/link'
-import { Home, HelpCircle, Plus, Bell, User, Settings, Moon, Sun, LogOut, Loader2 } from 'lucide-react'
+import { Home, HelpCircle, Plus, Bell, User, Settings, Moon, Sun, LogOut, Loader2, Shield } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import useLogout from '@/hooks/auth-hooks/use-logout'
@@ -17,6 +17,9 @@ export function MobileNav() {
     const { user } = useSelector((state: RootState) => state.auth)
     const { data: userProfile } = useGetProfileById(user?.profileId as string);
     const { logout, isLoggingOut } = useLogout()
+
+    const userRoles = user?.roles
+    const isAdminOrModerator = userRoles?.includes('Admin') || userRoles?.includes('Moderator')
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -65,7 +68,7 @@ export function MobileNav() {
                     <div className="absolute bottom-full right-0 mb-4 w-56 bg-card border border-default rounded-xl shadow-elevated p-2 flex flex-col gap-1 animate-in fade-in slide-in-from-bottom-2">
                         <div className="px-3 py-2 mb-1 border-b border-default">
                             <span className="text-sm font-bold text-heading block truncate">{userProfile?.fullName || 'username'}</span>
-                            <span className="text-xs text-muted-foreground block truncate">{user?.roles || 'Role'}</span>
+                            <span className="text-xs text-muted-foreground block truncate">{userRoles?.join(', ') || 'Role'}</span>
                         </div>
 
                         <Link
@@ -76,6 +79,17 @@ export function MobileNav() {
                             <User className="w-5 h-5" />
                             <span className="text-sm font-medium">View Profile</span>
                         </Link>
+
+                        {isAdminOrModerator && (
+                            <Link
+                                href="/admin/dashboard"
+                                className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors"
+                                onClick={() => setIsMobileProfileOpen(false)}
+                            >
+                                <Shield className="w-5 h-5" />
+                                <span className="text-sm font-medium">Admin Dashboard</span>
+                            </Link>
+                        )}
 
                         <Link
                             href="/settings"

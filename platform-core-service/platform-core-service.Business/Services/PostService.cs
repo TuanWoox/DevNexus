@@ -31,6 +31,7 @@ namespace platform_core_service.Business.Services
         private readonly ISocialGuardService _socialGuardService;
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IAiWorkerClient _aiWorkerClient;
+        private readonly IConfigurationService _configurationService;
 
         public PostService(
             ApplicationDbContext context,
@@ -39,7 +40,8 @@ namespace platform_core_service.Business.Services
             IRepository<PostEntity, string> postRepository,
             ISocialGuardService socialGuardService,
             IBackgroundJobClient backgroundJobClient,
-            IAiWorkerClient aiWorkerClient
+            IAiWorkerClient aiWorkerClient,
+            IConfigurationService configurationService
         )
         {
             _context = context;
@@ -49,6 +51,7 @@ namespace platform_core_service.Business.Services
             _socialGuardService = socialGuardService;
             _backgroundJobClient = backgroundJobClient;
             _aiWorkerClient = aiWorkerClient;
+            _configurationService = configurationService;
         }
 
         public async Task<ReturnResult<SelectPostDTO>> CreateAsync(CreatePostDTO createDTO)
@@ -62,6 +65,14 @@ namespace platform_core_service.Business.Services
                     result.Message = businessLogicResult.Message;
                     return result;
                 }
+
+                // Keyword filter: posts with banned keywords skip AI submission (stay Pending for human review)
+                var bannedKeywords = await GetBannedKeywordsAsync();
+                bool hasBannedKeyword = bannedKeywords.Any(k =>
+                    !string.IsNullOrEmpty(k) && (
+                        (createDTO.Content ?? "").Contains(k, StringComparison.OrdinalIgnoreCase) ||
+                        (createDTO.Title ?? "").Contains(k, StringComparison.OrdinalIgnoreCase)
+                    ));
 
                 // Step 3: Map DTO to entity
                 var post = _mapper.Map<PostEntity>(createDTO);
@@ -96,13 +107,16 @@ namespace platform_core_service.Business.Services
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
+                    .Include(p => p.Community)
                     .FirstOrDefaultAsync(p => p.Id == post.Id);
 
                 result.Result = _mapper.Map<SelectPostDTO>(savedPost);
 
                 // Step 8: Fire-and-forget — submit to AI moderation pipeline.
                 // Runs after response is already built; never blocks or throws to caller.
-                await _aiWorkerClient.SubmitForModerationAsync(post.Id, createDTO.Content);
+                // Skip AI submission for banned-keyword posts — they stay Pending for human review.
+                if (!hasBannedKeyword)
+                    await _aiWorkerClient.SubmitForModerationAsync(post.Id, createDTO.Content);
             }
             catch (Exception ex)
             {
@@ -123,15 +137,23 @@ namespace platform_core_service.Business.Services
                     returnResult.Message = "Post ID is required";
                     return returnResult;
                 }
+                bool hasPrivilegedAccess = _userContext.IsAdmin || _userContext.IsModerator;
 
                 // Step 2: Load post with tags and author (public read)
-                var post = await _context.Posts
+                var query = _context.Posts
                     .Include(p => p.PostTags)
-                    .ThenInclude(pt => pt.Tag)
+                        .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
-                    .FirstOrDefaultAsync(p =>
-                        (p.Id == postId || p.Slug == postId));
-                // && p.ModerationStatus == ModerationStatus.Approved);
+                    .Include(p => p.Community)
+                    .Where(p => p.Id == postId || p.Slug == postId);
+
+                // Apply ModerationStatus filter ONLY if the user is a standard user
+                if (!hasPrivilegedAccess)
+                {
+                    query = query.Where(p => p.ModerationStatus == ModerationStatus.Approved);
+                }
+
+                var post = await query.FirstOrDefaultAsync();
 
                 if (post == null)
                 {
@@ -139,14 +161,16 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                var accessCheck = await _socialGuardService.CheckVisibleContent(post.AuthorId, post.CommunityId);
-
-                if (!accessCheck.Result)
+                if (!hasPrivilegedAccess)
                 {
-                    returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
-                    return returnResult;
-                }
+                    var accessCheck = await _socialGuardService.CheckVisibleContent(post.AuthorId, post.CommunityId);
 
+                    if (!accessCheck.Result)
+                    {
+                        returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
+                        return returnResult;
+                    }
+                }
 
                 returnResult.Result = _mapper.Map<SelectPostDTO>(post);
                 await SetCurrentUserVoteAsync(returnResult.Result);
@@ -168,6 +192,7 @@ namespace platform_core_service.Business.Services
                                             .Include(p => p.PostTags)
                                             .ThenInclude(pt => pt.Tag)
                                             .Include(p => p.Author)
+                                            .Include(p => p.Community)
                                             .FirstOrDefaultAsync(p => p.Id == postId || p.Slug == postId && p.CommunityId == communityId);
                 if (post == null)
                 {
@@ -199,13 +224,23 @@ namespace platform_core_service.Business.Services
             var result = new ReturnResult<PagedData<SelectPostDTO, string>>();
             try
             {
+                string currentProfileId = _userContext.ProfileId;
+
                 // Step 2: Build query — news feed shows only approved posts for all users
                 var query = _context.Posts
                     .Where(p => p.GetType() == typeof(PostEntity))
-                    // .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Where(p => 
+                        p.CommunityId == null || // Post that not belong to community
+                        !p.Community.IsPrivate || // Public Community
+                        p.Community.OwnerId == currentProfileId || // User is the community's owner
+                        p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || // User is Moderator
+                        p.Community.Members.Any(m => m.ProfileId == currentProfileId) // User is Member
+                    )
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
+                    .Include(p => p.Community)
                     .AsNoTracking()
                     .AsQueryable();
 
@@ -236,14 +271,106 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                string currentProfileId = _userContext.ProfileId;
+
                 // Step 2: Build query — only concrete Post rows (exclude QAPost subtype)
                 var query = _context.Posts
                     .Where(p => p.GetType() == typeof(PostEntity))
-                    // .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Where(p => p.CommunityId == null || !p.Community.IsPrivate || p.Community.OwnerId == currentProfileId || p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || p.Community.Members.Any(m => m.ProfileId == currentProfileId))
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Where(p => p.AuthorId == profileId)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
+                    .Include(p => p.Community)
+                    .AsNoTracking()
+                    .AsQueryable();
+
+                // Step 3: Get paged results
+                result.Result = await _postRepository.GetPagingAsync<Page<string>, SelectPostDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCommentCountForListAsync(result.Result.Data.ToList());
+                }
+
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while retrieving posts: {ex.Message}";
+            }
+            return result;
+        }
+
+        public async Task<ReturnResult<PagedData<SelectPostDTO, string>>> GetPageAsyncByCommunityId(Page<string> page, string communityId)
+        {
+            var result = new ReturnResult<PagedData<SelectPostDTO, string>>();
+            try
+            {
+                if (string.IsNullOrEmpty(communityId))
+                {
+                    result.Message = "Community ID is required";
+                    return result;
+                }
+
+                // Verify the caller has access to this community's content
+                var accessCheck = await _socialGuardService.CheckBelongToCommunity(communityId);
+                if (accessCheck.Message != null)
+                {
+                    result.Message = accessCheck.Message;
+                    return result;
+                }
+
+                var query = _context.Posts
+                    .Where(p => p.GetType() == typeof(PostEntity))
+                    .Where(p => p.CommunityId == communityId)
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Include(p => p.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
+                    .Include(p => p.Community)
+                    .AsNoTracking()
+                    .AsQueryable();
+
+                result.Result = await _postRepository.GetPagingAsync<Page<string>, SelectPostDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCommentCountForListAsync(result.Result.Data.ToList());
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while retrieving community posts: {ex.Message}";
+            }
+            return result;
+        }
+
+        public async Task<ReturnResult<PagedData<SelectPostDTO, string>>> GetPostAndQAByProfileId(Page<string> page, string profileId)
+        {
+            var result = new ReturnResult<PagedData<SelectPostDTO, string>>();
+            try
+            {
+                // Step 1: Get current user profile
+                if (string.IsNullOrEmpty(profileId))
+                {
+                    result.Message = "User profile not found";
+                    return result;
+                }
+
+                string currentProfileId = _userContext.ProfileId;
+
+                // Step 2: Build query — only concrete Post rows (exclude QAPost subtype)
+                var query = _context.Posts
+                    .Where(p => p.CommunityId == null || !p.Community.IsPrivate || p.Community.OwnerId == currentProfileId || p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || p.Community.Members.Any(m => m.ProfileId == currentProfileId))
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Where(p => p.AuthorId == profileId)
+                    .Include(p => p.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
+                    .Include(p => p.Community)
                     .AsNoTracking()
                     .AsQueryable();
 
@@ -298,6 +425,17 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                // Step 3b: If CommunityId is provided, validate user belongs to that community
+                if (!string.IsNullOrEmpty(updateDTO.CommunityId))
+                {
+                    var communityCheck = await _socialGuardService.CheckBelongToCommunity(updateDTO.CommunityId);
+                    if (communityCheck.Message != null)
+                    {
+                        result.Message = communityCheck.Message;
+                        return result;
+                    }
+                }
+
                 // Step 4: Update basic fields
                 var oldSlug = post.Slug;
                 _mapper.Map(updateDTO, post);
@@ -328,11 +466,30 @@ namespace platform_core_service.Business.Services
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
+                    .Include(p => p.Community)
                     .FirstOrDefaultAsync(p => p.Id == postId);
 
                 result.Result = _mapper.Map<SelectPostDTO>(updatedPost);
                 await SetCurrentUserVoteAsync(result.Result);
 
+                // Step 10: Reset to Pending and re-submit for moderation.
+                // Edited content must pass the pipeline again before becoming visible.
+                // Banned-keyword check: posts with banned keywords skip AI submission (stay Pending for human review).
+                if (!string.IsNullOrWhiteSpace(updateDTO.Content))
+                {
+                    var bannedKeywords = await GetBannedKeywordsAsync();
+                    bool hasBannedKeyword = bannedKeywords.Any(k =>
+                        !string.IsNullOrEmpty(k) && (
+                            (updateDTO.Content ?? "").Contains(k, StringComparison.OrdinalIgnoreCase) ||
+                            (updateDTO.Title ?? "").Contains(k, StringComparison.OrdinalIgnoreCase)
+                        ));
+
+                    post.ModerationStatus = ModerationStatus.Pending;
+                    await _context.SaveChangesAsync();
+
+                    if (!hasBannedKeyword)
+                        await _aiWorkerClient.SubmitForModerationAsync(postId, updateDTO.Content);
+                }
             }
             catch (Exception ex)
             {
@@ -433,6 +590,15 @@ namespace platform_core_service.Business.Services
                 result.Result = 0;
             }
             return result;
+        }
+
+        private async Task<List<string>> GetBannedKeywordsAsync()
+        {
+            var settingResult = await _configurationService.GetOneByKeyAndGroup("BannedKeywords", "Moderation");
+            if (settingResult.Result == null || string.IsNullOrEmpty(settingResult.Result.Value))
+                return new List<string>();
+            try { return System.Text.Json.JsonSerializer.Deserialize<List<string>>(settingResult.Result.Value) ?? new List<string>(); }
+            catch { return new List<string>(); }
         }
 
         // Helper method to generate slug from title

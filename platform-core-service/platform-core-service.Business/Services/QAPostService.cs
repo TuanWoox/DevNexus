@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.Contexts;
+using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.EntityDTO.QAPost;
@@ -12,8 +13,10 @@ using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using PostTagEntity = platform_core_service.Common.Entities.DbEntities.PostTag;
 using TagEntity = platform_core_service.Common.Entities.DbEntities.Tag;
+using platform_core_service.Common.Utils.Enums;
 using Hangfire;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
+using platform_core_service.Common.Interfaces.Services;
 
 namespace platform_core_service.Business.Services
 {
@@ -24,13 +27,19 @@ namespace platform_core_service.Business.Services
         private readonly IMapper _mapper;
         private readonly IRepository<QAPost, string> _qaPostRepository;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IAiWorkerClient _aiWorkerClient;
+        private readonly IConfigurationService _configurationService;
+        private readonly ISocialGuardService _socialGuardService;
 
         public QAPostService(
             ApplicationDbContext dbContext,
             IUserContext userContext,
             IMapper mapper,
-            IRepository<QAPost, string> qaPostRepository, 
-            IBackgroundJobClient backgroundJobClient
+            IRepository<QAPost, string> qaPostRepository,
+            IBackgroundJobClient backgroundJobClient,
+            IAiWorkerClient aiWorkerClient,
+            IConfigurationService configurationService,
+            ISocialGuardService socialGuardService
             )
         {
             _dbContext = dbContext;
@@ -38,6 +47,9 @@ namespace platform_core_service.Business.Services
             _mapper = mapper;
             _qaPostRepository = qaPostRepository;
             _backgroundJobClient = backgroundJobClient;
+            _aiWorkerClient = aiWorkerClient;
+            _configurationService = configurationService;
+            _socialGuardService = socialGuardService;
         }
 
         public async Task<ReturnResult<SelectQAPostDTO>> CreateAsync(CreateQAPostDTO createDTO)
@@ -59,6 +71,14 @@ namespace platform_core_service.Business.Services
                     result.Message = "User profile not found";
                     return result;
                 }
+
+                // Keyword filter: posts with banned keywords skip AI submission (stay Pending for human review)
+                var bannedKeywords = await GetBannedKeywordsAsync();
+                bool hasBannedKeyword = bannedKeywords.Any(k =>
+                    !string.IsNullOrEmpty(k) && (
+                        (createDTO.Content ?? "").Contains(k, StringComparison.OrdinalIgnoreCase) ||
+                        (createDTO.Title ?? "").Contains(k, StringComparison.OrdinalIgnoreCase)
+                    ));
 
                 // Step 3: Map DTO to entity and set server-side fields
                 var qaPost = _mapper.Map<QAPost>(createDTO);
@@ -94,9 +114,16 @@ namespace platform_core_service.Business.Services
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(q => q.Author)
+                    .Include(q => q.Community)
                     .FirstOrDefaultAsync(q => q.Id == qaPost.Id);
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(savedPost);
+
+                // Step 9: Fire-and-forget — submit to AI moderation pipeline.
+                // Runs after response is already built; never blocks or throws to caller.
+                // Skip AI submission for banned-keyword posts — they stay Pending for human review.
+                if (!hasBannedKeyword)
+                    await _aiWorkerClient.SubmitForModerationAsync(qaPost.Id, createDTO.Content);
             }
             catch (Exception ex)
             {
@@ -125,7 +152,10 @@ namespace platform_core_service.Business.Services
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(q => q.Author)
-                    .FirstOrDefaultAsync(q => q.Id == postId || q.Slug == postId);
+                    .Include(q => q.Community)
+                    .FirstOrDefaultAsync(q =>
+                        (q.Id == postId || q.Slug == postId)
+                        && q.ModerationStatus == ModerationStatus.Approved);
 
                 if (qaPost == null)
                 {
@@ -149,12 +179,17 @@ namespace platform_core_service.Business.Services
             var result = new ReturnResult<PagedData<SelectQAPostDTO, string>>();
             try
             {
+                string currentProfileId = _userContext.ProfileId;
+
                 var query = _dbContext.Posts
                     .OfType<QAPost>()
+                    .Where(q => q.ModerationStatus == ModerationStatus.Approved)
+                    .Where(q => q.CommunityId == null || !q.Community.IsPrivate || q.Community.OwnerId == currentProfileId || q.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || q.Community.Members.Any(m => m.ProfileId == currentProfileId))
                     .Include(q => q.Answers)
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(q => q.Author)
+                    .Include(q => q.Community)
                     .AsQueryable();
 
                 result.Result = await _qaPostRepository.GetPagingAsync<Page<string>, SelectQAPostDTO>(query, page);
@@ -169,6 +204,91 @@ namespace platform_core_service.Business.Services
             {
                 DevNexusLogger.Instance.Debug(ex.Message);
                 result.Message = $"An error occurred while retrieving posts: {ex.Message}";
+            }
+            return result;
+        }
+
+        public async Task<ReturnResult<PagedData<SelectQAPostDTO, string>>> GetPageAsyncByProfileId(Page<string> page, string profileId)
+        {
+            var result = new ReturnResult<PagedData<SelectQAPostDTO, string>>();
+            try
+            {
+                if (string.IsNullOrEmpty(profileId))
+                {
+                    result.Message = "User profile not found";
+                    return result;
+                }
+
+                string currentProfileId = _userContext.ProfileId;
+
+                var query = _dbContext.Posts
+                    .OfType<QAPost>()
+                    .Where(q => q.AuthorId == profileId)
+                    .Where(q => q.ModerationStatus == ModerationStatus.Approved)
+                    .Where(q => q.CommunityId == null || !q.Community.IsPrivate || q.Community.OwnerId == currentProfileId || q.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || q.Community.Members.Any(m => m.ProfileId == currentProfileId))
+                    .Include(q => q.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
+                    .Include(q => q.Community)
+                    .AsNoTracking()
+                    .AsQueryable();
+
+                result.Result = await _qaPostRepository.GetPagingAsync<Page<string>, SelectQAPostDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCommentCountForListAsync(result.Result.Data.ToList());
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while retrieving posts: {ex.Message}";
+            }
+            return result;
+        }
+
+        public async Task<ReturnResult<PagedData<SelectQAPostDTO, string>>> GetPageAsyncByCommunityId(Page<string> page, string communityId)
+        {
+            var result = new ReturnResult<PagedData<SelectQAPostDTO, string>>();
+            try
+            {
+                if (string.IsNullOrEmpty(communityId))
+                {
+                    result.Message = "Community ID is required";
+                    return result;
+                }
+
+                // Verify the caller has access to this community's content
+                var accessCheck = await _socialGuardService.CheckBelongToCommunity(communityId);
+                if (accessCheck.Message != null)
+                {
+                    result.Message = accessCheck.Message;
+                    return result;
+                }
+
+                var query = _dbContext.Posts
+                    .OfType<QAPost>()
+                    .Where(q => q.CommunityId == communityId)
+                    .Where(q => q.ModerationStatus == ModerationStatus.Approved)
+                    .Include(q => q.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
+                    .Include(q => q.Community)
+                    .AsNoTracking()
+                    .AsQueryable();
+
+                result.Result = await _qaPostRepository.GetPagingAsync<Page<string>, SelectQAPostDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCommentCountForListAsync(result.Result.Data.ToList());
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while retrieving community Q&A posts: {ex.Message}";
             }
             return result;
         }
@@ -208,6 +328,17 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                // Step 3b: If CommunityId is provided, validate user belongs to that community
+                if (!string.IsNullOrEmpty(updateDTO.CommunityId))
+                {
+                    var communityCheck = await _socialGuardService.CheckBelongToCommunity(updateDTO.CommunityId);
+                    if (communityCheck.Message != null)
+                    {
+                        result.Message = communityCheck.Message;
+                        return result;
+                    }
+                }
+
                 // Step 4: Apply DTO to entity
                 var oldSlug = qaPost.Slug;
                 _mapper.Map(updateDTO, qaPost);
@@ -242,10 +373,30 @@ namespace platform_core_service.Business.Services
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(q => q.Author)
+                    .Include(q => q.Community)
                     .FirstOrDefaultAsync(q => q.Id == postId);
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(updatedPost);
                 await SetCurrentUserVoteAsync(result.Result);
+
+                // Step 10: Reset to Pending and re-submit for moderation.
+                // Edited content must pass the pipeline again before becoming visible.
+                // Banned-keyword check: posts with banned keywords skip AI submission (stay Pending for human review).
+                if (!string.IsNullOrWhiteSpace(updateDTO.Content))
+                {
+                    var bannedKeywords = await GetBannedKeywordsAsync();
+                    bool hasBannedKeyword = bannedKeywords.Any(k =>
+                        !string.IsNullOrEmpty(k) && (
+                            (updateDTO.Content ?? "").Contains(k, StringComparison.OrdinalIgnoreCase) ||
+                            (updateDTO.Title ?? "").Contains(k, StringComparison.OrdinalIgnoreCase)
+                        ));
+
+                    qaPost.ModerationStatus = ModerationStatus.Pending;
+                    await _dbContext.SaveChangesAsync();
+
+                    if (!hasBannedKeyword)
+                        await _aiWorkerClient.SubmitForModerationAsync(postId, updateDTO.Content);
+                }
 
             }
             catch (Exception ex)
@@ -356,6 +507,15 @@ namespace platform_core_service.Business.Services
         }
 
         // ── Private helpers ────────────────────────────────────────────────────
+
+        private async Task<List<string>> GetBannedKeywordsAsync()
+        {
+            var settingResult = await _configurationService.GetOneByKeyAndGroup("BannedKeywords", "Moderation");
+            if (settingResult.Result == null || string.IsNullOrEmpty(settingResult.Result.Value))
+                return new List<string>();
+            try { return System.Text.Json.JsonSerializer.Deserialize<List<string>>(settingResult.Result.Value) ?? new List<string>(); }
+            catch { return new List<string>(); }
+        }
 
         private string GenerateSlug(string title)
         {

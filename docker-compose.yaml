@@ -72,6 +72,8 @@ services:
 
   ai-worker:
     container_name: ai-worker
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://postgres:niko1234@postgres:5432/ai_worker_db"
     build:
       context: ./ai-worker
       dockerfile: Dockerfile

@@ -62,6 +62,13 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                // Step 3b: Cannot self-ban
+                if (createDTO.BannedProfileId == profileId)
+                {
+                    result.Message = "It is impossible to ban yourself.";
+                    return result;
+                }
+
                 // Step 4: Cannot ban the community owner
                 var community = await _context.Communities
                     .FirstOrDefaultAsync(c => c.Id == createDTO.CommunityId);
@@ -74,7 +81,20 @@ namespace platform_core_service.Business.Services
 
                 if (community.OwnerId == createDTO.BannedProfileId)
                 {
-                    result.Message = "The community owner cannot be banned";
+                    result.Message = "It is not possible to ban the Community Owner.";
+                    return result;
+                }
+
+                // Step 4b: Moderator cannot ban another Moderator
+                var callerIsModerator = await _context.CommunityModerators
+                    .AnyAsync(m => m.CommunityId == createDTO.CommunityId && m.ModeratorId == profileId);
+
+                var targetIsModerator = await _context.CommunityModerators
+                    .AnyAsync(m => m.CommunityId == createDTO.CommunityId && m.ModeratorId == createDTO.BannedProfileId);
+
+                if (callerIsModerator && targetIsModerator)
+                {
+                    result.Message = "A Moderator cannot ban another Moderator. Please ask the Owner.";
                     return result;
                 }
 
@@ -94,6 +114,13 @@ namespace platform_core_service.Business.Services
 
                 if (existingMember != null)
                     _context.CommunityMembers.Remove(existingMember);
+
+                // Step 6b: Remove moderator record if present (prevent role leak after ban)
+                var existingModerator = await _context.CommunityModerators
+                    .FirstOrDefaultAsync(m => m.CommunityId == createDTO.CommunityId && m.ModeratorId == createDTO.BannedProfileId);
+
+                if (existingModerator != null)
+                    _context.CommunityModerators.Remove(existingModerator);
 
                 // Step 7: Create ban record
                 var ban = new CommunityBan

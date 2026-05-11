@@ -135,6 +135,13 @@ namespace platform_core_service.Business.Services
 
                 if (result.Succeeded)
                 {
+                    var suspensionMessage = await GetActiveSuspensionMessage(user.Id);
+                    if (!string.IsNullOrEmpty(suspensionMessage))
+                    {
+                        returnResult.Message = suspensionMessage;
+                        return returnResult;
+                    }
+
                     returnResult.Result = await _tokenService.IssueTokens(user, loginAccount.RememberMe);
                 }
                 else if (result.IsLockedOut)
@@ -176,6 +183,13 @@ namespace platform_core_service.Business.Services
                 if (user.RefreshTokenValidity == null || user.RefreshTokenValidity < DateTime.UtcNow)
                 {
                     returnResult.Message = "Refresh token has expired. Please login again.";
+                    return returnResult;
+                }
+
+                var suspensionMessage = await GetActiveSuspensionMessage(user.Id);
+                if (!string.IsNullOrEmpty(suspensionMessage))
+                {
+                    returnResult.Message = suspensionMessage;
                     return returnResult;
                 }
 
@@ -505,6 +519,13 @@ namespace platform_core_service.Business.Services
                 if (user != null)
                 {
                     if (!user.EmailConfirmed) user.EmailConfirmed = true;
+                    var suspensionMessage = await GetActiveSuspensionMessage(user.Id);
+                    if (!string.IsNullOrEmpty(suspensionMessage))
+                    {
+                        returnResult.Message = suspensionMessage;
+                        return returnResult;
+                    }
+
                     returnResult.Result = await _tokenService.IssueTokens(user, rememberMe: true);
                 }
                 else
@@ -555,6 +576,13 @@ namespace platform_core_service.Business.Services
                 if (user != null)
                 {
                     if (!user.EmailConfirmed) user.EmailConfirmed = true;
+                    var suspensionMessage = await GetActiveSuspensionMessage(user.Id);
+                    if (!string.IsNullOrEmpty(suspensionMessage))
+                    {
+                        returnResult.Message = suspensionMessage;
+                        return returnResult;
+                    }
+
                     returnResult.Result = await _tokenService.IssueTokens(user, rememberMe: true);
                 }
                 else
@@ -637,6 +665,26 @@ namespace platform_core_service.Business.Services
 
             returnResult.Result = await _tokenService.IssueTokens(newUser, rememberMe: true);
             return returnResult;
+        }
+
+        private async Task<string?> GetActiveSuspensionMessage(string userId)
+        {
+            var profile = await _context.Profiles
+                .FirstOrDefaultAsync(p => p.ApplicationUserId == userId);
+
+            if (profile == null || !profile.IsSuspended) return null;
+
+            if (profile.SuspendedUntil != null && profile.SuspendedUntil <= DateTimeOffset.UtcNow)
+            {
+                profile.IsSuspended = false;
+                profile.SuspendedUntil = null;
+                await _context.SaveChangesAsync();
+                return null;
+            }
+
+            return profile.SuspendedUntil == null
+                ? "Your account has been suspended."
+                : $"Your account has been suspended until {profile.SuspendedUntil:MMM dd, yyyy HH:mm} UTC.";
         }
 
         private async Task<string?> GetGitHubPrimaryEmail(HttpClient http)

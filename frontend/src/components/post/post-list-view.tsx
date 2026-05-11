@@ -8,8 +8,8 @@ import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
 import { useIntersectionObserver } from '@/hooks/use-intersection-observer';
 
 interface PostListViewProps {
-    title: string;
-    subtitle: string;
+    title?: string;
+    subtitle?: string;
     posts: (SelectPostDTO | SelectQAPostDTO)[] | undefined;
     isLoading: boolean;
     isError: boolean;
@@ -46,10 +46,12 @@ export function PostListView({
 
     return (
         <div className="w-full mx-auto py-4 sm:p-6">
-            <div className="mb-6 px-4 sm:px-0">
-                <h1 className="text-2xl font-bold text-heading">{title}</h1>
-                <p className="text-base text-muted-foreground mt-1">{subtitle}</p>
-            </div>
+            {(title || subtitle) && (
+                <div className="mb-6 px-4 sm:px-0">
+                    {title && <h1 className="text-2xl font-bold text-heading">{title}</h1>}
+                    {subtitle && <p className="text-base text-muted-foreground mt-1">{subtitle}</p>}
+                </div>
+            )}
 
             <div className="flex flex-col gap-4 px-4 sm:px-0">
                 {isLoading && (
