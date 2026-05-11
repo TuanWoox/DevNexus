@@ -29,22 +29,24 @@ const menuItems = [
 
 export function LeftSidebar() {
     const pathname = usePathname()
-    const [isCollapsed, setIsCollapsed] = useState(true)
+
+    const [isCollapsed, setIsCollapsed] = useState(() => {
+        if (typeof window === 'undefined') return true
+        return !window.matchMedia('(min-width: 1024px)').matches
+    })
     const [isPanelOpen, setIsPanelOpen] = useState(false)
 
     const { data: unreadCount = 0 } = useUnreadCount()
 
     useEffect(() => {
-        const isLarge = window.matchMedia('(min-width: 1024px)').matches
-        setIsCollapsed(!isLarge)
+        const mediaQuery = window.matchMedia('(min-width: 1024px)')
 
-        const handleResize = () => {
-            const isLarge = window.matchMedia('(min-width: 1024px)').matches
-            if (!isLarge) setIsCollapsed(true)
+        const handleChange = (event: MediaQueryListEvent) => {
+            if (!event.matches) setIsCollapsed(true)
         }
 
-        window.addEventListener('resize', handleResize)
-        return () => window.removeEventListener('resize', handleResize)
+        mediaQuery.addEventListener('change', handleChange)
+        return () => mediaQuery.removeEventListener('change', handleChange)
     }, [])
 
     return (
@@ -57,7 +59,7 @@ export function LeftSidebar() {
             >
                 {/* Collapse toggle */}
                 <button
-                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    onClick={() => setIsCollapsed((prev) => !prev)}
                     className="absolute -right-3 top-5 z-50 flex items-center justify-center w-6 h-6 rounded-full bg-card border border-default text-muted-foreground hover:text-heading hover:bg-subtle transition-colors shadow-sm"
                 >
                     {isCollapsed ? (
@@ -118,7 +120,7 @@ export function LeftSidebar() {
 
                 {/* Notifications */}
                 <button
-                    onClick={() => setIsPanelOpen(!isPanelOpen)}
+                    onClick={() => setIsPanelOpen((prev) => !prev)}
                     className={cn(
                         "relative flex items-center gap-4 rounded-xl transition-colors group mt-2",
                         isCollapsed ? "justify-center py-3" : "px-3 py-3",

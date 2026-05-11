@@ -26,17 +26,12 @@ export function ProfileMediaUploadModal({ isOpen, onClose, profileId, mediaType 
 
     const { mutate: uploadMedia, isPending: isUploading } = useCreateProfileMedia();
 
-    // Reset state when modal opens/closes
-    useEffect(() => {
-        if (isOpen) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setView('options');
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setSelectedFile(null);
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setPreviewUrl(null);
-        }
-    }, [isOpen]);
+    const handleClose = () => {
+        setView('options');
+        setSelectedFile(null);
+        setPreviewUrl(null);
+        onClose();
+    };
 
     // Handle File Selection
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -67,7 +62,7 @@ export function ProfileMediaUploadModal({ isOpen, onClose, profileId, mediaType 
             profileMediaType: mediaType
         }, {
             onSuccess: () => {
-                onClose();
+                handleClose();
             }
         });
     };
@@ -79,7 +74,7 @@ export function ProfileMediaUploadModal({ isOpen, onClose, profileId, mediaType 
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
             <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
                 <DialogHeader className="shrink-0">
                     <DialogTitle className="flex items-center gap-2 text-2xl">
