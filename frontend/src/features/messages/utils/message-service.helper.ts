@@ -39,12 +39,8 @@ export function getAvatarUrl(chat: Chat, currentProfileId: string): string | und
     if (chat.ChatPictureUrl) return chat.ChatPictureUrl;
 
     // For 1-on-1 chats, use the other person's avatar
-    if (!chat.IsGroup) {
-        const otherMember = chat.Members.find(m => m.MemberId !== currentProfileId);
-        return otherMember?.Member?.AvatarUrl || undefined;
-    }
-
-    return undefined;
+    const otherMember = chat.Members.find(m => m.MemberId !== currentProfileId);
+    return otherMember?.Member?.AvatarUrl || "/images/default-avatar.webp";
 }
 
 export function getProfileId(rawProfileId?: string): string {

@@ -29,15 +29,15 @@ const menuItems = [
 
 export function LeftSidebar() {
     const pathname = usePathname()
-    const [isCollapsed, setIsCollapsed] = useState(() => {
-        if (typeof window === 'undefined') return true
-        return !window.matchMedia('(min-width: 1024px)').matches
-    })
+    const [isCollapsed, setIsCollapsed] = useState(true)
     const [isPanelOpen, setIsPanelOpen] = useState(false)
 
     const { data: unreadCount = 0 } = useUnreadCount()
 
     useEffect(() => {
+        const isLarge = window.matchMedia('(min-width: 1024px)').matches
+        setIsCollapsed(!isLarge)
+
         const handleResize = () => {
             const isLarge = window.matchMedia('(min-width: 1024px)').matches
             if (!isLarge) setIsCollapsed(true)
