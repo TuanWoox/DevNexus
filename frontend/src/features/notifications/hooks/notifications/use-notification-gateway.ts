@@ -5,12 +5,12 @@ import { io, Socket } from "socket.io-client";
 import { useSelector } from "react-redux";
 import { useQueryClient } from "@tanstack/react-query";
 import { RootState } from "@/store/store";
-import type { Notification } from "../types/contracts";
-import { getWsBaseUrl } from "../utils/notification-service.helper";
+import type { Notification } from "../../types/contracts";
+import { getWsBaseUrl } from "../../utils/notification-service.helper";
 import {
     prependNotificationToCache,
     setUnreadCountInCache,
-} from "../utils/notification-cache-helper";
+} from "../../utils/notification-cache-helper";
 
 export function useNotificationGateway() {
     const socketRef = useRef<Socket | null>(null);

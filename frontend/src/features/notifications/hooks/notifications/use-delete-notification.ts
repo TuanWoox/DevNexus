@@ -1,8 +1,8 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { notificationService } from "../services/notification-service";
-import { removeNotificationFromCache } from "../utils/notification-cache-helper";
+import { notificationService } from "../../services/notification-service";
+import { removeNotificationFromCache } from "../../utils/notification-cache-helper";
 
 export function useDeleteNotification() {
     const queryClient = useQueryClient();

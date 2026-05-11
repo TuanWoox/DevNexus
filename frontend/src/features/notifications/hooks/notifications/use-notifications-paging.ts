@@ -1,8 +1,8 @@
 "use client";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { notificationService } from "../services/notification-service";
-import { notificationQueryKeys, NotificationFilter } from "./notification-query-keys";
+import { notificationService } from "../../services/notification-service";
+import { notificationQueryKeys, NotificationFilter } from "../notification-query-keys";
 
 const PAGE_SIZE = 20;
 

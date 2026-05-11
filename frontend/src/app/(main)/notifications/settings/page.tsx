@@ -4,15 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Loader2, Bell, BellOff, Trash2 } from "lucide-react";
-import {
-  useGlobalSetting,
-  useUpdateGlobalSetting,
-  useMuteSettings,
-  useRemoveMute,
-} from "@/features/notifications/hooks/settings";
 import { getEntityTypeName, getNotificationTypeName } from "@/features/notifications/utils/notification-helpers";
 import { formatDistanceToNow } from "date-fns";
 import { EntityTypeEnum, NotificationEventEnum } from "@/features/notifications/types/enums";
+import { useGlobalSetting, useUpdateGlobalSetting } from "@/features/notifications/hooks/settings/use-global-setting";
+import { useMuteSettings, useRemoveMute } from "@/features/notifications/hooks/settings/use-mute-settings";
 
 export default function NotificationSettingsPage() {
   const { data: globalSetting, isLoading: isLoadingGlobal } = useGlobalSetting();

@@ -5,9 +5,9 @@ import { Bell, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Card } from "@/components/ui/card";
-import { useNotificationsPaging } from "@/features/notifications/hooks/use-notifications-paging";
-import { useUnreadCount } from "@/features/notifications/hooks/use-unread-count";
-import { useMarkAllAsRead } from "@/features/notifications/hooks/use-mark-all-as-read";
+import { useNotificationsPaging } from "@/features/notifications/hooks/notifications/use-notifications-paging";
+import { useUnreadCount } from "@/features/notifications/hooks/notifications/use-unread-count";
+import { useMarkAllAsRead } from "@/features/notifications/hooks/notifications/use-mark-all-as-read";
 import { NotificationFilter } from "@/features/notifications/hooks/notification-query-keys";
 import { NotificationItem } from "@/components/notification/notification-item";
 import { cn } from "@/lib/utils";
@@ -106,7 +106,7 @@ const NotificationsPage = () => {
                     ) : (
                         <>
                             {notifications.map(n => (
-                                <NotificationItem key={n.Id} notification={n} onClose={() => {}} />
+                                <NotificationItem key={n.Id} notification={n} onClose={() => { }} />
                             ))}
                             {hasNextPage && (
                                 <p ref={sentinelRef} className="h-16 flex items-center justify-center border-t border-default">
