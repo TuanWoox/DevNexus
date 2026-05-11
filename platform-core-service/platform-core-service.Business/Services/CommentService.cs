@@ -506,18 +506,20 @@ namespace platform_core_service.Business.Services
             NotificationEventType eventType,
             string recipientId,
             string actorId,
-            string commentId,
+            string entityId,
             string? entityTitle,
             string? entityPreview,
-            string actionUrl)
+            string actionUrl,
+            NotificationEntityType entityType = NotificationEntityType.COMMENT
+        )
         {
             var notificationEvent = new NotiicationCreatedEntityDTO
             {
                 EventType = eventType,
                 ActorId = actorId,
                 RecipientId = recipientId,
-                EntityType = NotificationEntityType.COMMENT,
-                EntityId = commentId,
+                EntityType = entityType,
+                EntityId = entityId,
                 EntityTitle = entityTitle,
                 EntityPreview = entityPreview,
                 ActionUrl = actionUrl
@@ -545,7 +547,7 @@ namespace platform_core_service.Business.Services
                         eventType: NotificationEventType.REPLY_COMMENT,
                         recipientId: parentCommentAuthorId,
                         actorId: actorId,
-                        commentId: commentId,
+                        entityId: commentId,
                         entityTitle: rootPost?.Title,
                         entityPreview: GetPreview(savedComment.Content),
                         actionUrl: actionUrl);
@@ -561,7 +563,7 @@ namespace platform_core_service.Business.Services
                         eventType: isQuestion ? NotificationEventType.COMMENT_QUESTION : NotificationEventType.COMMENT_POST,
                         recipientId: postAuthorId,
                         actorId: actorId,
-                        commentId: commentId,
+                        entityId: commentId,
                         entityTitle: rootPost?.Title,
                         entityPreview: GetPreview(savedComment.Content),
                         actionUrl: actionUrl);
@@ -582,7 +584,7 @@ namespace platform_core_service.Business.Services
                         eventType: NotificationEventType.COMMENT_ANSWER,
                         recipientId: recipientId,
                         actorId: actorId,
-                        commentId: commentId,
+                        entityId: commentId,
                         entityTitle: rootPost.Title,
                         entityPreview: GetPreview(savedComment.Content),
                         actionUrl: $"/questions/{rootPost.Id}#comment-{commentId}");
@@ -600,16 +602,18 @@ namespace platform_core_service.Business.Services
                     ? $"/questions/{rootPost?.Id}#comment-{commentId}"
                     : $"/post/{rootPost?.Id}#comment-{commentId}";
 
-                if (!string.IsNullOrEmpty(recipientId) && recipientId != actorId)
+                if (!string.IsNullOrEmpty(recipientId) && recipientId != actorId && rootPost != null)
                 {
                     PublishCommentNotification(
                         eventType: isQuestion ? NotificationEventType.COMMENT_QUESTION : NotificationEventType.COMMENT_POST,
                         recipientId: recipientId,
                         actorId: actorId,
-                        commentId: commentId,
-                        entityTitle: rootPost?.Title,
+                        entityId: rootPost.Id,
+                        entityTitle: rootPost.Title,
                         entityPreview: GetPreview(savedComment.Content),
-                        actionUrl: actionUrl);
+                        actionUrl: actionUrl,
+                        entityType: NotificationEntityType.POST
+                    );
                 }
 
                 return Task.CompletedTask;

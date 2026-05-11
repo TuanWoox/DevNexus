@@ -378,8 +378,8 @@ namespace platform_core_service.Business.Services
                 EventType = NotificationEventType.NEW_ANSWER,
                 ActorId = actorId,
                 RecipientId = recipientId,
-                EntityType = NotificationEntityType.ANSWER,
-                EntityId = answerId,
+                EntityType = NotificationEntityType.POST,
+                EntityId = answer.QAPost.Id,
                 EntityTitle = answer.QAPost.Title,
                 EntityPreview = answer.Content?.Substring(0, Math.Min(200, answer.Content?.Length ?? 0)),
                 ActionUrl = $"/questions/{answer.QAPostId}#answer-{answerId}"

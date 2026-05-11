@@ -5,6 +5,7 @@ import { X, Bell, CheckCheck, Settings } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNotificationsPaging } from "@/features/notifications/hooks/notifications/use-notifications-paging";
 import { useUnreadCount } from "@/features/notifications/hooks/notifications/use-unread-count";
 import { useMarkAllAsRead } from "@/features/notifications/hooks/notifications/use-mark-all-as-read";
@@ -51,21 +52,42 @@ export function NotificationPanel({ isOpen, onClose }: Props) {
             )}
             <aside
                 className={cn(
-                    "fixed top-0 left-18 h-screen bg-card border-r border-default shadow-elevated z-40 flex flex-col transition-all duration-300",
+                    "fixed top-0 left-18 h-screen bg-card border-r border-border shadow-2xl z-40 flex flex-col transition-all duration-300",
                     isOpen ? "w-100 opacity-100" : "w-0 opacity-0 pointer-events-none",
                 )}
             >
-                <header className="flex items-center justify-between px-4 py-3 shrink-0 border-b border-default">
+                <header className="flex items-center justify-between px-4 py-3 shrink-0 border-b border-border bg-muted/30">
                     <h2 className="text-lg font-bold text-heading">Notifications</h2>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={onClose}
-                        aria-label="Close"
-                        className="h-8 w-8 rounded-lg hover:bg-subtle"
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        asChild
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 rounded-lg hover:bg-subtle"
+                                    >
+                                        <Link href="/notifications/settings" onClick={onClose}>
+                                            <Settings className="h-4 w-4" />
+                                        </Link>
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Notification Settings</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={onClose}
+                            aria-label="Close"
+                            className="h-8 w-8 rounded-lg hover:bg-subtle"
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </header>
 
                 <nav className="flex shrink-0 px-3 pt-3 gap-2" aria-label="Notification filters">
@@ -155,7 +177,7 @@ export function NotificationPanel({ isOpen, onClose }: Props) {
 
                 <Separator />
 
-                <footer className="p-3 shrink-0 flex flex-col gap-2">
+                <footer className="p-3 shrink-0 bg-muted/30 border-t border-border">
                     <Button
                         asChild
                         variant="ghost"
@@ -165,12 +187,6 @@ export function NotificationPanel({ isOpen, onClose }: Props) {
                             View all notifications
                         </Link>
                     </Button>
-                    <Link href="/notifications/settings" onClick={onClose}>
-                        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:bg-subtle">
-                            <Settings className="h-4 w-4 mr-2" />
-                            Notification Settings
-                        </Button>
-                    </Link>
                 </footer>
             </aside>
         </>

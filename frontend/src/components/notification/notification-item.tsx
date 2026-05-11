@@ -5,6 +5,7 @@ import { Trash2, BellOff, Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Notification } from "@/features/notifications/types/contracts";
 import { NotificationEventEnum } from "@/features/notifications/types/enums";
 import { useMarkAsRead } from "@/features/notifications/hooks/notifications/use-mark-as-read";
@@ -12,6 +13,7 @@ import { useDeleteNotification } from "@/features/notifications/hooks/notificati
 import { useAddMute, useRemoveMute } from "@/features/notifications/hooks/settings/use-mute-settings";
 import { FollowRequestOverlay } from "./follow-request-overlay";
 import { toRelativeTime } from "@/features/messages/utils/message-service.helper";
+import { getEntityTypeName, getNotificationTypeName } from "@/features/notifications/utils/notification-helpers";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -122,44 +124,67 @@ export function NotificationItem({ notification, onClose }: Props) {
 
             {/* Action buttons */}
             <div className="absolute top-2 right-2 flex items-center gap-1">
-                {canMute && (
-                    notification.IsMuted ? (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleUnmute}
-                            disabled={removeMute.isPending}
-                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg hover:bg-primary/10 hover:text-primary"
-                            aria-label="Unmute notification"
-                        >
-                            <Bell className="h-3.5 w-3.5" />
-                        </Button>
-                    ) : (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleMute}
-                            disabled={addMute.isPending}
-                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg hover:bg-muted"
-                            aria-label="Mute notification"
-                        >
-                            <BellOff className="h-3.5 w-3.5" />
-                        </Button>
-                    )
-                )}
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        deleteNotif.mutate(notification.Id);
-                    }}
-                    disabled={deleteNotif.isPending}
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg hover:bg-destructive/10 hover:text-destructive"
-                    aria-label="Delete notification"
-                >
-                    <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <TooltipProvider>
+                    {canMute && (
+                        notification.IsMuted ? (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={handleUnmute}
+                                        disabled={removeMute.isPending}
+                                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg hover:bg-primary/10 hover:text-primary"
+                                        aria-label="Unmute notification"
+                                    >
+                                        <Bell className="h-3.5 w-3.5" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Unmute {getNotificationTypeName(notification.Type)} from {getEntityTypeName(notification.EntityType)}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        ) : (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={handleMute}
+                                        disabled={addMute.isPending}
+                                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg hover:bg-muted"
+                                        aria-label="Mute notification"
+                                    >
+                                        <BellOff className="h-3.5 w-3.5" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Mute {getNotificationTypeName(notification.Type)} from {getEntityTypeName(notification.EntityType)}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        )
+                    )}
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteNotif.mutate(notification.Id);
+                                }}
+                                disabled={deleteNotif.isPending}
+                                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg hover:bg-destructive/10 hover:text-destructive"
+                                aria-label="Delete notification"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Delete notification</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
             </div>
 
             {activeOverlay === NotificationEventEnum.FOLLOW_REQUEST && (
