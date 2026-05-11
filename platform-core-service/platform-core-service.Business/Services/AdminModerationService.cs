@@ -1,6 +1,9 @@
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Moderation;
@@ -17,15 +20,18 @@ namespace platform_core_service.Business.Services
         private readonly ApplicationDbContext _context;
         private readonly IUserContext _userContext;
         private readonly IRepository<ModerationQueueEntry, string> _queueRepository;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
         public AdminModerationService(
             ApplicationDbContext context,
             IUserContext userContext,
-            IRepository<ModerationQueueEntry, string> queueRepository)
+            IRepository<ModerationQueueEntry, string> queueRepository,
+            IBackgroundJobClient backgroundJobClient)
         {
             _context = context;
             _userContext = userContext;
             _queueRepository = queueRepository;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<ReturnResult<PagedData<AdminQueueEntryDTO, string>>> GetPendingQueueAsync(Page<string> page)
@@ -67,9 +73,14 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
                 var adminId = _userContext.ProfileId;
-                // Step 1: Load entry with its linked post
+
+                // Step 1: Load entry with its linked post + Kéo theo cả Author và Tags
                 var entry = await _context.ModerationQueueEntries
                     .Include(e => e.Post)
+                        .ThenInclude(p => p.Author) // <--- Phải kéo Author lên để lấy FullName
+                    .Include(e => e.Post)
+                        .ThenInclude(p => p.PostTags)
+                            .ThenInclude(pt => pt.Tag) // <--- Phải kéo Tag lên để lấy Name
                     .FirstOrDefaultAsync(e => e.Id == dto.Id);
 
                 if (entry == null)
@@ -95,9 +106,34 @@ namespace platform_core_service.Business.Services
 
                 await _context.SaveChangesAsync();
 
-                DevNexusLogger.Instance.Debug(
-                    $"[AdminModeration] Entry {dto.Id} approved by admin {adminId} for post {entry.PostId}");
+                // Gán entry.Post vào biến post để xài cho gọn và hết lỗi đỏ
+                var post = entry.Post;
 
+                if (post is QAPost)
+                {
+                    var aiRequest = new platform_core_service.Common.Models.DTOs.AIDTO.AIFirstResponderRequestDTO
+                    {
+                        PostId = post.Id,
+                        Title = post.Title,
+                        Content = post.Content,
+                        Tags = post.PostTags?.Select(pt => pt.Tag.Name).ToList() ?? new List<string>(),
+                        AuthorId = post.AuthorId,
+                        AuthorDisplayName = post.Author?.FullName ?? "Unknown",
+                        CreatedAt = post.DateCreated ?? DateTimeOffset.UtcNow
+                    };
+
+                    string routingKey = "ai.task.firstresponder.request";
+
+                    _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                        x => x.PublicAiTask(aiRequest, routingKey, MessageBusEnum.Create, MessageBusEntityEnum.AIFirstResponder)
+                    );
+
+                    DevNexusLogger.Instance.Debug($"[AdminModeration] AI Task queued for QA Post {post.Id}");
+                }
+                else
+                {
+                    DevNexusLogger.Instance.Debug($"[AdminModeration] Skipped AI Task for non-QA Post {post.Id}");
+                }
                 result.Result = true;
             }
             catch (Exception ex)

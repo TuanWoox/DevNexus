@@ -1,5 +1,7 @@
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Common.Entities.DbEntities;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Moderation;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
@@ -12,10 +14,12 @@ namespace platform_core_service.Business.Services
     public class ModerationService : IModerationService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
-        public ModerationService(ApplicationDbContext context)
+        public ModerationService(ApplicationDbContext context, IBackgroundJobClient backgroundJobClient)
         {
             _context = context;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<ReturnResult<bool>> HandleCallbackAsync(ModerationCallbackDTO dto)
@@ -27,6 +31,9 @@ namespace platform_core_service.Business.Services
                 // (Race condition: user deleted post while AI pipeline was running)
                 var post = await _context.Posts
                     .IgnoreQueryFilters()
+                    .Include(p => p.Author)
+                    .Include(p => p.PostTags)
+                        .ThenInclude(pt => pt.Tag)
                     .FirstOrDefaultAsync(p => p.Id == dto.PostId);
 
                 if (post == null)
@@ -82,6 +89,30 @@ namespace platform_core_service.Business.Services
 
                 DevNexusLogger.Instance.Debug(
                     $"[Moderation] Post {dto.PostId} → {post.ModerationStatus} (decision={dto.Decision})");
+                var discriminatorValue = _context.Entry(post).Property("Discriminator").CurrentValue?.ToString();
+
+                if (post.ModerationStatus == ModerationStatus.Approved && discriminatorValue == "QAPost")
+                {
+                    var aiRequest = new platform_core_service.Common.Models.DTOs.AIDTO.AIFirstResponderRequestDTO
+                    {
+                        PostId = post.Id,
+                        Title = post.Title,
+                        Content = post.Content,
+                        Tags = post.PostTags?.Select(pt => pt.Tag.Name).ToList() ?? new List<string>(),
+                        AuthorId = post.AuthorId,
+                        // Chú ý: Dùng FullName hoặc DisplayName tùy theo entity Author của bác
+                        AuthorDisplayName = post.Author?.FullName ?? "Unknown",
+                        CreatedAt = post.DateCreated ?? DateTimeOffset.UtcNow
+                    };
+
+                    string routingKey = "ai.task.firstresponder.request";
+
+                    _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                        x => x.PublicAiTask(aiRequest, routingKey, MessageBusEnum.Create, MessageBusEntityEnum.AIFirstResponder)
+                    );
+
+                    DevNexusLogger.Instance.Debug($"[Moderation] AI First Responder Task queued for QA Post {post.Id}");
+                }
 
                 result.Result = true;
             }

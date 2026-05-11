@@ -46,11 +46,10 @@ async def generate_diagram(
     return await service.generate_diagram(request, user_id=current_user.user_id)
 
 
-@router.post("/first-responder", response_model=FirstResponderResponse, summary="Analyze error stacktrace")
-async def analyze_error(
+@router.post("/first-responder", response_model=FirstResponderResponse, summary="Analyze Q&A post error and generate suggested fix")
+async def generate_first_response(
     request: FirstResponderRequest,
     service: CodeToolsService = Depends(get_code_tools_service),
-    current_user: CurrentUser = Depends(get_current_user),
 ) -> FirstResponderResponse:
-    """AI root-causes a stacktrace and suggests actionable fixes."""
-    return await service.analyze_error(request, user_id=current_user.user_id)
+    """Phase 4 — AI First Responder. Called by C# Background Job Worker when a post is approved."""
+    return await service.generate_first_response(request, user_id=request.authorId)
