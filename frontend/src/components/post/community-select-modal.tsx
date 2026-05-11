@@ -32,14 +32,11 @@ export function CommunitySelectModal({
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
-    useEffect(() => {
-        if (!isOpen) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setSearchQuery("");
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setDebouncedSearchQuery("");
-        }
-    }, [isOpen]);
+    const handleClose = () => {
+        setSearchQuery("");
+        setDebouncedSearchQuery("");
+        onClose();
+    };
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -88,7 +85,7 @@ export function CommunitySelectModal({
     const sentinelRef = useIntersectionObserver(handleIntersect);
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
             <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden flex flex-col h-[80vh] sm:h-[600px]">
                 <DialogHeader className="p-4 border-b">
                     <DialogTitle className="text-xl font-bold">Select a Community</DialogTitle>
@@ -135,7 +132,7 @@ export function CommunitySelectModal({
                                     type="button"
                                     onClick={() => {
                                         onSelect(community.id, community.name, community.communityCoverPhotoUrl);
-                                        onClose();
+                                        handleClose();
                                     }}
                                     className={`flex items-center gap-3 p-3 rounded-xl transition-all text-left hover:bg-primary/5 group ${selectedId === community.id
                                         ? "bg-primary/10 border-primary/20"

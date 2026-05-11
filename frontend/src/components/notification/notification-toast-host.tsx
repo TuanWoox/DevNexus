@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { Notification } from "@/features/notifications/types/contracts";
@@ -16,7 +16,7 @@ export function NotificationToastHost() {
     const isOnNotificationsPage = pathname.startsWith("/notifications");
     const [activeOverlay, setActiveOverlay] = useState<NotificationEventEnum | null>(null);
 
-    const handleViewClick = (notification: Notification, toastId: string | number) => {
+    const handleViewClick = useCallback((notification: Notification, toastId: string | number) => {
         toast.dismiss(toastId);
 
         if (notification.Type === NotificationEventEnum.FOLLOW_REQUEST) {
@@ -24,7 +24,7 @@ export function NotificationToastHost() {
         } else if (notification.ActionUrl) {
             router.push(notification.ActionUrl);
         }
-    };
+    }, [router]);
 
     useEffect(() => {
         const handler = (e: Event) => {
@@ -72,7 +72,7 @@ export function NotificationToastHost() {
 
         window.addEventListener("new-notification", handler);
         return () => window.removeEventListener("new-notification", handler);
-    }, [isOnNotificationsPage, router]);
+    }, [isOnNotificationsPage, handleViewClick]);
 
     return (
         <>

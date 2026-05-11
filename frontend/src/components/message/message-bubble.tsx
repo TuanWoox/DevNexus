@@ -114,7 +114,7 @@ function ReaderAvatars({
                 <div className="flex -space-x-1.5">
                     {visible.map((r) => (
                         <Avatar key={r.ReaderId} className="h-4 w-4 ring-1 ring-background" title={r.Reader?.FullName ?? "Unknown"}>
-                            <AvatarImage src={r.Reader?.AvatarUrl ?? undefined} alt={r.Reader?.FullName ?? "Unknown"} />
+                            <AvatarImage src={r.Reader?.AvatarUrl ?? "/images/default-avatar.webp"} alt={r.Reader?.FullName ?? "Unknown"} />
                             <AvatarFallback className="text-[6px] bg-primary/10 text-primary">
                                 {getInitials(r.Reader?.FullName as string ?? "?")}
                             </AvatarFallback>
@@ -183,7 +183,7 @@ export function MessageBubble({
                     <div className="w-7 shrink-0 self-end mb-1">
                         {showAvatar && (
                             <Avatar className="h-7 w-7 ring-1 ring-border/50">
-                                <AvatarImage src={sender.AvatarUrl ?? undefined} alt={sender.FullName} />
+                                <AvatarImage src={sender.AvatarUrl ?? "/images/default-avatar.webp"} alt={sender.FullName} />
                                 <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
                                     {getInitials(sender.FullName)}
                                 </AvatarFallback>
