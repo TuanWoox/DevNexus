@@ -1,5 +1,4 @@
 export interface ReturnResult<T> {
-    message: string,
-    //deprecated
-    result: T
+    message: string;
+    result: T;
 }

@@ -51,6 +51,7 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IPostMediaService, PostMediaService>();
             services.AddScoped<IQAMediaService, QAMediaService>();
             services.AddScoped<IModerationService, ModerationService>();
+            services.AddScoped<IMicroserviceSyncService, MicroserviceSyncService>();
             services.AddScoped<IAdminModerationService, AdminModerationService>();
             services.AddScoped<IAdminPostService, AdminPostService>();
             services.AddScoped<IAdminDashboardService, AdminDashboardService>();

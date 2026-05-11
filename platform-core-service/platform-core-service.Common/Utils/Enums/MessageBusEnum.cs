@@ -18,6 +18,7 @@ namespace platform_core_service.Common.Utils.Enums
     {
         Profile,
         UserFollow,
-        ProfileBlock
+        ProfileBlock,
+        Notification
     }
 }

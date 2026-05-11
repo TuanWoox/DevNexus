@@ -96,7 +96,25 @@ namespace platform_core_service.Business.Services
                     await _dbContext.FollowRequests.AddAsync(followRequest);
                     if (await _dbContext.SaveChangesAsync() > 0)
                     {
-                        returnResult.Result = _mapper.Map<SelectFollowRequest>(followRequest);
+                        var selectFollowRequest = _mapper.Map<SelectFollowRequest>(followRequest);
+                        returnResult.Result = selectFollowRequest;
+
+                        // Publish FOLLOW_REQUEST notification
+                        var notificationEvent = new NotiicationCreatedEntityDTO
+                        {
+                            EventType = NotificationEventType.FOLLOW_REQUEST,
+                            ActorId = _userContext.ProfileId,
+                            RecipientId = createUserFollow.FollowingProfileId,
+                            EntityType = NotificationEntityType.PROFILE,
+                            EntityId = "profile_requests",
+                            EntityTitle = selectFollowRequest.RequesterProfile?.FullName,
+                            EntityPreview = null,
+                            ActionUrl = null,
+                            Timestamp = DateTime.UtcNow
+                        };
+
+                        _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                            x => x.PublicNotification(notificationEvent, "notifications.follow"));
                     }
                     else returnResult.Message = ResponseMessage.MESSAGE_OPERATION_CANT_BE_DONE;
                 }

@@ -90,13 +90,25 @@ export function formatDaySeparator(isoDate: string): string {
 }
 
 export function getWsBaseUrl(): string {
-    const httpUrl =
+    const raw =
         process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTPS ||
         process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTP ||
-        "http://localhost:3001/message-service/api";
+        "/message-service/api";
 
-    // WebSocket namespaces aren't affected by NestJS global prefix — use origin
-    return new URL(httpUrl).origin;
+    // Absolute URL (production, docker, etc.)
+    if (/^https?:\/\//.test(raw)) {
+        const url = new URL(raw);
+        if (process.env.NODE_ENV == "development") return url.origin;
+        // Keep service name, drop /api 
+        return `${url.origin}/message-service`;
+    }
+
+    // Relative URL (Next.js rewrite)
+    if (typeof window !== "undefined") {
+        return `${window.location.origin}/message-service`;
+    }
+
+    return "";
 }
 
 export function getMediaUrl(mediaName: string): string {

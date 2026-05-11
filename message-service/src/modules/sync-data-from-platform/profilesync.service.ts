@@ -21,6 +21,10 @@ export class ProfilesyncService {
                     await this.syncUpdateProfile(publishMessage.Entity as ProfileUpdateInput);
                     break;
                 }
+                case MessageBusEnum.Delete: {
+                    await this.syncDeleteProfile(publishMessage.Entity);
+                    break;
+                }
                 default:
                     console.log('Unknown event');
             }
@@ -45,16 +49,43 @@ export class ProfilesyncService {
     async syncUpdateProfile(profile: ProfileUpdateInput) {
         try {
             const profileId = profile.Id as string;
-            console.log(`[ProfileSync] Updating profile with ID: ${profileId}`, profile);
-            const { ...updateData } = profile;
-            const result = await this.prismaService.profile.update({
+            console.log(`[ProfileSync] Upserting profile with ID: ${profileId}`, profile);
+            
+            const { Id, ...updateData } = profile;
+            
+            // Upsert: Update if exists, create if not exists
+            const result = await this.prismaService.profile.upsert({
                 where: { Id: profileId },
-                data: updateData,
+                update: updateData,
+                create: {
+                    Id: profileId,
+                    ...(updateData as any),
+                },
             });
-            console.log(`[ProfileSync] Profile updated successfully`);
+            console.log(`[ProfileSync] Profile upserted successfully`);
             return result;
         } catch (e) {
-            console.error(`[ProfileSync] Failed to update profile:`, e);
+            console.error(`[ProfileSync] Failed to upsert profile:`, e);
+        }
+    }
+
+    async syncDeleteProfile(profile: any) {
+        try {
+            const profileId = profile.Id as string;
+            console.log(`[ProfileSync] Soft-deleting profile with ID: ${profileId}`);
+            
+            const result = await this.prismaService.profile.update({
+                where: { Id: profileId },
+                data: { 
+                    Deleted: true, 
+                    DateDeleted: new Date() 
+                },
+            });
+            
+            console.log(`[ProfileSync] Profile deleted successfully`);
+            return result;
+        } catch (e) {
+            console.error(`[ProfileSync] Failed to delete profile:`, e);
         }
     }
 }
