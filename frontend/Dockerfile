@@ -57,7 +57,8 @@ ENV NODE_ENV=production
 # This caches the .next/cache directory across builds, but it also prevents
 # .next/cache/fetch-cache from being included in the final image, meaning
 # cached fetch responses from the build won't be available at runtime.
-RUN if [ -f package-lock.json ]; then \
+RUN --mount=type=cache,target=/app/.next/cache \
+    if [ -f package-lock.json ]; then \
     npm run build; \
     elif [ -f yarn.lock ]; then \
     corepack enable yarn && yarn build; \

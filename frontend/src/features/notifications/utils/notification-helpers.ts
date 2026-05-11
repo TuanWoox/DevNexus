@@ -1,7 +1,9 @@
 import { EntityTypeEnum, NotificationEventEnum } from '../types/enums';
 
-export const getEntityTypeName = (type: EntityTypeEnum): string => {
-  const names = {
+export const getEntityTypeName = (type?: EntityTypeEnum | number | null): string => {
+  if (type === undefined || type === null) return "Unknown";
+
+  const names: Record<number, string> = {
     [EntityTypeEnum.POST]: "Post",
     [EntityTypeEnum.QUESTION]: "Question",
     [EntityTypeEnum.COMMENT]: "Comment",
