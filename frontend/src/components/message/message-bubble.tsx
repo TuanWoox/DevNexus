@@ -17,6 +17,7 @@ import {
 import { useDeleteMessage } from "@/features/messages/hooks/messages/use-delete-message";
 import { useUndoDeleteMessage } from "@/features/messages/hooks/messages/use-undo-delete-message";
 import { MessageEditHistoryOverlay } from "@/components/message/message-edit-history-overlay";
+import { MarkdownViewer } from "@/components/editor/markdown-viewer";
 
 const MAX_VISIBLE_AVATARS = 3;
 
@@ -173,6 +174,8 @@ export function MessageBubble({
         [mountedAt, createdAt, message.Content],
     );
 
+    const hasMarkdown = message.Content ? /```|`|\*\*|\*|__|_|\[.*\]\(.*\)|^#{1,6}\s/.test(message.Content) : false;
+
     return (
         <>
             <div className={cn(
@@ -228,15 +231,27 @@ export function MessageBubble({
                         </div>
                     ) : (
                         message.Content && (
-                            <div
-                                className={cn(
-                                    "rounded-lg px-4 py-2.5 text-sm leading-relaxed wrap-break-words shadow-sm",
-                                    isMine
-                                        ? "rounded-br-md bg-linear-to-br from-brand-500 to-brand-600 text-white shadow-[0_2px_6px_rgba(99,102,241,0.25)]"
-                                        : "rounded-bl-md bg-card border border-border/40 text-foreground",
+                            <div className={cn(
+                                "rounded-lg px-4 py-2.5 shadow-sm",
+                                isMine
+                                  ? "rounded-br-md bg-linear-to-br from-brand-500 to-brand-600 shadow-[0_2px_6px_rgba(99,102,241,0.25)]"
+                                  : "rounded-bl-md bg-card border border-border/40",
+                              )}>
+                                {hasMarkdown ? (
+                                  <div className={cn(
+                                    "text-sm leading-relaxed",
+                                    isMine && "[&_*]:text-white [&_code]:bg-white/20 [&_pre]:bg-white/10 [&_a]:text-white [&_a]:underline"
+                                  )}>
+                                    <MarkdownViewer source={message.Content} />
+                                  </div>
+                                ) : (
+                                  <div className={cn(
+                                      "text-sm leading-relaxed wrap-break-words",
+                                      isMine ? "text-white" : "text-foreground"
+                                  )}>
+                                    {message.Content}
+                                  </div>
                                 )}
-                            >
-                                {message.Content}
                             </div>
                         )
                     )}
