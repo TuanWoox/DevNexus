@@ -1,53 +1,60 @@
 import notificationApi from "@/lib/notificationServiceAxiosConfig";
+import type { ReturnResult } from "@/types/common/return-result";
+import { EntityTypeEnum, NotificationEventEnum } from "../types/enums";
+import type { Page } from "@/types/common/page";
+import type { PagedData } from "@/types/common/paged-data";
 
 export interface GlobalSetting {
   AllNotifications: boolean;
 }
 
 export interface MuteSetting {
-  EntityType: number;
+  EntityType: EntityTypeEnum;
   EntityId: string;
-  Type: number;
+  Type: NotificationEventEnum;
   DateCreated?: string;
 }
 
 export interface MuteSettingDto {
-  EntityType: number;
+  EntityType: EntityTypeEnum;
   EntityId: string;
-  Type: number;
+  Type: NotificationEventEnum;
 }
 
 class NotificationSettingsService {
   // Global setting
-  async getGlobalSetting(): Promise<GlobalSetting> {
-    const response = await notificationApi.get<{ Result: GlobalSetting }>("/settings/global");
-    return response.data.Result;
+  async getGlobalSetting(): Promise<ReturnResult<GlobalSetting>> {
+    const { data } = await notificationApi.get<ReturnResult<GlobalSetting>>("/settings/global");
+    return data;
   }
 
-  async updateGlobalSetting(allNotifications: boolean): Promise<GlobalSetting> {
-    const response = await notificationApi.patch<{ Result: GlobalSetting }>(
+  async updateGlobalSetting(allNotifications: boolean): Promise<ReturnResult<GlobalSetting>> {
+    const { data } = await notificationApi.patch<ReturnResult<GlobalSetting>>(
       "/settings/global",
       { AllNotifications: allNotifications }
     );
-    return response.data.Result;
+    return data;
   }
 
   // Mute settings
-  async getMutes(): Promise<MuteSetting[]> {
-    const response = await notificationApi.get<{ Result: MuteSetting[] }>("/settings/mutes");
-    return response.data.Result;
+  async getMutesPaging(page: Page<string>): Promise<ReturnResult<PagedData<MuteSetting, string>>> {
+    const { data } = await notificationApi.post<ReturnResult<PagedData<MuteSetting, string>>>(
+      "/settings/mutes/paging",
+      page
+    );
+    return data;
   }
 
-  async addMute(dto: MuteSettingDto): Promise<boolean> {
-    const response = await notificationApi.post<{ Result: boolean }>("/settings/mutes", dto);
-    return response.data.Result;
+  async addMute(dto: MuteSettingDto): Promise<ReturnResult<boolean>> {
+    const { data } = await notificationApi.post<ReturnResult<boolean>>("/settings/mutes", dto);
+    return data;
   }
 
-  async removeMute(dto: MuteSettingDto): Promise<boolean> {
-    const response = await notificationApi.delete<{ Result: boolean }>("/settings/mutes", {
+  async removeMute(dto: MuteSettingDto): Promise<ReturnResult<boolean>> {
+    const { data } = await notificationApi.delete<ReturnResult<boolean>>("/settings/mutes", {
       data: dto,
     });
-    return response.data.Result;
+    return data;
   }
 }
 

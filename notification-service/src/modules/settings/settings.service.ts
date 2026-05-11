@@ -1,9 +1,10 @@
 import { Injectable, Scope } from '@nestjs/common';
 import { PrismaService } from '../prisma-database/prisma.service';
 import { MuteSettingDto } from './dto/mute-setting.dto';
-import { EntityTypeEnum, NotificationEventEnum } from '../../shared/enums/NotificationEventEnum';
 import { ReturnResult } from '../../shared/dtos/ReturnResult';
 import { UserContextService } from '../auth/userContext.service';
+import { PagedData } from '../../shared/dtos/PagedData';
+import { Page } from '../../shared/dtos/Page';
 
 @Injectable({ scope: Scope.REQUEST })
 export class SettingsService {
@@ -32,18 +33,42 @@ export class SettingsService {
       update: { AllNotifications: allNotifications },
       create: { ProfileId: profileId, AllNotifications: allNotifications },
     });
+
     returnResult.Result = { AllNotifications: setting.AllNotifications };
     return returnResult;
   }
 
-  async getMutes(): Promise<ReturnResult<Array<{ EntityType: EntityTypeEnum; EntityId: string; Type: NotificationEventEnum; DateCreated: Date }>>> {
-    const returnResult = new ReturnResult<Array<{ EntityType: EntityTypeEnum; EntityId: string; Type: NotificationEventEnum; DateCreated: Date }>>();
+  async getMutesPaging(page: Page<string>): Promise<ReturnResult<PagedData<string, any>>> {
+    const returnResult = new ReturnResult<PagedData<string, any>>();
     const profileId = this.userContext.getProfileId();
 
-    returnResult.Result = await this.prisma.notificationMuteSetting.findMany({
-      where: { ProfileId: profileId },
-      select: { EntityType: true, EntityId: true, Type: true, DateCreated: true },
-    });
+    if (page.size > 50) page.size = 50;
+    const skip = (page.pageNumber - 1) * page.size;
+
+    const where = { ProfileId: profileId };
+
+    const [mutes, totalElements] = await Promise.all([
+      this.prisma.notificationMuteSetting.findMany({
+        where,
+        skip,
+        take: page.size,
+        orderBy: { DateCreated: 'desc' },
+        select: { EntityType: true, EntityId: true, Type: true, DateCreated: true },
+      }),
+      this.prisma.notificationMuteSetting.count({ where }),
+    ]);
+
+    returnResult.Result = {
+      page: {
+        size: page.size,
+        pageNumber: page.pageNumber,
+        totalElements,
+        selected: page.selected,
+        indexPaging: mutes.length > 0 ? mutes[mutes.length - 1].DateCreated.toISOString() : null,
+      },
+      data: mutes,
+    };
+
     return returnResult;
   }
 

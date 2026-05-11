@@ -14,6 +14,7 @@ export interface Notification {
     ReadAt?: string;
     GroupKey?: string;
     AggregatedCount: number;
+    IsMuted?: boolean;
     DateCreated: string;
     DateModified: string;
 }

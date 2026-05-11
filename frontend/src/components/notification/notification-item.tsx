@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, BellOff } from "lucide-react";
+import { Trash2, BellOff, Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Notification } from "@/features/notifications/types/contracts";
 import { NotificationEventEnum } from "@/features/notifications/types/enums";
 import { useMarkAsRead } from "@/features/notifications/hooks/notifications/use-mark-as-read";
 import { useDeleteNotification } from "@/features/notifications/hooks/notifications/use-delete-notification";
-import { useAddMute } from "@/features/notifications/hooks/settings/use-mute-settings";
+import { useAddMute, useRemoveMute } from "@/features/notifications/hooks/settings/use-mute-settings";
 import { FollowRequestOverlay } from "./follow-request-overlay";
 import { toRelativeTime } from "@/features/messages/utils/message-service.helper";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,7 @@ export function NotificationItem({ notification, onClose }: Props) {
     const markAsRead = useMarkAsRead();
     const deleteNotif = useDeleteNotification();
     const addMute = useAddMute();
+    const removeMute = useRemoveMute();
     const [activeOverlay, setActiveOverlay] = useState<NotificationEventEnum | null>(null);
 
     const handleClick = () => {
@@ -53,6 +54,19 @@ export function NotificationItem({ notification, onClose }: Props) {
         }
     };
 
+    const handleUnmute = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (notification.EntityType !== undefined && notification.EntityId !== undefined) {
+            removeMute.mutate({
+                EntityType: notification.EntityType,
+                EntityId: notification.EntityId,
+                Type: notification.Type,
+            });
+        }
+    };
+
+    const canMute = notification.EntityType !== undefined && notification.EntityId !== undefined;
+
     return (
         <div
             onClick={handleClick}
@@ -77,7 +91,7 @@ export function NotificationItem({ notification, onClose }: Props) {
                 </AvatarFallback>
             </Avatar>
 
-            <div className="flex-1 min-w-0 pr-7">
+            <div className="flex-1 min-w-0 pr-20">
                 <p className="text-sm text-body leading-relaxed">
                     {notification.Message}
                 </p>
@@ -98,34 +112,55 @@ export function NotificationItem({ notification, onClose }: Props) {
                     {!notification.IsRead && (
                         <span className="text-xs font-semibold text-primary">• New</span>
                     )}
+                    {notification.IsMuted && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            • <BellOff className="h-3 w-3" /> Muted
+                        </span>
+                    )}
                 </div>
             </div>
 
-            {notification.EntityType !== undefined && notification.EntityId !== undefined && (
+            {/* Action buttons */}
+            <div className="absolute top-2 right-2 flex items-center gap-1">
+                {canMute && (
+                    notification.IsMuted ? (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleUnmute}
+                            disabled={removeMute.isPending}
+                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg hover:bg-primary/10 hover:text-primary"
+                            aria-label="Unmute notification"
+                        >
+                            <Bell className="h-3.5 w-3.5" />
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleMute}
+                            disabled={addMute.isPending}
+                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg hover:bg-muted"
+                            aria-label="Mute notification"
+                        >
+                            <BellOff className="h-3.5 w-3.5" />
+                        </Button>
+                    )
+                )}
                 <Button
                     variant="ghost"
                     size="icon"
-                    onClick={handleMute}
-                    disabled={addMute.isPending}
-                    className="absolute top-2 right-10 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg hover:bg-muted"
-                    aria-label="Mute notification"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        deleteNotif.mutate(notification.Id);
+                    }}
+                    disabled={deleteNotif.isPending}
+                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg hover:bg-destructive/10 hover:text-destructive"
+                    aria-label="Delete notification"
                 >
-                    <BellOff className="h-3.5 w-3.5" />
+                    <Trash2 className="h-3.5 w-3.5" />
                 </Button>
-            )}
-            <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    deleteNotif.mutate(notification.Id);
-                }}
-                disabled={deleteNotif.isPending}
-                className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg hover:bg-destructive/10 hover:text-destructive"
-                aria-label="Delete notification"
-            >
-                <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+            </div>
 
             {activeOverlay === NotificationEventEnum.FOLLOW_REQUEST && (
                 <FollowRequestOverlay
