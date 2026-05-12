@@ -10,7 +10,8 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Lock, Star, UserPlus, MessageSquare, MoreHorizontal, Share2, ShieldAlert, UserX, Edit3 } from "lucide-react";
+import { Lock, Star, UserPlus, MessageSquare, MoreHorizontal, Share2, ShieldAlert, UserX, Edit3, Loader2 } from "lucide-react";
+import { useOpenChatByProfile } from "@/features/messages/hooks/chats/use-open-chat-by-profile";
 
 interface ProfileInfoProps {
     profile: SelectProfileDTO;
@@ -19,6 +20,18 @@ interface ProfileInfoProps {
 }
 
 export function ProfileInfo({ profile, isOwnProfile, onEdit }: ProfileInfoProps) {
+    const dropdownTriggerId = `profile-menu-trigger-${profile.id}`;
+    const { openMessagePopup, isCheckingChat } = useOpenChatByProfile({
+        id: profile.id,
+        fullName: profile.fullName || "Unknown",
+        avatarUrl: profile.avatarUrl,
+    });
+
+    const handleMessage = async () => {
+        if (isCheckingChat) return;
+        await openMessagePopup();
+    };
+
     return (
         <div className="px-4 md:px-10 max-w-5xl mx-auto w-full pb-6">
             {/* Name + private badge + options menu */}
@@ -26,10 +39,10 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit }: ProfileInfoProps)
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
                     {profile.fullName || "User Name"}
                 </h1>
-                
+
                 {!isOwnProfile && (
                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger id={dropdownTriggerId} asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground border shadow-sm">
                                 <MoreHorizontal className="w-5 h-5" />
                             </Button>
@@ -95,10 +108,10 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit }: ProfileInfoProps)
             {/* Actions Row - Positioned "under the tags" */}
             <div className="flex items-center gap-2 mt-6">
                 {isOwnProfile ? (
-                    <Button 
+                    <Button
                         onClick={onEdit}
-                        variant="secondary" 
-                        size="default" 
+                        variant="secondary"
+                        size="default"
                         className="h-10 font-semibold px-8 border shadow-sm"
                     >
                         <Edit3 className="w-4 h-4 mr-2" />
@@ -110,8 +123,18 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit }: ProfileInfoProps)
                             <UserPlus className="w-4 h-4 mr-2" />
                             Follow
                         </Button>
-                        <Button variant="secondary" size="default" className="h-10 font-semibold px-8 border shadow-sm">
-                            <MessageSquare className="w-4 h-4 mr-2" />
+                        <Button
+                            variant="secondary"
+                            size="default"
+                            className="h-10 font-semibold px-8 border shadow-sm"
+                            onClick={handleMessage}
+                            disabled={isCheckingChat}
+                        >
+                            {isCheckingChat ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                                <MessageSquare className="w-4 h-4 mr-2" />
+                            )}
                             Message
                         </Button>
                     </>

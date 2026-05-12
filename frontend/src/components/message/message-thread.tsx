@@ -75,7 +75,7 @@ export function MessageThread({
         <div
             ref={scrollContainerRef}
             onScroll={handleScroll}
-            className="flex h-full flex-col-reverse overflow-y-auto px-4 py-3"
+            className="flex h-full flex-col-reverse overflow-y-auto px-2 py-3 sm:px-4"
         >
             <TypingIndicator chatId={chatId} isGroup={isGroup} />
 

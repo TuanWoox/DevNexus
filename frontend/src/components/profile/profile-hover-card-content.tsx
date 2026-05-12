@@ -3,12 +3,13 @@
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
-import { MessageSquare, Star, User, X } from 'lucide-react';
+import { Loader2, MessageSquare, Star, User, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RootState } from '@/store/store';
 import { ProfileHoverCardActions } from './profile-hover-card-actions';
+import { useOpenChatByProfile } from '@/features/messages/hooks/chats/use-open-chat-by-profile';
 
 export interface ProfileHoverCardAuthor {
     fullName?: string;
@@ -51,14 +52,20 @@ export function ProfileHoverCardContent({
     const avatarUrl = author?.avatarUrl || '/images/default-avatar.webp';
     const backgroundUrl = author?.backgroundUrl || '/images/default-background.webp';
     const isOwnProfile = user?.profileId === profileId;
+    const { openMessagePopup, isCheckingChat } = useOpenChatByProfile({
+        id: profileId,
+        fullName,
+        avatarUrl,
+    });
 
     const handleViewProfile = () => {
         router.push(`/profile/${profileId}`);
         onClose?.();
     };
 
-    const handleMessage = () => {
-        router.push(`/messages/new?profileId=${profileId}`);
+    const handleMessage = async () => {
+        if (isCheckingChat) return;
+        await openMessagePopup();
         onClose?.();
     };
 
@@ -131,8 +138,12 @@ export function ProfileHoverCardContent({
                     {isOwnProfile ? 'View My Profile' : 'Profile'}
                 </Button>
                 {!isOwnProfile ? (
-                    <Button size="sm" onClick={handleMessage} className="w-full">
-                        <MessageSquare className="mr-2 h-4 w-4" />
+                    <Button size="sm" onClick={handleMessage} disabled={isCheckingChat} className="w-full">
+                        {isCheckingChat ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                        )}
                         Message
                     </Button>
                 ) : null}
