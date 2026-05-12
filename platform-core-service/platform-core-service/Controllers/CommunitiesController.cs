@@ -53,12 +53,12 @@ namespace platform_core_service.Controllers
         }
 
         [HttpPost("paging")]
-        public async Task<IActionResult> GetPage([FromBody] Page<string> page)
+        public async Task<IActionResult> GetPage([FromBody] CommunityPageRequest request)
         {
             var returnResult = new ReturnResult<PagedData<SelectCommunityDTO, string>>();
             try
             {
-                returnResult = await _communityService.GetPageAsync(page);
+                returnResult = await _communityService.GetPageAsync(request);
             }
             catch (Exception ex)
             {

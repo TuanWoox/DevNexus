@@ -7,4 +7,5 @@ export interface UpdatePostDTO {
     postType?: PostType;
     slug?: string;
     tagNames?: string[];
+    communityId?: string;   // Optional: Community ID to move/associate this post with a community
 }

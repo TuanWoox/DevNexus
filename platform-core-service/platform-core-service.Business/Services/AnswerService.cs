@@ -1,12 +1,15 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Hangfire;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Answer;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
@@ -19,17 +22,20 @@ namespace platform_core_service.Business.Services
         private readonly IUserContext _userContext;
         private readonly IMapper _mapper;
         private readonly IRepository<Answer, string> _answerRepository;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
         public AnswerService(
             ApplicationDbContext dbContext,
             IUserContext userContext,
             IMapper mapper,
-            IRepository<Answer, string> answerRepository)
+            IRepository<Answer, string> answerRepository,
+            IBackgroundJobClient backgroundJobClient)
         {
             _dbContext = dbContext;
             _userContext = userContext;
             _mapper = mapper;
             _answerRepository = answerRepository;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<ReturnResult<SelectAnswerDTO>> CreateAsync(CreateAnswerDTO answerDTO)
@@ -71,6 +77,8 @@ namespace platform_core_service.Business.Services
                 // Step 5: Save
                 _dbContext.Answers.Add(answer);
                 await _dbContext.SaveChangesAsync();
+
+                await PublishAnswerNotificationAsync(answer.Id, profileId);
 
                 // Step 6: Reload with author and return
                 var saved = await _dbContext.Answers
@@ -346,6 +354,39 @@ namespace platform_core_service.Business.Services
                 .FirstOrDefaultAsync();
 
             dto.CurrentUserVote = vote;
+        }
+
+        private async Task PublishAnswerNotificationAsync(string answerId, string actorId)
+        {
+            var answer = await _dbContext.Answers
+                .Include(a => a.QAPost)
+                .FirstOrDefaultAsync(a => a.Id == answerId);
+
+            if (answer?.QAPost == null)
+            {
+                return;
+            }
+
+            var recipientId = answer.QAPost.AuthorId;
+            if (string.IsNullOrEmpty(recipientId) || recipientId == actorId)
+            {
+                return;
+            }
+
+            var notificationEvent = new NotiicationCreatedEntityDTO
+            {
+                EventType = NotificationEventType.NEW_ANSWER,
+                ActorId = actorId,
+                RecipientId = recipientId,
+                EntityType = NotificationEntityType.POST,
+                EntityId = answer.QAPost.Id,
+                EntityTitle = answer.QAPost.Title,
+                EntityPreview = answer.Content?.Substring(0, Math.Min(200, answer.Content?.Length ?? 0)),
+                ActionUrl = $"/questions/{answer.QAPostId}#answer-{answerId}"
+            };
+
+            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                x => x.PublicNotification(notificationEvent, "notifications.answer"));
         }
     }
 }

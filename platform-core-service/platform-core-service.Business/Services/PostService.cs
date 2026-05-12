@@ -107,6 +107,7 @@ namespace platform_core_service.Business.Services
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
+                    .Include(p => p.Community)
                     .FirstOrDefaultAsync(p => p.Id == post.Id);
 
                 result.Result = _mapper.Map<SelectPostDTO>(savedPost);
@@ -143,6 +144,7 @@ namespace platform_core_service.Business.Services
                     .Include(p => p.PostTags)
                         .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
+                    .Include(p => p.Community)
                     .Where(p => p.Id == postId || p.Slug == postId);
 
                 // Apply ModerationStatus filter ONLY if the user is a standard user
@@ -190,6 +192,7 @@ namespace platform_core_service.Business.Services
                                             .Include(p => p.PostTags)
                                             .ThenInclude(pt => pt.Tag)
                                             .Include(p => p.Author)
+                                            .Include(p => p.Community)
                                             .FirstOrDefaultAsync(p => p.Id == postId || p.Slug == postId && p.CommunityId == communityId);
                 if (post == null)
                 {
@@ -221,13 +224,23 @@ namespace platform_core_service.Business.Services
             var result = new ReturnResult<PagedData<SelectPostDTO, string>>();
             try
             {
+                string currentProfileId = _userContext.ProfileId;
+
                 // Step 2: Build query — news feed shows only approved posts for all users
                 var query = _context.Posts
                     .Where(p => p.GetType() == typeof(PostEntity))
+                    .Where(p => 
+                        p.CommunityId == null || // Post that not belong to community
+                        !p.Community.IsPrivate || // Public Community
+                        p.Community.OwnerId == currentProfileId || // User is the community's owner
+                        p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || // User is Moderator
+                        p.Community.Members.Any(m => m.ProfileId == currentProfileId) // User is Member
+                    )
                     .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
+                    .Include(p => p.Community)
                     .AsNoTracking()
                     .AsQueryable();
 
@@ -258,14 +271,106 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                string currentProfileId = _userContext.ProfileId;
+
                 // Step 2: Build query — only concrete Post rows (exclude QAPost subtype)
                 var query = _context.Posts
                     .Where(p => p.GetType() == typeof(PostEntity))
+                    .Where(p => p.CommunityId == null || !p.Community.IsPrivate || p.Community.OwnerId == currentProfileId || p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || p.Community.Members.Any(m => m.ProfileId == currentProfileId))
                     .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Where(p => p.AuthorId == profileId)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
+                    .Include(p => p.Community)
+                    .AsNoTracking()
+                    .AsQueryable();
+
+                // Step 3: Get paged results
+                result.Result = await _postRepository.GetPagingAsync<Page<string>, SelectPostDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCommentCountForListAsync(result.Result.Data.ToList());
+                }
+
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while retrieving posts: {ex.Message}";
+            }
+            return result;
+        }
+
+        public async Task<ReturnResult<PagedData<SelectPostDTO, string>>> GetPageAsyncByCommunityId(Page<string> page, string communityId)
+        {
+            var result = new ReturnResult<PagedData<SelectPostDTO, string>>();
+            try
+            {
+                if (string.IsNullOrEmpty(communityId))
+                {
+                    result.Message = "Community ID is required";
+                    return result;
+                }
+
+                // Verify the caller has access to this community's content
+                var accessCheck = await _socialGuardService.CheckBelongToCommunity(communityId);
+                if (accessCheck.Message != null)
+                {
+                    result.Message = accessCheck.Message;
+                    return result;
+                }
+
+                var query = _context.Posts
+                    .Where(p => p.GetType() == typeof(PostEntity))
+                    .Where(p => p.CommunityId == communityId)
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Include(p => p.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
+                    .Include(p => p.Community)
+                    .AsNoTracking()
+                    .AsQueryable();
+
+                result.Result = await _postRepository.GetPagingAsync<Page<string>, SelectPostDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCommentCountForListAsync(result.Result.Data.ToList());
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while retrieving community posts: {ex.Message}";
+            }
+            return result;
+        }
+
+        public async Task<ReturnResult<PagedData<SelectPostDTO, string>>> GetPostAndQAByProfileId(Page<string> page, string profileId)
+        {
+            var result = new ReturnResult<PagedData<SelectPostDTO, string>>();
+            try
+            {
+                // Step 1: Get current user profile
+                if (string.IsNullOrEmpty(profileId))
+                {
+                    result.Message = "User profile not found";
+                    return result;
+                }
+
+                string currentProfileId = _userContext.ProfileId;
+
+                // Step 2: Build query — only concrete Post rows (exclude QAPost subtype)
+                var query = _context.Posts
+                    .Where(p => p.CommunityId == null || !p.Community.IsPrivate || p.Community.OwnerId == currentProfileId || p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || p.Community.Members.Any(m => m.ProfileId == currentProfileId))
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Where(p => p.AuthorId == profileId)
+                    .Include(p => p.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
+                    .Include(p => p.Community)
                     .AsNoTracking()
                     .AsQueryable();
 
@@ -320,6 +425,17 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                // Step 3b: If CommunityId is provided, validate user belongs to that community
+                if (!string.IsNullOrEmpty(updateDTO.CommunityId))
+                {
+                    var communityCheck = await _socialGuardService.CheckBelongToCommunity(updateDTO.CommunityId);
+                    if (communityCheck.Message != null)
+                    {
+                        result.Message = communityCheck.Message;
+                        return result;
+                    }
+                }
+
                 // Step 4: Update basic fields
                 var oldSlug = post.Slug;
                 _mapper.Map(updateDTO, post);
@@ -350,6 +466,7 @@ namespace platform_core_service.Business.Services
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
+                    .Include(p => p.Community)
                     .FirstOrDefaultAsync(p => p.Id == postId);
 
                 result.Result = _mapper.Map<SelectPostDTO>(updatedPost);

@@ -13,7 +13,15 @@ type ChatListInfiniteData = InfiniteData<ChatListPage>;
 export const useChatById = (chatId: string) => {
     const queryClient = useQueryClient();
 
+    const query = useQuery({
+        queryKey: messagingQueryKeys.chatById(chatId),
+        queryFn: () => chatService.getChatById(chatId),
+        enabled: !!chatId,
+        staleTime: 30_000,
+    });
+
     // Try to find the chat from any already-loaded chat list cache (instant navigation)
+    // Use this as fallback while the query is loading
     const cachedChat = useMemo(() => {
         if (!chatId) return null;
         const tabTypes = ["main", "request", "archived"];
@@ -30,19 +38,12 @@ export const useChatById = (chatId: string) => {
         return null;
     }, [chatId, queryClient]);
 
-    const query = useQuery({
-        queryKey: messagingQueryKeys.chatById(chatId),
-        queryFn: () => chatService.getChatById(chatId),
-        // Skip the network call if we already have the chat from the list cache
-        enabled: !!chatId && !cachedChat,
-        staleTime: 30_000,
-    });
-
-    const chat = cachedChat ?? query.data?.result ?? null;
+    // Prefer the query result (most up-to-date), fallback to cached chat during loading
+    const chat = query.data?.result ?? cachedChat ?? null;
 
     return {
         chat,
-        isLoading: !cachedChat && query.isLoading,
+        isLoading: query.isLoading && !cachedChat,
         isError: query.isError,
         error: query.error,
     };

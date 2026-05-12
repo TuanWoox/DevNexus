@@ -8,6 +8,12 @@ import { MessageBusEntityEnum } from '../../utils/enums/MessageBusEnum';
 import { PrismaService } from '../prisma-database/prisma.service';
 import { NotificationGateway } from '../websocket/notification.gateway';
 import { MessageBusEnum } from 'src/utils/enums/MessageBusEnum';
+import { convertTypeToMessage } from 'src/utils/helper/convertTypeToMessage';
+import type { Notification } from '../../generated/prisma/client';
+
+type NotificationWithActor = Notification & {
+  Actor: { Id: string; FullName: string | null; AvatarUrl: string | null } | null;
+};
 
 @Injectable()
 export class RabbitMQService implements OnModuleInit {
@@ -93,9 +99,6 @@ export class RabbitMQService implements OnModuleInit {
 
     try {
       const data = JSON.parse(msg.content.toString()) as PublishMessageBusDTO<NotiicationCreatedEntity>;
-
-      console.log(data);
-
       switch (data.MessageBusEntityEnum) {
         case MessageBusEntityEnum.Notification:
           await this.createNotificationFromEvent(data);
@@ -161,7 +164,7 @@ export class RabbitMQService implements OnModuleInit {
       ),
     );
 
-    const created: Array<{ recipientId: string; notification: any }> = [];
+    const created: Array<{ recipientId: string; notification: NotificationWithActor }> = [];
     for (let i = 0; i < createdResults.length; i++) {
       const result = createdResults[i];
       if (result.status === 'fulfilled' && result.value) {
@@ -188,9 +191,14 @@ export class RabbitMQService implements OnModuleInit {
       unreadCounts.map((r) => [r.RecipientId, r._count.Id]),
     );
 
-    // Emit notifications with Actor data already included from processRecipient
+    // Emit notifications with Message enriched for real-time payloads
     for (const { recipientId, notification } of created) {
-      this.notificationGateway.emitToUser(recipientId, 'notification:new', notification);
+      const actorName = notification.Actor?.FullName ?? 'Someone';
+      const enrichedNotification = notification.ActorId
+        ? { ...notification, Message: convertTypeToMessage(notification, actorName) }
+        : notification;
+
+      this.notificationGateway.emitToUser(recipientId, 'notification:new', enrichedNotification);
       this.notificationGateway.emitToUser(
         recipientId,
         'notification:unread-count',
@@ -268,7 +276,7 @@ export class RabbitMQService implements OnModuleInit {
 
     try {
       const data = JSON.parse(msg.content.toString()) as PublishMessageBusDTO<any>;
-
+      
       switch (data.MessageBusEntityEnum) {
         case MessageBusEntityEnum.Profile:
           await this.profileSyncService.eventDrive(data);

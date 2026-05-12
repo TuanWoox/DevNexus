@@ -71,16 +71,17 @@ namespace platform_core_service.Business.Services
                     // Publish notification only for new upvotes (not downvotes, not self-votes, not toggle-offs)
                     if (isNewUpvote && post.AuthorId != profileId)
                     {
+                        var isQuestion = post is QAPost;
                         var notificationEvent = new NotiicationCreatedEntityDTO
                         {
-                            EventType = NotificationEventType.UPVOTE_POST,
+                            EventType = isQuestion ? NotificationEventType.UPVOTE_QUESTION : NotificationEventType.UPVOTE_POST,
                             ActorId = profileId,
                             RecipientId = post.AuthorId,
-                            EntityType = NotificationEntityType.POST,
+                            EntityType = isQuestion ? NotificationEntityType.QUESTION : NotificationEntityType.POST,
                             EntityId = postId,
                             EntityTitle = post.Title,
                             EntityPreview = post.Content?.Substring(0, Math.Min(200, post.Content?.Length ?? 0)),
-                            ActionUrl = $"/post/{postId}"
+                            ActionUrl = isQuestion ? $"/questions/{postId}" : $"/post/{postId}"
                         };
 
                         _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
@@ -154,7 +155,7 @@ namespace platform_core_service.Business.Services
                             EntityId = answerId,
                             EntityTitle = answer.QAPost?.Title ?? "Answer",
                             EntityPreview = answer.Content?.Substring(0, Math.Min(200, answer.Content?.Length ?? 0)),
-                            ActionUrl = $"/post/{answer.QAPostId}#answer-{answerId}"
+                            ActionUrl = $"/questions/{answer.QAPostId}#answer-{answerId}"
                         };
 
                         _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
@@ -192,6 +193,13 @@ namespace platform_core_service.Business.Services
                     var comment = await _dbContext.Comments
                         .Include(c => c.Author)
                         .Include(c => c.Post)
+                        .Include(c => c.Answer)
+                            .ThenInclude(a => a.QAPost)
+                        .Include(c => c.ReplyToComment)
+                            .ThenInclude(rc => rc.Answer)
+                                .ThenInclude(a => a.QAPost)
+                        .Include(c => c.ReplyToComment)
+                            .ThenInclude(rc => rc.Post)
                         .FirstOrDefaultAsync(c => c.Id == commentId);
 
                     if (comment == null)
@@ -219,6 +227,12 @@ namespace platform_core_service.Business.Services
                     // Publish notification only for new upvotes
                     if (isNewUpvote && comment.AuthorId != profileId)
                     {
+                        var rootPost = comment.Post ?? comment.Answer?.QAPost ?? comment.ReplyToComment?.Answer?.QAPost;
+                        var isQuestion = rootPost is QAPost;
+                        var actionUrl = isQuestion
+                            ? $"/questions/{rootPost?.Id}#comment-{commentId}"
+                            : $"/post/{rootPost?.Id}#comment-{commentId}";
+
                         var notificationEvent = new NotiicationCreatedEntityDTO
                         {
                             EventType = NotificationEventType.UPVOTE_COMMENT,
@@ -226,9 +240,9 @@ namespace platform_core_service.Business.Services
                             RecipientId = comment.AuthorId,
                             EntityType = NotificationEntityType.COMMENT,
                             EntityId = commentId,
-                            EntityTitle = comment.Post?.Title ?? "Comment",
+                            EntityTitle = rootPost?.Title ?? "Comment",
                             EntityPreview = comment.Content?.Substring(0, Math.Min(200, comment.Content?.Length ?? 0)),
-                            ActionUrl = $"/post/{comment.PostId}#comment-{commentId}"
+                            ActionUrl = actionUrl
                         };
 
                         _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(

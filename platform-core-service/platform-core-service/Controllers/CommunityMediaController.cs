@@ -44,7 +44,7 @@ namespace platform_core_service.Controllers
         [HttpPost("paging/{communityId}")]
         public async Task<IActionResult> GetPaging([TrimmedRequired] string communityId, Page<string> page)
         {
-            ReturnResult<PagedData<SelectCommunityMediaDTO, string>> returnResult = new();
+            ReturnResult<PagedData<DisplayCommunityMediaDTO, string>> returnResult = new();
             try
             {
                 returnResult = await _communityMediaService.GetPaging(communityId, page);

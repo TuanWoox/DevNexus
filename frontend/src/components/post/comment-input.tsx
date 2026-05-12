@@ -63,7 +63,7 @@ export function CommentInput({ postId, currentUserAvatar, isQAPost }: CommentInp
             {/* Avatar */}
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/20 shrink-0 mt-1 border border-default overflow-hidden relative">
                 {currentUserAvatar ? (
-                    <Image src={currentUserAvatar} alt="Current User" fill className="object-cover" />
+                    <Image src={currentUserAvatar} alt="Current User" fill unoptimized className="object-cover" />
                 ) : (
                     <span className="w-full h-full flex items-center justify-center font-bold text-primary">U</span>
                 )}

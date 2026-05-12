@@ -2,6 +2,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Configuration;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Attributes;
 using platform_core_service.Common.Entities.DbEntities;
@@ -26,7 +27,8 @@ namespace platform_core_service.Business.Services
         IConfigurationService configurationService,
         IUserContext userContext,
         ICacheService cacheService,
-        ICommunityService communityService
+        ICommunityService communityService,
+        IConfiguration configuration
     ) : ICommunityMediaService
     {
         private readonly ApplicationDbContext _context = context;
@@ -38,6 +40,7 @@ namespace platform_core_service.Business.Services
         private readonly ICacheService _cacheService = cacheService;
         private readonly ICommunityService _communityService = communityService;
         private readonly DistributedCacheEntryOptions cacheEntryOptions = new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(30) };
+        private readonly IConfiguration _configuration = configuration;
 
         public async Task<string> GetById([TrimmedRequired] string Id)
         {
@@ -67,14 +70,25 @@ namespace platform_core_service.Business.Services
             return fileDestination;
         }
 
-        public async Task<ReturnResult<PagedData<SelectCommunityMediaDTO, string>>> GetPaging([TrimmedRequired] string communityId, Page<string> page)
+        public async Task<ReturnResult<PagedData<DisplayCommunityMediaDTO, string>>> GetPaging([TrimmedRequired] string communityId, Page<string> page)
         {
-            ReturnResult<PagedData<SelectCommunityMediaDTO, string>> returnResult = new();
+            ReturnResult<PagedData<DisplayCommunityMediaDTO, string>> returnResult = new();
             try
             {
                 var query = _context.CommunityMedias.Where(x => x.CommunityId == communityId).OrderByDescending(x => x.IsPrimary).AsQueryable().AsNoTracking();
                 var pagingResult = await _repository.GetPagingAsync<Page<string>, SelectCommunityMediaDTO>(query, page);
-                returnResult.Result = pagingResult;
+                if (pagingResult.Data.Count() > 0)
+                {
+                    string? baseUrl = _configuration["ApiSettings:CommunityMediaBaseUrl"] ?? "https://localhost:7184/api/CommunityMedia";
+                    var displayCommunityMedia = pagingResult.Data.Select(x => new DisplayCommunityMediaDTO
+                    {
+                        Url = baseUrl + "/" + x.Id,
+                        Id = x.Id
+                    }).ToList();
+
+                    returnResult.Result = new PagedData<DisplayCommunityMediaDTO, string>(pagingResult.Page);
+                    returnResult.Result.Data = displayCommunityMedia;
+                }
             }
             catch (Exception ex)
             {

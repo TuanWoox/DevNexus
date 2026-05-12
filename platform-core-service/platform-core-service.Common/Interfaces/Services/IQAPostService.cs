@@ -12,6 +12,8 @@ namespace platform_core_service.Common.Interfaces.Services
         Task<ReturnResult<SelectQAPostDTO>> CreateAsync(CreateQAPostDTO createDTO);
         Task<ReturnResult<SelectQAPostDTO>> GetByIdAsync(string postId);
         Task<ReturnResult<PagedData<SelectQAPostDTO, string>>> GetPageAsync(Page<string> page);
+        Task<ReturnResult<PagedData<SelectQAPostDTO,string>>> GetPageAsyncByProfileId(Page<string> page, string profileId);
+        Task<ReturnResult<PagedData<SelectQAPostDTO, string>>> GetPageAsyncByCommunityId(Page<string> page, string communityId);
         Task<ReturnResult<SelectQAPostDTO>> UpdateAsync(UpdateQAPostDTO updateDTO);
         Task<ReturnResult<bool>> DeleteByIdAsync(string postId);
         Task<ReturnResult<int>> DeleteManyAsync(List<string> ids);

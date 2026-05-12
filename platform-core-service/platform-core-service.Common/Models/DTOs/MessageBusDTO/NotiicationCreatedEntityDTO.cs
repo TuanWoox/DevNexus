@@ -36,49 +36,56 @@ namespace platform_core_service.Common.Models.DTOs.MessageBusDTO
     public enum NotificationEventType
     {
         // Voting
-        UPVOTE_POST,
-        DOWNVOTE_POST,
-        UPVOTE_ANSWER,
-        DOWNVOTE_ANSWER,
-        UPVOTE_COMMENT,
-        DOWNVOTE_COMMENT,
+        UPVOTE_POST = 0,
+        DOWNVOTE_POST = 1,
+        UPVOTE_ANSWER = 2,
+        DOWNVOTE_ANSWER = 3,
+        UPVOTE_COMMENT = 4,
+        DOWNVOTE_COMMENT = 5,
+        UPVOTE_QUESTION = 6,
+        DOWNVOTE_QUESTION = 7,
 
         // Q&A Interactions
-        NEW_ANSWER,
-        COMMENT_POST,
-        COMMENT_ANSWER,
-        REPLY_COMMENT,
-        ANSWER_ACCEPTED,
+        NEW_ANSWER = 8,
+        COMMENT_POST = 9,
+        COMMENT_ANSWER = 10,
+        REPLY_COMMENT = 11,
+        ANSWER_ACCEPTED = 12,
 
         // Follow System
-        FOLLOW_USER,
-        FOLLOW_REQUEST,
-        FOLLOW_ACCEPTED,
+        FOLLOW_USER = 13,
+        FOLLOW_REQUEST = 14,
+        FOLLOW_ACCEPTED = 15,
 
         // Community
-        COMMUNITY_INVITE,
-        COMMUNITY_JOIN_REQUEST,
-        COMMUNITY_POST,
-        COMMUNITY_ROLE_CHANGE,
-        COMMUNITY_BAN,
+        COMMUNITY_INVITE = 16,
+        COMMUNITY_JOIN_REQUEST = 17,
+        COMMUNITY_POST = 18,
+        COMMUNITY_ROLE_CHANGE = 19,
+        COMMUNITY_BAN = 20,
 
         // Messaging
-        NEW_MESSAGE,
-        MESSAGE_REQUEST,
+        NEW_MESSAGE = 21,
+        MESSAGE_REQUEST = 22,
 
         // System
-        MODERATION_RESULT,
-        REPUTATION_MILESTONE,
-        SYSTEM_ANNOUNCEMENT
+        MODERATION_RESULT = 23,
+        REPUTATION_MILESTONE = 24,
+        SYSTEM_ANNOUNCEMENT = 25,
+
+        // Q&A (additional)
+        COMMENT_QUESTION = 26
     }
 
     public enum NotificationEntityType
     {
         POST,
+        QUESTION,
         COMMENT,
         ANSWER,
         COMMUNITY,
         PROFILE,
-        MESSAGE
+        MESSAGE,
+
     }
 }

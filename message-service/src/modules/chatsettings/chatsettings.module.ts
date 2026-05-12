@@ -5,6 +5,7 @@ import { UserfollowsModule } from '../userfollows/userfollows.module';
 import { BullModule } from '@nestjs/bullmq';
 import { ChatSettingProcessor } from './chatsetting.processor';
 import { MessageChatGatewayModule } from '../message-chat-gateway/message-chat-gateway.module';
+import { RabbitMqModule } from '../rabbit-mq/rabbit-mq.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { MessageChatGatewayModule } from '../message-chat-gateway/message-chat-g
       name: 'chatsetting',
       prefix: 'chatsetting'
     }),
+    RabbitMqModule,
   ],
   controllers: [ChatsettingsController],
   providers: [ChatsettingsService, ChatSettingProcessor, Logger],

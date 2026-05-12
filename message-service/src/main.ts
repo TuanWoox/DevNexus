@@ -42,7 +42,7 @@ async function bootstrap() {
 
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   // Set global prefix for all routes
-  app.setGlobalPrefix("message-service/api");
+  app.setGlobalPrefix("api");
 
   // Perform blocking initial sync
   const syncService = app.get(InitialSyncService);

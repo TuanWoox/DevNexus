@@ -24,8 +24,6 @@ services:
       - "8080:8080"
     volumes:
       - platform_core_upload:/var/www/uploads
-    # Chờ postgres healthy mới start platform-core-service
-    # service_healthy = tự động từ healthcheck của postgres
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,13 +44,32 @@ services:
     volumes:
       - message_service_upload:/var/www/Message-Upload
     depends_on:
+      platform-core-service:
+        condition: service_started   # ✅ only wait for start
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
       redis:
         condition: service_healthy
-  
+
+  notification-service: 
+    container_name: notification-service
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    env_file:
+      - ./notification-service/.env.production
+    depends_on:
+      platform-core-service:
+        condition: service_started   # ✅ only wait for start
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   ai-worker:
     container_name: ai-worker
     environment:
@@ -61,9 +78,7 @@ services:
       context: ./ai-worker
       dockerfile: Dockerfile
     volumes:
-      # UPDATE PATH: Replace with your actual model directory path
       - "D:/ai-worker-store/model/my-final-toxic-model:/app/models/my-final-toxic-model"
-      # UPDATE PATH: Replace with your actual HF_CACHE directory path
       - "D:/ai-worker-store/cache:/app/.hf_cache"
     depends_on:
       postgres:
@@ -74,7 +89,6 @@ services:
     build:
       context: .
       dockerfile: ./background-job-worker/Dockerfile
-    # Background worker depends on these services
     depends_on:
       postgres:
         condition: service_healthy
@@ -91,10 +105,7 @@ services:
       POSTGRES_PASSWORD: niko1234
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Chạy init-db.sql khi container start (tạo database devnexus_background_job)
       - ./script/init-db.sql:/docker-entrypoint-initdb.d/init.sql
-    # Healthcheck = kiểm tra postgres ready chưa?
-    # Nếu ready → status = healthy → platform-core-service mới được phép start
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -107,13 +118,9 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
-    # ports:
-    #   - "5672:5672"
-    #   - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
       - rabbitmq_log:/var/log/rabbitmq
-    # Healthcheck - kiểm tra RabbitMQ sẵn sàng
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
@@ -124,12 +131,9 @@ services:
     container_name: redis-server
     image: redis
     restart: always
-    # ports:
-    #   - "6379:6379"
     volumes:
       - redis_data:/data
     command: ["redis-server", "--appendonly", "yes"]
-    # Healthcheck - kiểm tra Redis sẵn sàng
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

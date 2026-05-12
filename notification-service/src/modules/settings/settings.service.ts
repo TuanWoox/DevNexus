@@ -1,16 +1,17 @@
 import { Injectable, Scope } from '@nestjs/common';
 import { PrismaService } from '../prisma-database/prisma.service';
 import { MuteSettingDto } from './dto/mute-setting.dto';
-import { EntityType, NotificationType } from '../../generated/prisma/client';
 import { ReturnResult } from '../../shared/dtos/ReturnResult';
 import { UserContextService } from '../auth/userContext.service';
+import { PagedData } from '../../shared/dtos/PagedData';
+import { Page } from '../../shared/dtos/Page';
 
 @Injectable({ scope: Scope.REQUEST })
 export class SettingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly userContext: UserContextService,
-  ) {}
+  ) { }
 
   async getGlobalSetting(): Promise<ReturnResult<{ AllNotifications: boolean }>> {
     const returnResult = new ReturnResult<{ AllNotifications: boolean }>();
@@ -36,14 +37,37 @@ export class SettingsService {
     return returnResult;
   }
 
-  async getMutes(): Promise<ReturnResult<Array<{ EntityType: EntityType; EntityId: string; Type: NotificationType; DateCreated: Date }>>> {
-    const returnResult = new ReturnResult<Array<{ EntityType: EntityType; EntityId: string; Type: NotificationType; DateCreated: Date }>>();
+  async getMutesPaging(page: Page<string>): Promise<ReturnResult<PagedData<string, any>>> {
+    const returnResult = new ReturnResult<PagedData<string, any>>();
     const profileId = this.userContext.getProfileId();
 
-    returnResult.Result = await this.prisma.notificationMuteSetting.findMany({
-      where: { ProfileId: profileId },
-      select: { EntityType: true, EntityId: true, Type: true, DateCreated: true },
-    });
+    if (page.size > 50) page.size = 50;
+    const skip = (page.pageNumber - 1) * page.size;
+
+    const where = { ProfileId: profileId };
+
+    const [mutes, totalElements] = await Promise.all([
+      this.prisma.notificationMuteSetting.findMany({
+        where,
+        skip,
+        take: page.size,
+        orderBy: { DateCreated: 'desc' },
+        select: { EntityType: true, EntityId: true, Type: true, DateCreated: true },
+      }),
+      this.prisma.notificationMuteSetting.count({ where }),
+    ]);
+
+    returnResult.Result = {
+      page: {
+        size: page.size,
+        pageNumber: page.pageNumber,
+        totalElements,
+        selected: page.selected,
+        indexPaging: mutes.length > 0 ? mutes[mutes.length - 1].DateCreated.toISOString() : null,
+      },
+      data: mutes,
+    };
+
     return returnResult;
   }
 
@@ -55,17 +79,17 @@ export class SettingsService {
       where: {
         ProfileId_EntityType_EntityId_Type: {
           ProfileId: profileId,
-          EntityType: dto.EntityType as EntityType,
+          EntityType: dto.EntityType,
           EntityId: dto.EntityId,
-          Type: dto.Type as NotificationType,
+          Type: dto.Type,
         },
       },
       update: {},
       create: {
         ProfileId: profileId,
-        EntityType: dto.EntityType as EntityType,
+        EntityType: dto.EntityType,
         EntityId: dto.EntityId,
-        Type: dto.Type as NotificationType,
+        Type: dto.Type,
       },
     });
     returnResult.Result = true;
@@ -79,9 +103,9 @@ export class SettingsService {
     await this.prisma.notificationMuteSetting.deleteMany({
       where: {
         ProfileId: profileId,
-        EntityType: dto.EntityType as EntityType,
+        EntityType: dto.EntityType,
         EntityId: dto.EntityId,
-        Type: dto.Type as NotificationType,
+        Type: dto.Type,
       },
     });
     returnResult.Result = true;

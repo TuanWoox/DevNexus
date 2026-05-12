@@ -29,6 +29,9 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Post
 
         public DateTimeOffset? DateModified { get; set; }
         public bool? CurrentUserVote { get; set; }
+
+        public string? CommunityId { get; set; }
+        public SelectPostCommunityDTO? Community { get; set; }
     }
 
     public class SelectPostAuthorDTO
@@ -37,5 +40,13 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Post
         public string FullName { get; set; } = null!;
         public string? AvatarUrl { get; set; }
         public List<string> TechStacks { get; set; } = new List<string>();
+    }
+
+    public class SelectPostCommunityDTO
+    {
+        public string Id { get; set; } = null!;
+        public string Name { get; set; } = null!;
+        public string Slug { get; set; } = null!;
+        public string? CommunityCoverPhotoUrl { get; set; }
     }
 }

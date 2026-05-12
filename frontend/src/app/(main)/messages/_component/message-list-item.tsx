@@ -29,6 +29,7 @@ export function MessageListItem({ item, isActive = false, onSelect }: MessageLis
     const avatarUrl = getAvatarUrl(item, currentProfileId);
 
     const lastMessage = item.Messages?.[0];
+    const isMessageDeleted = lastMessage?.IsDeleted;
     const messageContent = lastMessage?.Content;
     const firstMedia = lastMessage?.Medias?.[0];
     const isCurrentUserSender = lastMessage?.SenderId === currentProfileId;
@@ -44,7 +45,9 @@ export function MessageListItem({ item, isActive = false, onSelect }: MessageLis
         File: " File",
     };
 
-    const previewText = messageContent || (firstMedia ? mediaLabel[firstMedia.Type] || " Media" : "No messages yet");
+    const previewText = isMessageDeleted
+        ? "Message deleted"
+        : messageContent || (firstMedia ? mediaLabel[firstMedia.Type] || " Media" : "No messages yet");
 
     return (
         <button
@@ -99,9 +102,10 @@ export function MessageListItem({ item, isActive = false, onSelect }: MessageLis
                     <p className={cn(
                         "truncate text-[13px] leading-snug transition-colors",
                         isUnread ? "font-semibold text-foreground/90" : "text-muted-foreground",
+                        isMessageDeleted && "italic text-muted-foreground/60"
                     )}>
                         {previewText !== "No messages yet" ? (
-                            isCurrentUserSender ? (
+                            isCurrentUserSender && !isMessageDeleted ? (
                                 <>
                                     <span className="font-medium text-primary/70">You: </span>
                                     {previewText}

@@ -161,3 +161,47 @@ export function markAllAsReadInCache(queryClient: QueryClient) {
     // Reset unread count
     queryClient.setQueryData(notificationQueryKeys.unreadCount(), 0);
 }
+
+export function updateMuteStatusInCache(
+    queryClient: QueryClient,
+    entityType: number,
+    entityId: string,
+    type: number,
+    isMuted: boolean
+) {
+    const filters: NotificationFilter[] = ["all", "unread"];
+    let updated = false;
+
+    for (const filter of filters) {
+        const cacheKey = notificationQueryKeys.list(filter);
+        const oldData = queryClient.getQueryData<InfiniteData<PagedData<Notification, string>>>(cacheKey);
+        if (!oldData?.pages?.length) continue;
+
+        const newPages = oldData.pages.map(page => {
+            const newData = page.data.map(n => {
+                // Check if this notification matches the mute criteria
+                if (
+                    n.EntityType === entityType &&
+                    n.EntityId === entityId &&
+                    n.Type === type
+                ) {
+                    updated = true;
+                    return { ...n, IsMuted: isMuted };
+                }
+                return n;
+            });
+
+            return { ...page, data: newData };
+        });
+
+        queryClient.setQueryData<InfiniteData<PagedData<Notification, string>>>(cacheKey, {
+            ...oldData,
+            pages: newPages,
+        });
+    }
+
+    // Only invalidate mute settings if we actually updated something
+    if (updated) {
+        queryClient.invalidateQueries({ queryKey: ['notification-settings', 'mutes'] });
+    }
+}

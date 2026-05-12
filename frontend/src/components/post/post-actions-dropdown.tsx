@@ -19,6 +19,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { usePostDelete } from '@/hooks/post-hooks/use-post-delete';
+import { useHasMounted } from '@/hooks/use-has-mounted';
 
 interface PostActionsDropdownProps {
     postId: string;
@@ -35,6 +36,7 @@ export function PostActionsDropdown({
     onDeleted,
     dropdownClassName = '',
 }: PostActionsDropdownProps) {
+    const hasMounted = useHasMounted();
     const router = useRouter();
     const basePath = isQAPost ? '/questions' : '/post';
     const { showDeleteAlert, setShowDeleteAlert, isPending, handleDeleteConfirm } = usePostDelete({
@@ -42,16 +44,27 @@ export function PostActionsDropdown({
         onDeleted,
     });
 
+    if (!hasMounted) {
+        return (
+            <div
+                className={`p-2 text-muted-foreground transition-colors ${dropdownClassName}`}
+                aria-label="More options"
+            >
+                <MoreHorizontal className="w-5 h-5" />
+            </div>
+        );
+    }
+
     return (
         <>
             <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
-                    <button
+                    <div
                         className={`p-2 text-muted-foreground hover:text-primary hover:bg-subtle rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${dropdownClassName}`}
                         aria-label="More options"
                     >
                         <MoreHorizontal className="w-5 h-5" />
-                    </button>
+                    </div>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-42 bg-card border rounded-xl shadow-elevated p-1 z-10">
                     {isAuthor ? (

@@ -1,11 +1,10 @@
 export interface Notification {
     Id: string;
     RecipientId: string;
-    Type: string;
+    Type: number;
     ActorId?: string;
-    ActorName?: string;
-    ActorAvatarUrl?: string;
-    EntityType?: string;
+    Actor: Actor
+    EntityType?: number;
     EntityId?: string;
     EntityTitle?: string;
     EntityPreview?: string;
@@ -15,6 +14,13 @@ export interface Notification {
     ReadAt?: string;
     GroupKey?: string;
     AggregatedCount: number;
+    IsMuted?: boolean;
     DateCreated: string;
     DateModified: string;
+}
+
+
+export interface Actor {
+    FullName: string,
+    AvatarUrl?: string,
 }

@@ -5,6 +5,7 @@ using platform_core_service.Common.Models.DTOs.EntityDTO.QAPost;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Attributes;
 
 namespace platform_core_service.Controllers
 {
@@ -59,6 +60,38 @@ namespace platform_core_service.Controllers
             try
             {
                 returnResult = await _qaPostService.GetPageAsync(page);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
+
+        [HttpPost("profile/{profileId}/paging")]
+        public async Task<IActionResult> GetPagingByProfileId([FromBody] Page<string> page, [TrimmedRequired] string profileId)
+        {
+            var returnResult = new ReturnResult<PagedData<SelectQAPostDTO,string>>();
+            try
+            {
+                returnResult = await _qaPostService.GetPageAsyncByProfileId(page, profileId);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
+
+        [HttpPost("community/{communityId}/paging")]
+        public async Task<IActionResult> GetPagingByCommunityId([FromBody] Page<string> page, [TrimmedRequired] string communityId)
+        {
+            var returnResult = new ReturnResult<PagedData<SelectQAPostDTO, string>>();
+            try
+            {
+                returnResult = await _qaPostService.GetPageAsyncByCommunityId(page, communityId);
             }
             catch (Exception ex)
             {

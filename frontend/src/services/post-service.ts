@@ -20,7 +20,22 @@ export const postService = {
     getPostsWithPagination: async (payload: Page<string>): Promise<PagedData<SelectPostDTO, string>> => {
         // Sử dụng POST cho paging vì payload (Page) có cấu trúc phức tạp (filter, sort)
         const { data } = await api.post<ReturnResult<PagedData<SelectPostDTO, string>>>('/Posts/paging', payload);
-        return data.result;
+        return data.result ?? { data: [], page: payload };
+    },
+
+    getPostsByProfileId: async (profileId: string, payload: Page<string>): Promise<PagedData<SelectPostDTO, string>> => {
+        const { data } = await api.post<ReturnResult<PagedData<SelectPostDTO, string>>>(`/Posts/profile/${profileId}/paging`, payload);
+        return data.result ?? { data: [], page: payload };
+    },
+
+    getOverviewByProfileId: async (profileId: string, payload: Page<string>): Promise<PagedData<SelectPostDTO, string>> => {
+        const { data } = await api.post<ReturnResult<PagedData<SelectPostDTO, string>>>(`/Posts/profile/${profileId}/overview/paging`, payload);
+        return data.result ?? { data: [], page: payload };
+    },
+
+    getPostsByCommunityId: async (communityId: string, payload: Page<string>): Promise<PagedData<SelectPostDTO, string>> => {
+        const { data } = await api.post<ReturnResult<PagedData<SelectPostDTO, string>>>(`/Posts/community/${communityId}/paging`, payload);
+        return data.result ?? { data: [], page: payload };
     },
 
     updatePost: async (updatePostDTO: UpdatePostDTO): Promise<SelectPostDTO> => {
