@@ -276,7 +276,7 @@ export class RabbitMQService implements OnModuleInit {
 
     try {
       const data = JSON.parse(msg.content.toString()) as PublishMessageBusDTO<any>;
-
+      
       switch (data.MessageBusEntityEnum) {
         case MessageBusEntityEnum.Profile:
           await this.profileSyncService.eventDrive(data);

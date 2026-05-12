@@ -17,8 +17,8 @@ import {
 import { cn } from '@/lib/utils'
 import { SidebarUserMenu } from './sidebar-user-menu'
 
-import { useUnreadCount } from "@/features/notifications/hooks/notifications/use-unread-count"
-import { NotificationPanel } from "@/components/notification/notification-panel"
+import { useUnreadCount } from "@/features/notifications/hooks/use-unread-count";
+import { NotificationPanel } from "@/components/notification/notification-panel";
 
 const menuItems = [
     { name: 'Home', href: '/feed', icon: Home },
