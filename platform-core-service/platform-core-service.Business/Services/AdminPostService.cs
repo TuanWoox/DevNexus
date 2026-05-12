@@ -94,7 +94,7 @@ namespace platform_core_service.Business.Services
                         x => x.PublicAiTask(aiRequest, routingKey, MessageBusEnum.Create, MessageBusEntityEnum.AIFirstResponder)
                     );
 
-                    DevNexusLogger.Instance.Debug($"[AdminModeration] AI Task queued for QA Post {post.Id}");
+                    DevNexusLogger.Instance.Debug($"[AdminPost] AI Task queued for QA Post {post.Id}");
                 }
                 else
                 {

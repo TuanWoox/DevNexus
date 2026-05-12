@@ -29,11 +29,9 @@ namespace platform_core_service.Business.Services
             {
                 // Use IgnoreQueryFilters so we can still handle callbacks for soft-deleted posts
                 // (Race condition: user deleted post while AI pipeline was running)
+                // Load only the base post first — Author/Tags are loaded conditionally below
                 var post = await _context.Posts
                     .IgnoreQueryFilters()
-                    .Include(p => p.Author)
-                    .Include(p => p.PostTags)
-                        .ThenInclude(pt => pt.Tag)
                     .FirstOrDefaultAsync(p => p.Id == dto.PostId);
 
                 if (post == null)
@@ -89,10 +87,14 @@ namespace platform_core_service.Business.Services
 
                 DevNexusLogger.Instance.Debug(
                     $"[Moderation] Post {dto.PostId} → {post.ModerationStatus} (decision={dto.Decision})");
-                var discriminatorValue = _context.Entry(post).Property("Discriminator").CurrentValue?.ToString();
 
-                if (post.ModerationStatus == ModerationStatus.Approved && discriminatorValue == "QAPost")
+                if (post.ModerationStatus == ModerationStatus.Approved && post is QAPost)
                 {
+                    // Load Author and Tags now that we know this is a QA post
+                    await _context.Entry(post).Reference(p => p.Author).LoadAsync();
+                    await _context.Entry(post).Collection(p => p.PostTags).Query()
+                        .Include(pt => pt.Tag).LoadAsync();
+
                     var aiRequest = new platform_core_service.Common.Models.DTOs.AIDTO.AIFirstResponderRequestDTO
                     {
                         PostId = post.Id,
@@ -100,7 +102,6 @@ namespace platform_core_service.Business.Services
                         Content = post.Content,
                         Tags = post.PostTags?.Select(pt => pt.Tag.Name).ToList() ?? new List<string>(),
                         AuthorId = post.AuthorId,
-                        // Chú ý: Dùng FullName hoặc DisplayName tùy theo entity Author của bác
                         AuthorDisplayName = post.Author?.FullName ?? "Unknown",
                         CreatedAt = post.DateCreated ?? DateTimeOffset.UtcNow
                     };

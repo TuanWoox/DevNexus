@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from google import genai
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.app.core.security import CurrentUser, get_current_user
+from src.app.core.security import CurrentUser, get_current_user, verify_internal_api_key
 from src.app.infrastructure.database import get_db_session
 from src.app.infrastructure.gemini import get_gemini_client
 from src.app.schemas.code_tools import (
@@ -50,6 +50,7 @@ async def generate_diagram(
 async def generate_first_response(
     request: FirstResponderRequest,
     service: CodeToolsService = Depends(get_code_tools_service),
+    _: None = Depends(verify_internal_api_key),
 ) -> FirstResponderResponse:
     """Phase 4 — AI First Responder. Called by C# Background Job Worker when a post is approved."""
     return await service.generate_first_response(request, user_id=request.authorId)

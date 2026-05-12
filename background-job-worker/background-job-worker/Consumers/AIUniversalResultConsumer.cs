@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Data;
@@ -93,8 +93,8 @@ namespace background_job_worker.Consumers
                         catch (Exception ex)
                         {
                             _logger.LogError($"[AI_Consumer] Error processing message: {ex.Message}");
-                            // Bị lỗi lúc chạy logic vẫn ACK để ném tin nhắn lỗi đi, tránh vòng lặp vô tận
-                            await _channel.BasicAckAsync(deliveryTag: ea.DeliveryTag, multiple: false);
+                            // NACK so the message is rejected to the DLQ rather than silently dropped
+                            await _channel.BasicNackAsync(deliveryTag: ea.DeliveryTag, multiple: false, requeue: false);
                         }
                     };
 

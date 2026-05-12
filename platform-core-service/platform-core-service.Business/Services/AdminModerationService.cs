@@ -1,6 +1,5 @@
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.BackgroundJobs;

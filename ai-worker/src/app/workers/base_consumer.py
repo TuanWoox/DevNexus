@@ -26,8 +26,8 @@ class BaseAITaskConsumer(abc.ABC):
         pass
 
     async def start(self):
-        await setup_task_queue(self.queue_name, self.routing_key)
         """Starts the RabbitMQ consumer loop."""
+        await setup_task_queue(self.queue_name, self.routing_key)
         connection = await get_rabbitmq_connection()
         self._channel = await connection.channel()
         
