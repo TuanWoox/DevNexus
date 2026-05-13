@@ -1,7 +1,12 @@
 export interface SelectCommentAuthorDTO {
     id: string;
     fullName: string;
-    avatarUrl: string;
+    avatarUrl?: string;
+    backgroundUrl?: string;
+    bio: string;
+    reputationPoints: number;
+    techStacks: string[];
+    isPrivate: boolean;
 }
 
 export interface SelectCommentDTO {

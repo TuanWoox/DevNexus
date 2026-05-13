@@ -19,6 +19,11 @@ export const chatService = {
         return data;
     },
 
+    getChatByProfileId: async (profileId: string) => {
+        const { data } = await messageApi.get<ReturnResult<Chat | null>>(`/chats/by-profile/${profileId}`);
+        return data;
+    },
+
     createChat: async (dto: CreateChatDto): Promise<ReturnResult<Chat>> => {
         // Backend uses FileInterceptor — must send as FormData with DTO as JSON string
         const formData = new FormData();

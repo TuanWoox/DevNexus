@@ -48,3 +48,5 @@ export function ProfileTabs({ activeTab, setActiveTab, isOwnProfile, isPrivate }
         </div>
     );
 }
+
+

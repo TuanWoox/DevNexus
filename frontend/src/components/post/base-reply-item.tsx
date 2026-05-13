@@ -12,10 +12,16 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from 'next/link';
+import { ProfileHoverCard } from '@/components/profile/profile-hover-card';
 
 export interface ReplyAuthor {
     fullName: string;
     avatarUrl?: string;
+    backgroundUrl?: string;
+    bio?: string;
+    reputationPoints?: number;
+    techStacks?: string[];
+    isPrivate?: boolean;
 }
 
 export interface BaseReplyItemProps {
@@ -68,22 +74,26 @@ export function BaseReplyItem({
 
     return (
         <div className="flex gap-3 sm:gap-4 group">
-            <Link href={`/profile/${authorId}`} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-secondary shrink-0 overflow-hidden border border-default relative">
-                {author?.avatarUrl ? (
-                    <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs font-bold text-heading">
-                        {author?.fullName?.charAt(0) || 'U'}
-                    </div>
-                )}
-            </Link>
+            <ProfileHoverCard profileId={authorId} author={author}>
+                <Link href={`/profile/${authorId}`} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-secondary shrink-0 overflow-hidden border border-default relative">
+                    {author?.avatarUrl ? (
+                        <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs font-bold text-heading">
+                            {author?.fullName?.charAt(0) || 'U'}
+                        </div>
+                    )}
+                </Link>
+            </ProfileHoverCard>
 
             <div className="flex-1 min-w-0">
                 <div className="bg-card border border-default rounded-2xl rounded-tl-none p-3 sm:p-4 inline-block max-w-full overflow-hidden">
                     <div className="flex items-center gap-2 mb-1">
-                        <Link href={`/profile/${authorId}`} className="text-sm font-semibold text-heading hover:text-primary transition-colors">
-                            {author?.fullName || 'Unknown'}
-                        </Link>
+                        <ProfileHoverCard profileId={authorId} author={author}>
+                            <Link href={`/profile/${authorId}`} className="text-sm font-semibold text-heading hover:text-primary transition-colors">
+                                {author?.fullName || 'Unknown'}
+                            </Link>
+                        </ProfileHoverCard>
                         {dateModified && (
                             <span className="text-xs font-semibold text-muted-foreground">
                                 {new Date(dateModified).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}

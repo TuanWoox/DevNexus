@@ -2,6 +2,11 @@ export interface SelectAnswerAuthorDTO {
     id: string;
     fullName: string;
     avatarUrl?: string;
+    backgroundUrl?: string;
+    bio: string;
+    reputationPoints: number;
+    techStacks: string[];
+    isPrivate: boolean;
 }
 
 export interface SelectAnswerDTO {

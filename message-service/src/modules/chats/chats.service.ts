@@ -301,6 +301,72 @@ export class ChatsService {
     return returnResult;
   }
 
+  async getChatByProfileId(targetProfileId: string) {
+    const returnResult = new ReturnResult<Chat | null>();
+    try {
+      const currentProfileId = this.userContext.getProfileId();
+
+      if (!targetProfileId || targetProfileId === currentProfileId) {
+        returnResult.Result = null;
+        return returnResult;
+      }
+
+      const chat = await this.prismaService.chat.findFirst({
+        where: {
+          IsGroup: false,
+          Members: {
+            every: {
+              MemberId: {
+                in: [currentProfileId, targetProfileId],
+              },
+            },
+            some: {
+              MemberId: currentProfileId,
+            },
+          },
+          AND: [
+            {
+              Members: {
+                some: {
+                  MemberId: targetProfileId,
+                },
+              },
+            },
+          ],
+        },
+        include: {
+          Members: {
+            include: {
+              Member: { select: { FullName: true, AvatarUrl: true } },
+            },
+          },
+          ChatSettings: {
+            where: { ProfileId: { equals: currentProfileId } },
+          },
+          Messages: {
+            orderBy: { DateCreated: 'desc' as const },
+            take: 1,
+            include: {
+              Sender: { select: { FullName: true, AvatarUrl: true } },
+              ReadReceipts: {
+                where: { ReaderId: { equals: currentProfileId } },
+                include: {
+                  Reader: { select: { FullName: true, AvatarUrl: true } },
+                },
+              },
+              Medias: true,
+            },
+          },
+        },
+      });
+
+      returnResult.Result = chat;
+    } catch (ex) {
+      returnResult.Message = ex instanceof Error ? ex.message : String(ex);
+    }
+    return returnResult;
+  }
+
   async searchContactsAndGroups(page: Page<string>) {
     const returnResult = new ReturnResult<PagedData<string, Chat>>();
 

@@ -43,5 +43,7 @@ export function ProfileOverviewList({ profileId }: ProfileOverviewListProps) {
             emptyTitle="No recent activities"
             emptySubtitle="This user hasn't posted anything yet."
         />
+
+
     );
 }

@@ -37,9 +37,18 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Post
     public class SelectPostAuthorDTO
     {
         public string Id { get; set; } = null!;
-        public string FullName { get; set; } = null!;
+        public string FullName { get; set; }
         public string? AvatarUrl { get; set; }
+
+        public string? BackgroundUrl { get; set; }
+
+        public string Bio { get; set; }
+
+        public int ReputationPoints { get; set; }
+
         public List<string> TechStacks { get; set; } = new List<string>();
+
+        public bool IsPrivate { get; set; }
     }
 
     public class SelectPostCommunityDTO

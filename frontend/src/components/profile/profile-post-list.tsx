@@ -43,5 +43,7 @@ export function ProfilePostList({ profileId }: ProfilePostListProps) {
             emptyTitle="No posts yet"
             emptySubtitle="This user hasn't created any posts."
         />
+
+
     );
 }
