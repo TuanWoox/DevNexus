@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Model identifiers
 # In Docker: /app/models/text-model (mounted from D:\Ai-Worker-Model\model\my-final-toxic-model)
 # Local development: D:\Learning\Fouth_Year\fine-tunning\my-final-toxic-model
-_expected_local_path = "/app/models/my-final-toxic-model" if os.path.exists("/app") else r"D:\Learning\Fouth_Year\fine-tunning\my-final-toxic-model"
+_expected_local_path = "/app/models/my-final-toxic-model" if os.path.exists("/app") else r"D:\ai-worker-store\model\my-final-toxic-model"
 
 # Kiểm tra xem đường dẫn đó có thực sự tồn tại model không
 

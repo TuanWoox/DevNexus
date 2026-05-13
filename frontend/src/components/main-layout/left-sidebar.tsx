@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SidebarUserMenu } from './sidebar-user-menu'
+import { GlobalSearch } from '@/components/search/global-search'
 
 import { useUnreadCount } from "@/features/notifications/hooks/use-unread-count";
 import { NotificationPanel } from "@/components/notification/notification-panel";
@@ -91,6 +92,10 @@ export function LeftSidebar() {
                         </span>
                     )}
                 </Link>
+
+                <div className={cn("mb-4", isCollapsed ? "px-0" : "px-2")}>
+                    <GlobalSearch compact={isCollapsed} />
+                </div>
 
                 {/* Menu */}
                 <nav className="flex flex-col gap-0.5">
