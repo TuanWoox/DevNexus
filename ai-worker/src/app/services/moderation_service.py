@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------
 # Tier boundaries
 # -----------------------------------------------------------------------
-_SAFE_THRESHOLD = 0.3
-_TOXIC_THRESHOLD = 0.7
+_SAFE_THRESHOLD = 0.2
+_TOXIC_THRESHOLD = 0.6
 _T2_CONFIDENCE_THRESHOLD = 0.8
 
 _MODEL = "gemini-2.5-flash-lite"

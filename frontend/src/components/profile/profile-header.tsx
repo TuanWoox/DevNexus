@@ -2,11 +2,9 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { Camera, EditIcon, Image as ImageIcon } from "lucide-react";
+import { Camera, Image as ImageIcon } from "lucide-react";
 import { SelectProfileDTO } from "@/types/profile/select-profile-dto";
 import { ProfileMediaType } from "@/types/profile-media/profile-media-type";
-import { EditProfileModal } from "@/components/profile/edit-profile-modal";
 import { ProfileMediaUploadModal } from "@/components/profile/avatar-upload-modal";
 
 interface ProfileHeaderProps {
@@ -15,7 +13,6 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({ profile, isOwnProfile }: ProfileHeaderProps) {
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
     const [isBackgroundModalOpen, setIsBackgroundModalOpen] = useState(false);
 
@@ -23,11 +20,11 @@ export function ProfileHeader({ profile, isOwnProfile }: ProfileHeaderProps) {
         <>
             {/* Background / Cover Image */}
             <div
-                className={`w-full h-52 md:h-72 relative bg-gradient-to-br from-primary/30 via-primary/10 to-transparent ${isOwnProfile ? 'group cursor-pointer' : ''}`}
+                className={`w-full h-52 md:h-72 relative bg-linear-to-br from-primary/30 via-primary/10 to-transparent ${isOwnProfile ? 'group cursor-pointer' : ''}`}
                 onClick={() => { if (isOwnProfile) setIsBackgroundModalOpen(true) }}
             >
                 <Image
-                    src={profile.backgroundUrl || "https://images.unsplash.com/photo-1707343843437-caacff5cfa74"}
+                    src={profile.backgroundUrl || "/images/default-background.webp"}
                     alt="Cover Image"
                     fill
                     priority
@@ -35,7 +32,7 @@ export function ProfileHeader({ profile, isOwnProfile }: ProfileHeaderProps) {
                     className={`object-cover ${isOwnProfile ? 'transition-opacity group-hover:opacity-80' : ''}`}
                 />
                 {/* Bottom gradient overlay for depth */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-t from-black/30 via-transparent to-transparent" />
 
                 {isOwnProfile && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -76,31 +73,11 @@ export function ProfileHeader({ profile, isOwnProfile }: ProfileHeaderProps) {
                             </div>
                         )}
                     </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-2 mb-2">
-                        {isOwnProfile && (
-                            <Button
-                                variant="custom"
-                                size="default"
-                                onClick={() => setIsEditModalOpen(true)}
-                                className="btn-secondary font-semibold px-5 border-2"
-                            >
-                                <EditIcon className="w-4 h-4 mr-2" />
-                                Edit Profile
-                            </Button>
-                        )}
-                    </div>
                 </div>
             </div>
 
             {isOwnProfile && (
                 <>
-                    <EditProfileModal
-                        isOpen={isEditModalOpen}
-                        onClose={() => setIsEditModalOpen(false)}
-                        currentProfile={profile}
-                    />
                     <ProfileMediaUploadModal
                         isOpen={isAvatarModalOpen}
                         onClose={() => setIsAvatarModalOpen(false)}
@@ -115,6 +92,10 @@ export function ProfileHeader({ profile, isOwnProfile }: ProfileHeaderProps) {
                     />
                 </>
             )}
+
         </>
     );
 }
+
+
+

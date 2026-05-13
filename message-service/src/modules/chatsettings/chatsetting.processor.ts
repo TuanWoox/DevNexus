@@ -3,6 +3,10 @@ import { Job } from "bullmq";
 import { PrismaService } from "../prisma-database/prisma.service";
 import { Logger } from "@nestjs/common";
 import { RabbitMQService } from '../rabbit-mq/rabbitmq.service';
+import { PublishMessageBusDTO } from "src/shared/dtos/helper/PublishMessageBusDTO";
+import { NotiicationCreatedEntity } from "src/shared/dtos/helper/NotificationEventDTO";
+import { EntityTypeEnum, NotificationEventEnum } from "src/utils/enums/NotificationEventEnum";
+import { MessageBusEntityEnum, MessageBusEnum } from "src/utils/enums/MessageBusEnum";
 
 interface UnmuteData {
     chatSettingId: string
@@ -65,7 +69,7 @@ export class ChatSettingProcessor extends WorkerHost {
     private async sendMessageNotification(data: SendMessageNotificationData) {
         try {
             const { chatId, senderId, messageContent } = data;
-            
+
             // Get chat with members and settings
             const chat = await this.prismaService.chat.findFirst({
                 where: { Id: chatId },
@@ -76,48 +80,56 @@ export class ChatSettingProcessor extends WorkerHost {
                     },
                 }
             });
-            
+
             if (!chat) {
                 this.logger.warn(`Chat ${chatId} not found`);
                 return;
             }
-            
-            // Get sender profile
-            const sender = await this.prismaService.profile.findFirst({
-                where: { Id: senderId },
-                select: { FullName: true }
-            });
-            
+
             // Get recipients who have this as a request (IsRequested: true)
             const requestRecipients = chat.ChatSettings
                 .filter(cs => !cs.IsMuted) // Also filter out muted
                 .map(cs => cs.ProfileId);
-            
+
             if (requestRecipients.length === 0) {
                 this.logger.log(`No request recipients for chat ${chatId}`);
                 return;
             }
-            
+
             // Publish notification event to RabbitMQ
-            // IMPORTANT: EntityId is "message_requests" (static) to group ALL requests together
-            const notificationEvent = {
-                EventType: 'MESSAGE_REQUEST', // Use enum value
-                ActorId: senderId,
-                RecipientId: requestRecipients, // Array for multiple recipients
-                EntityType: 'MESSAGE', // Use enum value
-                EntityId: 'message_requests', // Static string - groups all message requests together!
-                EntityTitle: sender?.FullName,
-                EntityPreview: messageContent?.substring(0, 100),
-                ActionUrl: `/messages?chatId=${chatId}`, // Format: /messages?chatId={chatId}
-                Timestamp: new Date(),
+            // IMPORTANT: EntityId is intentionally static ("message_requests")
+            // so ALL message request notifications are grouped together.
+            const publishMessage: PublishMessageBusDTO<NotiicationCreatedEntity> = {
+                Entity: {
+                    EventType: NotificationEventEnum.MESSAGE_REQUEST,
+                    ActorId: senderId,
+                    // Multiple recipients can receive the same notification
+                    RecipientId: requestRecipients,
+                    EntityType: EntityTypeEnum.MESSAGE,
+                    // Static ID used to group all message request notifications
+                    EntityId: 'message_requests',
+                    // Notification title shown to recipients
+                    EntityTitle: 'New Message Request',
+                    // Short preview of the message content (max 100 chars)
+                    EntityPreview: messageContent?.substring(0, 100),
+                    // Redirect URL to open the related chat
+                    // Format: /messages/{chatId}
+                    ActionUrl: `/messages/${chatId}`,
+                    // ISO timestamp for notification creation time
+                    Timestamp: new Date().toISOString(),
+                },
+                // Publish "Create" event to message bus
+                MessageBusEnum: MessageBusEnum.Create,
+                // Notification entity channel/topic
+                MessageBusEntityEnum: MessageBusEntityEnum.Notification,
             };
-            
+
             await this.rabbitMQService.publish(
                 'devnexus_notifications',
                 'notifications.message',
-                notificationEvent
+                publishMessage
             );
-            
+
             this.logger.log(`MESSAGE_REQUEST notification published for chat ${chatId}, recipients: ${requestRecipients.length}`);
         }
         catch (ex) {

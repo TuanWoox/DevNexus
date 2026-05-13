@@ -1,10 +1,15 @@
 import { PostType } from "./create-post-dto";
+import { ModerationStatus } from "./moderation-status";
 
 export interface SelectPostAuthorDTO {
     id: string;
     fullName: string;
     avatarUrl?: string;
+    backgroundUrl?: string;
+    bio: string;
+    reputationPoints: number;
     techStacks: string[];
+    isPrivate: boolean;
 }
 
 export interface SelectPostCommunityDTO {
@@ -20,6 +25,8 @@ export interface SelectPostDTO {
     content: string;
     slug: string;
     postType: PostType;
+    moderationStatus: ModerationStatus;
+    moderationReason?: string | null;
     authorId: string;
     author?: SelectPostAuthorDTO;
     upvoteCount: number;

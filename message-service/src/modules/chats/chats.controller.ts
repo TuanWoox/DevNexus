@@ -69,6 +69,23 @@ export class ChatsController {
     return returnResult;
   }
 
+  @Get('by-profile/:profileId')
+  @HttpCode(200)
+  async getChatByProfileId(@Param('profileId') profileId: string) {
+    let returnResult = new ReturnResult<Chat | null>();
+    try {
+      returnResult = await this.chatsService.getChatByProfileId(profileId);
+    }
+    catch (ex) {
+      if (ex instanceof Error) {
+        returnResult.Message = ex.message;
+      } else {
+        returnResult.Message = String(ex);
+      }
+    }
+    return returnResult;
+  }
+
   @Get(':chatId')
   @HttpCode(200)
   async getById(@Param('chatId') chatId: string) {

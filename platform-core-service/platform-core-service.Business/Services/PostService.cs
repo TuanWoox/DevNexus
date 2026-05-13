@@ -32,6 +32,7 @@ namespace platform_core_service.Business.Services
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IAiWorkerClient _aiWorkerClient;
         private readonly IConfigurationService _configurationService;
+        private readonly IModerationService _moderationService;
 
         public PostService(
             ApplicationDbContext context,
@@ -41,7 +42,8 @@ namespace platform_core_service.Business.Services
             ISocialGuardService socialGuardService,
             IBackgroundJobClient backgroundJobClient,
             IAiWorkerClient aiWorkerClient,
-            IConfigurationService configurationService
+            IConfigurationService configurationService,
+            IModerationService moderationService
         )
         {
             _context = context;
@@ -52,6 +54,7 @@ namespace platform_core_service.Business.Services
             _backgroundJobClient = backgroundJobClient;
             _aiWorkerClient = aiWorkerClient;
             _configurationService = configurationService;
+            _moderationService = moderationService;
         }
 
         public async Task<ReturnResult<SelectPostDTO>> CreateAsync(CreatePostDTO createDTO)
@@ -66,13 +69,7 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Keyword filter: posts with banned keywords skip AI submission (stay Pending for human review)
-                var bannedKeywords = await GetBannedKeywordsAsync();
-                bool hasBannedKeyword = bannedKeywords.Any(k =>
-                    !string.IsNullOrEmpty(k) && (
-                        (createDTO.Content ?? "").Contains(k, StringComparison.OrdinalIgnoreCase) ||
-                        (createDTO.Title ?? "").Contains(k, StringComparison.OrdinalIgnoreCase)
-                    ));
+                var matchedBannedKeywords = await GetMatchedBannedKeywordsAsync(createDTO.Title, createDTO.Content);
 
                 // Step 3: Map DTO to entity
                 var post = _mapper.Map<PostEntity>(createDTO);
@@ -114,9 +111,20 @@ namespace platform_core_service.Business.Services
 
                 // Step 8: Fire-and-forget — submit to AI moderation pipeline.
                 // Runs after response is already built; never blocks or throws to caller.
-                // Skip AI submission for banned-keyword posts — they stay Pending for human review.
-                if (!hasBannedKeyword)
-                    await _aiWorkerClient.SubmitForModerationAsync(post.Id, createDTO.Content);
+                // Banned-keyword posts bypass AI and go directly to human review.
+                if (matchedBannedKeywords.Any())
+                {
+                    await _moderationService.EnqueueBannedKeywordReviewAsync(post.Id, matchedBannedKeywords);
+                    if (result.Result != null)
+                    {
+                        result.Result.ModerationStatus = ModerationStatus.InReview;
+                        result.Result.ModerationReason = BuildBannedKeywordReason(matchedBannedKeywords);
+                    }
+                }
+                else
+                {
+                    await _aiWorkerClient.SubmitForModerationAsync(post.Id, createDTO.Title, createDTO.Content);
+                }
             }
             catch (Exception ex)
             {
@@ -137,6 +145,7 @@ namespace platform_core_service.Business.Services
                     returnResult.Message = "Post ID is required";
                     return returnResult;
                 }
+                var currentProfileId = _userContext.ProfileId;
                 bool hasPrivilegedAccess = _userContext.IsAdmin || _userContext.IsModerator;
 
                 // Step 2: Load post with tags and author (public read)
@@ -147,15 +156,19 @@ namespace platform_core_service.Business.Services
                     .Include(p => p.Community)
                     .Where(p => p.Id == postId || p.Slug == postId);
 
-                // Apply ModerationStatus filter ONLY if the user is a standard user
-                if (!hasPrivilegedAccess)
-                {
-                    query = query.Where(p => p.ModerationStatus == ModerationStatus.Approved);
-                }
-
                 var post = await query.FirstOrDefaultAsync();
 
                 if (post == null)
+                {
+                    returnResult.Message = $"Post {postId} not found";
+                    return returnResult;
+                }
+
+                var canViewModerationState = post.ModerationStatus == ModerationStatus.Approved
+                    || post.AuthorId == currentProfileId
+                    || hasPrivilegedAccess;
+
+                if (!canViewModerationState)
                 {
                     returnResult.Message = $"Post {postId} not found";
                     return returnResult;
@@ -189,13 +202,25 @@ namespace platform_core_service.Business.Services
             ReturnResult<SelectPostDTO> returnResult = new ReturnResult<SelectPostDTO>();
             try
             {
+                var currentProfileId = _userContext.ProfileId;
+                bool hasPrivilegedAccess = _userContext.IsAdmin || _userContext.IsModerator;
                 var post = await _context.Posts
                                             .Include(p => p.PostTags)
                                             .ThenInclude(pt => pt.Tag)
                                             .Include(p => p.Author)
                                             .Include(p => p.Community)
-                                            .FirstOrDefaultAsync(p => p.Id == postId || p.Slug == postId && p.CommunityId == communityId);
+                                            .FirstOrDefaultAsync(p => (p.Id == postId || p.Slug == postId) && p.CommunityId == communityId);
                 if (post == null)
+                {
+                    returnResult.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_FOUND, "post", postId);
+                    return returnResult;
+                }
+
+                var canViewModerationState = post.ModerationStatus == ModerationStatus.Approved
+                    || post.AuthorId == currentProfileId
+                    || hasPrivilegedAccess;
+
+                if (!canViewModerationState)
                 {
                     returnResult.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_FOUND, "post", postId);
                     return returnResult;
@@ -238,7 +263,8 @@ namespace platform_core_service.Business.Services
                         p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || // User is Moderator
                         p.Community.Members.Any(m => m.ProfileId == currentProfileId) && !p.Community.Bans.Any(b => b.BannedProfileId == currentProfileId) // User is Member, not banned
                     )
-                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved
+                        || (p.AuthorId == currentProfileId && p.ModerationStatus != ModerationStatus.Approved))
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
@@ -286,7 +312,8 @@ namespace platform_core_service.Business.Services
                         p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) ||
                         p.Community.Members.Any(m => m.ProfileId == currentProfileId) && !p.Community.Bans.Any(b => b.BannedProfileId == currentProfileId)
                     )
-                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved
+                        || (profileId == currentProfileId && p.AuthorId == currentProfileId && p.ModerationStatus != ModerationStatus.Approved))
                     .Where(p => p.AuthorId == profileId)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
@@ -335,7 +362,8 @@ namespace platform_core_service.Business.Services
                 var query = _context.Posts
                     .Where(p => p.GetType() == typeof(PostEntity))
                     .Where(p => p.CommunityId == communityId)
-                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved
+                        || (p.AuthorId == _userContext.ProfileId && p.ModerationStatus != ModerationStatus.Approved))
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
@@ -382,7 +410,8 @@ namespace platform_core_service.Business.Services
                         p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) ||
                         p.Community.Members.Any(m => m.ProfileId == currentProfileId) && !p.Community.Bans.Any(b => b.BannedProfileId == currentProfileId)
                     )
-                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved
+                        || (profileId == currentProfileId && p.AuthorId == currentProfileId && p.ModerationStatus != ModerationStatus.Approved))
                     .Where(p => p.AuthorId == profileId)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
@@ -472,6 +501,8 @@ namespace platform_core_service.Business.Services
                     await UpdatePostTagsAsync(post, updateDTO.TagNames, postId);
                 }
 
+                var shouldModerate = !string.IsNullOrWhiteSpace(updateDTO.Content) || !string.IsNullOrWhiteSpace(updateDTO.Title);
+
                 // Step 7: Save changes
                 _context.Posts.Update(post);
                 await _context.SaveChangesAsync();
@@ -479,7 +510,26 @@ namespace platform_core_service.Business.Services
                 // Step 8: Link any newly provided pre-uploaded media
                 if (updateDTO.MediaIds?.Count > 0) _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x => x.UpdatePostMediaPostId(_userContext.UserId, postId, updateDTO.MediaIds));
 
-                // Step 9: Reload and return
+                // Step 9: Reset and re-submit for moderation.
+                // Edited content must pass the pipeline again before becoming visible.
+                if (shouldModerate)
+                {
+                    var matchedBannedKeywords = await GetMatchedBannedKeywordsAsync(post.Title, post.Content);
+
+                    if (matchedBannedKeywords.Any())
+                    {
+                        await _moderationService.EnqueueBannedKeywordReviewAsync(postId, matchedBannedKeywords);
+                    }
+                    else
+                    {
+                        post.ModerationStatus = ModerationStatus.Pending;
+                        post.ModerationReason = null;
+                        await _context.SaveChangesAsync();
+                        await _aiWorkerClient.SubmitForModerationAsync(postId, post.Title, post.Content);
+                    }
+                }
+
+                // Step 10: Reload after moderation changes so response matches persisted state
                 var updatedPost = await _context.Posts
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
@@ -490,25 +540,6 @@ namespace platform_core_service.Business.Services
                 result.Result = _mapper.Map<SelectPostDTO>(updatedPost);
                 await SetCurrentUserVoteAsync(result.Result);
                 await SetCurrentUserSavedAsync(result.Result);
-
-                // Step 10: Reset to Pending and re-submit for moderation.
-                // Edited content must pass the pipeline again before becoming visible.
-                // Banned-keyword check: posts with banned keywords skip AI submission (stay Pending for human review).
-                if (!string.IsNullOrWhiteSpace(updateDTO.Content))
-                {
-                    var bannedKeywords = await GetBannedKeywordsAsync();
-                    bool hasBannedKeyword = bannedKeywords.Any(k =>
-                        !string.IsNullOrEmpty(k) && (
-                            (updateDTO.Content ?? "").Contains(k, StringComparison.OrdinalIgnoreCase) ||
-                            (updateDTO.Title ?? "").Contains(k, StringComparison.OrdinalIgnoreCase)
-                        ));
-
-                    post.ModerationStatus = ModerationStatus.Pending;
-                    await _context.SaveChangesAsync();
-
-                    if (!hasBannedKeyword)
-                        await _aiWorkerClient.SubmitForModerationAsync(postId, updateDTO.Content);
-                }
             }
             catch (Exception ex)
             {
@@ -618,6 +649,27 @@ namespace platform_core_service.Business.Services
                 return new List<string>();
             try { return System.Text.Json.JsonSerializer.Deserialize<List<string>>(settingResult.Result.Value) ?? new List<string>(); }
             catch { return new List<string>(); }
+        }
+
+        private async Task<List<string>> GetMatchedBannedKeywordsAsync(string? title, string? content)
+        {
+            var bannedKeywords = await GetBannedKeywordsAsync();
+            return bannedKeywords
+                .Where(k => !string.IsNullOrWhiteSpace(k) && (
+                    (content ?? "").Contains(k, StringComparison.OrdinalIgnoreCase) ||
+                    (title ?? "").Contains(k, StringComparison.OrdinalIgnoreCase)
+                ))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private static string BuildBannedKeywordReason(IReadOnlyCollection<string> matchedKeywords)
+        {
+            var keywordPreview = matchedKeywords.Where(k => !string.IsNullOrWhiteSpace(k)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            var reason = keywordPreview.Any()
+                ? $"Banned keywords detected: {string.Join(", ", keywordPreview)}"
+                : "Banned keywords detected.";
+            return reason.Length <= 1000 ? reason : reason[..1000];
         }
 
         // Helper method to generate slug from title

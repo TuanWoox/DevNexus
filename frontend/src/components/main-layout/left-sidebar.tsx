@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -18,9 +18,10 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SidebarUserMenu } from './sidebar-user-menu'
+import { GlobalSearch } from '@/components/search/global-search'
 
-import { useUnreadCount } from "@/features/notifications/hooks/notifications/use-unread-count"
-import { NotificationPanel } from "@/components/notification/notification-panel"
+import { useUnreadCount } from "@/features/notifications/hooks/use-unread-count";
+import { NotificationPanel } from "@/components/notification/notification-panel";
 
 const menuItems = [
     { name: 'Home', href: '/feed', icon: Home },
@@ -30,31 +31,29 @@ const menuItems = [
     { name: 'Saved', href: '/profile/saved', icon: Bookmark },
 ]
 
+function subscribeToDesktopMedia(callback: () => void) {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+    mediaQuery.addEventListener('change', callback)
+    return () => mediaQuery.removeEventListener('change', callback)
+}
+
+function getDesktopSnapshot() {
+    return window.matchMedia('(min-width: 1024px)').matches
+}
+
+function getServerDesktopSnapshot() {
+    return false
+}
+
 export function LeftSidebar() {
     const pathname = usePathname()
 
-    const [isCollapsed, setIsCollapsed] = useState(true)
-    const [isMounted, setIsMounted] = useState(false)
+    const isDesktop = useSyncExternalStore(subscribeToDesktopMedia, getDesktopSnapshot, getServerDesktopSnapshot)
+    const [isManuallyCollapsed, setIsManuallyCollapsed] = useState(false)
     const [isPanelOpen, setIsPanelOpen] = useState(false)
+    const isCollapsed = !isDesktop || isManuallyCollapsed
 
     const { data: unreadCount = 0 } = useUnreadCount()
-
-    useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setIsMounted(true)
-
-        const mediaQuery = window.matchMedia('(min-width: 1024px)')
-
-        // Set initial state based on media query
-        setIsCollapsed(!mediaQuery.matches)
-
-        const handleChange = (event: MediaQueryListEvent) => {
-            if (!event.matches) setIsCollapsed(true)
-        }
-
-        mediaQuery.addEventListener('change', handleChange)
-        return () => mediaQuery.removeEventListener('change', handleChange)
-    }, [])
 
     return (
         <>
@@ -66,7 +65,7 @@ export function LeftSidebar() {
             >
                 {/* Collapse toggle */}
                 <button
-                    onClick={() => setIsCollapsed((prev) => !prev)}
+                    onClick={() => setIsManuallyCollapsed((prev) => !prev)}
                     className="absolute -right-3 top-5 z-50 flex items-center justify-center w-6 h-6 rounded-full bg-card border border-default text-muted-foreground hover:text-heading hover:bg-subtle transition-colors shadow-sm"
                 >
                     {isCollapsed ? (
@@ -96,6 +95,10 @@ export function LeftSidebar() {
                         </span>
                     )}
                 </Link>
+
+                <div className={cn("mb-4", isCollapsed ? "px-0" : "px-2")}>
+                    <GlobalSearch compact={isCollapsed} />
+                </div>
 
                 {/* Menu */}
                 <nav className="flex flex-col gap-0.5">

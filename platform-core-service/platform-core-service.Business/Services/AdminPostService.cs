@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
@@ -10,19 +11,24 @@ using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using PostEntity = platform_core_service.Common.Entities.DbEntities.Post;
 
+using Hangfire;
+
 namespace platform_core_service.Business.Services
 {
     public class AdminPostService : IAdminPostService
     {
         private readonly ApplicationDbContext _context;
         private readonly IRepository<PostEntity, string> _postRepository;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
         public AdminPostService(
             ApplicationDbContext context,
-            IRepository<PostEntity, string> postRepository)
+            IRepository<PostEntity, string> postRepository,
+            IBackgroundJobClient backgroundJobClient)
         {
             _context = context;
             _postRepository = postRepository;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<ReturnResult<PagedData<AdminPostDTO, string>>> GetAllPostsAsync(Page<string> page)
@@ -55,6 +61,8 @@ namespace platform_core_service.Business.Services
             {
                 var post = await _context.Posts
                     .IgnoreQueryFilters()
+                    .Include(p => p.Author)
+                    .Include(p => p.PostTags).ThenInclude(pt => pt.Tag)
                     .FirstOrDefaultAsync(p => p.Id == postId);
 
                 if (post == null)
@@ -64,9 +72,36 @@ namespace platform_core_service.Business.Services
                 }
 
                 post.ModerationStatus = ModerationStatus.Approved;
+                post.ModerationReason = null;
                 await _context.SaveChangesAsync();
 
-                DevNexusLogger.Instance.Debug($"[AdminPost] Post {postId} force-approved");
+                // Build DTO for AI First Responder
+                if (post is QAPost) // Thay QAPost bằng tên entity QA của bác (ví dụ: QaPostEntity)
+                {
+                    var aiRequest = new platform_core_service.Common.Models.DTOs.AIDTO.AIFirstResponderRequestDTO
+                    {
+                        PostId = post.Id,
+                        Title = post.Title,
+                        Content = post.Content,
+                        Tags = post.PostTags?.Select(pt => pt.Tag.Name).ToList() ?? new List<string>(),
+                        AuthorId = post.AuthorId,
+                        AuthorDisplayName = post.Author?.FullName ?? "Unknown",
+                        CreatedAt = post.DateCreated ?? DateTimeOffset.UtcNow
+                    };
+
+                    string routingKey = "ai.task.firstresponder.request";
+
+                    _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                        x => x.PublicAiTask(aiRequest, routingKey, MessageBusEnum.Create, MessageBusEntityEnum.AIFirstResponder)
+                    );
+
+                    DevNexusLogger.Instance.Debug($"[AdminPost] AI Task queued for QA Post {post.Id}");
+                }
+                else
+                {
+                    DevNexusLogger.Instance.Debug($"[AdminPost] Post {postId} force-approved");
+                }
+
                 result.Result = true;
             }
             catch (Exception ex)
@@ -94,6 +129,7 @@ namespace platform_core_service.Business.Services
 
                 // Flagged = hidden from public feed (same as human-reject in Phase 1)
                 post.ModerationStatus = ModerationStatus.Flagged;
+                post.ModerationReason = "Rejected by moderator.";
                 await _context.SaveChangesAsync();
 
                 DevNexusLogger.Instance.Debug($"[AdminPost] Post {postId} force-flagged");

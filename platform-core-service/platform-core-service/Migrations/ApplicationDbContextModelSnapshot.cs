@@ -640,6 +640,10 @@ namespace platform_core_service.Migrations
                     b.Property<int>("DownvoteCount")
                         .HasColumnType("integer");
 
+                    b.Property<string>("ModerationReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<int>("ModerationStatus")
                         .HasColumnType("integer");
 
@@ -661,11 +665,15 @@ namespace platform_core_service.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AuthorId");
-
                     b.HasIndex("CommunityId");
 
                     b.HasIndex("Deleted");
+
+                    b.HasIndex("Slug");
+
+                    b.HasIndex("ModerationStatus", "DateCreated");
+
+                    b.HasIndex("AuthorId", "ModerationStatus", "DateCreated");
 
                     b.ToTable("Posts");
 

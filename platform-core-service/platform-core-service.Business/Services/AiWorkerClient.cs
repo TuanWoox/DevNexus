@@ -26,12 +26,14 @@ namespace platform_core_service.Business.Services
             _httpClient.DefaultRequestHeaders.Add("X-Internal-Api-Key", internalKey);
         }
 
-        public Task SubmitForModerationAsync(string postId, string textContent)
+        public Task SubmitForModerationAsync(string postId, string title, string textContent)
         {
+            var moderationText = BuildModerationText(title, textContent);
             var form = new MultipartFormDataContent
             {
-                { new StringContent(postId),      "post_id"      },
-                { new StringContent(textContent), "text_content" },
+                { new StringContent(postId),         "post_id"      },
+                { new StringContent(title ?? string.Empty), "title" },
+                { new StringContent(moderationText), "text_content" },
             };
 
             _ = Task.Run(async () =>
@@ -60,6 +62,18 @@ namespace platform_core_service.Business.Services
 
             return Task.CompletedTask;
         }
+
+        private static string BuildModerationText(string? title, string? textContent)
+        {
+            var parts = new[]
+            {
+                string.IsNullOrWhiteSpace(title) ? null : $"Title: {title.Trim()}",
+                string.IsNullOrWhiteSpace(textContent) ? null : $"Content: {textContent.Trim()}",
+            };
+
+            return string.Join(Environment.NewLine + Environment.NewLine, parts.Where(p => p != null));
+        }
+
         public async Task<ReturnResult<AiUsageLogPageResponseDTO>> GetPageAiUsageLogsAsync(Page<string> page)
         {
             var result = new ReturnResult<AiUsageLogPageResponseDTO>();

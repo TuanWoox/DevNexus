@@ -11,15 +11,18 @@ import { useChatById } from "@/features/messages/hooks/chats/use-chat-by-id";
 
 interface Props {
     chatId: string;
+    title?: string;
+    avatarUrl?: string;
 }
 
-export function ChatHead({ chatId }: Props) {
+export function ChatHead({ chatId, title: titleProp, avatarUrl: avatarUrlProp }: Props) {
     const { restoreChat, closeChat, unreadCounts } = useChatWindows();
     const currentProfileId = useSelector((s: RootState) => getProfileId(s.auth.user?.profileId));
-    const { chat } = useChatById(chatId);
+    const shouldFetchChat = !titleProp && !chatId.startsWith("new-");
+    const { chat } = useChatById(shouldFetchChat ? chatId : "");
 
-    const title = chat ? getTitle(chat, currentProfileId) : "…";
-    const avatarUrl = chat ? getAvatarUrl(chat, currentProfileId) : undefined;
+    const title = titleProp ?? (chat ? getTitle(chat, currentProfileId) : "...");
+    const avatarUrl = avatarUrlProp ?? (chat ? getAvatarUrl(chat, currentProfileId) : undefined);
     const unread = unreadCounts[chatId] ?? 0;
 
     return (

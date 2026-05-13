@@ -33,7 +33,6 @@ export class SettingsService {
       update: { AllNotifications: allNotifications },
       create: { ProfileId: profileId, AllNotifications: allNotifications },
     });
-
     returnResult.Result = { AllNotifications: setting.AllNotifications };
     return returnResult;
   }
