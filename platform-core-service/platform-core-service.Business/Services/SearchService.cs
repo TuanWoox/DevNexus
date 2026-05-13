@@ -1,11 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Search;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
-using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Data;
 using PostEntity = platform_core_service.Common.Entities.DbEntities.Post;
 
@@ -79,7 +79,7 @@ namespace platform_core_service.Business.Services
         public async Task<PagedData<SearchProfileResultDTO, string>> SearchProfilesAsync(Page<string> page, CancellationToken cancellationToken = default)
         {
             var query = GetSearchQuery(page);
-            var profilesQuery = ApplyProfileSearch(_context.Profiles.AsNoTracking().Where(p => !p.IsPrivate && !p.IsSuspended), query)
+            var profilesQuery = ApplyProfileSearch(GetVisibleProfiles(), query)
                 .OrderByDescending(p => p.ReputationPoints);
 
             return await ToPagedDataAsync(profilesQuery, page, ProjectProfile, cancellationToken);
@@ -114,7 +114,7 @@ namespace platform_core_service.Business.Services
 
         private async Task<List<SearchProfileResultDTO>> SearchProfilesPreviewAsync(string query, int size, CancellationToken cancellationToken)
         {
-            return await ApplyProfileSearch(_context.Profiles.AsNoTracking().Where(p => !p.IsPrivate && !p.IsSuspended), query)
+            return await ApplyProfileSearch(GetVisibleProfiles(), query)
                 .OrderByDescending(p => p.ReputationPoints)
                 .Take(size)
                 .Select(ProjectProfile)
@@ -127,13 +127,7 @@ namespace platform_core_service.Business.Services
 
             return _context.Posts
                 .AsNoTracking()
-                .Where(p => p.ModerationStatus == ModerationStatus.Approved)
-                .Where(p =>
-                    p.CommunityId == null ||
-                    !p.Community!.IsPrivate ||
-                    p.Community.OwnerId == currentProfileId ||
-                    p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) ||
-                    p.Community.Members.Any(m => m.ProfileId == currentProfileId));
+                .ApplyPostVisibilityRules(_context, currentProfileId);
         }
 
         private IQueryable<QAPost> GetVisibleQAPosts()
@@ -143,13 +137,7 @@ namespace platform_core_service.Business.Services
             return _context.Posts
                 .OfType<QAPost>()
                 .AsNoTracking()
-                .Where(p => p.ModerationStatus == ModerationStatus.Approved)
-                .Where(p =>
-                    p.CommunityId == null ||
-                    !p.Community!.IsPrivate ||
-                    p.Community.OwnerId == currentProfileId ||
-                    p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) ||
-                    p.Community.Members.Any(m => m.ProfileId == currentProfileId));
+                .ApplyQAPostVisibilityRules(_context, currentProfileId);
         }
 
         private IQueryable<Community> GetVisibleCommunities()
@@ -158,11 +146,16 @@ namespace platform_core_service.Business.Services
 
             return _context.Communities
                 .AsNoTracking()
-                .Where(c =>
-                    !c.IsPrivate ||
-                    c.OwnerId == currentProfileId ||
-                    c.Moderators.Any(m => m.ModeratorId == currentProfileId) ||
-                    c.Members.Any(m => m.ProfileId == currentProfileId));
+                .ApplyCommunityVisibilityRules(_context, currentProfileId);
+        }
+
+        private IQueryable<Profile> GetVisibleProfiles()
+        {
+            var currentProfileId = _userContext.ProfileId;
+
+            return _context.Profiles
+                .AsNoTracking()
+                .ApplyProfileVisibilityRules(_context, currentProfileId);
         }
 
         private static IQueryable<PostEntity> ApplyPostSearch(IQueryable<PostEntity> query, string searchQuery)
