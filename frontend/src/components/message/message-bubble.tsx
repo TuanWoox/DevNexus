@@ -42,12 +42,12 @@ function MediaAttachment({
 
     if (media.Type === MediaType.Image) {
         return (
-            <button type="button" onClick={onClick} className="block w-full text-left">
+            <button type="button" onClick={onClick} className="block w-full max-w-full text-left">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     src={url}
                     alt={media.MediaName}
-                    className="max-h-64 max-w-full rounded-lg object-cover cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm hover:shadow-md"
+                    className="max-h-64 w-full max-w-full rounded-lg object-cover cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm hover:shadow-md"
                     loading="lazy"
                 />
             </button>
@@ -58,7 +58,7 @@ function MediaAttachment({
         return (
             <video
                 controls
-                className="max-h-64 max-w-full rounded-lg shadow-sm"
+                className="max-h-64 w-full max-w-full rounded-lg shadow-sm"
                 preload="metadata"
                 onDoubleClick={onClick}
             >
@@ -75,7 +75,7 @@ function MediaAttachment({
         <a
             href={url}
             download={media.MediaName}
-            className="flex items-center gap-3 rounded-lg bg-card px-4 py-3 hover:bg-accent/40 transition-colors shadow-sm border border-border/40 group/file"
+            className="flex max-w-full items-center gap-3 rounded-lg bg-card px-3 py-3 hover:bg-accent/40 transition-colors shadow-sm border border-border/40 group/file"
         >
             <div className="shrink-0 h-10 w-10 rounded-md bg-primary/10 flex items-center justify-center">
                 {isArchive
@@ -85,7 +85,7 @@ function MediaAttachment({
             </div>
             <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium truncate">{media.MediaName}</p>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="truncate text-[10px] text-muted-foreground">
                     {ext} file · Click to download
                 </p>
             </div>
@@ -179,7 +179,7 @@ export function MessageBubble({
     return (
         <>
             <div className={cn(
-                "flex items-end gap-1 px-1 group",
+                "flex w-full min-w-0 items-end gap-1 px-1 group",
                 isMine ? "flex-row-reverse" : "flex-row",
             )}>
                 {!isMine && (
@@ -195,9 +195,9 @@ export function MessageBubble({
                     </div>
                 )}
 
-                <div className={cn("flex flex-col gap-1", isMine ? "items-end max-w-[65%]" : "items-start max-w-[65%]")}>
+                <div className={cn("flex min-w-0 max-w-[78%] flex-col gap-1 sm:max-w-[65%]", isMine ? "items-end" : "items-start")}>
                     {hasMedias && !message.IsDeleted && (
-                        <div className="flex max-w-[90%] flex-col gap-1.5">
+                        <div className="flex w-full min-w-0 max-w-full flex-col gap-1.5">
                             {message.Medias.map((media, idx) => (
                                 <MediaAttachment
                                     key={media.Id}
@@ -232,21 +232,21 @@ export function MessageBubble({
                     ) : (
                         message.Content && (
                             <div className={cn(
-                                "rounded-lg px-4 py-2.5 shadow-sm",
+                                "min-w-0 max-w-full overflow-hidden rounded-lg px-3 py-2.5 shadow-sm sm:px-4",
                                 isMine
                                   ? "rounded-br-md bg-linear-to-br from-brand-500 to-brand-600 shadow-[0_2px_6px_rgba(99,102,241,0.25)]"
                                   : "rounded-bl-md bg-card border border-border/40",
                               )}>
                                 {hasMarkdown ? (
                                   <div className={cn(
-                                    "text-sm leading-relaxed",
+                                    "min-w-0 max-w-full overflow-hidden text-sm leading-relaxed [&_code]:break-words [&_pre]:max-w-full [&_pre]:overflow-x-auto",
                                     isMine && "[&_*]:text-white [&_code]:bg-white/20 [&_pre]:bg-white/10 [&_a]:text-white [&_a]:underline"
                                   )}>
                                     <MarkdownViewer source={message.Content} />
                                   </div>
                                 ) : (
                                   <div className={cn(
-                                      "text-sm leading-relaxed wrap-break-words",
+                                      "whitespace-pre-wrap text-sm leading-relaxed break-words [overflow-wrap:anywhere]",
                                       isMine ? "text-white" : "text-foreground"
                                   )}>
                                     {message.Content}
@@ -282,7 +282,7 @@ export function MessageBubble({
                 </div>
 
                 {isMine && !message.IsDeleted && (
-                    <div className="self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <button className="p-1 rounded-md hover:bg-accent transition-colors">

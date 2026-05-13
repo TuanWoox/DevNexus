@@ -7,6 +7,7 @@ import { ProfileHeader } from "./profile-header";
 import { ProfileInfo } from "./profile-info";
 import { ProfileTabs } from "./profile-tabs";
 import { ProfileContent } from "./profile-content";
+import { EditProfileModal } from "./edit-profile-modal";
 
 import { useHasMounted } from "@/hooks/use-has-mounted";
 import { useGetProfileById } from "@/hooks/profile-hooks/use-get-profile-by-id";
@@ -18,6 +19,7 @@ interface ProfileViewWrapperProps {
 export function ProfileViewWrapper({ profileId }: ProfileViewWrapperProps) {
     const hasMounted = useHasMounted();
     const [activeTab, setActiveTab] = useState<"overview" | "post" | "qa-post" | "saved">("overview");
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     const { data: profile } = useGetProfileById(profileId);
     const { user } = useSelector((state: RootState) => state.auth);
@@ -29,7 +31,7 @@ export function ProfileViewWrapper({ profileId }: ProfileViewWrapperProps) {
 
     return (
         <div className="flex flex-col w-full min-h-screen fade-in">
-            <div className="bg-card shadow-card">
+            <div className="bg-card shadow-card mb-2">
                 {/* Full-width cover + avatar section */}
                 <ProfileHeader
                     profile={profile}
@@ -39,6 +41,8 @@ export function ProfileViewWrapper({ profileId }: ProfileViewWrapperProps) {
                 {/* Constrained content area */}
                 <ProfileInfo
                     profile={profile}
+                    isOwnProfile={isOwnProfile}
+                    onEdit={() => setIsEditModalOpen(true)}
                 />
 
                 <ProfileTabs
@@ -55,6 +59,17 @@ export function ProfileViewWrapper({ profileId }: ProfileViewWrapperProps) {
                 isOwnProfile={isOwnProfile}
                 isPrivate={profile.isPrivate}
             />
+
+            {isOwnProfile && (
+                <EditProfileModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                    currentProfile={profile}
+                />
+            )}
         </div>
     );
 }
+
+
+

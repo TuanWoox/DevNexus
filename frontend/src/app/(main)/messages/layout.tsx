@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useParams, useRouter, usePathname } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useParams, useRouter, usePathname, useSearchParams } from "next/navigation";
 import { MessageListSection } from "@/app/(main)/messages/_component/message-list-section";
 import { MessageTabs } from "@/app/(main)/messages/_component/message-tabs";
 import { MessageSearch } from "@/app/(main)/messages/_component/message-search";
@@ -10,36 +10,71 @@ import { UsersRound } from "lucide-react";
 import { InboxTab, Chat, ProfileSummary } from "@/features/messages/types/contracts";
 import { useChatList } from "@/features/messages/hooks/chats/use-chat-list";
 
+const validTabs: InboxTab[] = ["main", "request", "archived"];
+
+function getValidTab(tabParam: string | null): InboxTab {
+    if (tabParam && validTabs.includes(tabParam as InboxTab)) {
+        return tabParam as InboxTab;
+    }
+    return "main";
+}
+
 export default function MessagesLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <Suspense fallback={null}>
+            <MessagesLayoutContent>{children}</MessagesLayoutContent>
+        </Suspense>
+    );
+}
+
+function MessagesLayoutContent({ children }: { children: React.ReactNode }) {
 
     const params = useParams();
     const router = useRouter();
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const activeChatId = params?.chatId as string | undefined;
     // Treat /messages/new and /messages/new-group as "right panel open" for mobile
     const isRightPanelOpen = !!activeChatId
         || pathname === "/messages/new"
         || pathname === "/messages/new-group";
 
-    const [activeTab, setActiveTab] = useState<InboxTab>("main");
+    const activeTab = getValidTab(searchParams.get("tab"));
     const [searchQuery, setSearchQuery] = useState("");
 
     const { chats: chatList, isLoading: chatsLoading, isFetchingMore: chatsFetchingMore,
         hasMore: chatsHasMore, loadMore: chatsLoadMore } = useChatList(30, activeTab);
 
+    const buildUrlWithTab = (basePath: string, tab: InboxTab, preserveParams: boolean) => {
+        const nextParams = preserveParams
+            ? new URLSearchParams(searchParams.toString())
+            : new URLSearchParams();
+
+        if (tab === "main") {
+            nextParams.delete("tab");
+        } else {
+            nextParams.set("tab", tab);
+        }
+
+        const query = nextParams.toString();
+        return query ? `${basePath}?${query}` : basePath;
+    };
+
     const handleTabChange = (tab: InboxTab) => {
-        setActiveTab(tab);
-        router.push("/messages");
+        router.push(buildUrlWithTab(pathname, tab, true), { scroll: false });
     };
 
     const handleSelectChat = (chat: Chat) => {
         setSearchQuery("");
-        router.push(`/messages/${chat.Id}`);
+        router.push(buildUrlWithTab(`/messages/${chat.Id}`, activeTab, false));
     };
 
     const handleSelectPerson = (profile: ProfileSummary) => {
+        if (!profile.Id) return;
         setSearchQuery("");
-        router.push(`/messages/new?profileId=${profile.Id}`);
+        const params = new URLSearchParams({ profileId: profile.Id });
+        if (activeTab !== "main") params.set("tab", activeTab);
+        router.push(`/messages/new?${params.toString()}`);
     };
 
     return (
@@ -57,7 +92,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                     <h1 className="text-xl font-bold tracking-tight text-foreground">Messages</h1>
                     <button
                         type="button"
-                        onClick={() => router.push("/messages/new-group")}
+                        onClick={() => router.push(buildUrlWithTab("/messages/new-group", activeTab, false))}
                         className="rounded-full p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
                         title="New group chat"
                     >

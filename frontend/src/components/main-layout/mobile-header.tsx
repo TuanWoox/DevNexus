@@ -6,6 +6,7 @@ import { Hexagon, Sparkles, Search } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import { useGetProfileById } from '@/hooks/profile-hooks/use-get-profile-by-id'
+import { GlobalSearch } from '@/components/search/global-search'
 
 export function MobileHeader() {
     const { user } = useSelector((state: RootState) => state.auth)
@@ -24,9 +25,13 @@ export function MobileHeader() {
             </Link>
 
             <div className="flex items-center gap-2">
-                <button className="text-muted-foreground hover:text-primary transition-colors p-2">
-                    <Search className="h-5 w-5" />
-                </button>
+                <GlobalSearch
+                    trigger={
+                        <button className="text-muted-foreground hover:text-primary transition-colors p-2">
+                            <Search className="h-5 w-5" />
+                        </button>
+                    }
+                />
                 {/* <button className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
                     {user?.userName?.charAt(0).toUpperCase() || 'U'}
                 </button> */}

@@ -5,15 +5,23 @@ import { usePathname } from "next/navigation";
 
 type WindowState = "open" | "minimized";
 
+export interface NewChatProfileData {
+    id: string;
+    fullName: string;
+    avatarUrl?: string;
+}
+
 export interface ChatWindowEntry {
     chatId: string;
     state: WindowState;
+    type: "existing" | "new";
+    profileData?: NewChatProfileData;
 }
 
 interface ChatWindowsContextValue {
     windows: ChatWindowEntry[];
     unreadCounts: Record<string, number>;
-    openChat: (chatId: string) => void;
+    openChat: (chatId: string, profileData?: NewChatProfileData) => void;
     closeChat: (chatId: string) => void;
     minimizeChat: (chatId: string) => void;
     restoreChat: (chatId: string) => void;
@@ -39,11 +47,27 @@ export function ChatWindowsProvider({ children }: { children: ReactNode }) {
         [isMessagesPage, unreadCounts],
     );
 
-    const openChat = useCallback((chatId: string) => {
+    const openChat = useCallback((chatId: string, profileData?: NewChatProfileData) => {
         setWindows(prev => {
             const existing = prev.find(w => w.chatId === chatId);
-            if (existing) return prev;
-            const next = [...prev, { chatId, state: "open" as WindowState }];
+            const isNewChat = chatId.startsWith("new-");
+            if (existing) {
+                return prev.map(w =>
+                    w.chatId === chatId
+                        ? {
+                            ...w,
+                            state: "open" as WindowState,
+                            profileData: isNewChat ? profileData ?? w.profileData : undefined,
+                        }
+                        : w
+                );
+            }
+            const next = [...prev, {
+                chatId,
+                state: "open" as WindowState,
+                type: isNewChat ? "new" as const : "existing" as const,
+                profileData: isNewChat ? profileData : undefined,
+            }];
             return next.slice(-MAX_WINDOWS);
         });
     }, []);

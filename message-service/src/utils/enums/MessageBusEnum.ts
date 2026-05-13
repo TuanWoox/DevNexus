@@ -8,5 +8,6 @@ export enum MessageBusEnum {
 export enum MessageBusEntityEnum {
     Profile = 0,
     UserFollow = 1,
-    ProfileBlock = 2
+    ProfileBlock = 2,
+    Notification = 3,
 }

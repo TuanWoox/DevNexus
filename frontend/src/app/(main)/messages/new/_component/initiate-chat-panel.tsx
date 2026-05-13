@@ -120,7 +120,7 @@ export function InitiateChatPanel({ targetProfile }: InitiateChatPanelProps) {
                         disabled={createChat.isPending}
                         className={cn(
                             "flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60",
-                            "outline-none border-0 ring-0 py-1 max-h-[120px] overflow-y-auto",
+                            "outline-none border-0 ring-0 py-1 max-h-30 overflow-y-auto",
                             "disabled:opacity-50",
                         )}
                         style={{ height: "36px" }}
