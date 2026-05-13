@@ -38,7 +38,12 @@ export const useCreateQAPost = () => {
                     ? {
                         id: user.profileId ?? "",
                         fullName: user.userName,
+                        avatarUrl: undefined,
+                        backgroundUrl: undefined,
+                        bio: "",
+                        reputationPoints: 0,
                         techStacks: [],
+                        isPrivate: false,
                     }
                     : undefined,
                 upvoteCount: 0,

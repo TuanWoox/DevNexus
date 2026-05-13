@@ -220,7 +220,7 @@ namespace platform_core_service.Business.Services
 
                 post.ModerationStatus = ModerationStatus.InReview;
 
-                var keywordPreview = matchedKeywords?.Where(k => !string.IsNullOrWhiteSpace(k)).Distinct().ToList() ?? new List<string>();
+                var keywordPreview = matchedKeywords?.Where(k => !string.IsNullOrWhiteSpace(k)).Distinct(StringComparer.OrdinalIgnoreCase).ToList() ?? new List<string>();
                 var reasoning = keywordPreview.Any()
                     ? $"Banned keywords detected: {string.Join(", ", keywordPreview)}"
                     : "Banned keywords detected.";
