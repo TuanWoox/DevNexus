@@ -40,6 +40,7 @@ export interface BaseReplyItemProps {
     isDeleting: boolean;
     onUpdate: (newContent: string, onSuccess: () => void) => void;
     isUpdating: boolean;
+    isDisabled?: boolean;
 }
 
 export function BaseReplyItem({
@@ -57,6 +58,7 @@ export function BaseReplyItem({
     isDeleting,
     onUpdate,
     isUpdating,
+    isDisabled,
 }: BaseReplyItemProps) {
     const isAuthor = authorId === currentUserId;
     const [isEditing, setIsEditing] = useState(false);
@@ -134,7 +136,7 @@ export function BaseReplyItem({
                 <div className="flex items-center gap-4 mt-1.5 ml-2">
                     <button
                         onClick={() => onVote(true)}
-                        disabled={isVotePending}
+                        disabled={isVotePending || isDisabled}
                         className={`flex items-center gap-1 text-xs font-medium transition-colors disabled:opacity-50
                             ${currentUserVote === true
                                 ? 'text-emerald-500'
@@ -146,7 +148,7 @@ export function BaseReplyItem({
                     </button>
                     <button
                         onClick={() => onVote(false)}
-                        disabled={isVotePending}
+                        disabled={isVotePending || isDisabled}
                         className={`flex items-center gap-1 text-xs font-medium transition-colors disabled:opacity-50
                             ${currentUserVote === false
                                 ? 'text-rose-500'
@@ -156,7 +158,10 @@ export function BaseReplyItem({
                         <ArrowBigDown className={`w-4 h-4 transition-all ${currentUserVote === false ? 'fill-rose-500' : ''}`} />
                         {downvoteCount}
                     </button>
-                    <button className="text-xs text-muted-foreground hover:text-heading font-medium transition-colors">
+                    <button 
+                        disabled={isDisabled}
+                        className="text-xs text-muted-foreground hover:text-heading font-medium transition-colors disabled:opacity-50"
+                    >
                         Reply
                     </button>
                     <DropdownMenu modal={false}>
@@ -169,7 +174,7 @@ export function BaseReplyItem({
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-42 bg-card border rounded-xl shadow-elevated p-1 z-10">
-                            {!isAuthor && (
+                            {!isAuthor && !isDisabled && (
                                 <>
                                     <DropdownMenuItem className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium">
                                         <UserPlus className="w-4 h-4" />
@@ -181,7 +186,7 @@ export function BaseReplyItem({
                                     </DropdownMenuItem>
                                 </>
                             )}
-                            {isAuthor && (
+                            {isAuthor && !isDisabled && (
                                 <>
                                     <DropdownMenuItem
                                         onClick={() => setIsEditing(true)}
@@ -200,6 +205,11 @@ export function BaseReplyItem({
                                         <span>Delete</span>
                                     </DropdownMenuItem>
                                 </>
+                            )}
+                            {isDisabled && (
+                                <DropdownMenuItem disabled className="text-xs text-muted-foreground p-2 text-center">
+                                    Actions disabled for unapproved post
+                                </DropdownMenuItem>
                             )}
                         </DropdownMenuContent>
                     </DropdownMenu>

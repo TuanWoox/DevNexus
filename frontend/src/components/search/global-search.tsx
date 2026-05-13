@@ -11,10 +11,10 @@ import { useGlobalSearch } from "@/hooks/search-hooks/use-global-search";
 import { cn } from "@/lib/utils";
 import {
   SearchCommunityResult,
-  SearchPostResult,
   SearchProfileResult,
-  SearchQAPostResult,
 } from "@/types/search/global-search-result";
+import { SelectPostDTO } from "@/types/post/select-post-dto";
+import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
 
 const DEFAULT_AVATAR_URL = "/images/default-avatar.webp";
 
@@ -84,7 +84,7 @@ export function GlobalSearch({ trigger, compact = false }: GlobalSearchProps) {
     );
   }
 
-  function PostRow({ post, question = false }: { post: SearchPostResult | SearchQAPostResult; question?: boolean }) {
+  function PostRow({ post, question = false }: { post: SelectPostDTO | SelectQAPostDTO; question?: boolean }) {
     const Icon = question ? HelpCircle : FileText;
     return (
       <ResultButton href={`${question ? "/questions" : "/post"}/${post.id}`}>
@@ -94,7 +94,7 @@ export function GlobalSearch({ trigger, compact = false }: GlobalSearchProps) {
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium text-heading">{post.title}</div>
           <div className="truncate text-xs text-muted-foreground">
-            {post.author?.fullName || "Unknown"}{post.communityName ? ` in ${post.communityName}` : ""}
+            {post.author?.fullName || "Unknown"}{post?.community?.name ? ` in ${post.community.name}` : ""}
           </div>
         </div>
       </ResultButton>

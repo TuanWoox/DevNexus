@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using platform_core_service.Common.Interfaces.Services;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
+using platform_core_service.Common.Models.DTOs.EntityDTO.QAPost;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Search;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
@@ -39,7 +41,7 @@ namespace platform_core_service.Controllers
         [HttpPost("posts")]
         public async Task<IActionResult> SearchPosts([FromBody] Page<string> page, CancellationToken cancellationToken)
         {
-            var returnResult = new ReturnResult<PagedData<SearchPostResultDTO, string>>();
+            var returnResult = new ReturnResult<PagedData<SelectPostDTO, string>>();
             try
             {
                 returnResult.Result = await _searchService.SearchPostsAsync(page, cancellationToken);
@@ -55,7 +57,7 @@ namespace platform_core_service.Controllers
         [HttpPost("questions")]
         public async Task<IActionResult> SearchQAPosts([FromBody] Page<string> page, CancellationToken cancellationToken)
         {
-            var returnResult = new ReturnResult<PagedData<SearchQAPostResultDTO, string>>();
+            var returnResult = new ReturnResult<PagedData<SelectQAPostDTO, string>>();
             try
             {
                 returnResult.Result = await _searchService.SearchQAPostsAsync(page, cancellationToken);

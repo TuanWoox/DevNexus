@@ -4,6 +4,8 @@ import { useMutation, useQueryClient, InfiniteData } from "@tanstack/react-query
 import { bookmarkedItemQueryKeys } from "./use-bookmarked-item-query-keys";
 import { postQueryKeys } from "@/hooks/post-hooks/use-post-query-keys";
 import { qaPostQueryKeys } from "../qa-post-hooks/use-qa-post-query-key";
+import { searchQueryKeys } from "../search-hooks/use-global-search";
+import { GlobalSearchResult } from "@/types/search/global-search-result";
 import { SelectPostDTO } from "@/types/post/select-post-dto";
 import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
 import { PagedData } from "@/types/common/paged-data";
@@ -35,12 +37,25 @@ const applySaveToInfiniteList = <T extends SelectPostDTO | SelectQAPostDTO>(
     };
 };
 
+const applySaveToGlobalSearch = (
+    oldData: GlobalSearchResult | undefined,
+    targetId: string,
+    bookmarkItemId: string
+): GlobalSearchResult | undefined => {
+    if (!oldData) return oldData;
+    return {
+        ...oldData,
+        posts: oldData.posts.map((post) => markAsSaved(post, targetId, bookmarkItemId)),
+        qaPosts: oldData.qaPosts.map((post) => markAsSaved(post, targetId, bookmarkItemId)),
+    };
+};
+
 export const useCreateBookmarkedItem = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
         mutationFn: (payload: CreateBookmarkedItemDTO) => bookmarkedItemService.createBookmarkedItem(payload),
-        
+
         onMutate: async (payload) => {
             const targetId = payload.postId || payload.qaPostId;
             if (!targetId) return;
@@ -51,12 +66,14 @@ export const useCreateBookmarkedItem = () => {
             await queryClient.cancelQueries({ queryKey: postQueryKeys.all });
             await queryClient.cancelQueries({ queryKey: qaPostQueryKeys.all });
             await queryClient.cancelQueries({ queryKey: bookmarkedItemQueryKeys.all });
+            await queryClient.cancelQueries({ queryKey: searchQueryKeys.all });
 
             // 2. Snapshot previous values
             const previousPostLists = queryClient.getQueriesData<InfiniteData<PagedData<SelectPostDTO, string>>>({ queryKey: postQueryKeys.lists() });
             const previousQaPostLists = queryClient.getQueriesData<InfiniteData<PagedData<SelectQAPostDTO, string>>>({ queryKey: qaPostQueryKeys.lists() });
             const previousPostDetails = queryClient.getQueriesData<SelectPostDTO>({ queryKey: postQueryKeys.details() });
             const previousQaPostDetails = queryClient.getQueriesData<SelectQAPostDTO>({ queryKey: qaPostQueryKeys.details() });
+            const previousSearchQueries = queryClient.getQueriesData<any>({ queryKey: searchQueryKeys.all });
 
             // 3. Optimistically update lists
             previousPostLists.forEach(([queryKey, oldData]) => {
@@ -64,6 +81,14 @@ export const useCreateBookmarkedItem = () => {
             });
             previousQaPostLists.forEach(([queryKey, oldData]) => {
                 queryClient.setQueryData(queryKey, applySaveToInfiniteList(oldData, targetId, tempId));
+            });
+            previousSearchQueries.forEach(([queryKey, oldData]: [any, any]) => {
+                if (!oldData) return;
+                if ("pages" in oldData) {
+                    queryClient.setQueryData(queryKey, applySaveToInfiniteList(oldData, targetId, tempId));
+                } else {
+                    queryClient.setQueryData(queryKey, applySaveToGlobalSearch(oldData, targetId, tempId));
+                }
             });
 
             // 4. Optimistically update details
@@ -74,11 +99,12 @@ export const useCreateBookmarkedItem = () => {
                 if (oldData) queryClient.setQueryData(queryKey, markAsSaved(oldData, targetId, tempId));
             });
 
-            return { 
-                previousPostLists, 
-                previousQaPostLists, 
-                previousPostDetails, 
+            return {
+                previousPostLists,
+                previousQaPostLists,
+                previousPostDetails,
                 previousQaPostDetails,
+                previousSearchQueries,
                 targetId
             };
         },
@@ -89,6 +115,7 @@ export const useCreateBookmarkedItem = () => {
             context?.previousQaPostLists.forEach(([queryKey, oldData]) => queryClient.setQueryData(queryKey, oldData));
             context?.previousPostDetails.forEach(([queryKey, oldData]) => queryClient.setQueryData(queryKey, oldData));
             context?.previousQaPostDetails.forEach(([queryKey, oldData]) => queryClient.setQueryData(queryKey, oldData));
+            context?.previousSearchQueries.forEach(([queryKey, oldData]) => queryClient.setQueryData(queryKey, oldData));
             toast.error("Failed to save item.");
         },
 
@@ -121,6 +148,20 @@ export const useCreateBookmarkedItem = () => {
 
                 queryClient.setQueriesData<SelectQAPostDTO>({ queryKey: qaPostQueryKeys.details() }, (oldData) => {
                     return oldData ? updateWithRealId(oldData) : oldData;
+                });
+
+                queryClient.setQueriesData<any>({ queryKey: searchQueryKeys.all }, (oldData: any) => {
+                    if (!oldData) return oldData;
+                    if ("pages" in oldData) {
+                        return { ...oldData, pages: oldData.pages.map((p: any) => ({ ...p, data: p.data.map(updateWithRealId) })) };
+                    } else {
+                        const globalData = oldData as GlobalSearchResult;
+                        return {
+                            ...globalData,
+                            posts: globalData.posts.map(updateWithRealId),
+                            qaPosts: globalData.qaPosts.map(updateWithRealId),
+                        };
+                    }
                 });
 
                 toast.success("Item saved successfully!");

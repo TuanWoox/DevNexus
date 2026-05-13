@@ -17,14 +17,10 @@ import {
 import { PostCard } from "@/components/post/post-card";
 import {
   SearchCommunityResult,
-  SearchPostResult,
   SearchProfileResult,
-  SearchQAPostResult,
 } from "@/types/search/global-search-result";
-import { PostType } from "@/types/post/create-post-dto";
 import { SelectPostDTO } from "@/types/post/select-post-dto";
 import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
-import { ModerationStatus } from "@/types/post/moderation-status";
 
 type TabValue = "all" | SearchTab;
 
@@ -64,58 +60,9 @@ function LoadingState({ label = "Searching..." }: { label?: string }) {
   );
 }
 
-function toPostCardData(post: SearchPostResult): SelectPostDTO {
-  const createdAt = post.dateCreated ?? new Date().toISOString();
-
-  return {
-    id: post.id,
-    title: post.title,
-    content: post.content,
-    slug: post.slug,
-    postType: PostType.MarkDown,
-    authorId: post.authorId,
-    author: post.author
-      ? {
-        id: post.author.id,
-        fullName: post.author.fullName,
-        avatarUrl: post.author.avatarUrl ?? undefined,
-        backgroundUrl: post.author.backgroundUrl ?? undefined,
-        bio: post.author.bio ?? "",
-        reputationPoints: post.author.reputationPoints,
-        techStacks: post.author.techStacks ?? [],
-        isPrivate: post.author.isPrivate,
-      }
-      : undefined,
-    upvoteCount: post.upvoteCount,
-    downvoteCount: 0,
-    commentCount: post.commentCount,
-    tagNames: [],
-    dateCreated: createdAt,
-    dateModified: createdAt,
-    currentUserVote: null,
-    moderationStatus: "Approved" as ModerationStatus,
-    moderationReason: null,
-    communityId: post.communityId ?? undefined,
-    community: post.communityId && post.communityName
-      ? {
-        id: post.communityId,
-        name: post.communityName,
-        slug: post.communityId,
-      }
-      : undefined,
-  };
-}
-
-function toQAPostCardData(post: SearchQAPostResult): SelectQAPostDTO {
-  return {
-    ...toPostCardData(post),
-    answerCount: post.answerCount,
-  };
-}
-
 function InfiniteResults({ type, query }: { type: SearchTab; query: string }) {
   const result = useSearchInfinite(type, query);
-  const pages = (result.data?.pages ?? []) as Array<{ data: Array<SearchPostResult | SearchQAPostResult | SearchCommunityResult | SearchProfileResult> }>;
+  const pages = (result.data?.pages ?? []) as Array<{ data: Array<SelectPostDTO | SelectQAPostDTO | SearchCommunityResult | SearchProfileResult> }>;
   const items = pages.flatMap((page) => page.data);
   const sentinelRef = useIntersectionObserver(() => {
     if (result.hasNextPage && !result.isFetchingNextPage) result.fetchNextPage();
@@ -129,8 +76,8 @@ function InfiniteResults({ type, query }: { type: SearchTab; query: string }) {
   return (
     <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
       {items.map((item) => {
-        if (type === "posts") return <PostCard key={item.id} post={toPostCardData(item as SearchPostResult)} />;
-        if (type === "questions") return <PostCard key={item.id} post={toQAPostCardData(item as SearchQAPostResult)} />;
+        if (type === "posts") return <PostCard key={item.id} post={item as SelectPostDTO} />;
+        if (type === "questions") return <PostCard key={item.id} post={item as SelectQAPostDTO} />;
         if (type === "communities") return <SearchCommunityCard key={item.id} community={item as never} />;
         return <SearchProfileCard key={item.id} profile={item as never} />;
       })}
@@ -158,12 +105,12 @@ function AllResults({ query, onSeeAll }: { query: string; onSeeAll: (tab: Search
     <div className="space-y-7 animate-in fade-in slide-in-from-bottom-2 duration-200">
       {!!data?.posts.length && (
         <ResultSection title="Posts" count={data.posts.length} icon={FileText} onSeeAll={() => onSeeAll("posts")}>
-          {data.posts.slice(0, 5).map((post) => <PostCard key={post.id} post={toPostCardData(post)} />)}
+          {data.posts.slice(0, 5).map((post) => <PostCard key={post.id} post={post} />)}
         </ResultSection>
       )}
       {!!data?.qaPosts.length && (
         <ResultSection title="Questions" count={data.qaPosts.length} icon={HelpCircle} onSeeAll={() => onSeeAll("questions")}>
-          {data.qaPosts.slice(0, 5).map((post) => <PostCard key={post.id} post={toQAPostCardData(post)} />)}
+          {data.qaPosts.slice(0, 5).map((post) => <PostCard key={post.id} post={post} />)}
         </ResultSection>
       )}
       {!!data?.communities.length && (

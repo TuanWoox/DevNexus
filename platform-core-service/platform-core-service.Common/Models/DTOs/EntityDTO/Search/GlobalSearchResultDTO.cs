@@ -1,11 +1,13 @@
 using platform_core_service.Common.Entities.BaseEntity;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
+using platform_core_service.Common.Models.DTOs.EntityDTO.QAPost;
 
 namespace platform_core_service.Common.Models.DTOs.EntityDTO.Search
 {
     public class GlobalSearchResultDTO
     {
-        public List<SearchPostResultDTO> Posts { get; set; } = [];
-        public List<SearchQAPostResultDTO> QAPosts { get; set; } = [];
+        public List<SelectPostDTO> Posts { get; set; } = [];
+        public List<SelectQAPostDTO> QAPosts { get; set; } = [];
         public List<SearchCommunityResultDTO> Communities { get; set; } = [];
         public List<SearchProfileResultDTO> Profiles { get; set; } = [];
     }

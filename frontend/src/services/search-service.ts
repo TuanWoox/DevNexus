@@ -7,10 +7,10 @@ import { ReturnResult } from "@/types/common/return-result";
 import {
   GlobalSearchResult,
   SearchCommunityResult,
-  SearchPostResult,
   SearchProfileResult,
-  SearchQAPostResult,
 } from "@/types/search/global-search-result";
+import { SelectPostDTO } from "@/types/post/select-post-dto";
+import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
 
 export function buildSearchPage(query: string, size: number, pageNumber = 0): Page<string> {
   return {
@@ -38,13 +38,13 @@ export const searchService = {
     return data.result ?? { posts: [], qaPosts: [], communities: [], profiles: [] };
   },
 
-  searchPosts: async (payload: Page<string>): Promise<PagedData<SearchPostResult, string>> => {
-    const { data } = await api.post<ReturnResult<PagedData<SearchPostResult, string>>>("/Search/posts", payload);
+  searchPosts: async (payload: Page<string>): Promise<PagedData<SelectPostDTO, string>> => {
+    const { data } = await api.post<ReturnResult<PagedData<SelectPostDTO, string>>>("/Search/posts", payload);
     return data.result ?? { data: [], page: payload };
   },
 
-  searchQuestions: async (payload: Page<string>): Promise<PagedData<SearchQAPostResult, string>> => {
-    const { data } = await api.post<ReturnResult<PagedData<SearchQAPostResult, string>>>("/Search/questions", payload);
+  searchQuestions: async (payload: Page<string>): Promise<PagedData<SelectQAPostDTO, string>> => {
+    const { data } = await api.post<ReturnResult<PagedData<SelectQAPostDTO, string>>>("/Search/questions", payload);
     return data.result ?? { data: [], page: payload };
   },
 

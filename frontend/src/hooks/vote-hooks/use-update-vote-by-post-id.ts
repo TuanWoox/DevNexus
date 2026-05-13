@@ -7,6 +7,8 @@ import { postQueryKeys } from "@/hooks/post-hooks/use-post-query-keys";
 import { qaPostQueryKeys } from "../qa-post-hooks/use-qa-post-query-key";
 import { bookmarkedItemQueryKeys } from "../bookmarked-item-hooks/use-bookmarked-item-query-keys";
 import { SelectBookmarkedItemDTO } from "@/types/bookmarked-item/select-bookmarked-item-dto";
+import { searchQueryKeys } from "../search-hooks/use-global-search";
+import { GlobalSearchResult } from "@/types/search/global-search-result";
 
 const applyVoteToPost = <T extends SelectPostDTO>(post: T, voteRequestDTO: VoteRequestDTO): T => {
     const isToggleOff = post.currentUserVote === voteRequestDTO.isUpvote;
@@ -76,6 +78,23 @@ const applyVoteToBookmarkedList = (
     };
 };
 
+const applyVoteToGlobalSearch = (
+    oldData: GlobalSearchResult | undefined,
+    postId: string,
+    voteRequestDTO: VoteRequestDTO
+): GlobalSearchResult | undefined => {
+    if (!oldData) return oldData;
+    return {
+        ...oldData,
+        posts: oldData.posts.map((post) =>
+            post.id === postId ? applyVoteToPost(post, voteRequestDTO) : post
+        ),
+        qaPosts: oldData.qaPosts.map((post) =>
+            post.id === postId ? applyVoteToPost(post, voteRequestDTO) : post
+        ),
+    };
+};
+
 export const useUpdateVoteByPostId = (postId: string) => {
     const queryClient = useQueryClient();
 
@@ -86,12 +105,14 @@ export const useUpdateVoteByPostId = (postId: string) => {
             await queryClient.cancelQueries({ queryKey: postQueryKeys.all });
             await queryClient.cancelQueries({ queryKey: qaPostQueryKeys.all });
             await queryClient.cancelQueries({ queryKey: bookmarkedItemQueryKeys.all });
+            await queryClient.cancelQueries({ queryKey: searchQueryKeys.all });
 
             const previousPostDetail = queryClient.getQueryData<SelectPostDTO>(postQueryKeys.detail(postId));
             const previousQaPostDetail = queryClient.getQueryData<SelectPostDTO>(qaPostQueryKeys.detail(postId));
             const previousPostLists = queryClient.getQueriesData<InfiniteData<PagedData<SelectPostDTO, string>>>({ queryKey: postQueryKeys.lists() });
             const previousQaPostLists = queryClient.getQueriesData<InfiniteData<PagedData<SelectPostDTO, string>>>({ queryKey: qaPostQueryKeys.lists() });
             const previousBookmarkedLists = queryClient.getQueriesData<InfiniteData<PagedData<SelectBookmarkedItemDTO, string>>>({ queryKey: bookmarkedItemQueryKeys.lists() });
+            const previousSearchQueries = queryClient.getQueriesData<any>({ queryKey: searchQueryKeys.all });
 
             if (previousPostDetail) {
                 queryClient.setQueryData(postQueryKeys.detail(postId), applyVoteToPost(previousPostDetail, voteRequestDTO));
@@ -109,8 +130,16 @@ export const useUpdateVoteByPostId = (postId: string) => {
             previousBookmarkedLists.forEach(([queryKey, oldData]) => {
                 queryClient.setQueryData(queryKey, applyVoteToBookmarkedList(oldData, postId, voteRequestDTO));
             });
+            previousSearchQueries.forEach(([queryKey, oldData]: [any, any]) => {
+                if (!oldData) return;
+                if ("pages" in oldData) {
+                    queryClient.setQueryData(queryKey, applyVoteToInfiniteList(oldData, postId, voteRequestDTO));
+                } else {
+                    queryClient.setQueryData(queryKey, applyVoteToGlobalSearch(oldData, postId, voteRequestDTO));
+                }
+            });
 
-            return { previousPostDetail, previousQaPostDetail, previousPostLists, previousQaPostLists, previousBookmarkedLists };
+            return { previousPostDetail, previousQaPostDetail, previousPostLists, previousQaPostLists, previousBookmarkedLists, previousSearchQueries };
         },
 
         onError: (err, voteRequestDTO, context) => {
@@ -127,6 +156,9 @@ export const useUpdateVoteByPostId = (postId: string) => {
                 queryClient.setQueryData(queryKey, oldData);
             });
             context?.previousBookmarkedLists.forEach(([queryKey, oldData]) => {
+                queryClient.setQueryData(queryKey, oldData);
+            });
+            context?.previousSearchQueries.forEach(([queryKey, oldData]) => {
                 queryClient.setQueryData(queryKey, oldData);
             });
         },

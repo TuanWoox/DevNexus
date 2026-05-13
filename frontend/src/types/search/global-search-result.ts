@@ -1,3 +1,6 @@
+import { SelectPostDTO } from "../post/select-post-dto";
+import { SelectQAPostDTO } from "../qa-post/select-qa-post-dto";
+
 export interface SearchPostAuthor {
   id: string;
   fullName: string;
@@ -48,8 +51,8 @@ export interface SearchProfileResult {
 }
 
 export interface GlobalSearchResult {
-  posts: SearchPostResult[];
-  qaPosts: SearchQAPostResult[];
+  posts: SelectPostDTO[];
+  qaPosts: SelectQAPostDTO[];
   communities: SearchCommunityResult[];
   profiles: SearchProfileResult[];
 }

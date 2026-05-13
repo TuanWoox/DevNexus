@@ -4,10 +4,10 @@ import { searchQueryKeys } from "./use-global-search";
 import { PagedData } from "@/types/common/paged-data";
 import {
   SearchCommunityResult,
-  SearchPostResult,
   SearchProfileResult,
-  SearchQAPostResult,
 } from "@/types/search/global-search-result";
+import { SelectPostDTO } from "@/types/post/select-post-dto";
+import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
 
 const PAGE_SIZE = 20;
 
@@ -19,7 +19,7 @@ const searchFns = {
 };
 
 export type SearchTab = keyof typeof searchFns;
-export type SearchResultItem = SearchPostResult | SearchQAPostResult | SearchCommunityResult | SearchProfileResult;
+export type SearchResultItem = SelectPostDTO | SelectQAPostDTO | SearchCommunityResult | SearchProfileResult;
 
 export function useSearchInfinite(type: SearchTab, query: string) {
   const normalizedQuery = query.trim();

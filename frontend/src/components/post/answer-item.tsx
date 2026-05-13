@@ -7,7 +7,7 @@ import { useUpdateAnswer } from '@/hooks/answer-hooks/use-update-answer';
 import { UpdateAnswerDTO } from '@/types/answer/update-answer-dto';
 import { BaseReplyItem } from './base-reply-item';
 
-export function AnswerItem({ answer, currentUserId }: { answer: SelectAnswerDTO, currentUserId: string }) {
+export function AnswerItem({ answer, currentUserId, isDisabled }: { answer: SelectAnswerDTO, currentUserId: string, isDisabled?: boolean }) {
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByAnswerId(answer.id);
     const { mutate: deleteAnswer, isPending: isDeletingAnswer } = useDeleteAnswerById();
     const { mutate: updateAnswer, isPending: isUpdatingAnswer } = useUpdateAnswer();
@@ -32,6 +32,7 @@ export function AnswerItem({ answer, currentUserId }: { answer: SelectAnswerDTO,
                 updateAnswer(payload, { onSuccess });
             }}
             isUpdating={isUpdatingAnswer}
+            isDisabled={isDisabled}
         />
     );
 }
