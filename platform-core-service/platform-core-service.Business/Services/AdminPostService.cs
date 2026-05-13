@@ -72,6 +72,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 post.ModerationStatus = ModerationStatus.Approved;
+                post.ModerationReason = null;
                 await _context.SaveChangesAsync();
 
                 // Build DTO for AI First Responder
@@ -128,6 +129,7 @@ namespace platform_core_service.Business.Services
 
                 // Flagged = hidden from public feed (same as human-reject in Phase 1)
                 post.ModerationStatus = ModerationStatus.Flagged;
+                post.ModerationReason = "Rejected by moderator.";
                 await _context.SaveChangesAsync();
 
                 DevNexusLogger.Instance.Debug($"[AdminPost] Post {postId} force-flagged");

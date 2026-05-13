@@ -15,6 +15,10 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Post
 
         public PostType PostType { get; set; }
 
+        public ModerationStatus ModerationStatus { get; set; }
+
+        public string? ModerationReason { get; set; }
+
         public string AuthorId { get; set; } = null!;
 
         public SelectPostAuthorDTO? Author { get; set; }

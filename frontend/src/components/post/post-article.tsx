@@ -23,6 +23,8 @@ import { useRouter } from "next/navigation";
 import { PostActionsDropdown } from './post-actions-dropdown';
 import { ProfileHoverCard } from '@/components/profile/profile-hover-card';
 import { SelectPostDTO } from '@/types/post/select-post-dto';
+import { ModerationBanner } from '@/components/shared/moderation-banner';
+import { normalizeModerationStatus } from '@/types/post/moderation-status';
 
 interface Props {
     postId: string;
@@ -38,6 +40,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     const post = isQAPost ? qaPost : normalPost;
     const isPostLoading = isQAPost ? isQALoading : isNormalLoading;
     const isAuthor = user?.profileId === post?.authorId;
+    const isAdmin = user?.roles?.includes('Admin') || user?.roles?.includes('Moderator');
 
     const author = post?.author;
     const community = (post as SelectPostDTO)?.community;
@@ -221,6 +224,15 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                         onDeleted={() => router.push('/feed')}
                     />
                 </div>
+
+                {/* Moderation Banner — only visible to author or admin */}
+                {(isAuthor || isAdmin) && post.moderationStatus !== undefined && (
+                    <ModerationBanner
+                        status={normalizeModerationStatus(post.moderationStatus)}
+                        reason={post.moderationReason}
+                        className="mb-1"
+                    />
+                )}
 
                 {/* Title */}
                 <h1 className="text-2xl sm:text-3xl font-bold text-heading leading-tight">

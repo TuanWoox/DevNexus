@@ -1,6 +1,7 @@
 'use client';
 
 import { Bookmark, Share2, MessageSquare, ArrowBigUp, ArrowBigDown, Globe, Code2, HelpCircle } from "lucide-react";
+import { ModerationBanner } from "@/components/shared/moderation-banner";
 import { SelectPostDTO } from "@/types/post/select-post-dto";
 import Link from "next/link";
 import Image from "next/image";
@@ -13,6 +14,8 @@ import { PostActionsDropdown } from "./post-actions-dropdown";
 import { ProfileHoverCard } from "@/components/profile/profile-hover-card";
 
 import { useHasMounted } from "@/hooks/use-has-mounted";
+import { cn } from "@/lib/utils";
+import { normalizeModerationStatus } from "@/types/post/moderation-status";
 
 interface PostCardProps {
     post: SelectPostDTO | SelectQAPostDTO;
@@ -23,6 +26,8 @@ export function PostCard({ post }: PostCardProps) {
     const { user } = useSelector((state: RootState) => state.auth);
     const isQaPost = 'answerCount' in post;
     const basePath = isQaPost ? '/questions' : '/post';
+    const moderationStatus = normalizeModerationStatus(post.moderationStatus);
+    const isApproved = moderationStatus === "Approved";
 
     const author = post.author;
     const community = (post as SelectPostDTO).community;
@@ -35,6 +40,7 @@ export function PostCard({ post }: PostCardProps) {
 
     const handleVote = (e: React.MouseEvent, isUpvote: boolean) => {
         e.preventDefault();
+        if (!isApproved) return;
         updateVote({ isUpvote });
     };
 
@@ -47,7 +53,11 @@ export function PostCard({ post }: PostCardProps) {
     });
 
     return (
-        <article className="group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-border/70 bg-card/95 p-4 text-card-foreground shadow-card backdrop-blur-sm transition-all duration-200 animate-in fade-in slide-in-from-bottom-2 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-elevated sm:p-5">
+        <article className={cn(
+            "group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-border/70 bg-card/95 p-4 text-card-foreground shadow-card backdrop-blur-sm transition-all duration-200 animate-in fade-in slide-in-from-bottom-2 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-elevated sm:p-5",
+            !isApproved && "border-dashed"
+        )}>
+            <ModerationBanner status={moderationStatus} reason={post.moderationReason} className="relative z-20" />
             {/* Header: Community/Author & Options */}
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 relative z-10">
@@ -134,13 +144,16 @@ export function PostCard({ post }: PostCardProps) {
             </div>
 
             {/* Content Wrap in Link */}
-            <div className="relative z-10 rounded-2xl border border-border/60 bg-background/45 p-3 sm:p-4">
+            <div className={cn(
+                "relative z-10 rounded-2xl border border-border/60 bg-background/45 p-3 transition-all sm:p-4",
+                !isApproved && "opacity-70 grayscale-[20%]"
+            )}>
                 <Link href={`${basePath}/${post.id}`} className="block after:absolute after:inset-0">
                     <h2 className="line-clamp-2 text-lg font-bold leading-tight text-heading transition-colors group-hover:text-primary sm:text-xl">
                         {post.title}
                     </h2>
                 </Link>
-                <div className="mt-2 line-clamp-3 text-sm leading-relaxed text-body sm:text-base">
+                <div className="mt-2 max-h-[4.875rem] overflow-hidden text-sm leading-relaxed text-body sm:text-base">
                     <MarkdownViewer source={post.content} />
                 </div>
             </div>
@@ -167,48 +180,58 @@ export function PostCard({ post }: PostCardProps) {
                     <div className="relative z-10 flex items-center rounded-full border border-border/70 bg-muted/50 p-0.5 shadow-sm">
                         <button
                             onClick={(e) => handleVote(e, true)}
-                            disabled={isVotePending}
-                            className={`flex items-center gap-1.5 rounded-full p-1.5 transition-colors hover:bg-background disabled:opacity-50 sm:p-2
-                                ${post.currentUserVote === true
-                                    ? 'text-emerald-500'
-                                    : 'text-muted-foreground hover:text-emerald-500'
-                                }`}
+                            disabled={isVotePending || !isApproved}
+                            className={cn(
+                                "group flex items-center gap-1.5 rounded-full p-1.5 transition-colors hover:bg-background disabled:opacity-50 sm:p-2",
+                                post.currentUserVote === true
+                                    ? "text-emerald-500"
+                                    : "text-muted-foreground hover:text-emerald-500"
+                            )}
                         >
-                            <ArrowBigUp className={`w-5 h-5 transition-all ${post.currentUserVote === true ? 'fill-emerald-500' : 'group-hover:fill-emerald-500/20'}`} />
+                            <ArrowBigUp className={cn("w-5 h-5 transition-all", post.currentUserVote === true ? "fill-emerald-500" : "group-hover:fill-emerald-500/20")} />
                             <span className="text-sm font-medium pr-1">{post.upvoteCount}</span>
                         </button>
                         <div className="mx-0.5 h-5 w-px bg-border"></div>
                         <button
                             onClick={(e) => handleVote(e, false)}
-                            disabled={isVotePending}
-                            className={`flex items-center gap-1.5 rounded-full p-1.5 transition-colors hover:bg-background disabled:opacity-50 sm:p-2
-                                ${post.currentUserVote === false
-                                    ? 'text-rose-500'
-                                    : 'text-muted-foreground hover:text-rose-500'
-                                }`}
+                            disabled={isVotePending || !isApproved}
+                            className={cn(
+                                "group flex items-center gap-1.5 rounded-full p-1.5 transition-colors hover:bg-background disabled:opacity-50 sm:p-2",
+                                post.currentUserVote === false
+                                    ? "text-rose-500"
+                                    : "text-muted-foreground hover:text-rose-500"
+                            )}
                         >
                             <span className="text-sm font-medium pr-1">{post.downvoteCount}</span>
-                            <ArrowBigDown className={`w-5 h-5 transition-all ${post.currentUserVote === false ? 'fill-rose-500' : 'group-hover:fill-rose-500/20'}`} />
+                            <ArrowBigDown className={cn("w-5 h-5 transition-all", post.currentUserVote === false ? "fill-rose-500" : "group-hover:fill-rose-500/20")} />
                         </button>
                     </div>
 
                     {/* Comments/Answers — Link instead of button for right-click support */}
-                    <Link
-                        href={`${basePath}/${post.id}`}
-                        className="relative z-10 flex items-center gap-2 rounded-full border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-heading sm:px-3 sm:py-2"
-                    >
-                        <MessageSquare className="w-5 h-5" />
-                        <span className="text-sm font-medium">{isQaPost ? (post as SelectQAPostDTO).answerCount : post.commentCount}</span>
-                        <span className="text-sm font-medium hidden sm:block">{isQaPost ? 'Answers' : 'Comments'}</span>
-                    </Link>
+                    {isApproved ? (
+                        <Link
+                            href={`${basePath}/${post.id}`}
+                            className="relative z-10 flex items-center gap-2 rounded-full border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-heading sm:px-3 sm:py-2"
+                        >
+                            <MessageSquare className="w-5 h-5" />
+                            <span className="text-sm font-medium">{isQaPost ? (post as SelectQAPostDTO).answerCount : post.commentCount}</span>
+                            <span className="text-sm font-medium hidden sm:block">{isQaPost ? 'Answers' : 'Comments'}</span>
+                        </Link>
+                    ) : (
+                        <div className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 text-muted-foreground opacity-50 rounded-full sm:rounded-lg relative z-10" aria-disabled>
+                            <MessageSquare className="w-5 h-5" />
+                            <span className="text-sm font-medium">{isQaPost ? (post as SelectQAPostDTO).answerCount : post.commentCount}</span>
+                            <span className="text-sm font-medium hidden sm:block">{isQaPost ? 'Answers' : 'Comments'}</span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-1 sm:gap-2">
-                    <button className="relative z-10 flex items-center gap-2 rounded-full border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-heading sm:px-3 sm:py-2">
+                    <button disabled={!isApproved} className="relative z-10 flex items-center gap-2 rounded-full border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-heading disabled:opacity-50 sm:px-3 sm:py-2">
                         <Bookmark className="w-5 h-5" />
                         <span className="hidden text-sm font-medium sm:block">Save</span>
                     </button>
-                    <button className="relative z-10 flex items-center gap-2 rounded-full border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-heading sm:px-3 sm:py-2">
+                    <button disabled={!isApproved} className="relative z-10 flex items-center gap-2 rounded-full border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-heading disabled:opacity-50 sm:px-3 sm:py-2">
                         <Share2 className="w-5 h-5" />
                         <span className="hidden text-sm font-medium sm:block">Share</span>
                     </button>

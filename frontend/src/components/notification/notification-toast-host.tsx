@@ -32,6 +32,27 @@ export function NotificationToastHost() {
             const notification = (e as CustomEvent<Notification>).detail;
             if (!notification) return;
 
+            if (notification.Type === NotificationEventEnum.MODERATION_RESULT) {
+                const preview = notification.EntityPreview;
+                const postUrl = notification.ActionUrl ?? (notification.EntityId ? `/post/${notification.EntityId}` : undefined);
+                const options = {
+                    action: postUrl
+                        ? { label: "View", onClick: () => router.push(postUrl) }
+                        : undefined,
+                };
+
+                if (preview === "Approved") {
+                    toast.success(notification.Message || "Post approved", options);
+                } else if (preview === "Flagged") {
+                    toast.warning(notification.Message || "Post flagged", options);
+                } else {
+                    toast(notification.Message || "Post sent to review", options);
+                }
+
+                return;
+            }
+
+            // --- Generic notification toast for all other event types ---
             toast.custom(
                 (t) => {
                     const actorName = notification.Actor?.FullName ?? "User";
@@ -72,7 +93,7 @@ export function NotificationToastHost() {
 
         window.addEventListener("new-notification", handler);
         return () => window.removeEventListener("new-notification", handler);
-    }, [isOnNotificationsPage, handleViewClick]);
+    }, [isOnNotificationsPage, handleViewClick, router]);
 
     return (
         <>

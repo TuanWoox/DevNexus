@@ -11,6 +11,23 @@ import {
     prependNotificationToCache,
     setUnreadCountInCache,
 } from "../utils/notification-cache-helper";
+import { NotificationEventEnum } from "../types/enums";
+import { updatePostModerationStatusInCache } from "@/hooks/post-hooks/post-cache-helper";
+import { ModerationStatus, normalizeModerationStatus } from "@/types/post/moderation-status";
+import { postQueryKeys } from "@/hooks/post-hooks";
+import { qaPostQueryKeys } from "@/hooks/qa-post-hooks/use-qa-post-query-key";
+
+function parseModerationStatus(value: string | undefined): Exclude<ModerationStatus, number> | null {
+    if (value === "Pending" || value === "Approved" || value === "Flagged" || value === "InReview") {
+        return value;
+    }
+
+    if (value === "0" || value === "1" || value === "2" || value === "3") {
+        return normalizeModerationStatus(Number(value) as ModerationStatus);
+    }
+
+    return null;
+}
 
 export function useNotificationGateway() {
     const socketRef = useRef<Socket | null>(null);
@@ -41,6 +58,18 @@ export function useNotificationGateway() {
             // prependNotificationToCache handles both fresh inserts and aggregation
             // (removes existing entry with same Id or GroupKey, then inserts at top)
             prependNotificationToCache(queryClient, notification);
+
+            if (notification.Type === NotificationEventEnum.MODERATION_RESULT && notification.EntityId) {
+                const moderationStatus = parseModerationStatus(notification.EntityPreview);
+                if (moderationStatus) {
+                    updatePostModerationStatusInCache(queryClient, notification.EntityId, moderationStatus);
+                }
+
+                queryClient.invalidateQueries({ queryKey: postQueryKeys.lists() });
+                queryClient.invalidateQueries({ queryKey: postQueryKeys.detail(notification.EntityId) });
+                queryClient.invalidateQueries({ queryKey: qaPostQueryKeys.lists() });
+                queryClient.invalidateQueries({ queryKey: qaPostQueryKeys.detail(notification.EntityId) });
+            }
 
             // Dispatch event for NotificationToastHost
             window.dispatchEvent(new CustomEvent("new-notification", { detail: notification }));

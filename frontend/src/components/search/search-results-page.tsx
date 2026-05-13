@@ -24,6 +24,7 @@ import {
 import { PostType } from "@/types/post/create-post-dto";
 import { SelectPostDTO } from "@/types/post/select-post-dto";
 import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
+import { ModerationStatus } from "@/types/post/moderation-status";
 
 type TabValue = "all" | SearchTab;
 
@@ -92,6 +93,8 @@ function toPostCardData(post: SearchPostResult): SelectPostDTO {
     dateCreated: createdAt,
     dateModified: createdAt,
     currentUserVote: null,
+    moderationStatus: "Approved" as ModerationStatus,
+    moderationReason: null,
     communityId: post.communityId ?? undefined,
     community: post.communityId && post.communityName
       ? {

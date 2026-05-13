@@ -1,4 +1,5 @@
 import { PostType } from "./create-post-dto";
+import { ModerationStatus } from "./moderation-status";
 
 export interface SelectPostAuthorDTO {
     id: string;
@@ -24,6 +25,8 @@ export interface SelectPostDTO {
     content: string;
     slug: string;
     postType: PostType;
+    moderationStatus: ModerationStatus;
+    moderationReason?: string | null;
     authorId: string;
     author?: SelectPostAuthorDTO;
     upvoteCount: number;
