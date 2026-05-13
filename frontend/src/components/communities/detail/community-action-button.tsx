@@ -29,7 +29,7 @@ export function CommunityActionButton({ communityId, role }: CommunityActionButt
     // Moderator — cannot leave via this button (use settings)
     if (role === "MODERATOR") {
         return (
-            <div className="w-full md:w-auto shrink-0 flex flex-col sm:flex-row md:flex-col gap-3">
+            <div className="w-full md:w-auto shrink-0 flex flex-col md:flex-col gap-3">
                 <Button size="lg" variant="outline" disabled className="cursor-default">
                     <Shield className="mr-2 h-4 w-4 text-primary" />
                     Moderator

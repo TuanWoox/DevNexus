@@ -111,7 +111,24 @@ namespace platform_core_service.Business.Helper
                     return returnResult;
                 }
 
-                // If the community is public => everyone can view it's content
+                // ── Ban check: MUST run before public short-circuit ──────────────────
+                // A banned user is blocked regardless of whether the community is public
+                // or private. Checking early prevents the !IsPrivate path from bypassing
+                // the ban entirely.
+                if (!string.IsNullOrEmpty(profileId))
+                {
+                    var isBanned = await _dbContext.CommunityBans
+                                                   .AsNoTracking()
+                                                   .AnyAsync(b => b.CommunityId == communityId
+                                                                && b.BannedProfileId == profileId);
+                    if (isBanned)
+                    {
+                        returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
+                        return returnResult;
+                    }
+                }
+
+                // If the community is public => everyone (non-banned) can view its content
                 if (!community.IsPrivate)
                 {
                     returnResult.Result = true;

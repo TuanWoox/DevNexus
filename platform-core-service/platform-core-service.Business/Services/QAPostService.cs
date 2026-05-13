@@ -165,6 +165,7 @@ namespace platform_core_service.Business.Services
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(qaPost);
                 await SetCurrentUserVoteAsync(result.Result);
+                await SetCurrentUserSavedAsync(result.Result);
             }
             catch (Exception ex)
             {
@@ -184,7 +185,13 @@ namespace platform_core_service.Business.Services
                 var query = _dbContext.Posts
                     .OfType<QAPost>()
                     .Where(q => q.ModerationStatus == ModerationStatus.Approved)
-                    .Where(q => q.CommunityId == null || !q.Community.IsPrivate || q.Community.OwnerId == currentProfileId || q.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || q.Community.Members.Any(m => m.ProfileId == currentProfileId))
+                    .Where(q =>
+                        q.CommunityId == null ||
+                        !q.Community.IsPrivate && !q.Community.Bans.Any(b => b.BannedProfileId == currentProfileId) ||
+                        q.Community.OwnerId == currentProfileId ||
+                        q.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) ||
+                        q.Community.Members.Any(m => m.ProfileId == currentProfileId) && !q.Community.Bans.Any(b => b.BannedProfileId == currentProfileId)
+                    )
                     .Include(q => q.Answers)
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
@@ -196,6 +203,7 @@ namespace platform_core_service.Business.Services
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCurrentUserSavedForListAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
                 }
 
@@ -225,7 +233,13 @@ namespace platform_core_service.Business.Services
                     .OfType<QAPost>()
                     .Where(q => q.AuthorId == profileId)
                     .Where(q => q.ModerationStatus == ModerationStatus.Approved)
-                    .Where(q => q.CommunityId == null || !q.Community.IsPrivate || q.Community.OwnerId == currentProfileId || q.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || q.Community.Members.Any(m => m.ProfileId == currentProfileId))
+                    .Where(q =>
+                        q.CommunityId == null ||
+                        !q.Community.IsPrivate && !q.Community.Bans.Any(b => b.BannedProfileId == currentProfileId) ||
+                        q.Community.OwnerId == currentProfileId ||
+                        q.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) ||
+                        q.Community.Members.Any(m => m.ProfileId == currentProfileId) && !q.Community.Bans.Any(b => b.BannedProfileId == currentProfileId)
+                    )
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(q => q.Author)
@@ -237,6 +251,7 @@ namespace platform_core_service.Business.Services
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCurrentUserSavedForListAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
                 }
             }
@@ -282,6 +297,7 @@ namespace platform_core_service.Business.Services
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCurrentUserSavedForListAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
                 }
             }
@@ -378,6 +394,7 @@ namespace platform_core_service.Business.Services
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(updatedPost);
                 await SetCurrentUserVoteAsync(result.Result);
+                await SetCurrentUserSavedAsync(result.Result);
 
                 // Step 10: Reset to Pending and re-submit for moderation.
                 // Edited content must pass the pipeline again before becoming visible.
@@ -657,6 +674,62 @@ namespace platform_core_service.Business.Services
                 .FirstOrDefaultAsync();
 
             dto.CurrentUserVote = vote;
+        }
+
+        private async Task SetCurrentUserSavedForListAsync(List<SelectQAPostDTO> dtos)
+        {
+            if (dtos == null || !dtos.Any()) return;
+            string profileId = _userContext.ProfileId;
+            if (string.IsNullOrEmpty(profileId)) return;
+            var postIds = dtos.Select(s => s.Id).ToList();
+
+            var savedItems = await _dbContext.BookMarkedItems
+                .Include(b => b.BookMark)
+                .Where(b => b.BookMark.OwnerId == profileId && postIds.Contains(b.QAPostId))
+                .Select(b => new { b.QAPostId, b.Id })
+                .ToListAsync();
+
+            var savedMap = savedItems
+                .Where(x => x.QAPostId != null)
+                .GroupBy(b => b.QAPostId)
+                .ToDictionary(g => g.Key, g => g.First().Id);
+
+            foreach (var dto in dtos)
+            {
+                if (savedMap.TryGetValue(dto.Id, out var bookMarkedItemId))
+                {
+                    dto.IsSaved = true;
+                    dto.SavedBookMarkedItemId = bookMarkedItemId;
+                }
+                else
+                {
+                    dto.IsSaved = false;
+                }
+            }
+        }
+
+        private async Task SetCurrentUserSavedAsync(SelectQAPostDTO dto)
+        {
+            if (dto == null) return;
+
+            string profileId = _userContext.ProfileId;
+            if (string.IsNullOrEmpty(profileId)) return;
+
+            var savedItem = await _dbContext.BookMarkedItems
+                .Include(b => b.BookMark)
+                .Where(b => b.BookMark.OwnerId == profileId && b.QAPostId == dto.Id)
+                .Select(b => b.Id)
+                .FirstOrDefaultAsync();
+
+            if (!string.IsNullOrEmpty(savedItem))
+            {
+                dto.IsSaved = true;
+                dto.SavedBookMarkedItemId = savedItem;
+            }
+            else
+            {
+                dto.IsSaved = false;
+            }
         }
     }
 }

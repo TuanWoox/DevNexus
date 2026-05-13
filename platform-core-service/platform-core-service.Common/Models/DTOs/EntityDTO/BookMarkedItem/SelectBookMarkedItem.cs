@@ -10,7 +10,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.BookMarkedItem
         public string BookMarkId { get; set; } = null!;
         public string? PostId { get; set; }
         public string? QAPostId { get; set; }
-        public SelectPartialPost? Post { get; set; }
-        public SelectPartialQA? QAPost { get; set; }
+        public SelectPostDTO? Post { get; set; }
+        public SelectQAPostDTO? QAPost { get; set; }
     }
 }

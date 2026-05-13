@@ -10,7 +10,8 @@ import {
     Sun,
     Settings,
     ChevronDown,
-    Loader2
+    Loader2,
+    ShieldCheck
 } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
@@ -108,11 +109,25 @@ export function SidebarUserMenu({ isCollapsed }: { isCollapsed?: boolean }) {
                     asChild
                     className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer"
                 >
-                    <Link href="/settings" className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer">
+                    <Link href="/settings">
                         <Settings className="w-5 h-5 shrink-0" />
                         <span className="text-sm font-medium">Settings</span>
                     </Link>
                 </DropdownMenuItem>
+
+                {(user?.roles?.includes('Admin') || user?.roles?.includes('Moderator')) && (
+                    <DropdownMenuItem
+                        asChild
+                        className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer"
+                    >
+                        <Link
+                            href={user?.roles?.includes('Admin') ? '/admin/dashboard' : '/admin/moderation'}
+                        >
+                            <ShieldCheck className="w-5 h-5 shrink-0" />
+                            <span className="text-sm font-medium">Admin Workspace</span>
+                        </Link>
+                    </DropdownMenuItem>
+                )}
 
                 <DropdownMenuItem
                     onClick={toggleTheme}

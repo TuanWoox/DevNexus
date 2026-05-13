@@ -31,4 +31,6 @@ export interface SelectPostDTO {
     currentUserVote?: boolean | null; // null = no vote, true = upvoted, false = downvoted
     communityId?: string;
     community?: SelectPostCommunityDTO;
+    isSaved: boolean;
+    savedBookMarkedItemId?: string;
 }

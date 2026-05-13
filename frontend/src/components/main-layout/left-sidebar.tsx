@@ -13,6 +13,8 @@ import {
     Sparkles,
     ChevronLeft,
     ChevronRight,
+    Plus,
+    Bookmark,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SidebarUserMenu } from './sidebar-user-menu'
@@ -25,21 +27,26 @@ const menuItems = [
     { name: 'Q&A', href: '/questions', icon: HelpCircle },
     { name: 'Communities', href: '/communities', icon: Users },
     { name: 'Messages', href: '/messages', icon: MessageSquare },
+    { name: 'Saved', href: '/profile/saved', icon: Bookmark },
 ]
 
 export function LeftSidebar() {
     const pathname = usePathname()
 
-    const [isCollapsed, setIsCollapsed] = useState(() => {
-        if (typeof window === 'undefined') return true
-        return !window.matchMedia('(min-width: 1024px)').matches
-    })
+    const [isCollapsed, setIsCollapsed] = useState(true)
+    const [isMounted, setIsMounted] = useState(false)
     const [isPanelOpen, setIsPanelOpen] = useState(false)
 
     const { data: unreadCount = 0 } = useUnreadCount()
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setIsMounted(true)
+
         const mediaQuery = window.matchMedia('(min-width: 1024px)')
+
+        // Set initial state based on media query
+        setIsCollapsed(!mediaQuery.matches)
 
         const handleChange = (event: MediaQueryListEvent) => {
             if (!event.matches) setIsCollapsed(true)
@@ -122,12 +129,13 @@ export function LeftSidebar() {
                 <button
                     onClick={() => setIsPanelOpen((prev) => !prev)}
                     className={cn(
-                        "relative flex items-center gap-4 rounded-xl transition-colors group mt-2",
+                        "relative flex items-center gap-4 rounded-xl transition-colors group mt-2 cursor-pointer",
                         isCollapsed ? "justify-center py-3" : "px-3 py-3",
                         isPanelOpen
                             ? 'bg-primary/10 text-primary font-medium'
                             : 'text-muted-foreground hover:bg-subtle hover:text-primary',
                     )}
+                    title={isCollapsed ? "Notifications" : undefined}
                 >
                     <div className="relative">
                         <Bell className="h-6 w-6 shrink-0" />
@@ -138,7 +146,7 @@ export function LeftSidebar() {
                         )}
                     </div>
 
-                    {!isCollapsed && <span>Notifications</span>}
+                    {!isCollapsed && <span className="text-base truncate font-medium">Notifications</span>}
                 </button>
 
                 {/* Create post */}
@@ -147,11 +155,18 @@ export function LeftSidebar() {
                         href="/post/create"
                         className={cn(
                             "btn-ai flex items-center gap-4 rounded-xl",
-                            isCollapsed ? "justify-center py-3" : "px-3 py-3",
+                            isCollapsed ? "justify-center py-3" : "justify-start px-3 py-3",
                         )}
+                        title={isCollapsed ? "Create Post" : undefined}
                     >
-                        <Sparkles className="h-5 w-5" />
-                        {!isCollapsed && <span>Create Post</span>}
+                        {isCollapsed ? (
+                            <Plus className="h-6 w-6 shrink-0" />
+                        ) : (
+                            <>
+                                <Sparkles className="h-5 w-5 shrink-0" />
+                                <span className="text-base truncate font-semibold">Create Post</span>
+                            </>
+                        )}
                     </Link>
                 </div>
 
@@ -165,6 +180,7 @@ export function LeftSidebar() {
             <NotificationPanel
                 isOpen={isPanelOpen}
                 onClose={() => setIsPanelOpen(false)}
+                sidebarCollapsed={isCollapsed}
             />
         </>
     )

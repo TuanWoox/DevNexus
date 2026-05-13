@@ -174,6 +174,7 @@ namespace platform_core_service.Business.Services
 
                 returnResult.Result = _mapper.Map<SelectPostDTO>(post);
                 await SetCurrentUserVoteAsync(returnResult.Result);
+                await SetCurrentUserSavedAsync(returnResult.Result);
             }
             catch (Exception ex)
             {
@@ -210,6 +211,7 @@ namespace platform_core_service.Business.Services
 
                 returnResult.Result = _mapper.Map<SelectPostDTO>(post);
                 await SetCurrentUserVoteAsync(returnResult.Result);
+                await SetCurrentUserSavedAsync(returnResult.Result);
             }
             catch (Exception ex)
             {
@@ -229,12 +231,12 @@ namespace platform_core_service.Business.Services
                 // Step 2: Build query — news feed shows only approved posts for all users
                 var query = _context.Posts
                     .Where(p => p.GetType() == typeof(PostEntity))
-                    .Where(p => 
-                        p.CommunityId == null || // Post that not belong to community
-                        !p.Community.IsPrivate || // Public Community
+                    .Where(p =>
+                        p.CommunityId == null || // Post not belonging to any community
+                        !p.Community.IsPrivate && !p.Community.Bans.Any(b => b.BannedProfileId == currentProfileId) || // Public community, not banned
                         p.Community.OwnerId == currentProfileId || // User is the community's owner
                         p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || // User is Moderator
-                        p.Community.Members.Any(m => m.ProfileId == currentProfileId) // User is Member
+                        p.Community.Members.Any(m => m.ProfileId == currentProfileId) && !p.Community.Bans.Any(b => b.BannedProfileId == currentProfileId) // User is Member, not banned
                     )
                     .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Include(p => p.PostTags)
@@ -249,6 +251,7 @@ namespace platform_core_service.Business.Services
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCurrentUserSavedForListAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
                 }
             }
@@ -276,7 +279,13 @@ namespace platform_core_service.Business.Services
                 // Step 2: Build query — only concrete Post rows (exclude QAPost subtype)
                 var query = _context.Posts
                     .Where(p => p.GetType() == typeof(PostEntity))
-                    .Where(p => p.CommunityId == null || !p.Community.IsPrivate || p.Community.OwnerId == currentProfileId || p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || p.Community.Members.Any(m => m.ProfileId == currentProfileId))
+                    .Where(p =>
+                        p.CommunityId == null ||
+                        !p.Community.IsPrivate && !p.Community.Bans.Any(b => b.BannedProfileId == currentProfileId) ||
+                        p.Community.OwnerId == currentProfileId ||
+                        p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) ||
+                        p.Community.Members.Any(m => m.ProfileId == currentProfileId) && !p.Community.Bans.Any(b => b.BannedProfileId == currentProfileId)
+                    )
                     .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Where(p => p.AuthorId == profileId)
                     .Include(p => p.PostTags)
@@ -291,6 +300,7 @@ namespace platform_core_service.Business.Services
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCurrentUserSavedForListAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
                 }
 
@@ -337,6 +347,7 @@ namespace platform_core_service.Business.Services
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCurrentUserSavedForListAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
                 }
             }
@@ -364,7 +375,13 @@ namespace platform_core_service.Business.Services
 
                 // Step 2: Build query — only concrete Post rows (exclude QAPost subtype)
                 var query = _context.Posts
-                    .Where(p => p.CommunityId == null || !p.Community.IsPrivate || p.Community.OwnerId == currentProfileId || p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || p.Community.Members.Any(m => m.ProfileId == currentProfileId))
+                    .Where(p =>
+                        p.CommunityId == null ||
+                        !p.Community.IsPrivate && !p.Community.Bans.Any(b => b.BannedProfileId == currentProfileId) ||
+                        p.Community.OwnerId == currentProfileId ||
+                        p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) ||
+                        p.Community.Members.Any(m => m.ProfileId == currentProfileId) && !p.Community.Bans.Any(b => b.BannedProfileId == currentProfileId)
+                    )
                     .Where(p => p.ModerationStatus == ModerationStatus.Approved)
                     .Where(p => p.AuthorId == profileId)
                     .Include(p => p.PostTags)
@@ -379,6 +396,7 @@ namespace platform_core_service.Business.Services
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await SetCurrentUserSavedForListAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
                 }
 
@@ -471,6 +489,7 @@ namespace platform_core_service.Business.Services
 
                 result.Result = _mapper.Map<SelectPostDTO>(updatedPost);
                 await SetCurrentUserVoteAsync(result.Result);
+                await SetCurrentUserSavedAsync(result.Result);
 
                 // Step 10: Reset to Pending and re-submit for moderation.
                 // Edited content must pass the pipeline again before becoming visible.
@@ -723,6 +742,62 @@ namespace platform_core_service.Business.Services
                 .FirstOrDefaultAsync();
 
             dto.CurrentUserVote = vote;
+        }
+
+        private async Task SetCurrentUserSavedForListAsync(List<SelectPostDTO> dtos)
+        {
+            if (dtos == null || !dtos.Any()) return;
+            string profileId = _userContext.ProfileId;
+            if (string.IsNullOrEmpty(profileId)) return;
+            var postIds = dtos.Select(s => s.Id).ToList();
+
+            var savedItems = await _context.BookMarkedItems
+                .Include(b => b.BookMark)
+                .Where(b => b.BookMark.OwnerId == profileId && (postIds.Contains(b.PostId) || postIds.Contains(b.QAPostId)))
+                .Select(b => new { b.PostId, b.QAPostId, b.Id })
+                .ToListAsync();
+
+            var savedMap = savedItems
+                .Where(x => x.PostId != null || x.QAPostId != null)
+                .GroupBy(b => b.PostId ?? b.QAPostId!)
+                .ToDictionary(g => g.Key, g => g.First().Id);
+
+            foreach (var dto in dtos)
+            {
+                if (savedMap.TryGetValue(dto.Id, out var bookMarkedItemId))
+                {
+                    dto.IsSaved = true;
+                    dto.SavedBookMarkedItemId = bookMarkedItemId;
+                }
+                else
+                {
+                    dto.IsSaved = false;
+                }
+            }
+        }
+
+        private async Task SetCurrentUserSavedAsync(SelectPostDTO dto)
+        {
+            if (dto == null) return;
+
+            string profileId = _userContext.ProfileId;
+            if (string.IsNullOrEmpty(profileId)) return;
+
+            var savedItem = await _context.BookMarkedItems
+                .Include(b => b.BookMark)
+                .Where(b => b.BookMark.OwnerId == profileId && (b.PostId == dto.Id || b.QAPostId == dto.Id))
+                .Select(b => b.Id)
+                .FirstOrDefaultAsync();
+
+            if (!string.IsNullOrEmpty(savedItem))
+            {
+                dto.IsSaved = true;
+                dto.SavedBookMarkedItemId = savedItem;
+            }
+            else
+            {
+                dto.IsSaved = false;
+            }
         }
     }
 }

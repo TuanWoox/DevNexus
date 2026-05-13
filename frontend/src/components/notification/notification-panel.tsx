@@ -16,9 +16,10 @@ import { cn } from "@/lib/utils";
 interface Props {
     isOpen: boolean;
     onClose: () => void;
+    sidebarCollapsed?: boolean;
 }
 
-export function NotificationPanel({ isOpen, onClose }: Props) {
+export function NotificationPanel({ isOpen, onClose, sidebarCollapsed = true }: Props) {
     const [filter, setFilter] = useState<NotificationFilter>("all");
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useNotificationsPaging(filter);
     const { data: unreadCount = 0 } = useUnreadCount();
@@ -45,14 +46,18 @@ export function NotificationPanel({ isOpen, onClose }: Props) {
         <>
             {isOpen && (
                 <div
-                    className="fixed top-0 right-0 bottom-0 left-118 z-39 bg-background/80 backdrop-blur-sm"
+                    className={cn(
+                        "fixed top-0 right-0 bottom-0 z-39 bg-background/80 backdrop-blur-sm transition-all duration-300",
+                        sidebarCollapsed ? "left-18" : "left-60"
+                    )}
                     onClick={onClose}
                     aria-hidden="true"
                 />
             )}
             <aside
                 className={cn(
-                    "fixed top-0 left-18 h-screen bg-card border-r border-border shadow-2xl z-40 flex flex-col transition-all duration-300",
+                    "fixed top-0 h-screen bg-card border-r border-border shadow-2xl z-40 flex flex-col transition-all duration-300",
+                    sidebarCollapsed ? "left-18" : "left-60",
                     isOpen ? "w-100 opacity-100" : "w-0 opacity-0 pointer-events-none",
                 )}
             >
