@@ -9,11 +9,10 @@ import { MarkdownViewer } from "@/components/editor/markdown-viewer";
 import { ProfileHoverCard } from "@/components/profile/profile-hover-card";
 import {
   SearchCommunityResult,
-  SearchPostAuthor,
-  SearchPostResult,
   SearchProfileResult,
-  SearchQAPostResult,
 } from "@/types/search/global-search-result";
+import { SelectPostAuthorDTO, SelectPostDTO } from "@/types/post/select-post-dto";
+import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
 
 const DEFAULT_AVATAR_URL = "/images/default-avatar.webp";
 
@@ -21,7 +20,7 @@ function initials(value?: string | null) {
   return value?.trim().charAt(0).toUpperCase() || "D";
 }
 
-function toHoverAuthor(author: SearchPostAuthor) {
+function toHoverAuthor(author: SelectPostAuthorDTO) {
   return {
     fullName: author.fullName,
     avatarUrl: author.avatarUrl ?? undefined,
@@ -44,10 +43,10 @@ function profileToHoverAuthor(profile: SearchProfileResult) {
   };
 }
 
-export function SearchPostCard({ post, question = false }: { post: SearchPostResult | SearchQAPostResult; question?: boolean }) {
+export function SearchPostCard({ post, question = false }: { post: SelectPostDTO | SelectQAPostDTO; question?: boolean }) {
   const href = `${question ? "/questions" : "/post"}/${post.id}`;
   const Icon = question ? HelpCircle : FileText;
-  const answerOrCommentCount = question ? (post as SearchQAPostResult).answerCount : post.commentCount;
+  const answerOrCommentCount = question ? (post as SelectQAPostDTO).answerCount : post.commentCount;
   const formattedDate = post.dateCreated
     ? new Date(post.dateCreated).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     : null;
@@ -61,9 +60,9 @@ export function SearchPostCard({ post, question = false }: { post: SearchPostRes
               <Icon className="size-3.5" />
               {question ? "Question" : "Post"}
             </Badge>
-            {post.communityName && (
+            {post.community?.name && (
               <span className="min-w-0 truncate text-xs text-muted-foreground">
-                in <span className="font-medium text-heading">{post.communityName}</span>
+                in <span className="font-medium text-heading">{post.community.name}</span>
               </span>
             )}
           </div>

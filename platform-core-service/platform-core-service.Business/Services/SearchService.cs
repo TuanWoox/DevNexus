@@ -3,6 +3,8 @@ using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
+using platform_core_service.Common.Models.DTOs.EntityDTO.QAPost;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Search;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
@@ -37,6 +39,11 @@ namespace platform_core_service.Business.Services
             var communities = await SearchCommunitiesPreviewAsync(query, size, cancellationToken);
             var profiles = await SearchProfilesPreviewAsync(query, size, cancellationToken);
 
+            await SetCurrentUserVotesForListAsync(posts);
+            await SetCurrentUserSavedForListAsync(posts);
+            await SetCurrentUserVotesForListAsync(qaPosts.Cast<SelectPostDTO>().ToList());
+            await SetCurrentUserSavedForListAsync(qaPosts.Cast<SelectPostDTO>().ToList());
+
             return new ReturnResult<GlobalSearchResultDTO>
             {
                 Result = new GlobalSearchResultDTO
@@ -49,22 +56,34 @@ namespace platform_core_service.Business.Services
             };
         }
 
-        public async Task<PagedData<SearchPostResultDTO, string>> SearchPostsAsync(Page<string> page, CancellationToken cancellationToken = default)
+        public async Task<PagedData<SelectPostDTO, string>> SearchPostsAsync(Page<string> page, CancellationToken cancellationToken = default)
         {
             var query = GetSearchQuery(page);
             var postsQuery = ApplyPostSearch(GetVisiblePosts().Where(p => p.GetType() == typeof(PostEntity)), query)
                 .OrderByDescending(p => p.DateCreated);
 
-            return await ToPagedDataAsync(postsQuery, page, ProjectPost(), cancellationToken);
+            var result = await ToPagedDataAsync(postsQuery, page, ProjectPost(), cancellationToken);
+            if (result?.Data != null && result.Data.Any())
+            {
+                await SetCurrentUserVotesForListAsync(result.Data.ToList());
+                await SetCurrentUserSavedForListAsync(result.Data.ToList());
+            }
+            return result;
         }
 
-        public async Task<PagedData<SearchQAPostResultDTO, string>> SearchQAPostsAsync(Page<string> page, CancellationToken cancellationToken = default)
+        public async Task<PagedData<SelectQAPostDTO, string>> SearchQAPostsAsync(Page<string> page, CancellationToken cancellationToken = default)
         {
             var query = GetSearchQuery(page);
             var qaPostsQuery = ApplyQAPostSearch(GetVisibleQAPosts(), query)
                 .OrderByDescending(p => p.DateCreated);
 
-            return await ToPagedDataAsync(qaPostsQuery, page, ProjectQAPost(), cancellationToken);
+            var result = await ToPagedDataAsync(qaPostsQuery, page, ProjectQAPost(), cancellationToken);
+            if (result?.Data != null && result.Data.Any())
+            {
+                await SetCurrentUserVotesForListAsync(result.Data.Cast<SelectPostDTO>().ToList());
+                await SetCurrentUserSavedForListAsync(result.Data.Cast<SelectPostDTO>().ToList());
+            }
+            return result;
         }
 
         public async Task<PagedData<SearchCommunityResultDTO, string>> SearchCommunitiesAsync(Page<string> page, CancellationToken cancellationToken = default)
@@ -85,7 +104,7 @@ namespace platform_core_service.Business.Services
             return await ToPagedDataAsync(profilesQuery, page, ProjectProfile, cancellationToken);
         }
 
-        private async Task<List<SearchPostResultDTO>> SearchPostsPreviewAsync(string query, int size, CancellationToken cancellationToken)
+        private async Task<List<SelectPostDTO>> SearchPostsPreviewAsync(string query, int size, CancellationToken cancellationToken)
         {
             return await ApplyPostSearch(GetVisiblePosts().Where(p => p.GetType() == typeof(PostEntity)), query)
                 .OrderByDescending(p => p.DateCreated)
@@ -94,7 +113,7 @@ namespace platform_core_service.Business.Services
                 .ToListAsync(cancellationToken);
         }
 
-        private async Task<List<SearchQAPostResultDTO>> SearchQAPostsPreviewAsync(string query, int size, CancellationToken cancellationToken)
+        private async Task<List<SelectQAPostDTO>> SearchQAPostsPreviewAsync(string query, int size, CancellationToken cancellationToken)
         {
             return await ApplyQAPostSearch(GetVisibleQAPosts(), query)
                 .OrderByDescending(p => p.DateCreated)
@@ -226,16 +245,19 @@ namespace platform_core_service.Business.Services
             return new PagedData<TDto, string>(page) { Data = data };
         }
 
-        private System.Linq.Expressions.Expression<Func<PostEntity, SearchPostResultDTO>> ProjectPost()
+        private System.Linq.Expressions.Expression<Func<PostEntity, SelectPostDTO>> ProjectPost()
         {
-            return p => new SearchPostResultDTO
+            return p => new SelectPostDTO
             {
                 Id = p.Id,
                 Title = p.Title,
                 Content = p.Content,
                 Slug = p.Slug,
+                PostType = p.PostType,
+                ModerationStatus = p.ModerationStatus,
+                ModerationReason = p.ModerationReason,
                 AuthorId = p.AuthorId,
-                Author = new SearchPostAuthorDTO
+                Author = new SelectPostAuthorDTO
                 {
                     Id = p.Author.Id,
                     FullName = p.Author.FullName,
@@ -247,23 +269,38 @@ namespace platform_core_service.Business.Services
                     IsPrivate = p.Author.IsPrivate
                 },
                 UpvoteCount = p.UpvoteCount,
+                DownvoteCount = p.DownvoteCount,
                 CommentCount = _context.Comments.Count(c => c.PostId == p.Id),
-                DateCreated = p.DateCreated,
+                TagNames = p.PostTags.Select(pt => pt.Tag.Name).ToList(),
+                DateCreated = p.DateCreated.GetValueOrDefault(),
+                DateModified = p.DateModified,
+                CurrentUserVote = null,
+                IsSaved = false,
+                SavedBookMarkedItemId = null,
                 CommunityId = p.CommunityId,
-                CommunityName = p.Community != null ? p.Community.Name : null
+                Community = p.Community != null ? new SelectPostCommunityDTO
+                {
+                    Id = p.Community.Id,
+                    Name = p.Community.Name,
+                    Slug = p.Community.Slug,
+                    CommunityCoverPhotoUrl = p.Community.CommunityCoverPhotoUrl
+                } : null
             };
         }
 
-        private System.Linq.Expressions.Expression<Func<QAPost, SearchQAPostResultDTO>> ProjectQAPost()
+        private System.Linq.Expressions.Expression<Func<QAPost, SelectQAPostDTO>> ProjectQAPost()
         {
-            return p => new SearchQAPostResultDTO
+            return p => new SelectQAPostDTO
             {
                 Id = p.Id,
                 Title = p.Title,
                 Content = p.Content,
                 Slug = p.Slug,
+                PostType = p.PostType,
+                ModerationStatus = p.ModerationStatus,
+                ModerationReason = p.ModerationReason,
                 AuthorId = p.AuthorId,
-                Author = new SearchPostAuthorDTO
+                Author = new SelectPostAuthorDTO
                 {
                     Id = p.Author.Id,
                     FullName = p.Author.FullName,
@@ -275,10 +312,22 @@ namespace platform_core_service.Business.Services
                     IsPrivate = p.Author.IsPrivate
                 },
                 UpvoteCount = p.UpvoteCount,
+                DownvoteCount = p.DownvoteCount,
                 CommentCount = _context.Comments.Count(c => c.PostId == p.Id),
-                DateCreated = p.DateCreated,
+                TagNames = p.PostTags.Select(pt => pt.Tag.Name).ToList(),
+                DateCreated = p.DateCreated.GetValueOrDefault(),
+                DateModified = p.DateModified,
+                CurrentUserVote = null,
+                IsSaved = false,
+                SavedBookMarkedItemId = null,
                 CommunityId = p.CommunityId,
-                CommunityName = p.Community != null ? p.Community.Name : null,
+                Community = p.Community != null ? new SelectPostCommunityDTO
+                {
+                    Id = p.Community.Id,
+                    Name = p.Community.Name,
+                    Slug = p.Community.Slug,
+                    CommunityCoverPhotoUrl = p.Community.CommunityCoverPhotoUrl
+                } : null,
                 AnswerCount = p.Answers.Count()
             };
         }
@@ -312,6 +361,58 @@ namespace platform_core_service.Business.Services
                 ?.Value
                 ?.ToString()
                 ?.Trim() ?? string.Empty;
+        }
+
+        private async Task SetCurrentUserVotesForListAsync(List<SelectPostDTO> dtos)
+        {
+            if (dtos == null || !dtos.Any()) return;
+            string profileId = _userContext.ProfileId;
+            if (string.IsNullOrEmpty(profileId)) return;
+            var postIds = dtos.Select(s => s.Id).ToList();
+
+            var votes = await _context.Votes
+                .Where(v => v.AuthorId == profileId && postIds.Contains(v.PostId))
+                .Select(v => new { v.PostId, v.IsUpvote })
+                .ToListAsync();
+
+            var voteMap = votes.ToDictionary(v => v.PostId, v => (bool?)v.IsUpvote);
+
+            foreach (var dto in dtos)
+            {
+                dto.CurrentUserVote = voteMap.TryGetValue(dto.Id, out var vote) ? vote : null;
+            }
+        }
+
+        private async Task SetCurrentUserSavedForListAsync(List<SelectPostDTO> dtos)
+        {
+            if (dtos == null || !dtos.Any()) return;
+            string profileId = _userContext.ProfileId;
+            if (string.IsNullOrEmpty(profileId)) return;
+            var postIds = dtos.Select(s => s.Id).ToList();
+
+            var savedItems = await _context.BookMarkedItems
+                .Include(b => b.BookMark)
+                .Where(b => b.BookMark.OwnerId == profileId && (postIds.Contains(b.PostId) || postIds.Contains(b.QAPostId)))
+                .Select(b => new { b.PostId, b.QAPostId, b.Id })
+                .ToListAsync();
+
+            var savedMap = savedItems
+                .Where(x => x.PostId != null || x.QAPostId != null)
+                .GroupBy(b => b.PostId ?? b.QAPostId!)
+                .ToDictionary(g => g.Key, g => g.First().Id);
+
+            foreach (var dto in dtos)
+            {
+                if (savedMap.TryGetValue(dto.Id, out var bookMarkedItemId))
+                {
+                    dto.IsSaved = true;
+                    dto.SavedBookMarkedItemId = bookMarkedItemId;
+                }
+                else
+                {
+                    dto.IsSaved = false;
+                }
+            }
         }
     }
 }

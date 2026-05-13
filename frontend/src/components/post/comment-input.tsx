@@ -12,9 +12,10 @@ interface CommentInputProps {
     postId: string;
     currentUserAvatar?: string;
     isQAPost: boolean;
+    isDisabled?: boolean;
 }
 
-export function CommentInput({ postId, currentUserAvatar, isQAPost }: CommentInputProps) {
+export function CommentInput({ postId, currentUserAvatar, isQAPost, isDisabled }: CommentInputProps) {
     const [content, setContent] = useState('');
     const { mutate: createComment, isPending: isCreatingComment } = useCreateComment();
     const { mutate: createAnswer, isPending: isCreatingAnswer } = useCreateAnswer();

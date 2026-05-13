@@ -7,7 +7,7 @@ import { useUpdateComment } from '@/hooks/comment-hooks/use-update-comment';
 import { UpdateCommentDTO } from '@/types/comment/update-comment-dto';
 import { BaseReplyItem } from './base-reply-item';
 
-export function CommentItem({ comment, currentUserId }: { comment: SelectCommentDTO, currentUserId: string }) {
+export function CommentItem({ comment, currentUserId, isDisabled }: { comment: SelectCommentDTO, currentUserId: string, isDisabled?: boolean }) {
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByCommentId(comment.id);
     const { mutate: deleteComment, isPending: isDeletingComment } = useDeleteComment();
     const { mutate: updateComment, isPending: isUpdatingComment } = useUpdateComment();
@@ -32,6 +32,7 @@ export function CommentItem({ comment, currentUserId }: { comment: SelectComment
                 updateComment(payload, { onSuccess });
             }}
             isUpdating={isUpdatingComment}
+            isDisabled={isDisabled}
         />
     );
 }

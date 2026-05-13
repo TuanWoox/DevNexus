@@ -48,6 +48,8 @@ export const useCreatePost = () => {
                 dateCreated: now,
                 dateModified: now,
                 currentUserVote: null,
+                isSaved: false,
+                savedBookMarkedItemId: undefined,
                 communityId: payload.communityId,
             };
 

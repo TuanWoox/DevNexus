@@ -14,6 +14,9 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 import { AnswerItem } from './answer-item';
 import { CommentItem } from './comment-item';
+import { useGetPostById } from '@/hooks/post-hooks';
+import { useGetQAPostById } from '@/hooks/qa-post-hooks/use-get-qa-post-by-id';
+import { normalizeModerationStatus } from '@/types/post/moderation-status';
 
 interface Props {
     postId: string;
@@ -45,6 +48,13 @@ export default function CommentSection({ postId, isQAPost }: Props) {
     const { data: answerData, isPending: isAnswerLoading } = useGetAnswersByPostId(postId, isQAPost, commentConfig)
     const { data: commentData, isPending: isCommentLoading } = useGetCommentsByPostId(postId, !isQAPost, commentConfig);
 
+    const { data: qaPost } = useGetQAPostById(postId, isQAPost);
+    const { data: normalPost } = useGetPostById(postId, !isQAPost);
+    const post = isQAPost ? qaPost : normalPost;
+
+    const moderationStatus = normalizeModerationStatus(post?.moderationStatus);
+    const isApproved = moderationStatus === "Approved";
+
     const commentsData = isQAPost ? answerData : commentData;
     const isLoading = isQAPost ? isAnswerLoading : isCommentLoading;
 
@@ -55,7 +65,13 @@ export default function CommentSection({ postId, isQAPost }: Props) {
             </h3>
 
             {/* Create Comment Input */}
-            <CommentInput postId={postId} currentUserAvatar={userProfile?.avatarUrl} isQAPost={isQAPost} />
+            {isApproved ? (
+                <CommentInput postId={postId} currentUserAvatar={userProfile?.avatarUrl} isQAPost={isQAPost} />
+            ) : (
+                <div className="bg-muted/30 border border-dashed border-default rounded-xl p-4 text-center text-muted-foreground mb-8">
+                    {isQAPost ? 'Answers' : 'Comments'} are disabled because this post is not approved.
+                </div>
+            )}
 
             {/* Comment List */}
             {isLoading ? (
@@ -92,7 +108,21 @@ export default function CommentSection({ postId, isQAPost }: Props) {
             ) : (
                 <div className="space-y-6">
                     {commentsData?.data?.map((comment) => (
-                        isQAPost ? <AnswerItem key={comment.id} answer={comment as SelectAnswerDTO} currentUserId={user?.profileId as string} /> : <CommentItem key={comment.id} comment={comment as SelectCommentDTO} currentUserId={user?.profileId as string} />
+                        isQAPost ? (
+                            <AnswerItem 
+                                key={comment.id} 
+                                answer={comment as SelectAnswerDTO} 
+                                currentUserId={user?.profileId as string} 
+                                isDisabled={!isApproved}
+                            />
+                        ) : (
+                            <CommentItem 
+                                key={comment.id} 
+                                comment={comment as SelectCommentDTO} 
+                                currentUserId={user?.profileId as string} 
+                                isDisabled={!isApproved}
+                            />
+                        )
                     ))}
                 </div>
             )}

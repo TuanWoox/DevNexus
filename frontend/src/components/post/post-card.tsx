@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Bookmark, Share2, MessageSquare, ArrowBigUp, ArrowBigDown, Globe, Code2, HelpCircle } from "lucide-react";
 import { ModerationBanner } from "@/components/shared/moderation-banner";
 import { SelectPostDTO } from "@/types/post/select-post-dto";
@@ -12,6 +13,18 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { PostActionsDropdown } from "./post-actions-dropdown";
 import { ProfileHoverCard } from "@/components/profile/profile-hover-card";
+import { SaveBookmarkModal } from "../bookmark/save-bookmark-modal";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useDeleteBookmarkedItemById } from "@/hooks/bookmarked-item-hooks/use-delete-bookmarked-item-by-id";
 
 import { useHasMounted } from "@/hooks/use-has-mounted";
 import { cn } from "@/lib/utils";
@@ -36,7 +49,27 @@ export function PostCard({ post }: PostCardProps) {
     // the server and client initial render match perfectly.
     const isAuthor = hasMounted && user?.profileId === post.authorId;
 
+    const [isBookmarkModalOpen, setIsBookmarkModalOpen] = useState(false);
+    const [isUnsaveModalOpen, setIsUnsaveModalOpen] = useState(false);
+
+    const { mutate: unsaveItem, isPending: isUnsavePending } = useDeleteBookmarkedItemById();
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(post.id);
+
+    const handleSaveClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (post.isSaved && post.savedBookMarkedItemId) {
+            setIsUnsaveModalOpen(true);
+        } else {
+            setIsBookmarkModalOpen(true);
+        }
+    };
+
+    const confirmUnsave = () => {
+        if (post.savedBookMarkedItemId) {
+            unsaveItem(post.savedBookMarkedItemId);
+        }
+        setIsUnsaveModalOpen(false);
+    };
 
     const handleVote = (e: React.MouseEvent, isUpvote: boolean) => {
         e.preventDefault();
@@ -227,9 +260,13 @@ export function PostCard({ post }: PostCardProps) {
                 </div>
 
                 <div className="flex items-center gap-1 sm:gap-2">
-                    <button disabled={!isApproved} className="relative z-10 flex items-center gap-2 rounded-full border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-heading disabled:opacity-50 sm:px-3 sm:py-2">
-                        <Bookmark className="w-5 h-5" />
-                        <span className="hidden text-sm font-medium sm:block">Save</span>
+                    <button
+                        onClick={handleSaveClick}
+                        disabled={!isApproved}
+                        className={`relative z-10 flex items-center gap-2 rounded-full border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-heading disabled:opacity-50 sm:px-3 sm:py-2 ${post.isSaved ? 'text-heading hover:text-heading/80' : 'text-muted-foreground hover:text-heading'}`}
+                    >
+                        <Bookmark className={`w-5 h-5 ${post.isSaved ? 'fill-foreground text-heading' : ''}`} />
+                        <span className="text-sm font-medium hidden sm:block">{post.isSaved ? 'Saved' : 'Save'}</span>
                     </button>
                     <button disabled={!isApproved} className="relative z-10 flex items-center gap-2 rounded-full border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-heading disabled:opacity-50 sm:px-3 sm:py-2">
                         <Share2 className="w-5 h-5" />
@@ -237,6 +274,36 @@ export function PostCard({ post }: PostCardProps) {
                     </button>
                 </div>
             </div>
+
+            <SaveBookmarkModal
+                isOpen={isBookmarkModalOpen}
+                onClose={() => setIsBookmarkModalOpen(false)}
+                postId={post.id}
+                isQAPost={isQaPost}
+            />
+
+            <AlertDialog open={isUnsaveModalOpen} onOpenChange={setIsUnsaveModalOpen}>
+                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Remove Bookmark?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to remove this post from your saved bookmarks?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isUnsavePending} variant="custom" size="lg" className="btn-secondary">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => { e.preventDefault(); confirmUnsave(); }}
+                            disabled={isUnsavePending}
+                            variant="destructive"
+                            size="lg"
+                            className="cursor-pointer"
+                        >
+                            {isUnsavePending ? "Removing..." : "Remove"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </article>
     );
 }

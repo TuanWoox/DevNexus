@@ -92,6 +92,12 @@ namespace platform_core_service.Business.Services
                 if (await _dbContext.SaveChangesAsync() > 0)
                 {
                     returnResult.Result = _mapper.Map<SelectBookMarkedItem>(item);
+                    var postDto = returnResult.Result.Post ?? (returnResult.Result.QAPost as platform_core_service.Common.Models.DTOs.EntityDTO.Post.SelectPostDTO);
+                    if (postDto != null)
+                    {
+                        postDto.IsSaved = true;
+                        postDto.SavedBookMarkedItemId = returnResult.Result.Id;
+                    }
                 }
                 else
                 {
@@ -125,11 +131,71 @@ namespace platform_core_service.Business.Services
 
                 var query = _dbContext.BookMarkedItems.Where(x => x.BookMarkId == bookMarkId)
                                                     .Include(x => x.Post)
+                                                        .ThenInclude(p => p.Author)
+                                                    .Include(x => x.Post)
+                                                        .ThenInclude(p => p.Community)
+                                                    .Include(x => x.Post)
+                                                        .ThenInclude(p => p.PostTags)
+                                                            .ThenInclude(pt => pt.Tag)
                                                     .Include(x => x.QAPost)
+                                                        .ThenInclude(p => p.Author)
+                                                    .Include(x => x.QAPost)
+                                                        .ThenInclude(p => p.Community)
+                                                    .Include(x => x.QAPost)
+                                                        .ThenInclude(p => p.PostTags)
+                                                            .ThenInclude(pt => pt.Tag)
                                                     .AsNoTracking()
                                                     .AsQueryable();
 
                 returnResult.Result = await _repository.GetPagingAsync<Page<string>, SelectBookMarkedItem>(query, page);
+
+                if (returnResult.Result?.Data != null && returnResult.Result.Data.Any())
+                {
+                    // ── ACCESS CONTROL: re-validate permissions for every saved item ──
+                    // A user may have lost access to a post since they saved it (e.g. banned
+                    // from a private community, left, or author changed privacy settings).
+                    // We nullify Post/QAPost instead of removing the item so the frontend
+                    // receives the item with null data and can render UnavailablePostCard,
+                    // giving the user a way to remove it from their collection.
+                    foreach (var item in returnResult.Result.Data)
+                    {
+                        string? authorId = item.Post?.AuthorId ?? item.QAPost?.AuthorId;
+                        string? communityId = item.Post?.CommunityId ?? item.QAPost?.CommunityId;
+
+                        if (!string.IsNullOrEmpty(authorId))
+                        {
+                            var accessCheck = await _socialGuardService.CheckVisibleContent(authorId, communityId);
+                            if (accessCheck.Message != null)
+                            {
+                                // Access denied — nullify content but keep the bookmark record
+                                // so the user can still remove it via UnavailablePostCard.
+                                item.Post = null;
+                                item.QAPost = null;
+                                continue;
+                            }
+                        }
+
+                        // Access granted — mark the item as saved
+                        var postDto = item.Post ?? (item.QAPost as platform_core_service.Common.Models.DTOs.EntityDTO.Post.SelectPostDTO);
+                        if (postDto != null)
+                        {
+                            postDto.IsSaved = true;
+                            postDto.SavedBookMarkedItemId = item.Id;
+                        }
+                    }
+
+                    // Enrich only the items that still have accessible post data
+                    var postDtos = returnResult.Result.Data
+                        .Select(x => x.Post ?? (x.QAPost as platform_core_service.Common.Models.DTOs.EntityDTO.Post.SelectPostDTO))
+                        .Where(x => x != null)
+                        .ToList();
+
+                    if (postDtos.Any())
+                    {
+                        await SetCurrentUserVotesForListAsync(postDtos!);
+                        await SetCommentCountForListAsync(postDtos!);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -137,6 +203,43 @@ namespace platform_core_service.Business.Services
                 returnResult.Message = ex.Message;
             }
             return returnResult;
+        }
+
+        private async Task SetCurrentUserVotesForListAsync(List<platform_core_service.Common.Models.DTOs.EntityDTO.Post.SelectPostDTO> dtos)
+        {
+            if (dtos == null || !dtos.Any()) return;
+            string profileId = _userContext.ProfileId;
+            if (string.IsNullOrEmpty(profileId)) return;
+            var postIds = dtos.Select(s => s.Id).ToList();
+
+            var votes = await _dbContext.Votes
+                .Where(v => v.AuthorId == profileId && postIds.Contains(v.PostId))
+                .Select(v => new { v.PostId, v.IsUpvote })
+                .ToListAsync();
+
+            var voteMap = votes.ToDictionary(v => v.PostId, v => (bool?)v.IsUpvote);
+
+            foreach (var dto in dtos)
+            {
+                dto.CurrentUserVote = voteMap.TryGetValue(dto.Id, out var vote) ? vote : null;
+            }
+        }
+
+        private async Task SetCommentCountForListAsync(List<platform_core_service.Common.Models.DTOs.EntityDTO.Post.SelectPostDTO> dtos)
+        {
+            if (dtos == null || !dtos.Any()) return;
+            var postIds = dtos.Select(s => s.Id).ToList();
+
+            var comments = await _dbContext.Comments
+                .Where(c => c.PostId != null && postIds.Contains(c.PostId))
+                .GroupBy(c => c.PostId)
+                .Select(g => new { PostId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.PostId!, x => x.Count);
+
+            foreach (var dto in dtos)
+            {
+                dto.CommentCount = comments.TryGetValue(dto.Id, out var count) ? count : 0;
+            }
         }
 
         public async Task<ReturnResult<bool>> DeleteById(string id)

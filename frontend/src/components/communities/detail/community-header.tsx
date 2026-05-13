@@ -88,7 +88,7 @@ export function CommunityHeader({ community, activeTab }: CommunityHeaderProps) 
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="w-full md:w-auto shrink-0 flex flex-col sm:flex-row md:flex-col gap-3">
+                    <div className="w-full md:w-auto shrink-0 flex flex-col md:flex-col gap-3">
                         {/* Create Post Button - Pre-filled with community info */}
                         {(role === "OWNER" || role === "MODERATOR" || role === "MEMBER") && (
                             <Button asChild className="btn-ai w-full text-white" size="lg">

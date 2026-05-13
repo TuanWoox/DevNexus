@@ -33,6 +33,8 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Post
 
         public DateTimeOffset? DateModified { get; set; }
         public bool? CurrentUserVote { get; set; }
+        public bool IsSaved { get; set; }
+        public string? SavedBookMarkedItemId { get; set; }
 
         public string? CommunityId { get; set; }
         public SelectPostCommunityDTO? Community { get; set; }

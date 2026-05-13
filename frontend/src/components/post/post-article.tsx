@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import {
     ArrowBigUp,
     ArrowBigDown,
@@ -25,6 +27,19 @@ import { ProfileHoverCard } from '@/components/profile/profile-hover-card';
 import { SelectPostDTO } from '@/types/post/select-post-dto';
 import { ModerationBanner } from '@/components/shared/moderation-banner';
 import { normalizeModerationStatus } from '@/types/post/moderation-status';
+import { SaveBookmarkModal } from '../bookmark/save-bookmark-modal';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useDeleteBookmarkedItemById } from "@/hooks/bookmarked-item-hooks/use-delete-bookmarked-item-by-id";
+import { cn } from '@/lib/utils';
 
 interface Props {
     postId: string;
@@ -34,6 +49,11 @@ interface Props {
 export default function PostArticle({ postId, isQAPost }: Props) {
     const router = useRouter();
 
+    const [isBookmarkModalOpen, setIsBookmarkModalOpen] = useState(false);
+    const [isUnsaveModalOpen, setIsUnsaveModalOpen] = useState(false);
+
+    const { mutate: unsaveItem, isPending: isUnsavePending } = useDeleteBookmarkedItemById();
+
     const { user } = useSelector((state: RootState) => state.auth);
     const { data: qaPost, isLoading: isQALoading } = useGetQAPostById(postId, isQAPost);
     const { data: normalPost, isLoading: isNormalLoading } = useGetPostById(postId, !isQAPost);
@@ -42,13 +62,33 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     const isAuthor = user?.profileId === post?.authorId;
     const isAdmin = user?.roles?.includes('Admin') || user?.roles?.includes('Moderator');
 
+    const moderationStatus = normalizeModerationStatus(post?.moderationStatus);
+    const isApproved = moderationStatus === "Approved";
+
     const author = post?.author;
     const community = (post as SelectPostDTO)?.community;
 
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(postId);
 
+    const handleSaveClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (post?.isSaved && post?.savedBookMarkedItemId) {
+            setIsUnsaveModalOpen(true);
+        } else {
+            setIsBookmarkModalOpen(true);
+        }
+    };
+
+    const confirmUnsave = () => {
+        if (post?.savedBookMarkedItemId) {
+            unsaveItem(post.savedBookMarkedItemId);
+        }
+        setIsUnsaveModalOpen(false);
+    };
+
     const handleVote = (e: React.MouseEvent, isUpvote: boolean) => {
         e.preventDefault();
+        if (!isApproved) return;
         updateVote({ isUpvote });
     };
 
@@ -132,7 +172,10 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     });
 
     return (
-        <article className="bg-card sm:rounded-xl sm:border border-default sm:shadow-sm sm:mx-6 overflow-hidden">
+        <article className={cn(
+            "bg-card sm:rounded-xl sm:border border-default sm:shadow-sm sm:mx-6 overflow-hidden",
+            !isApproved && "border-dashed"
+        )}>
             <div className="p-3 sm:px-5 flex flex-col gap-3">
                 {/* Header: Community/Author & Options */}
                 <div className="flex items-center justify-between">
@@ -240,7 +283,10 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                 </h1>
 
                 {/* Content */}
-                <div className="text-body text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
+                <div className={cn(
+                    "text-body text-sm sm:text-base leading-relaxed whitespace-pre-wrap transition-all",
+                    !isApproved && "opacity-70 grayscale-[20%]"
+                )}>
                     <MarkdownViewer source={post.content} />
                 </div>
 
@@ -262,7 +308,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                     <div className="flex items-center bg-subtle rounded-full border border-default p-0.5">
                         <button
                             onClick={(e) => handleVote(e, true)}
-                            disabled={isVotePending}
+                            disabled={isVotePending || !isApproved}
                             className={`p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group
                                 ${post.currentUserVote === true
                                     ? 'text-emerald-500'
@@ -275,7 +321,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                         <div className="w-px h-5 bg-default mx-0.5"></div>
                         <button
                             onClick={(e) => handleVote(e, false)}
-                            disabled={isVotePending}
+                            disabled={isVotePending || !isApproved}
                             className={`p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group
                                 ${post.currentUserVote === false
                                     ? 'text-rose-500'
@@ -287,23 +333,67 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                         </button>
                     </div>
 
-                    <button className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg transition-colors">
-                        <MessageSquare className="w-5 h-5" />
-                        <span className="text-sm font-medium hidden sm:block">{commentCount} {isQAPost ? 'Answers' : 'Comments'}</span>
-                    </button>
+                    {isApproved ? (
+                        <button className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg transition-colors">
+                            <MessageSquare className="w-5 h-5" />
+                            <span className="text-sm font-medium hidden sm:block">{commentCount} {isQAPost ? 'Answers' : 'Comments'}</span>
+                        </button>
+                    ) : (
+                        <div className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 text-muted-foreground opacity-50 rounded-full sm:rounded-lg relative z-10" aria-disabled>
+                            <MessageSquare className="w-5 h-5" />
+                            <span className="text-sm font-medium hidden sm:block">{commentCount} {isQAPost ? 'Answers' : 'Comments'}</span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-1 sm:gap-2">
-                    <button className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-primary hover:bg-subtle rounded-full sm:rounded-lg transition-colors flex items-center gap-2">
-                        <Bookmark className="w-5 h-5" />
-                        <span className="text-sm font-medium hidden sm:block">Save</span>
+                    <button
+                        onClick={handleSaveClick}
+                        disabled={!isApproved}
+                        className={`p-2 sm:px-3 sm:py-2 hover:bg-subtle rounded-full sm:rounded-lg transition-colors flex items-center gap-2 relative z-10 disabled:opacity-50 ${post.isSaved ? 'text-heading hover:text-heading/80' : 'text-muted-foreground hover:text-heading'}`}
+                    >
+                        <Bookmark className={`w-5 h-5 ${post.isSaved ? 'fill-foreground text-heading' : ''}`} />
+                        <span className="text-sm font-medium hidden sm:block">{post?.isSaved ? 'Saved' : 'Save'}</span>
                     </button>
-                    <button className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg transition-colors flex items-center gap-2">
+                    <button
+                        disabled={!isApproved}
+                        className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
                         <Share2 className="w-5 h-5" />
                         <span className="text-sm font-medium hidden sm:block">Share</span>
                     </button>
                 </div>
             </div>
+
+            <SaveBookmarkModal
+                isOpen={isBookmarkModalOpen}
+                onClose={() => setIsBookmarkModalOpen(false)}
+                postId={postId}
+                isQAPost={isQAPost}
+            />
+
+            <AlertDialog open={isUnsaveModalOpen} onOpenChange={setIsUnsaveModalOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Remove Bookmark?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to remove this post from your saved bookmarks?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isUnsavePending} variant="custom" size="lg" className="btn-secondary">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmUnsave}
+                            disabled={isUnsavePending}
+                            variant="destructive"
+                            size="lg"
+                            className="cursor-pointer"
+                        >
+                            {isUnsavePending ? "Removing..." : "Remove"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </article>
     );
 }
