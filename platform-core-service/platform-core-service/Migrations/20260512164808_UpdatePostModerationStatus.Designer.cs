@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using platform_core_service.Data;
@@ -12,9 +13,11 @@ using platform_core_service.Data;
 namespace platform_core_service.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260512164808_UpdatePostModerationStatus")]
+    partial class UpdatePostModerationStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -639,10 +642,6 @@ namespace platform_core_service.Migrations
 
                     b.Property<int>("DownvoteCount")
                         .HasColumnType("integer");
-
-                    b.Property<string>("ModerationReason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
 
                     b.Property<int>("ModerationStatus")
                         .HasColumnType("integer");

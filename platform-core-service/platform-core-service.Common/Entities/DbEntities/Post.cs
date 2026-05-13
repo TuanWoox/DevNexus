@@ -43,6 +43,10 @@ namespace platform_core_service.Common.Entities.DbEntities
         public List<PostMedia> PostMedias { get; set; } = [];
         [EnumDataType(typeof(ModerationStatus), ErrorMessage = "ModerationStatus must be a valid Moderation type")]
         public ModerationStatus ModerationStatus { get; set; } = ModerationStatus.Pending;
+
+        [StringLength(1000)]
+        public string? ModerationReason { get; set; }
+
         public virtual PostModerationResult? ModerationResult { get; set; }
     }
 }

@@ -4,18 +4,70 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { qaPostQueryKeys } from "./use-qa-post-query-key";
 import { toast } from "sonner";
 import { postQueryKeys } from "../post-hooks";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
+import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
+import { prependPostToInfiniteLists, replaceOptimisticPostInLists } from "@/hooks/post-hooks/post-cache-helper";
 
 export const useCreateQAPost = () => {
     const queryClient = useQueryClient();
+    const user = useSelector((state: RootState) => state.auth.user);
 
     return useMutation({
         mutationFn: (payload: CreateQAPostDTO) => qaPostService.createQAPost(payload),
-        onSuccess: (data) => {
+        onMutate: async (payload) => {
+            await Promise.all([
+                queryClient.cancelQueries({ queryKey: postQueryKeys.lists() }),
+                queryClient.cancelQueries({ queryKey: qaPostQueryKeys.lists() }),
+            ]);
+
+            const previousPostLists = queryClient.getQueriesData({ queryKey: postQueryKeys.lists() });
+            const previousQaLists = queryClient.getQueriesData({ queryKey: qaPostQueryKeys.lists() });
+            const now = new Date().toISOString();
+            const optimisticId = `optimistic-${Date.now()}`;
+
+            const optimisticPost: SelectQAPostDTO = {
+                id: optimisticId,
+                title: payload.title,
+                content: payload.content,
+                slug: payload.slug ?? optimisticId,
+                postType: payload.postType,
+                moderationStatus: "Pending",
+                authorId: user?.profileId ?? "",
+                author: user
+                    ? {
+                        id: user.profileId ?? "",
+                        fullName: user.userName,
+                        techStacks: [],
+                    }
+                    : undefined,
+                upvoteCount: 0,
+                downvoteCount: 0,
+                commentCount: 0,
+                answerCount: 0,
+                tagNames: payload.tagNames,
+                dateCreated: now,
+                dateModified: now,
+                currentUserVote: null,
+                communityId: payload.communityId,
+            };
+
+            prependPostToInfiniteLists(queryClient, optimisticPost);
+            return { previousPostLists, previousQaLists, optimisticId };
+        },
+        onError: (_error, _payload, context) => {
+            context?.previousPostLists.forEach(([queryKey, data]) => {
+                queryClient.setQueryData(queryKey, data);
+            });
+            context?.previousQaLists.forEach(([queryKey, data]) => {
+                queryClient.setQueryData(queryKey, data);
+            });
+        },
+        onSuccess: (data, _payload, context) => {
             if (data) {
-                // Hiện tại do feed đang xài API của getPostsWithPaging nên ta sẽ làm mới cache của nó
-                // Mốt khi trang feed xài 1 API mới thì sẽ sửa lại theo cache của trang feed 
-                // vì khi tạo mới 1 qapost thì data của trang feed hiện tại đã cũ và cần làm mới lại
-                queryClient.invalidateQueries({ queryKey: postQueryKeys.lists() });
+                if (context?.optimisticId) {
+                    replaceOptimisticPostInLists(queryClient, context.optimisticId, data);
+                }
                 queryClient.invalidateQueries({ queryKey: qaPostQueryKeys.lists() });
                 toast.success("Post created successfully!");
             }

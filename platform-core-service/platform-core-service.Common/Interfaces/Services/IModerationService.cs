@@ -17,5 +17,10 @@ namespace platform_core_service.Common.Interfaces.Services
         /// Returns the generated entry ID so AI Worker can store it as queue_entry_id.
         /// </summary>
         Task<ReturnResult<ModerationQueueResponseDTO>> EnqueueForReviewAsync(ModerationQueueRequestDTO dto);
+
+        /// <summary>
+        /// Sends a locally detected banned-keyword post to human review without using the AI worker.
+        /// </summary>
+        Task<ReturnResult<ModerationQueueResponseDTO>> EnqueueBannedKeywordReviewAsync(string postId, IReadOnlyCollection<string> matchedKeywords);
     }
 }

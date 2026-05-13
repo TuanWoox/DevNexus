@@ -50,6 +50,10 @@ namespace platform_core_service.Controllers
                 DevNexusLogger.Instance.Debug(ex.Message);
                 returnResult.Message = $"An error occurred: {ex.Message}";
             }
+            if (returnResult.Result == null && returnResult.Message?.Contains("not found", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return NotFound(returnResult);
+            }
             return Ok(returnResult);
         }
 

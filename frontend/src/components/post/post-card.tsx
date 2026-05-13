@@ -1,6 +1,7 @@
 'use client';
 
 import { Bookmark, Share2, MessageSquare, ArrowBigUp, ArrowBigDown, Globe } from "lucide-react";
+import { ModerationBanner } from "@/components/shared/moderation-banner";
 import { SelectPostDTO } from "@/types/post/select-post-dto";
 import Link from "next/link";
 import Image from "next/image";
@@ -12,6 +13,8 @@ import { RootState } from "@/store/store";
 import { PostActionsDropdown } from "./post-actions-dropdown";
 
 import { useHasMounted } from "@/hooks/use-has-mounted";
+import { cn } from "@/lib/utils";
+import { normalizeModerationStatus } from "@/types/post/moderation-status";
 
 interface PostCardProps {
     post: SelectPostDTO | SelectQAPostDTO;
@@ -22,6 +25,8 @@ export function PostCard({ post }: PostCardProps) {
     const { user } = useSelector((state: RootState) => state.auth);
     const isQaPost = 'answerCount' in post;
     const basePath = isQaPost ? '/questions' : '/post';
+    const moderationStatus = normalizeModerationStatus(post.moderationStatus);
+    const isApproved = moderationStatus === "Approved";
 
     const author = post.author;
     const community = (post as SelectPostDTO).community;
@@ -33,6 +38,7 @@ export function PostCard({ post }: PostCardProps) {
 
     const handleVote = (e: React.MouseEvent, isUpvote: boolean) => {
         e.preventDefault();
+        if (!isApproved) return;
         updateVote({ isUpvote });
     };
 
@@ -45,7 +51,11 @@ export function PostCard({ post }: PostCardProps) {
     });
 
     return (
-        <div className="card card-hover p-3 sm:px-5 flex flex-col gap-3 relative animate-in fade-in slide-in-from-bottom-2">
+        <div className={cn(
+            "card card-hover p-3 sm:px-5 flex flex-col gap-3 relative animate-in fade-in slide-in-from-bottom-2",
+            !isApproved && "border-dashed"
+        )}>
+            <ModerationBanner status={moderationStatus} reason={post.moderationReason} className="relative z-20" />
             {/* Header: Community/Author & Options */}
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3 relative z-10">
@@ -123,7 +133,10 @@ export function PostCard({ post }: PostCardProps) {
                     {post.title}
                 </h2>
             </Link>
-            <div className="text-sm sm:text-base text-body line-clamp-3 leading-relaxed relative z-10">
+            <div className={cn(
+                "text-sm sm:text-base text-body line-clamp-3 leading-relaxed relative z-10 transition-all",
+                !isApproved && "opacity-70 grayscale-[20%]"
+            )}>
                 <MarkdownViewer source={post.content} />
             </div>
 
@@ -144,48 +157,58 @@ export function PostCard({ post }: PostCardProps) {
                     <div className="flex items-center bg-subtle rounded-full border border-default p-0.5 relative z-10">
                         <button
                             onClick={(e) => handleVote(e, true)}
-                            disabled={isVotePending}
-                            className={`p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group
-                                ${post.currentUserVote === true
-                                    ? 'text-emerald-500'
-                                    : 'text-muted-foreground hover:text-emerald-500'
-                                }`}
+                            disabled={isVotePending || !isApproved}
+                            className={cn(
+                                "p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group",
+                                post.currentUserVote === true
+                                    ? "text-emerald-500"
+                                    : "text-muted-foreground hover:text-emerald-500"
+                            )}
                         >
-                            <ArrowBigUp className={`w-5 h-5 transition-all ${post.currentUserVote === true ? 'fill-emerald-500' : 'group-hover:fill-emerald-500/20'}`} />
+                            <ArrowBigUp className={cn("w-5 h-5 transition-all", post.currentUserVote === true ? "fill-emerald-500" : "group-hover:fill-emerald-500/20")} />
                             <span className="text-sm font-medium pr-1">{post.upvoteCount}</span>
                         </button>
                         <div className="w-px h-5 bg-default mx-0.5"></div>
                         <button
                             onClick={(e) => handleVote(e, false)}
-                            disabled={isVotePending}
-                            className={`p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group
-                                ${post.currentUserVote === false
-                                    ? 'text-rose-500'
-                                    : 'text-muted-foreground hover:text-rose-500'
-                                }`}
+                            disabled={isVotePending || !isApproved}
+                            className={cn(
+                                "p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group",
+                                post.currentUserVote === false
+                                    ? "text-rose-500"
+                                    : "text-muted-foreground hover:text-rose-500"
+                            )}
                         >
                             <span className="text-sm font-medium pr-1">{post.downvoteCount}</span>
-                            <ArrowBigDown className={`w-5 h-5 transition-all ${post.currentUserVote === false ? 'fill-rose-500' : 'group-hover:fill-rose-500/20'}`} />
+                            <ArrowBigDown className={cn("w-5 h-5 transition-all", post.currentUserVote === false ? "fill-rose-500" : "group-hover:fill-rose-500/20")} />
                         </button>
                     </div>
 
                     {/* Comments/Answers — Link instead of button for right-click support */}
-                    <Link
-                        href={`${basePath}/${post.id}`}
-                        className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg transition-colors relative z-10"
-                    >
+                    {isApproved ? (
+                        <Link
+                            href={`${basePath}/${post.id}`}
+                            className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg transition-colors relative z-10"
+                        >
+                            <MessageSquare className="w-5 h-5" />
+                            <span className="text-sm font-medium">{isQaPost ? (post as SelectQAPostDTO).answerCount : post.commentCount}</span>
+                            <span className="text-sm font-medium hidden sm:block">{isQaPost ? 'Answers' : 'Comments'}</span>
+                        </Link>
+                    ) : (
+                        <div className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 text-muted-foreground opacity-50 rounded-full sm:rounded-lg relative z-10" aria-disabled>
                         <MessageSquare className="w-5 h-5" />
                         <span className="text-sm font-medium">{isQaPost ? (post as SelectQAPostDTO).answerCount : post.commentCount}</span>
                         <span className="text-sm font-medium hidden sm:block">{isQaPost ? 'Answers' : 'Comments'}</span>
-                    </Link>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-1 sm:gap-2">
-                    <button className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg transition-colors flex items-center gap-2 relative z-10">
+                    <button disabled={!isApproved} className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle disabled:opacity-50 rounded-full sm:rounded-lg transition-colors flex items-center gap-2 relative z-10">
                         <Bookmark className="w-5 h-5" />
                         <span className="text-sm font-medium hidden sm:block">Save</span>
                     </button>
-                    <button className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg transition-colors flex items-center gap-2 relative z-10">
+                    <button disabled={!isApproved} className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle disabled:opacity-50 rounded-full sm:rounded-lg transition-colors flex items-center gap-2 relative z-10">
                         <Share2 className="w-5 h-5" />
                         <span className="text-sm font-medium hidden sm:block">Share</span>
                     </button>

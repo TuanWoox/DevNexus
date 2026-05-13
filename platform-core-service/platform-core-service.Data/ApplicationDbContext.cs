@@ -106,6 +106,14 @@ namespace platform_core_service.Data
                 .WithOne(m => m.Post)
                 .HasForeignKey<PostModerationResult>(m => m.PostId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Post>(entity =>
+            {
+                entity.Property(p => p.ModerationStatus).HasConversion<int>();
+                entity.HasIndex(p => new { p.ModerationStatus, p.DateCreated });
+                entity.HasIndex(p => new { p.AuthorId, p.ModerationStatus, p.DateCreated });
+                entity.HasIndex(p => p.Slug);
+            });
         }
 
         public async Task<int> SaveChangesAsync(bool populatedICreated = true, bool populatedIModified = true, CancellationToken cancellationToken = default)

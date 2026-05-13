@@ -7,6 +7,7 @@ using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Moderation;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
@@ -102,11 +103,13 @@ namespace platform_core_service.Business.Services
 
                 // Step 4: Update post to Approved — makes it visible in feed
                 entry.Post.ModerationStatus = ModerationStatus.Approved;
+                entry.Post.ModerationReason = null;
 
                 await _context.SaveChangesAsync();
 
                 // Gán entry.Post vào biến post để xài cho gọn và hết lỗi đỏ
                 var post = entry.Post;
+                EnqueueModerationNotification(post);
 
                 if (post is QAPost)
                 {
@@ -179,8 +182,10 @@ namespace platform_core_service.Business.Services
 
                 // Step 4: Update post to Flagged — keeps it hidden from feed
                 entry.Post.ModerationStatus = ModerationStatus.Flagged;
+                entry.Post.ModerationReason = BuildRejectionReason(dto.ModeratorNote, entry.Tier2Reasoning, entry.Reason);
 
                 await _context.SaveChangesAsync();
+                EnqueueModerationNotification(entry.Post);
 
                 DevNexusLogger.Instance.Debug(
                     $"[AdminModeration] Entry {dto.Id} rejected by admin {adminId} for post {entry.PostId}");
@@ -193,6 +198,36 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while rejecting queue entry: {ex.Message}";
             }
             return result;
+        }
+
+        private void EnqueueModerationNotification(Post post)
+        {
+            var isQuestion = post is QAPost;
+            var notificationEvent = new NotiicationCreatedEntityDTO
+            {
+                EventType = NotificationEventType.MODERATION_RESULT,
+                ActorId = post.AuthorId,
+                RecipientId = post.AuthorId,
+                EntityType = isQuestion ? NotificationEntityType.QUESTION : NotificationEntityType.POST,
+                EntityId = post.Id,
+                EntityTitle = post.Title,
+                EntityPreview = post.ModerationStatus.ToString(),
+                ActionUrl = isQuestion ? $"/questions/{post.Id}" : $"/post/{post.Id}",
+                Timestamp = DateTime.UtcNow,
+                Message = $"Your {(isQuestion ? "question" : "post")} is {post.ModerationStatus}."
+            };
+
+            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                x => x.PublicNotification(notificationEvent, "notifications.moderation"));
+        }
+
+        private static string BuildRejectionReason(string? moderatorNote, string? tier2Reasoning, string? queueReason)
+        {
+            var reason = new[] { moderatorNote, tier2Reasoning, queueReason }
+                .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
+                ?.Trim() ?? "Rejected by moderator.";
+
+            return reason.Length <= 1000 ? reason : reason[..1000];
         }
     }
 }

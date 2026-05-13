@@ -19,7 +19,8 @@ namespace platform_core_service.Business.Mappings
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.AuthorId, opt => opt.Ignore())
                 .ForMember(dest => dest.PostTags, opt => opt.Ignore())
-                .ForMember(dest => dest.DateCreated, opt => opt.Ignore());
+                .ForMember(dest => dest.DateCreated, opt => opt.Ignore())
+                .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
 
             // Post -> SelectPostDTO
             CreateMap<PostEntity, SelectPostDTO>()
