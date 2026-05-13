@@ -1,4 +1,5 @@
-﻿using background_job_worker.Configurations;
+using background_job_worker.Configurations;
+using background_job_worker.Consumers;
 using background_job_worker.Infrastructures;
 using background_job_worker.Jobs;
 using Microsoft.AspNetCore.Builder;
@@ -47,12 +48,18 @@ builder.Services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
 builder.Services.TryAddScoped<IConfigurationService, ConfigurationService>();
 builder.Services.AddKeyedSingleton<IMessageBusClient, MessageBusClient>("default");
 builder.Services.AddKeyedSingleton<IMessageBusClient, NotificationMessageBusClient>("notification");
+builder.Services.AddKeyedSingleton<IMessageBusClient, AITaskMessageBusClient>("aitask");
+
+builder.Services.AddHttpClient();
 
 // ── Background Jobs ───────────────────────────────────────────────────────────
 builder.Services.TryAddScoped<IEmailBackgroundJobs, EmailBackgroundJobs>();
 builder.Services.TryAddScoped<IMediaBackgroundJobs, MediaBackgroundJobs>();
 builder.Services.TryAddScoped<IProfileBlockBackgroundJobs, ProfileBackgroundJobs>();
 builder.Services.TryAddScoped<IPublishMessageBackgroundJobs, PublishMessageBackgroundJobs>();
+
+// ── Hosted Services (Consumers) ──────────────────────────────────────────────
+builder.Services.AddHostedService<AIUniversalResultConsumer>();
 
 var app = builder.Build();
 

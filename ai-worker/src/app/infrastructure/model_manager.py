@@ -127,14 +127,17 @@ class AIModelManager:
             logger.error("Failed to load text model from %s: %s", _TEXT_MODEL_ID, str(e))
             raise
 
-        logger.info("Loading CLIP model …")
-        self._clip_processor = CLIPProcessor.from_pretrained(_CLIP_MODEL_ID)
-        self._clip_model = CLIPModel.from_pretrained(
-            _CLIP_MODEL_ID,
-            torch_dtype=torch.float16 if self._device == "cuda" else torch.float32,
-        ).to(self._device)
-        self._clip_model.eval()
-        logger.info("CLIP loaded ✓")
+        try:
+            logger.info("Loading CLIP model …")
+            self._clip_processor = CLIPProcessor.from_pretrained(_CLIP_MODEL_ID)
+            self._clip_model = CLIPModel.from_pretrained(
+                _CLIP_MODEL_ID,
+                torch_dtype=torch.float16 if self._device == "cuda" else torch.float32,
+            ).to(self._device)
+            self._clip_model.eval()
+            logger.info("CLIP loaded ✓")
+        except Exception as e:
+            logger.error("Failed to load CLIP model from %s: %s. Worker will start without it.", _CLIP_MODEL_ID, str(e))
 
         self._loaded = True
         logger.info("AIModelManager: all models loaded successfully ✓")

@@ -11,5 +11,6 @@ namespace platform_core_service.Common.Interfaces.BackgroundJobs
     {
         public Task PublishEntity<TEntity>(TEntity entity,MessageBusEnum messageBus, MessageBusEntityEnum messageBusEntity);
         public Task PublicNotification<TEntity>(TEntity entity, string routingKey);
+        public Task PublicAiTask<TEntity>(TEntity entity, string routingKey, MessageBusEnum messageBus, MessageBusEntityEnum messageBusEntity);
     }
 }

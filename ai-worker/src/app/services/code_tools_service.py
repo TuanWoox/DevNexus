@@ -18,7 +18,7 @@ from src.app.services.ai_usage_service import AiUsageService
 
 logger = logging.getLogger(__name__)
 
-_MODEL = "gemini-2.5-flash-lite-lite"
+_MODEL = "gemini-2.5-flash-lite"
 
 
 class CodeToolsService:
@@ -125,20 +125,28 @@ class CodeToolsService:
         except Exception as exc:
             raise handle_genai_error("CodeToolsService.generate_diagram", exc) from exc
 
-    async def analyze_error(
+    async def generate_first_response(
         self,
         request: FirstResponderRequest,
         user_id: str | None = None,
     ) -> FirstResponderResponse:
-        logger.info("CodeToolsService: analyze_error for language %s", request.language)
+        logger.info("CodeToolsService: generate_first_response for post %s", request.postId)
 
-        safe_stacktrace = truncate_input(request.stacktrace)
+        safe_content = truncate_input(request.content)
+        tags_str = ", ".join(request.tags) if request.tags else "None"
 
         prompt = (
-            f"You are an expert DevOps and Senior Backend Engineer. Analyze the following {request.language} stacktrace.\n"
-            f"Provide a root cause in ONE sentence. Suggest up to 3 highly actionable steps to fix the issue. "
-            f"If applicable, link to official documentation.\n\n"
-            f"Stacktrace:\n```\n{safe_stacktrace}\n```"
+            f"You are an expert Senior Software Engineer and DevOps specialist. "
+            f"A user '{request.authorDisplayName}' has posted a Q&A question asking for help with a bug/error. "
+            f"Analyze the following post title, tags, and content to identify the error, stacktrace, or bug. "
+            f"If you find an error/bug, write a helpful first comment (in Vietnamese) providing a root cause analysis and suggesting actionable steps to fix it. "
+            f"Format your response as a friendly, markdown-formatted comment.\n\n"
+            f"CRITICAL RULES:\n"
+            f"1. If there is a bug/error: Return success=true, your comment in generatedComment, and errorMessage=null.\n"
+            f"2. If there is NO bug or error in the post: Return success=false, generatedComment=null, and errorMessage='No bug found'.\n\n"
+            f"Post Title: {request.title}\n"
+            f"Tags: {tags_str}\n"
+            f"Content:\n```\n{safe_content}\n```"
         )
 
         try:
@@ -148,7 +156,7 @@ class CodeToolsService:
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
                     response_schema=FirstResponderResponse,
-                    temperature=0.2,
+                    temperature=0.7,
                 ),
             )
 
@@ -156,7 +164,7 @@ class CodeToolsService:
 
             await self._usage.log_from_response(
                 response=response,
-                feature_name="analyze_error",
+                feature_name="first_responder",
                 model_used=_MODEL,
                 user_id=user_id,
             )
@@ -166,4 +174,4 @@ class CodeToolsService:
         except AIWorkerException:
             raise
         except Exception as exc:
-            raise handle_genai_error("CodeToolsService.analyze_error", exc) from exc
+            raise handle_genai_error("CodeToolsService.generate_first_response", exc) from exc

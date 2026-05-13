@@ -37,11 +37,16 @@ class DiagramResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class FirstResponderRequest(BaseModel):
-    stacktrace: str = Field(..., min_length=1, description="The error stack trace to analyze.")
-    language: str = Field(..., min_length=1, description="Programming language context.")
+    postId: str = Field(..., alias="PostId", description="Post ID")
+    title: str = Field(..., alias="Title", description="Post title")
+    content: str = Field(..., alias="Content", description="Post content")
+    tags: list[str] = Field(default_factory=list, alias="Tags", description="Post tags")
+    authorId: str = Field(..., alias="AuthorId", description="Author ID")
+    authorDisplayName: str = Field(..., alias="AuthorDisplayName", description="Author display name")
+    createdAt: str = Field(..., alias="CreatedAt", description="Post creation date")
 
 
 class FirstResponderResponse(BaseModel):
-    root_cause: str = Field(..., description="One sentence root cause analysis.")
-    suggested_fixes: list[str] = Field(..., max_length=3, description="Up to 3 actionable steps to fix.")
-    related_docs: list[str] = Field(default_factory=list, description="URLs to relevant official documentation.")
+    success: bool = Field(..., alias="success", description="Whether the comment generation was successful")
+    generatedComment: str | None = Field(None, alias="generatedComment", description="The AI generated friendly first comment")
+    errorMessage: str | None = Field(None, alias="errorMessage", description="Error message if generation failed")
