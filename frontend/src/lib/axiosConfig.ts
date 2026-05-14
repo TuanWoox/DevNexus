@@ -7,11 +7,11 @@ import { store } from "../store/store";
 import { setToken, clearToken, parseUserFromToken } from "../store/slices/auth-slice";
 
 declare module "axios" {
-  export interface AxiosRequestConfig {
+  export interface AxiosRequestConfig<D = any> {
     suppressToast?: boolean;
   }
 
-  export interface InternalAxiosRequestConfig {
+  export interface InternalAxiosRequestConfig<D = any> {
     suppressToast?: boolean;
   }
 }

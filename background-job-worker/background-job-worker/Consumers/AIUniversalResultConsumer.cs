@@ -158,7 +158,7 @@ namespace background_job_worker.Consumers
                         var notificationEvent = new NotiicationCreatedEntityDTO
                         {
                             EventType = NotificationEventType.NEW_ANSWER,
-                            ActorId = adminProfileId,
+                            ActorId = adminProfileId ?? authorId,
                             RecipientId = post.AuthorId,
                             EntityType = NotificationEntityType.POST,
                             EntityId = post.Id,
