@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -22,6 +22,17 @@ class AiUsageLogPageResponse(BaseModel):
     total: int = Field(..., description="Total matching rows across all pages")
     page: int = Field(..., description="Current 1-based page number")
     page_size: int = Field(..., description="Number of items in this page")
+
+
+class AiUsageInteractionUpdateRequest(BaseModel):
+    interaction_status: Literal["applied", "dismissed"] = Field(
+        ...,
+        description="Explicit user interaction with a generated AI suggestion",
+    )
+    metadata_json_patch: dict[str, Any] | None = Field(
+        default=None,
+        description="Small feature-specific analytics fields to merge into metadata_json",
+    )
 
 
 # --- Phase 7: AI Usage Summary Schemas ---

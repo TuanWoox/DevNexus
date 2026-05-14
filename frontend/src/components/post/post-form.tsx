@@ -19,6 +19,7 @@ import { UpdateQAPostDTO } from '@/types/qa-post/update-qa-post-dto'
 import { useRouter } from 'next/navigation'
 import { CommunitySelectModal } from './community-select-modal'
 import Image from 'next/image'
+import { AiMetadataAssist } from './ai-metadata-assist'
 
 export type PostFormData = {
     title: string;
@@ -87,6 +88,8 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
 
     const selectedTags = useWatch({ control, name: 'tags' });
     const communityId = useWatch({ control, name: 'communityId' });
+    const title = useWatch({ control, name: 'title' });
+    const content = useWatch({ control, name: 'content' });
 
     // Đồng bộ isQAPost vào react-hook-form nếu nó thay đổi (chỉ khi không bị lock fixedPostType)
     const handleSetIsQAPost = (value: boolean) => {
@@ -111,6 +114,11 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
     const handleCommunitySelect = (id: string, name: string, iconUrl?: string) => {
         setValue('communityId', id, { shouldValidate: true });
         setSelectedComm({ name, iconUrl: iconUrl || '' });
+    };
+
+    const handleApplyMetadataSuggestion = (suggestion: { title: string; tags: string[] }) => {
+        setValue('title', suggestion.title, { shouldValidate: true, shouldDirty: true });
+        setValue('tags', suggestion.tags, { shouldValidate: true, shouldDirty: true });
     };
 
     const onSubmit = (data: PostFormData) => {
@@ -377,6 +385,14 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                                     <AlertCircle className="w-4 h-4" /> {errors.content.message}
                                 </p>
                             )}
+
+                            <AiMetadataAssist
+                                content={content || ''}
+                                currentTitle={title || ''}
+                                currentTags={selectedTags || []}
+                                isSubmitting={isPending}
+                                onApply={handleApplyMetadataSuggestion}
+                            />
                         </div>
 
                     </CardContent>

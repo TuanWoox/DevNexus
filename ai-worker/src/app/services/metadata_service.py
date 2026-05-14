@@ -1,7 +1,10 @@
 import logging
+import hashlib
+import re
 
 from google import genai
 from google.genai import types
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.core.exceptions import AIWorkerException
@@ -12,6 +15,22 @@ from src.app.services.ai_usage_service import AiUsageService
 logger = logging.getLogger(__name__)
 
 _MODEL = "gemini-2.5-flash-lite"
+
+
+class _MetadataGenerationResult(BaseModel):
+    suggested_title: str = Field(..., description="AI-suggested title for the post")
+    suggested_tags: list[str] = Field(..., description="AI-suggested list of relevant tags")
+
+
+def _normalize_markdown_for_hash(markdown: str) -> str:
+    """Normalize transport whitespace without changing meaningful Markdown indentation."""
+    normalized = markdown.replace("\r\n", "\n").replace("\r", "\n").strip()
+    return re.sub(r"\n{3,}", "\n\n", normalized)
+
+
+def _hash_markdown(markdown: str) -> str:
+    normalized = _normalize_markdown_for_hash(markdown)
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
 class MetadataService:
@@ -47,19 +66,35 @@ class MetadataService:
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    response_schema=MetadataResponse,
+                    response_schema=_MetadataGenerationResult,
                     temperature=0.3,
                 ),
             )
 
-            result = MetadataResponse.model_validate_json(response.text)
+            generated = _MetadataGenerationResult.model_validate_json(response.text)
+            result = MetadataResponse(
+                suggested_title=generated.suggested_title,
+                suggested_tags=generated.suggested_tags,
+            )
 
-            await self._usage.log_from_response(
+            usage_log_id = await self._usage.log_from_response(
                 response=response,
-                feature_name="metadata",
+                feature_name="content_metadata",
                 model_used=_MODEL,
                 user_id=user_id,
+                input_hash=_hash_markdown(request.markdown_content),
+                output_json={
+                    "suggested_title": result.suggested_title,
+                    "suggested_tags": result.suggested_tags,
+                },
+                metadata_json={
+                    "suggestedTagCount": len(result.suggested_tags),
+                    "bodyLength": len(request.markdown_content),
+                },
+                interaction_status="generated",
+                status="success",
             )
+            result.usage_log_id = usage_log_id
 
             return result
 
