@@ -1,12 +1,14 @@
 import logging
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from google.genai.types import GenerateContentResponse
 from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.app.core.exceptions import AIWorkerException
 from src.app.models.ai_usage_log import AiUsageLog
 from src.app.schemas.ai_usage_log import (
+    AiUsageInteractionUpdateRequest,
     AiUsageByDateDTO,
     AiUsageByFeatureDTO,
     AiUsageByModelDTO,
@@ -45,7 +47,13 @@ class AiUsageService:
         feature_name: str,
         model_used: str,
         user_id: str | None = None,
-    ) -> None:
+        input_hash: str | None = None,
+        output_json: dict | None = None,
+        metadata_json: dict | None = None,
+        interaction_status: str | None = None,
+        status: str | None = None,
+        error_message: str | None = None,
+    ) -> int | None:
         """
         Extract token counts from response.usage_metadata and persist a log row.
         Failures are caught and logged — never raised — so they cannot break the caller.
@@ -63,9 +71,16 @@ class AiUsageService:
                 output_tokens=output_tokens,
                 total_tokens=total_tokens,
                 user_id=user_id,
+                input_hash=input_hash,
+                output_json=output_json,
+                metadata_json=metadata_json,
+                interaction_status=interaction_status,
+                status=status,
+                error_message=error_message,
             )
             self._db.add(log_entry)
             await self._db.commit()
+            await self._db.refresh(log_entry)
 
             logger.debug(
                 "AI usage logged: feature=%s model=%s tokens=%d/%d/%d user=%s",
@@ -76,8 +91,10 @@ class AiUsageService:
                 total_tokens,
                 user_id,
             )
+            return log_entry.id
         except Exception as exc:  # noqa: BLE001 — must never crash the caller
             logger.error("Failed to log AI usage (non-fatal): %s", exc)
+            return None
 
     # ── Read ─────────────────────────────────────────────────────────────────
 
@@ -120,6 +137,33 @@ class AiUsageService:
             page=page,
             page_size=page_size,
         )
+
+    async def update_interaction(
+        self,
+        usage_log_id: int,
+        request: AiUsageInteractionUpdateRequest,
+        user_id: str,
+    ) -> bool:
+        """Record an explicit Apply/Dismiss interaction for a user's own usage log."""
+        log_entry = await self._db.get(AiUsageLog, usage_log_id)
+        if log_entry is None:
+            raise AIWorkerException("AI usage log not found.", status_code=404)
+
+        if log_entry.user_id != user_id:
+            raise AIWorkerException("You are not allowed to update this AI usage log.", status_code=403)
+
+        existing_metadata = log_entry.metadata_json if isinstance(log_entry.metadata_json, dict) else {}
+        patch = request.metadata_json_patch if isinstance(request.metadata_json_patch, dict) else {}
+
+        log_entry.interaction_status = request.interaction_status
+        log_entry.interacted_at = datetime.now(UTC)
+        log_entry.metadata_json = {
+            **existing_metadata,
+            **patch,
+        }
+
+        await self._db.commit()
+        return True
 
     # ── Summary ───────────────────────────────────────────────────────────────
 

@@ -1,10 +1,13 @@
 using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Http;
 using platform_core_service.Common.Interfaces.Services;
+using platform_core_service.Common.Models.DTOs.AIDTO;
 using platform_core_service.Common.Models.DTOs.EntityDTO.AiUsageLog;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
 namespace platform_core_service.Business.Services
@@ -12,11 +15,16 @@ namespace platform_core_service.Business.Services
     public class AiWorkerClient : IAiWorkerClient
     {
         private readonly HttpClient _httpClient;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly string _baseUrl;
 
-        public AiWorkerClient(HttpClient httpClient, IConfiguration configuration)
+        public AiWorkerClient(
+            HttpClient httpClient,
+            IConfiguration configuration,
+            IHttpContextAccessor httpContextAccessor)
         {
             _httpClient = httpClient;
+            _httpContextAccessor = httpContextAccessor;
             _baseUrl = configuration["AiWorker:BaseUrl"]
                        ?? throw new InvalidOperationException("AiWorker:BaseUrl is not configured.");
             
@@ -74,6 +82,85 @@ namespace platform_core_service.Business.Services
             return string.Join(Environment.NewLine + Environment.NewLine, parts.Where(p => p != null));
         }
 
+        public async Task<ReturnResult<AIMetadataResponseDTO>> SuggestMetadataAsync(AIMetadataRequestDTO request)
+        {
+            var result = new ReturnResult<AIMetadataResponseDTO>();
+            try
+            {
+                using var httpRequest = new HttpRequestMessage(
+                    HttpMethod.Post,
+                    $"{_baseUrl}/ai/content/metadata")
+                {
+                    Content = JsonContent.Create(request),
+                };
+
+                ForwardAuthorizationHeader(httpRequest);
+
+                var response = await _httpClient.SendAsync(httpRequest);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync();
+                    DevNexusLogger.Instance.Warn(
+                        $"[AiWorkerClient] SuggestMetadata returned {(int)response.StatusCode}: {errorBody}");
+                    result.Message = $"Failed to generate AI metadata. AI worker returned {(int)response.StatusCode}.";
+                    return result;
+                }
+
+                var metadata = await response.Content.ReadFromJsonAsync<AIMetadataResponseDTO>();
+                if (metadata == null)
+                {
+                    result.Message = "AI worker returned an empty metadata response.";
+                    return result;
+                }
+
+                result.Result = metadata;
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error($"[AiWorkerClient] SuggestMetadataAsync failed: {ex.Message}");
+                result.Message = $"Failed to generate AI metadata: {ex.Message}";
+            }
+
+            return result;
+        }
+
+        public async Task<ReturnResult<bool>> UpdateUsageInteractionAsync(
+            int usageLogId,
+            AIUsageInteractionUpdateRequestDTO request)
+        {
+            var result = new ReturnResult<bool>();
+            try
+            {
+                using var httpRequest = new HttpRequestMessage(
+                    HttpMethod.Patch,
+                    $"{_baseUrl}/ai/usage-logs/{usageLogId}/interaction")
+                {
+                    Content = JsonContent.Create(request),
+                };
+
+                ForwardAuthorizationHeader(httpRequest);
+
+                var response = await _httpClient.SendAsync(httpRequest);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync();
+                    DevNexusLogger.Instance.Warn(
+                        $"[AiWorkerClient] UpdateUsageInteraction returned {(int)response.StatusCode}: {errorBody}");
+                    result.Message = $"Failed to update AI usage interaction. AI worker returned {(int)response.StatusCode}.";
+                    return result;
+                }
+
+                result.Result = await response.Content.ReadFromJsonAsync<bool>();
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error($"[AiWorkerClient] UpdateUsageInteractionAsync failed: {ex.Message}");
+                result.Message = $"Failed to update AI usage interaction: {ex.Message}";
+            }
+
+            return result;
+        }
+
         public async Task<ReturnResult<AiUsageLogPageResponseDTO>> GetPageAiUsageLogsAsync(Page<string> page)
         {
             var result = new ReturnResult<AiUsageLogPageResponseDTO>();
@@ -127,6 +214,16 @@ namespace platform_core_service.Business.Services
                 result.Message = $"Failed to fetch AI usage summary: {ex.Message}";
             }
             return result;
+        }
+
+        private void ForwardAuthorizationHeader(HttpRequestMessage httpRequest)
+        {
+            var authorizationHeader = _httpContextAccessor.HttpContext?.Request.Headers.Authorization.ToString();
+            if (!string.IsNullOrWhiteSpace(authorizationHeader) &&
+                AuthenticationHeaderValue.TryParse(authorizationHeader, out var parsedAuthorizationHeader))
+            {
+                httpRequest.Headers.Authorization = parsedAuthorizationHeader;
+            }
         }
     }
 }

@@ -8,6 +8,7 @@ class MetadataRequest(BaseModel):
 class MetadataResponse(BaseModel):
     suggested_title: str = Field(..., description="AI-suggested title for the post")
     suggested_tags: list[str] = Field(..., description="AI-suggested list of relevant tags")
+    usage_log_id: int | None = Field(default=None, description="AI usage log ID for later interaction tracking")
 
 
 class SummarizeRequest(BaseModel):

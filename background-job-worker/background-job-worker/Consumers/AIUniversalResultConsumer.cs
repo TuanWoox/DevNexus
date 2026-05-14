@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Common.Entities.DbEntities;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Data;
 using RabbitMQ.Client;
@@ -127,13 +128,16 @@ namespace background_job_worker.Consumers
                 var post = await dbContext.Posts.FirstOrDefaultAsync(p => p.Id == aiResult.PostId);
                 if (post != null)
                 {
-                    // Lấy ID Admin để làm tác giả comment
-                    var adminId = await dbContext.Users
-                        .Where(u => u.UserName == "admin")
-                        .Select(u => u.Id)
+                    // Use the admin profile as the AI answer actor. Answer.AuthorId and
+                    // notification ActorId both reference Profile.Id, not ApplicationUser.Id.
+                    var adminProfileId = await dbContext.Profiles
+                        .Where(p =>
+                            p.ApplicationUser.UserName == "admin" ||
+                            p.ApplicationUser.UserRoles.Any(ur => ur.Role.Name == "Admin"))
+                        .Select(p => p.Id)
                         .FirstOrDefaultAsync();
 
-                    var authorId = adminId ?? post.AuthorId; // Fallback nếu không có admin
+                    var authorId = adminProfileId ?? post.AuthorId; // Fallback nếu không có admin profile
 
                     var answer = new Answer
                     {
@@ -148,6 +152,39 @@ namespace background_job_worker.Consumers
 
                     dbContext.Answers.Add(answer);
                     await dbContext.SaveChangesAsync();
+
+                    if (!string.IsNullOrEmpty(post.AuthorId))
+                    {
+                        var notificationEvent = new NotiicationCreatedEntityDTO
+                        {
+                            EventType = NotificationEventType.NEW_ANSWER,
+                            ActorId = adminProfileId,
+                            RecipientId = post.AuthorId,
+                            EntityType = NotificationEntityType.POST,
+                            EntityId = post.Id,
+                            EntityTitle = post.Title,
+                            EntityPreview = answer.Content.Substring(0, Math.Min(200, answer.Content.Length)),
+                            ActionUrl = $"/questions/{post.Id}#answer-{answer.Id}",
+                            Message = "AI answered your question"
+                        };
+
+                        try
+                        {
+                            var notificationPublisher = scope.ServiceProvider.GetRequiredService<IPublishMessageBackgroundJobs>();
+                            await notificationPublisher.PublicNotification(notificationEvent, "notifications.answer");
+                            _logger.LogInformation(
+                                "[AIFirstResponder] Published NEW_ANSWER notification for post {PostId} to recipient {RecipientId}",
+                                post.Id,
+                                post.AuthorId);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(
+                                ex,
+                                "[AIFirstResponder] Saved AI answer for post {PostId}, but failed to publish notification.",
+                                post.Id);
+                        }
+                    }
 
                     _logger.LogInformation($"[AIFirstResponder] Successfully saved AI comment for post {aiResult.PostId}");
                 }

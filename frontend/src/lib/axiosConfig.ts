@@ -6,6 +6,16 @@ import { TokenResponseDTO } from "../types/helper/token-response-dto";
 import { store } from "../store/store";
 import { setToken, clearToken, parseUserFromToken } from "../store/slices/auth-slice";
 
+declare module "axios" {
+  export interface AxiosRequestConfig {
+    suppressToast?: boolean;
+  }
+
+  export interface InternalAxiosRequestConfig {
+    suppressToast?: boolean;
+  }
+}
+
 // --- QUẢN LÝ TRẠNG THÁI REFRESH ---
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
@@ -50,9 +60,11 @@ api.interceptors.request.use(
 // Interceptor cho Phản hồi (Response): Chạy khi có response từ server
 api.interceptors.response.use(
   function onFulfilled<T>(response: AxiosResponse<ReturnResult<T>>) {
+    const suppressToast = response.config.suppressToast === true;
+
     // Lưu ý: Chỉ nên toast ở đây nếu bạn thực sự muốn báo lỗi dẫu HTTP là 200 JS
     // Tốt nhất là bỏ qua, nhưng tạm giữ nguyên theo code hiện tại
-    if (response.data.message) {
+    if (!suppressToast && response.data.message) {
       toast.error(response.data.message);
     }
     return response;
@@ -136,7 +148,7 @@ api.interceptors.response.use(
     }
 
     // Các lỗi HTTP khác (400, 403, 500)
-    if (error.response?.data?.message) {
+    if (!originalRequest?.suppressToast && error.response?.data?.message) {
       toast.error(error.response.data.message as string);
     }
 

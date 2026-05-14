@@ -11,7 +11,7 @@ namespace platform_core_service.Common.Models.DTOs.MessageBusDTO
         public NotificationEventType EventType { get; set; }
 
         // Actor (who triggered the action)
-        public string ActorId { get; set; }
+        public string? ActorId { get; set; }
 
         // Recipient (who receives the notification)
         // Can be single or multiple recipients
