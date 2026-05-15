@@ -6,6 +6,7 @@ from google import genai
 from google.genai import types
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.app.core.ai_config import DEFAULT_GEMINI_MODEL
 from src.app.core.exceptions import AIWorkerException
 from src.app.infrastructure.model_manager import AIModelManager
 from pydantic import BaseModel, Field
@@ -29,7 +30,7 @@ _SAFE_THRESHOLD = 0.2
 _TOXIC_THRESHOLD = 0.6
 _T2_CONFIDENCE_THRESHOLD = 0.8
 
-_MODEL = "gemini-2.5-flash-lite"
+_MODEL = DEFAULT_GEMINI_MODEL
 _MAX_INPUT_CHARS = 15_000
 
 

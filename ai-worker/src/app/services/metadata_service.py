@@ -7,6 +7,7 @@ from google.genai import types
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.app.core.ai_config import DEFAULT_GEMINI_MODEL
 from src.app.core.exceptions import AIWorkerException
 from src.app.schemas.content import MetadataRequest, MetadataResponse
 from src.app.services.ai_helpers import handle_genai_error, truncate_input
@@ -14,7 +15,7 @@ from src.app.services.ai_usage_service import AiUsageService
 
 logger = logging.getLogger(__name__)
 
-_MODEL = "gemini-2.5-flash-lite"
+_MODEL = DEFAULT_GEMINI_MODEL
 
 
 class _MetadataGenerationResult(BaseModel):
@@ -54,8 +55,8 @@ class MetadataService:
         prompt = (
             "You are a technical content editor for a software engineering learning platform. "
             "Analyze the following Markdown post and return:\n"
-            "1. A concise, compelling title (max 80 characters)\n"
-            "2. A list of 3-7 relevant technical tags (lowercase, no spaces, use hyphens)\n\n"
+            "1. A concise, compelling title (max 150 characters)\n"
+            "2. A list of 3-5 relevant technical tags (lowercase, no spaces, use hyphens)\n\n"
             "Post content:\n"
             f"```markdown\n{safe_content}\n```"
         )

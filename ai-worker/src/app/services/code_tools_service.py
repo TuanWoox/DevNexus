@@ -4,6 +4,7 @@ from google import genai
 from google.genai import types
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.app.core.ai_config import DEFAULT_GEMINI_MODEL
 from src.app.core.exceptions import AIWorkerException
 from src.app.schemas.code_tools import (
     CodeExplainRequest,
@@ -18,7 +19,7 @@ from src.app.services.ai_usage_service import AiUsageService
 
 logger = logging.getLogger(__name__)
 
-_MODEL = "gemini-2.5-flash-lite"
+_MODEL = DEFAULT_GEMINI_MODEL
 
 
 class CodeToolsService:

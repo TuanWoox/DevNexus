@@ -1,5 +1,8 @@
+export type SummaryLanguage = 'auto' | 'vi' | 'en';
+
 export interface SummarizePostRequestDTO {
-  language?: 'vi' | 'en';
+  /** Omit to let the backend default to 'auto' (ai-worker detects from post content). */
+  language?: SummaryLanguage;
 }
 
 export interface SummarizePostResponseDTO {

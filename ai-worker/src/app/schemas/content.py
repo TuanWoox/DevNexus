@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -13,9 +15,16 @@ class MetadataResponse(BaseModel):
 
 class SummarizeRequest(BaseModel):
     content: str = Field(..., min_length=50, description="Full post content to summarize")
-    language: str = Field(default="vi", description="Target language for the summary (e.g. 'vi', 'en')")
+    language: Literal["auto", "vi", "en"] = Field(
+        default="auto",
+        description=(
+            "Target language for the summary. "
+            "'auto' = detect from post content; 'vi' = Vietnamese; 'en' = English."
+        ),
+    )
 
 
 class SummarizeResponse(BaseModel):
-    summary_points: list[str] = Field(..., description="3-5 key bullet-point takeaways")
+    summary_points: list[str] = Field(..., description="3-5 neutral bullet-point summary of the post")
     estimated_read_time_seconds: int = Field(..., description="Estimated read time of the original content in seconds")
+

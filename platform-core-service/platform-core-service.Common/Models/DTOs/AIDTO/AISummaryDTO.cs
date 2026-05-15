@@ -14,7 +14,7 @@ namespace platform_core_service.Common.Models.DTOs.AIDTO
 
         [JsonProperty("language")]
         [JsonPropertyName("language")]
-        public string Language { get; set; } = "vi";
+        public string Language { get; set; } = "auto";
     }
 
     public class AISummarizeResponseDTO
@@ -33,7 +33,7 @@ namespace platform_core_service.Common.Models.DTOs.AIDTO
 
     public class SummarizePostRequestDTO
     {
-        public string Language { get; set; } = "vi";
+        public string Language { get; set; } = "auto";
     }
 
     public class SummarizePostResponseDTO
