@@ -309,7 +309,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                         <button
                             onClick={(e) => handleVote(e, true)}
                             disabled={isVotePending || !isApproved}
-                            className={`p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group
+                            className={`p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group cursor-pointer disabled:cursor-not-allowed
                                 ${post.currentUserVote === true
                                     ? 'text-emerald-500'
                                     : 'text-muted-foreground hover:text-emerald-500'
@@ -322,7 +322,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                         <button
                             onClick={(e) => handleVote(e, false)}
                             disabled={isVotePending || !isApproved}
-                            className={`p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group
+                            className={`p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group cursor-pointer disabled:cursor-not-allowed
                                 ${post.currentUserVote === false
                                     ? 'text-rose-500'
                                     : 'text-muted-foreground hover:text-rose-500'
@@ -339,7 +339,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                             <span className="text-sm font-medium hidden sm:block">{commentCount} {isQAPost ? 'Answers' : 'Comments'}</span>
                         </button>
                     ) : (
-                        <div className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 text-muted-foreground opacity-50 rounded-full sm:rounded-lg relative z-10" aria-disabled>
+                        <div className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 cursor-not-allowed text-muted-foreground opacity-50 rounded-full sm:rounded-lg relative z-10" aria-disabled>
                             <MessageSquare className="w-5 h-5" />
                             <span className="text-sm font-medium hidden sm:block">{commentCount} {isQAPost ? 'Answers' : 'Comments'}</span>
                         </div>
@@ -350,14 +350,14 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                     <button
                         onClick={handleSaveClick}
                         disabled={!isApproved}
-                        className={`p-2 sm:px-3 sm:py-2 hover:bg-subtle rounded-full sm:rounded-lg transition-colors flex items-center gap-2 relative z-10 disabled:opacity-50 ${post.isSaved ? 'text-heading hover:text-heading/80' : 'text-muted-foreground hover:text-heading'}`}
+                        className={`p-2 sm:px-3 sm:py-2 hover:bg-subtle rounded-full sm:rounded-lg cursor-pointer disabled:cursor-not-allowed transition-colors flex items-center gap-2 relative z-10 disabled:opacity-50 ${post.isSaved ? 'text-heading hover:text-heading/80' : 'text-muted-foreground hover:text-heading'}`}
                     >
                         <Bookmark className={`w-5 h-5 ${post.isSaved ? 'fill-foreground text-heading' : ''}`} />
                         <span className="text-sm font-medium hidden sm:block">{post?.isSaved ? 'Saved' : 'Save'}</span>
                     </button>
                     <button
                         disabled={!isApproved}
-                        className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                        className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg cursor-pointer disabled:cursor-not-allowed transition-colors flex items-center gap-2 disabled:opacity-50"
                     >
                         <Share2 className="w-5 h-5" />
                         <span className="text-sm font-medium hidden sm:block">Share</span>

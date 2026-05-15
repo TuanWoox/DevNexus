@@ -125,7 +125,25 @@ namespace platform_core_service.Business.Services
                     await _dbContext.UserFollows.AddAsync(userFollow);
                     if (await _dbContext.SaveChangesAsync() > 0)
                     {
-                        returnResult.Result = _mapper.Map<SelectUserFollow>(userFollow);
+                        var selectUserFollow = _mapper.Map<SelectUserFollow>(userFollow);
+                        returnResult.Result = selectUserFollow;
+
+                        // Publish FOLLOW_USER notification
+                        var notificationEvent = new NotiicationCreatedEntityDTO
+                        {
+                            EventType = NotificationEventType.FOLLOW_USER,
+                            ActorId = _userContext.ProfileId,
+                            RecipientId = createUserFollow.FollowingProfileId,
+                            EntityType = NotificationEntityType.PROFILE,
+                            EntityId = "profile_followers",
+                            EntityTitle = selectUserFollow.Owner?.FullName,
+                            EntityPreview = null,
+                            ActionUrl = null,
+                            Timestamp = DateTime.UtcNow
+                        };
+
+                        _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                            x => x.PublicNotification(notificationEvent, "notifications.follow"));
 
                         //Send this over to rabbitmq 
                         _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
@@ -244,6 +262,90 @@ namespace platform_core_service.Business.Services
             catch (Exception ex)
             {
                 DevNexusLogger.Instance.Debug($"Error bulk deleting follows: {ex.Message}");
+                returnResult.Message = ex.Message;
+            }
+            return returnResult;
+        }
+
+        public async Task<ReturnResult<PagedData<SelectUserFollow, string>>> GetFollowersByProfileId(string profileId, Page<string> page)
+        {
+            ReturnResult<PagedData<SelectUserFollow, string>> returnResult = new();
+            try
+            {
+                var profile = await _dbContext.Profiles
+                    .Where(x => x.Id == profileId)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync();
+
+                if (profile == null)
+                {
+                    returnResult.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_FOUND, "profile", profileId);
+                    return returnResult;
+                }
+
+                var isOwner = _userContext.ProfileId == profileId;
+                if (profile.IsPrivate && !isOwner)
+                {
+                    var isFollowing = await _dbContext.UserFollows
+                        .AnyAsync(x => x.OwnerId == _userContext.ProfileId && x.FollowingProfileId == profileId);
+                    if (!isFollowing)
+                    {
+                        returnResult.Message = "You do not have permission to view this profile's followers.";
+                        return returnResult;
+                    }
+                }
+
+                var query = _dbContext.UserFollows.Where(x => x.FollowingProfileId == profileId)
+                                                .AsNoTracking()
+                                                .Include(x => x.Owner)
+                                                .AsQueryable();
+                returnResult.Result = await _repository.GetPagingAsync<Page<string>, SelectUserFollow>(query, page);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug($"Error fetching followers by profileId: {ex.Message}");
+                returnResult.Message = ex.Message;
+            }
+            return returnResult;
+        }
+
+        public async Task<ReturnResult<PagedData<SelectUserFollow, string>>> GetFollowingsByProfileId(string profileId, Page<string> page)
+        {
+            ReturnResult<PagedData<SelectUserFollow, string>> returnResult = new();
+            try
+            {
+                var profile = await _dbContext.Profiles
+                    .Where(x => x.Id == profileId)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync();
+
+                if (profile == null)
+                {
+                    returnResult.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_FOUND, "profile", profileId);
+                    return returnResult;
+                }
+
+                var isOwner = _userContext.ProfileId == profileId;
+                if (profile.IsPrivate && !isOwner)
+                {
+                    var isFollowing = await _dbContext.UserFollows
+                        .AnyAsync(x => x.OwnerId == _userContext.ProfileId && x.FollowingProfileId == profileId);
+                    if (!isFollowing)
+                    {
+                        returnResult.Message = "You do not have permission to view this profile's followings.";
+                        return returnResult;
+                    }
+                }
+
+                var query = _dbContext.UserFollows.Where(x => x.OwnerId == profileId)
+                                                .AsNoTracking()
+                                                .Include(x => x.FollowingProfile)
+                                                .AsQueryable();
+                returnResult.Result = await _repository.GetPagingAsync<Page<string>, SelectUserFollow>(query, page);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug($"Error fetching followings by profileId: {ex.Message}");
                 returnResult.Message = ex.Message;
             }
             return returnResult;

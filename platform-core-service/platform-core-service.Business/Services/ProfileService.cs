@@ -120,7 +120,9 @@ namespace platform_core_service.Business.Services
                 _context.Profiles.Update(profile);
                 await _context.SaveChangesAsync();
 
-                returnResult.Result = _mapper.Map<SelectProfileDTO>(profile);
+                var dto = _mapper.Map<SelectProfileDTO>(profile);
+                await EnrichProfileDTO(dto);
+                returnResult.Result = dto;
 
                 //Publsih To Other Source Too
                 _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
@@ -155,7 +157,9 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                returnResult.Result = _mapper.Map<SelectProfileDTO>(profile);
+                var dto = _mapper.Map<SelectProfileDTO>(profile);
+                await EnrichProfileDTO(dto);
+                returnResult.Result = dto;
             }
             catch (Exception ex)
             {
@@ -201,7 +205,11 @@ namespace platform_core_service.Business.Services
                 
                 _context.Profiles.Update(profile);
                 await _context.SaveChangesAsync();
-                returnResult.Result = _mapper.Map<SelectProfileDTO>(profile);
+
+                var dto = _mapper.Map<SelectProfileDTO>(profile);
+                await EnrichProfileDTO(dto);
+                returnResult.Result = dto;
+
                 //Publish To Other Source Too
                 _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
                     x => x.PublishEntity(_mapper.Map<ProfilePublishDTO>(profile), MessageBusEnum.Update, MessageBusEntityEnum.Profile)
@@ -214,5 +222,50 @@ namespace platform_core_service.Business.Services
             }
             return returnResult;
         }
+
+        // Enriches a SelectProfileDTO with follow metadata: counts, permissions, and current user's follow status.
+        private async Task EnrichProfileDTO(SelectProfileDTO dto)
+        {
+            var profileId = dto.Id;
+            var currentProfileId = _userContext.ProfileId;
+            var isOwner = currentProfileId == profileId;
+
+            // 1. Counts — always computed
+            dto.FollowerCount = await _context.UserFollows.CountAsync(x => x.FollowingProfileId == profileId);
+            dto.FollowingCount = await _context.UserFollows.CountAsync(x => x.OwnerId == profileId);
+
+            // 2. Current user's relationship with this profile
+            string? existingFollowId = null;
+            string? existingRequestId = null;
+
+            if (!isOwner && !string.IsNullOrEmpty(currentProfileId))
+            {
+                existingFollowId = await _context.UserFollows
+                    .Where(x => x.OwnerId == currentProfileId && x.FollowingProfileId == profileId)
+                    .Select(x => x.Id)
+                    .FirstOrDefaultAsync();
+
+                if (existingFollowId == null)
+                {
+                    existingRequestId = await _context.FollowRequests
+                        .Where(x => x.RequesterProfileId == currentProfileId && x.TargetProfileId == profileId)
+                        .Select(x => x.Id)
+                        .FirstOrDefaultAsync();
+                }
+            }
+
+            // 3. Permission — can the current user view the followers/following lists?
+            dto.CanViewProfile = isOwner || !dto.IsPrivate || existingFollowId != null;
+
+            // 4. Follow status
+            dto.FollowStatus = isOwner ? null
+                : existingFollowId != null ? "following"
+                : existingRequestId != null ? "requested"
+                : "none";
+
+            dto.CurrentUserFollowId = existingFollowId;
+            dto.CurrentUserRequestId = existingRequestId;
+        }
     }
 }
+

@@ -60,7 +60,7 @@ export function PostActionsDropdown({
             <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                     <div
-                        className={`p-2 text-muted-foreground hover:text-primary hover:bg-subtle rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${dropdownClassName}`}
+                        className={`p-2 text-muted-foreground hover:text-primary hover:bg-subtle rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${dropdownClassName} cursor-pointer`}
                         aria-label="More options"
                     >
                         <MoreHorizontal className="w-5 h-5" />

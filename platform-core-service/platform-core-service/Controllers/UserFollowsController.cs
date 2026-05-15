@@ -94,5 +94,37 @@ namespace platform_core_service.Controllers
             }
             return Ok(returnResult);
         }
+
+        [HttpPost("{profileId}/followers/paging")]
+        public async Task<IActionResult> GetFollowersByProfileId(string profileId, Page<string> page)
+        {
+            ReturnResult<PagedData<SelectUserFollow, string>> returnResult = new();
+            try
+            {
+                returnResult = await _userFollowService.GetFollowersByProfileId(profileId, page);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = ex.Message;
+            }
+            return Ok(returnResult);
+        }
+
+        [HttpPost("{profileId}/followings/paging")]
+        public async Task<IActionResult> GetFollowingsByProfileId(string profileId, Page<string> page)
+        {
+            ReturnResult<PagedData<SelectUserFollow, string>> returnResult = new();
+            try
+            {
+                returnResult = await _userFollowService.GetFollowingsByProfileId(profileId, page);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = ex.Message;
+            }
+            return Ok(returnResult);
+        }
     }
 }

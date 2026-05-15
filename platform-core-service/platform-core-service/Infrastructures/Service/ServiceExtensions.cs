@@ -302,7 +302,7 @@ public static class ServiceExtensions
                         factory: _ => new FixedWindowRateLimiterOptions
                         {
                             AutoReplenishment = true,
-                            PermitLimit = 100,        // authenticated users get more
+                            PermitLimit = 2000,        // authenticated users get more
                             //QueueLimit = 5,
                             //QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                             Window = TimeSpan.FromMinutes(1)
@@ -316,7 +316,7 @@ public static class ServiceExtensions
                     factory: _ => new FixedWindowRateLimiterOptions
                     {
                         AutoReplenishment = true,
-                        PermitLimit = 20,             // anonymous gets less
+                        PermitLimit = 2000,             // anonymous gets less
                         //QueueLimit = 2,
                         //QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         Window = TimeSpan.FromMinutes(1)

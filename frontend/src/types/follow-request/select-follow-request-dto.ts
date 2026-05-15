@@ -4,6 +4,8 @@ export interface SelectFollowRequestDTO {
   id: string;
   requesterProfileId: string;
   targetProfileId: string;
-  requesterProfile: SelectProfileDTO;
+  requesterProfile?: SelectProfileDTO;
+  targetProfile?: SelectProfileDTO;
   dateCreated: string;
+  dateModified: string;
 }

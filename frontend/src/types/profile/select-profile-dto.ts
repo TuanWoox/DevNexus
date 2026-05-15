@@ -10,4 +10,12 @@ export interface SelectProfileDTO {
     isPrivate: boolean;
     reputationPoints: number;
     techStacks: string[];
+
+    // Follow metadata — computed per-request by backend
+    followerCount: number;
+    followingCount: number;
+    canViewProfile: boolean;
+    followStatus?: 'none' | 'following' | 'requested' | null;
+    currentUserFollowId?: string;
+    currentUserRequestId?: string;
 }

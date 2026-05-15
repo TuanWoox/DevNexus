@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Search, Check, XIcon, UserPlus } from "lucide-react";
+import { Search, Check, XIcon, UserPlus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  useFollowRequests,
+  useGetReceivedFollowRequests,
   useApproveRequest,
   useRejectRequest,
   useBulkApproveRequests,
@@ -29,7 +29,7 @@ export function FollowRequestOverlay({ open, onClose }: Props) {
   const debouncedSearch = useDebounce(searchTerm, 300);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useFollowRequests(debouncedSearch);
+    useGetReceivedFollowRequests(debouncedSearch);
 
   const approveRequest = useApproveRequest();
   const rejectRequest = useRejectRequest();
@@ -81,8 +81,8 @@ export function FollowRequestOverlay({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+      <DialogContent className="max-h-[80vh] p-0" showCloseButton={false}>
+        <DialogHeader className="p-3 sm:px-6 sm:pt-6 sm:pb-4 border-b">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-xl font-semibold">
               Follow Requests
@@ -92,9 +92,6 @@ export function FollowRequestOverlay({ open, onClose }: Props) {
                 </span>
               )}
             </DialogTitle>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
           </div>
 
           {/* Search */}
@@ -124,18 +121,20 @@ export function FollowRequestOverlay({ open, onClose }: Props) {
                   variant="default"
                   onClick={handleBulkApprove}
                   disabled={bulkApprove.isPending}
+                  className="cursor-pointer"
                 >
-                  <Check className="h-4 w-4 mr-1" />
-                  Accept All
+                  <Check className="h-4 w-4" />
+                  <span className="hidden sm:block ml-1">Accept All</span>
                 </Button>
                 <Button
                   size="sm"
                   variant="destructive"
                   onClick={handleBulkReject}
                   disabled={bulkReject.isPending}
+                  className="cursor-pointer"
                 >
-                  <XIcon className="h-4 w-4 mr-1" />
-                  Reject All
+                  <XIcon className="h-4 w-4" />
+                  <span className="hidden sm:block ml-1">Reject All</span>
                 </Button>
               </div>
             </div>
@@ -171,25 +170,25 @@ export function FollowRequestOverlay({ open, onClose }: Props) {
 
                   <Avatar className="h-12 w-12">
                     <AvatarImage
-                      src={request.requesterProfile.avatarUrl || "/images/default-avatar.webp"}
-                      alt={request.requesterProfile.fullName}
+                      src={request.requesterProfile?.avatarUrl || "/images/default-avatar.webp"}
+                      alt={request.requesterProfile?.fullName ?? "User"}
                     />
                     <AvatarFallback>
-                      {request.requesterProfile.fullName.charAt(0).toUpperCase()}
+                      {request.requesterProfile?.fullName?.charAt(0)?.toUpperCase() ?? "U"}
                     </AvatarFallback>
                   </Avatar>
 
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">
-                      {request.requesterProfile.fullName}
+                      {request.requesterProfile?.fullName ?? "Unknown User"}
                     </p>
-                    {request.requesterProfile.bio && (
+                    {/* {request.requesterProfile?.bio && (
                       <p className="text-sm text-muted-foreground truncate">
                         {request.requesterProfile.bio}
                       </p>
-                    )}
+                    )} */}
                     <p className="text-xs text-muted-foreground mt-1">
-                      {request.requesterProfile.reputationPoints} reputation
+                      {request.requesterProfile?.reputationPoints ?? 0} reputation
                     </p>
                   </div>
 
@@ -199,6 +198,7 @@ export function FollowRequestOverlay({ open, onClose }: Props) {
                       variant="default"
                       onClick={() => handleApprove(request.id)}
                       disabled={approveRequest.isPending}
+                      className="cursor-pointer"
                     >
                       <Check className="h-4 w-4" />
                     </Button>
@@ -207,6 +207,7 @@ export function FollowRequestOverlay({ open, onClose }: Props) {
                       variant="destructive"
                       onClick={() => handleReject(request.id)}
                       disabled={rejectRequest.isPending}
+                      className="cursor-pointer"
                     >
                       <XIcon className="h-4 w-4" />
                     </Button>

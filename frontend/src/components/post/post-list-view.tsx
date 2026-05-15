@@ -48,7 +48,7 @@ export function PostListView({
     const sentinelRef = useIntersectionObserver(handleIntersect);
 
     return (
-        <section className="mx-auto w-full max-w-5xl px-4 py-4 sm:px-6 xl:px-0">
+        <section className="mx-auto w-full max-w-5xl px-4 py-4 sm:px-6">
             {(title || subtitle) && (
                 <div className="relative z-10 mb-6 fade-in">
                     <div className="absolute -inset-1 -z-10 rounded-full bg-linear-to-r from-primary to-primary/60 opacity-20 blur-2xl dark:opacity-10" />
@@ -97,8 +97,8 @@ export function PostListView({
             ) : (
                 <div className="grid grid-cols-3 gap-1 sm:gap-6 px-0 sm:px-4">
                     {posts?.map((post) => (
-                        <Link 
-                            key={post.id} 
+                        <Link
+                            key={post.id}
                             href={`/post/${post.slug}`}
                             className="relative aspect-square bg-muted group overflow-hidden cursor-pointer border border-border sm:rounded-md"
                         >
@@ -107,7 +107,7 @@ export function PostListView({
                                     {post.title}
                                 </p>
                             </div>
-                            
+
                             {/* Overlay on hover */}
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-bold text-sm">
                                 <div className="flex items-center gap-1">
