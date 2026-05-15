@@ -10,16 +10,17 @@ interface ProfileContentProps {
     targetProfileId: string;
     isOwnProfile: boolean;
     isPrivate: boolean;
+    canViewContent: boolean;
 }
 
-export function ProfileContent({ activeTab, targetProfileId, isOwnProfile, isPrivate }: ProfileContentProps) {
+export function ProfileContent({ activeTab, targetProfileId, isOwnProfile, isPrivate, canViewContent }: ProfileContentProps) {
     const isPrivateAndNotOwner = !isOwnProfile && isPrivate;
 
     return (
         <div className="max-w-5xl mx-auto w-full md:px-4">
             {activeTab === "overview" && (
                 <div className="fade-in">
-                    {isPrivateAndNotOwner ? (
+                    {!canViewContent ? (
                         <div className="flex flex-col items-center justify-center py-20 text-center">
                             <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
                                 <Lock className="w-10 h-10 text-muted-foreground" />
@@ -35,13 +36,13 @@ export function ProfileContent({ activeTab, targetProfileId, isOwnProfile, isPri
                 </div>
             )}
 
-            {!isPrivateAndNotOwner && activeTab === "post" && (
+            {canViewContent && activeTab === "post" && (
                 <div className="fade-in">
                     <ProfilePostList profileId={targetProfileId} />
                 </div>
             )}
 
-            {!isPrivateAndNotOwner && activeTab === "qa-post" && (
+            {canViewContent && activeTab === "qa-post" && (
                 <div className="fade-in">
                     <ProfileQAList profileId={targetProfileId} />
                 </div>

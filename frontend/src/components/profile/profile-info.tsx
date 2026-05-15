@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { SelectProfileDTO } from "@/types/profile/select-profile-dto";
 
 import { Button } from "@/components/ui/button";
@@ -10,8 +11,13 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Lock, Star, UserPlus, MessageSquare, MoreHorizontal, Share2, ShieldAlert, UserX, Edit3, Loader2 } from "lucide-react";
+import { Lock, Star, UserPlus, UserCheck, Clock, MessageSquare, MoreHorizontal, Share2, ShieldAlert, UserX, Edit3, Loader2, Users } from "lucide-react";
 import { useOpenChatByProfile } from "@/features/messages/hooks/chats/use-open-chat-by-profile";
+import { useCreateUserFollow } from "@/hooks/user-follow-hooks/use-create-user-follow";
+import { useDeleteFollowById } from "@/hooks/user-follow-hooks/use-delete-follow-by-id";
+import { useCancelRequest } from "@/hooks/follow-request-hooks";
+import { ConnectionsModal, type ConnectionsTabValue } from "./connections/connections-modal";
+import { cn } from "@/lib/utils";
 
 interface ProfileInfoProps {
     profile: SelectProfileDTO;
@@ -27,10 +33,49 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit }: ProfileInfoProps)
         avatarUrl: profile.avatarUrl,
     });
 
+    // Follow actions
+    const createFollow = useCreateUserFollow();
+    const deleteFollow = useDeleteFollowById();
+    const cancelRequest = useCancelRequest();
+
+    // Connections modal
+    const [connectionsModalOpen, setConnectionsModalOpen] = useState(false);
+    const [connectionsInitialTab, setConnectionsInitialTab] = useState<ConnectionsTabValue>("followers");
+
+    const openConnectionsModal = (tab: ConnectionsTabValue) => {
+        setConnectionsInitialTab(tab);
+        setConnectionsModalOpen(true);
+    };
+
     const handleMessage = async () => {
         if (isCheckingChat) return;
         await openMessagePopup();
     };
+
+    const handleFollowAction = () => {
+        if (profile.followStatus === "following" && profile.currentUserFollowId) {
+            deleteFollow.mutate(profile.currentUserFollowId);
+        } else if (profile.followStatus === "requested" && profile.currentUserRequestId) {
+            cancelRequest.mutate(profile.currentUserRequestId);
+        } else {
+            createFollow.mutate({ followingProfileId: profile.id });
+        }
+    };
+
+    const isFollowActionPending = createFollow.isPending || deleteFollow.isPending || cancelRequest.isPending;
+
+    const getFollowButtonConfig = () => {
+        switch (profile.followStatus) {
+            case "following":
+                return { label: "Following", icon: UserCheck, variant: "secondary" as const };
+            case "requested":
+                return { label: "Requested", icon: Clock, variant: "outline" as const };
+            default:
+                return { label: "Follow", icon: UserPlus, variant: "default" as const };
+        }
+    };
+
+    const followConfig = getFollowButtonConfig();
 
     return (
         <div className="px-4 md:px-10 max-w-5xl mx-auto w-full pb-6">
@@ -41,23 +86,31 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit }: ProfileInfoProps)
                 </h1>
 
                 {!isOwnProfile && (
-                    <DropdownMenu>
+                    <DropdownMenu modal={false}>
                         <DropdownMenuTrigger id={dropdownTriggerId} asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground border shadow-sm">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground border shadow-sm cursor-pointer">
                                 <MoreHorizontal className="w-5 h-5" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-48">
-                            <DropdownMenuItem className="cursor-pointer">
+                            <DropdownMenuItem
+                                className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium"
+                            >
                                 <Share2 className="w-4 h-4 mr-2" />
                                 Share Profile
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive">
+                            <DropdownMenuItem
+                                variant='destructive'
+                                className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
+                            >
                                 <ShieldAlert className="w-4 h-4 mr-2" />
                                 Report User
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive">
+                            <DropdownMenuItem
+                                variant='destructive'
+                                className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
+                            >
                                 <UserX className="w-4 h-4 mr-2" />
                                 Block User
                             </DropdownMenuItem>
@@ -87,6 +140,38 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit }: ProfileInfoProps)
                     <span className="font-bold text-heading">{profile.reputationPoints || 0}</span>
                     <span className="text-muted-foreground">reputation</span>
                 </div>
+
+                {/* Follower count */}
+                <button
+                    onClick={() => profile.canViewProfile && openConnectionsModal("followers")}
+                    disabled={!profile.canViewProfile}
+                    className={cn(
+                        "flex items-center gap-1.5 transition-colors",
+                        profile.canViewProfile
+                            ? "hover:text-primary cursor-pointer"
+                            : "cursor-default"
+                    )}
+                >
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-bold text-heading">{profile.followerCount || 0}</span>
+                    <span className="text-muted-foreground">followers</span>
+                </button>
+
+                {/* Following count */}
+                <button
+                    onClick={() => profile.canViewProfile && openConnectionsModal("following")}
+                    disabled={!profile.canViewProfile}
+                    className={cn(
+                        "flex items-center gap-1.5 transition-colors",
+                        profile.canViewProfile
+                            ? "hover:text-primary cursor-pointer"
+                            : "cursor-default"
+                    )}
+                >
+                    <UserCheck className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-bold text-heading">{profile.followingCount || 0}</span>
+                    <span className="text-muted-foreground">following</span>
+                </button>
             </div>
 
             {/* Tech stack tags - Ensuring they display */}
@@ -112,21 +197,39 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit }: ProfileInfoProps)
                         onClick={onEdit}
                         variant="secondary"
                         size="default"
-                        className="h-10 font-semibold px-8 border shadow-sm"
+                        className="h-10 font-semibold px-8 border shadow-sm cursor-pointer"
                     >
                         <Edit3 className="w-4 h-4 mr-2" />
                         Edit Profile
                     </Button>
                 ) : (
                     <>
-                        <Button size="default" className="h-10 font-semibold px-8 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
-                            <UserPlus className="w-4 h-4 mr-2" />
-                            Follow
+                        <Button
+                            size="default"
+                            variant={followConfig.variant}
+                            className={cn(
+                                "h-10 font-semibold px-8 shadow-sm cursor-pointer",
+                                profile.followStatus === "following" && "hover:bg-destructive/10 hover:text-destructive hover:border-destructive"
+                            )}
+                            onClick={handleFollowAction}
+                            disabled={isFollowActionPending}
+                        >
+                            {isFollowActionPending ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                                <followConfig.icon className="w-4 h-4 mr-2" />
+                            )}
+                            {profile.followStatus === "following" ? (
+                                <span className="group-hover/button:hidden">{followConfig.label}</span>
+                            ) : followConfig.label}
+                            {profile.followStatus === "following" && (
+                                <span className="hidden group-hover/button:inline">Unfollow</span>
+                            )}
                         </Button>
                         <Button
                             variant="secondary"
                             size="default"
-                            className="h-10 font-semibold px-8 border shadow-sm"
+                            className="h-10 font-semibold px-8 border shadow-sm cursor-pointer"
                             onClick={handleMessage}
                             disabled={isCheckingChat}
                         >
@@ -140,8 +243,17 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit }: ProfileInfoProps)
                     </>
                 )}
             </div>
+
+            {/* Connections Modal */}
+            <ConnectionsModal
+                open={connectionsModalOpen}
+                onClose={() => setConnectionsModalOpen(false)}
+                profileId={profile.id}
+                isOwnProfile={isOwnProfile}
+                initialTab={connectionsInitialTab}
+                followerCount={profile.followerCount}
+                followingCount={profile.followingCount}
+            />
         </div>
     );
 }
-
-

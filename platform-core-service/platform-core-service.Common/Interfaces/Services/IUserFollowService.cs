@@ -11,5 +11,7 @@ namespace platform_core_service.Common.Interfaces.Services
         public Task<ReturnResult<PagedData<SelectUserFollow, string>>> GetFollowings(Page<string> page);
         public Task<ReturnResult<bool>> DeleteById(string followId);
         public Task<ReturnResult<int>> BulkDeleteByIds(List<string> followIds);
+        public Task<ReturnResult<PagedData<SelectUserFollow, string>>> GetFollowersByProfileId(string profileId, Page<string> page);
+        public Task<ReturnResult<PagedData<SelectUserFollow, string>>> GetFollowingsByProfileId(string profileId, Page<string> page);
     }
 }

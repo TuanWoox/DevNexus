@@ -11,6 +11,9 @@ using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.MessageBusDTO;
+using Hangfire;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 
 namespace platform_core_service.Business.Services
 {
@@ -19,13 +22,15 @@ namespace platform_core_service.Business.Services
         ApplicationDbContext dbContext,
         IMapper mapper,
         IRepository<FollowRequest, string> repository,
-        IUserContext userContext
+        IUserContext userContext,
+        IBackgroundJobClient backgroundJobClient
     ) : IFollowRequestService
     {
         private readonly ApplicationDbContext _dbContext = dbContext;
         private readonly IMapper _mapper = mapper;
         private readonly IRepository<FollowRequest, string> _repository = repository;
         private readonly IUserContext _userContext = userContext;
+        private readonly IBackgroundJobClient _backgroundJobClient = backgroundJobClient;
 
         public async Task<ReturnResult<SelectUserFollow>> ApproveFollowRequest(string requestId)
         {
@@ -62,7 +67,25 @@ namespace platform_core_service.Business.Services
                         _dbContext.FollowRequests.Remove(existingFollowRequest);
                         if (await _dbContext.SaveChangesAsync() > 0)
                         {
-                            returnResult.Result = _mapper.Map<SelectUserFollow>(newUserFollow);
+                            var selectUserFollow = _mapper.Map<SelectUserFollow>(newUserFollow);
+                            returnResult.Result = selectUserFollow;
+
+                            // Publish FOLLOW_ACCEPTED notification
+                            var notificationEvent = new NotiicationCreatedEntityDTO
+                            {
+                                EventType = NotificationEventType.FOLLOW_ACCEPTED,
+                                ActorId = _userContext.ProfileId,
+                                RecipientId = existingFollowRequest.RequesterProfileId,
+                                EntityType = NotificationEntityType.PROFILE,
+                                EntityId = "profile_requests_accepted",
+                                EntityTitle = existingFollowRequest.TargetProfile?.FullName,
+                                EntityPreview = null,
+                                ActionUrl = null,
+                                Timestamp = DateTime.UtcNow,
+                            };
+
+                            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                                x => x.PublicNotification(notificationEvent, "notifications.follow"));
                         }
                         else returnResult.Message = ResponseMessage.MESSAGE_OPERATION_CANT_BE_DONE;
                     }

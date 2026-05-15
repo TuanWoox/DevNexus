@@ -19,5 +19,13 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Profile
         public List<string> TechStacks { get; set; }
 
         public bool IsPrivate { get; set; }
+
+        // Follow metadata — computed per-request in ProfileService.GetAsync()
+        public int FollowerCount { get; set; }
+        public int FollowingCount { get; set; }
+        public bool CanViewProfile { get; set; }
+        public string? FollowStatus { get; set; }           // "none" | "following" | "requested"
+        public string? CurrentUserFollowId { get; set; }
+        public string? CurrentUserRequestId { get; set; }
     }
 }

@@ -215,7 +215,7 @@ export function PostCard({ post }: PostCardProps) {
                             onClick={(e) => handleVote(e, true)}
                             disabled={isVotePending || !isApproved}
                             className={cn(
-                                "group flex items-center gap-1.5 rounded-full p-1.5 transition-colors hover:bg-background disabled:opacity-50 sm:p-2",
+                                "group flex items-center gap-1.5 rounded-full p-1.5 transition-colors hover:bg-background disabled:opacity-50 sm:p-2 cursor-pointer disabled:cursor-not-allowed",
                                 post.currentUserVote === true
                                     ? "text-emerald-500"
                                     : "text-muted-foreground hover:text-emerald-500"
@@ -229,7 +229,7 @@ export function PostCard({ post }: PostCardProps) {
                             onClick={(e) => handleVote(e, false)}
                             disabled={isVotePending || !isApproved}
                             className={cn(
-                                "group flex items-center gap-1.5 rounded-full p-1.5 transition-colors hover:bg-background disabled:opacity-50 sm:p-2",
+                                "group flex items-center gap-1.5 rounded-full p-1.5 transition-colors hover:bg-background disabled:opacity-50 sm:p-2 cursor-pointer disabled:cursor-not-allowed",
                                 post.currentUserVote === false
                                     ? "text-rose-500"
                                     : "text-muted-foreground hover:text-rose-500"
@@ -251,7 +251,7 @@ export function PostCard({ post }: PostCardProps) {
                             <span className="text-sm font-medium hidden sm:block">{isQaPost ? 'Answers' : 'Comments'}</span>
                         </Link>
                     ) : (
-                        <div className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 text-muted-foreground opacity-50 rounded-full sm:rounded-lg relative z-10" aria-disabled>
+                        <div className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 cursor-not-allowed text-muted-foreground opacity-50 rounded-full sm:rounded-lg relative z-10" aria-disabled>
                             <MessageSquare className="w-5 h-5" />
                             <span className="text-sm font-medium">{isQaPost ? (post as SelectQAPostDTO).answerCount : post.commentCount}</span>
                             <span className="text-sm font-medium hidden sm:block">{isQaPost ? 'Answers' : 'Comments'}</span>
@@ -263,12 +263,15 @@ export function PostCard({ post }: PostCardProps) {
                     <button
                         onClick={handleSaveClick}
                         disabled={!isApproved}
-                        className={`relative z-10 flex items-center gap-2 rounded-full border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-heading disabled:opacity-50 sm:px-3 sm:py-2 ${post.isSaved ? 'text-heading hover:text-heading/80' : 'text-muted-foreground hover:text-heading'}`}
+                        className={`relative z-10 flex items-center gap-2 rounded-full cursor-pointer disabled:cursor-not-allowed border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-heading disabled:opacity-50 sm:px-3 sm:py-2 ${post.isSaved ? 'text-heading hover:text-heading/80' : 'text-muted-foreground hover:text-heading'}`}
                     >
                         <Bookmark className={`w-5 h-5 ${post.isSaved ? 'fill-foreground text-heading' : ''}`} />
                         <span className="text-sm font-medium hidden sm:block">{post.isSaved ? 'Saved' : 'Save'}</span>
                     </button>
-                    <button disabled={!isApproved} className="relative z-10 flex items-center gap-2 rounded-full border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-heading disabled:opacity-50 sm:px-3 sm:py-2">
+                    <button
+                        disabled={!isApproved}
+                        className="relative z-10 flex items-center gap-2 rounded-full cursor-pointer disabled:cursor-not-allowed border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-heading disabled:opacity-50 sm:px-3 sm:py-2"
+                    >
                         <Share2 className="w-5 h-5" />
                         <span className="hidden text-sm font-medium sm:block">Share</span>
                     </button>

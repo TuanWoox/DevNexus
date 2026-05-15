@@ -14,9 +14,10 @@ import { useGetProfileById } from "@/hooks/profile-hooks/use-get-profile-by-id";
 
 interface ProfileViewWrapperProps {
     profileId: string;
+    currentProfileId?: string;
 }
 
-export function ProfileViewWrapper({ profileId }: ProfileViewWrapperProps) {
+export function ProfileViewWrapper({ profileId, currentProfileId }: ProfileViewWrapperProps) {
     const hasMounted = useHasMounted();
     const [activeTab, setActiveTab] = useState<"overview" | "post" | "qa-post" | "saved">("overview");
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -25,9 +26,9 @@ export function ProfileViewWrapper({ profileId }: ProfileViewWrapperProps) {
     const { user } = useSelector((state: RootState) => state.auth);
 
     if (!profile) return null;
-    // Gate isOwnProfile with hasMounted to ensure server/client initial render match.
-    // This prevents Radix ID shifts caused by conditional modal rendering.
-    const isOwnProfile = hasMounted && user?.profileId === profile.id;
+    // Use currentProfileId from server to ensure consistent SSR and hydration.
+    // Falls back to user?.profileId from Redux on the client if needed.
+    const isOwnProfile = (currentProfileId || user?.profileId) === profile.id;
 
     return (
         <div className="flex flex-col w-full min-h-screen fade-in">
@@ -50,6 +51,7 @@ export function ProfileViewWrapper({ profileId }: ProfileViewWrapperProps) {
                     setActiveTab={setActiveTab}
                     isOwnProfile={isOwnProfile}
                     isPrivate={profile.isPrivate}
+                    canViewContent={profile.canViewProfile}
                 />
             </div>
 
@@ -58,6 +60,7 @@ export function ProfileViewWrapper({ profileId }: ProfileViewWrapperProps) {
                 targetProfileId={profile.id}
                 isOwnProfile={isOwnProfile}
                 isPrivate={profile.isPrivate}
+                canViewContent={profile.canViewProfile}
             />
 
             {isOwnProfile && (

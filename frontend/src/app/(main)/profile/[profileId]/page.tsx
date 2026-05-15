@@ -10,6 +10,8 @@ import { SelectPostDTO } from '@/types/post/select-post-dto';
 import { INFINITE_PAGE_SIZE } from '@/constants/feed-payload';
 import { SortOrderType } from '@/constants/sortOrderType';
 import { ProfileNotFound } from '@/components/profile/profile-not-found';
+import { cookies } from 'next/headers';
+import { parseUserFromToken } from '@/store/slices/auth-slice';
 
 type Props = {
     params: Promise<{ profileId: string }>
@@ -54,6 +56,11 @@ export default async function ProfilePage({ params }: Props) {
     const queryClient = getQueryClient();
 
     // Base payload for Overview fetching
+    const cookieStore = await cookies();
+    const accessToken = cookieStore.get('accessToken')?.value;
+    const parsed = accessToken ? parseUserFromToken(accessToken) : null;
+    const currentProfileId = parsed?.user?.profileId;
+
     const basePayload = {
         totalElements: 0,
         orders: [{ sort: 'dateCreated', sortDir: SortOrderType.DESC, dynamicProperty: '', delimiter: '', dataType: '' }],
@@ -100,7 +107,7 @@ export default async function ProfilePage({ params }: Props) {
 
     return (
         <HydrationBoundary state={dehydrate(queryClient)}>
-            <ProfileViewWrapper profileId={profileId} />
+            <ProfileViewWrapper profileId={profileId} currentProfileId={currentProfileId} />
         </HydrationBoundary>
     );
 }
