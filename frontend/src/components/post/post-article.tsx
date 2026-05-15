@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useDeleteBookmarkedItemById } from "@/hooks/bookmarked-item-hooks/use-delete-bookmarked-item-by-id";
 import { cn } from '@/lib/utils';
+import { AiPostSummary } from './ai-post-summary';
 
 interface Props {
     postId: string;
@@ -281,6 +282,14 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                 <h1 className="text-2xl sm:text-3xl font-bold text-heading leading-tight">
                     {post.title}
                 </h1>
+
+                {/* AI TL;DR Summary — lazy, only on post detail, never in feed */}
+                {!isQAPost && isApproved && (
+                    <AiPostSummary
+                        postId={postId}
+                        contentLength={post.content?.length ?? 0}
+                    />
+                )}
 
                 {/* Content */}
                 <div className={cn(

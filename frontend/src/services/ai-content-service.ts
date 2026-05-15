@@ -5,6 +5,10 @@ import {
     MetadataSuggestionResponseDTO,
     UpdateAiUsageInteractionRequestDTO,
 } from "@/types/ai/content-metadata-dto";
+import {
+    SummarizePostRequestDTO,
+    SummarizePostResponseDTO,
+} from "@/types/ai/post-summary-dto";
 
 type MetadataSuggestionApiResponse =
     | MetadataSuggestionResponseDTO
@@ -27,6 +31,19 @@ export const aiContentService = {
         const { data } = await api.post<MetadataSuggestionApiResponse>('/AiContent/metadata', payload);
         return normalizeMetadataSuggestionResponse(data);
     },
+
+    summarizePost: async (
+        postId: string,
+        payload: SummarizePostRequestDTO
+    ): Promise<SummarizePostResponseDTO> => {
+        const { data } = await api.post<ReturnResult<SummarizePostResponseDTO>>(
+            `/AiContent/posts/${postId}/summary`,
+            payload,
+            { suppressToast: true }
+        );
+        return data.result;
+    },
+
     updateUsageInteraction: async (
         usageLogId: number,
         payload: UpdateAiUsageInteractionRequestDTO
@@ -40,3 +57,4 @@ export const aiContentService = {
         return data.result;
     },
 };
+

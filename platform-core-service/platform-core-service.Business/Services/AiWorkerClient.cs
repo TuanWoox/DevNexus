@@ -82,6 +82,48 @@ namespace platform_core_service.Business.Services
             return string.Join(Environment.NewLine + Environment.NewLine, parts.Where(p => p != null));
         }
 
+        public async Task<ReturnResult<AISummarizeResponseDTO>> SummarizeContentAsync(AISummarizeRequestDTO request)
+        {
+            var result = new ReturnResult<AISummarizeResponseDTO>();
+            try
+            {
+                using var httpRequest = new HttpRequestMessage(
+                    HttpMethod.Post,
+                    $"{_baseUrl}/ai/content/summarize")
+                {
+                    Content = JsonContent.Create(request),
+                };
+
+                ForwardAuthorizationHeader(httpRequest);
+
+                var response = await _httpClient.SendAsync(httpRequest);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync();
+                    DevNexusLogger.Instance.Warn(
+                        $"[AiWorkerClient] SummarizeContent returned {(int)response.StatusCode}: {errorBody}");
+                    result.Message = $"AI worker could not generate a summary. Status: {(int)response.StatusCode}.";
+                    return result;
+                }
+
+                var summary = await response.Content.ReadFromJsonAsync<AISummarizeResponseDTO>();
+                if (summary == null)
+                {
+                    result.Message = "AI worker returned an empty summary response.";
+                    return result;
+                }
+
+                result.Result = summary;
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error($"[AiWorkerClient] SummarizeContentAsync failed: {ex.Message}");
+                result.Message = $"Failed to generate AI summary: {ex.Message}";
+            }
+
+            return result;
+        }
+
         public async Task<ReturnResult<AIMetadataResponseDTO>> SuggestMetadataAsync(AIMetadataRequestDTO request)
         {
             var result = new ReturnResult<AIMetadataResponseDTO>();
