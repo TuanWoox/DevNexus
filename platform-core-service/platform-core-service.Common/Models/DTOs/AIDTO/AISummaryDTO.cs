@@ -47,7 +47,7 @@ namespace platform_core_service.Common.Models.DTOs.AIDTO
         /// <summary>Hard-coded at 60 s for Phase 1; Phase 2 will compute from bullet count.</summary>
         public int SummaryEstimatedReadTimeSeconds { get; set; } = 60;
 
-        /// <summary>Always false in Phase 1 — keeps the frontend contract ready for Phase 2 cache.</summary>
+        /// <summary>Indicates whether the summary response was served from cache.</summary>
         public bool Cached { get; set; } = false;
 
         public string Status { get; set; } = "Completed";

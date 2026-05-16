@@ -57,7 +57,6 @@ export function AiPostSummary({ postId, contentLength, language = 'vi' }: AiPost
             return;
           }
 
-          setSummaryData(data);
           setSummaryState('success');
         },
         onError: () => {

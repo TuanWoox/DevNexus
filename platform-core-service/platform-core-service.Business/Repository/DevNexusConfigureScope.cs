@@ -70,7 +70,11 @@ namespace platform_core_service.Business.Repository
                 var redisConfig = configuration.GetSection("RedisCacheOptions").GetValue<string>("Configuration");
                 if (string.IsNullOrEmpty(redisConfig))
                     throw new InvalidOperationException("Redis configuration is missing in appsettings");
-                return ConnectionMultiplexer.Connect(redisConfig);
+
+                var options = ConfigurationOptions.Parse(redisConfig);
+                options.AbortOnConnectFail = false;
+
+                return ConnectionMultiplexer.Connect(options);
             });
 
             return services;
