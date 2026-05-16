@@ -135,8 +135,8 @@ export default function PostsManagementPage() {
     approvePostMutation.mutate(post.id)
   }
 
-  function handleRejectPost(post: AdminPostDTO) {
-    rejectPostMutation.mutate(post.id)
+  function handleRejectPost(post: AdminPostDTO, reasonText: string, moderatorNote?: string) {
+    rejectPostMutation.mutate({ id: post.id, reasonText, moderatorNote })
   }
 
   function handleRetry() {

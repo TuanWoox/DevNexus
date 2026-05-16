@@ -19,6 +19,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Moderation
         public string? AssignedModeratorId { get; set; }
         public DateTimeOffset? ResolvedAt { get; set; }
         public string? Resolution { get; set; }
+        public string? ModeratorNote { get; set; }
 
         public DateTimeOffset CreatedAt { get; set; }
     }

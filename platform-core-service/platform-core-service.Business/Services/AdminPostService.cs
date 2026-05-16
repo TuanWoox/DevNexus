@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
+using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
@@ -20,15 +21,18 @@ namespace platform_core_service.Business.Services
         private readonly ApplicationDbContext _context;
         private readonly IRepository<PostEntity, string> _postRepository;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IUserContext _userContext;
 
         public AdminPostService(
             ApplicationDbContext context,
             IRepository<PostEntity, string> postRepository,
-            IBackgroundJobClient backgroundJobClient)
+            IBackgroundJobClient backgroundJobClient,
+            IUserContext userContext)
         {
             _context = context;
             _postRepository = postRepository;
             _backgroundJobClient = backgroundJobClient;
+            _userContext = userContext;
         }
 
         public async Task<ReturnResult<PagedData<AdminPostDTO, string>>> GetAllPostsAsync(Page<string> page)
@@ -73,6 +77,7 @@ namespace platform_core_service.Business.Services
 
                 post.ModerationStatus = ModerationStatus.Approved;
                 post.ModerationReason = null;
+                await ResolveOpenQueueEntryAsync(post.Id, "Approved", null);
                 await _context.SaveChangesAsync();
 
                 // Build DTO for AI First Responder
@@ -112,11 +117,31 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
-        public async Task<ReturnResult<bool>> ForceRejectAsync(string postId)
+        public async Task<ReturnResult<bool>> ForceRejectAsync(string postId, AdminForceRejectPostDTO dto)
         {
             var result = new ReturnResult<bool>();
             try
             {
+                var reasonText = dto?.ReasonText?.Trim();
+                if (string.IsNullOrWhiteSpace(reasonText))
+                {
+                    result.Message = "ReasonText is required";
+                    return result;
+                }
+
+                if (reasonText.Length > 1000)
+                {
+                    result.Message = "ReasonText cannot exceed 1000 characters";
+                    return result;
+                }
+
+                var moderatorNote = dto?.ModeratorNote?.Trim();
+                if (moderatorNote?.Length > 500)
+                {
+                    result.Message = "ModeratorNote cannot exceed 500 characters";
+                    return result;
+                }
+
                 var post = await _context.Posts
                     .IgnoreQueryFilters()
                     .FirstOrDefaultAsync(p => p.Id == postId);
@@ -129,7 +154,8 @@ namespace platform_core_service.Business.Services
 
                 // Flagged = hidden from public feed (same as human-reject in Phase 1)
                 post.ModerationStatus = ModerationStatus.Flagged;
-                post.ModerationReason = "Rejected by moderator.";
+                post.ModerationReason = reasonText;
+                await ResolveOpenQueueEntryAsync(post.Id, "Rejected", moderatorNote);
                 await _context.SaveChangesAsync();
 
                 DevNexusLogger.Instance.Debug($"[AdminPost] Post {postId} force-flagged");
@@ -141,6 +167,24 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while rejecting post: {ex.Message}";
             }
             return result;
+        }
+
+        private async Task ResolveOpenQueueEntryAsync(string postId, string resolution, string? moderatorNote)
+        {
+            var openEntries = await _context.ModerationQueueEntries
+                .Where(e => e.PostId == postId && e.ResolvedAt == null)
+                .ToListAsync();
+
+            if (openEntries.Count == 0) return;
+
+            var resolvedAt = DateTimeOffset.UtcNow;
+            foreach (var entry in openEntries)
+            {
+                entry.AssignedModeratorId = _userContext.ProfileId;
+                entry.Resolution = resolution;
+                entry.ResolvedAt = resolvedAt;
+                entry.ModeratorNote = moderatorNote;
+            }
         }
     }
 }

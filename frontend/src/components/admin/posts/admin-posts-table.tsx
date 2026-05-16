@@ -22,7 +22,7 @@ interface AdminPostsTableProps {
   posts: AdminPostDTO[]
   isLoading: boolean
   onApprove: (post: AdminPostDTO) => void
-  onReject: (post: AdminPostDTO) => void
+  onReject: (post: AdminPostDTO, reasonText: string, moderatorNote?: string) => void
 }
 
 function mapPostType(type: string | number): string {
@@ -79,9 +79,11 @@ export function AdminPostsTable({ posts, isLoading, onApprove, onReject }: Admin
     setDialogState({ open: true, post, action })
   }
   function closeDialog() { setDialogState((s) => ({ ...s, open: false })) }
-  function handleConfirm() {
+  function handleConfirm(reasonText?: string, moderatorNote?: string) {
     if (!dialogState.post) return
-    dialogState.action === 'approve' ? onApprove(dialogState.post) : onReject(dialogState.post)
+    dialogState.action === 'approve'
+      ? onApprove(dialogState.post)
+      : onReject(dialogState.post, reasonText!, moderatorNote)
     closeDialog()
   }
 

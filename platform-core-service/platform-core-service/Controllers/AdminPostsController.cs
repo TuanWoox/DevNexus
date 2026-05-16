@@ -73,12 +73,12 @@ namespace platform_core_service.Controllers
         /// Post is hidden from public feed (ModerationStatus = Flagged).
         /// </summary>
         [HttpPost("{id}/reject")]
-        public async Task<IActionResult> ForceReject(string id)
+        public async Task<IActionResult> ForceReject(string id, [FromBody] AdminForceRejectPostDTO dto)
         {
             ReturnResult<bool> returnResult = new();
             try
             {
-                returnResult = await _adminPostService.ForceRejectAsync(id);
+                returnResult = await _adminPostService.ForceRejectAsync(id, dto);
             }
             catch (Exception ex)
             {

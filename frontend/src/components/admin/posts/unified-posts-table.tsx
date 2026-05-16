@@ -31,7 +31,7 @@ interface UnifiedPostsTableProps {
   onApproveQueue: (entry: AdminQueueEntryDTO, note?: string) => void
   onRejectQueue: (entry: AdminQueueEntryDTO, note?: string) => void
   onApprovePost: (post: AdminPostDTO) => void
-  onRejectPost: (post: AdminPostDTO) => void
+  onRejectPost: (post: AdminPostDTO, reasonText: string, moderatorNote?: string) => void
 }
 
 // Map raw enum numbers to readable labels
@@ -432,11 +432,11 @@ export function UnifiedPostsTable({
           onClose={() => setPostDialogState((s) => ({ ...s, open: false }))}
           post={postDialogState.post}
           action={postDialogState.action}
-          onConfirm={() => {
+          onConfirm={(reasonText, moderatorNote) => {
             if (postDialogState.action === 'approve') {
               onApprovePost(postDialogState.post!)
             } else {
-              onRejectPost(postDialogState.post!)
+              onRejectPost(postDialogState.post!, reasonText!, moderatorNote)
             }
             setPostDialogState((s) => ({ ...s, open: false }))
           }}

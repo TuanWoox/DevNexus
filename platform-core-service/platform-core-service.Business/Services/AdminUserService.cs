@@ -19,6 +19,14 @@ namespace platform_core_service.Business.Services
 {
     public class AdminUserService : IAdminUserService
     {
+        private const string LastActiveAdminMessage = "Cannot modify the last active admin account.";
+        private static readonly HashSet<string> ManagedPlatformRoles = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "Admin",
+            "Moderator",
+            "Developer"
+        };
+
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<ApplicationRole> _roleManager;
@@ -95,6 +103,12 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                if (await IsLastActiveAdminAsync(profile))
+                {
+                    result.Message = LastActiveAdminMessage;
+                    return result;
+                }
+
                 profile.IsSuspended = true;
                 profile.SuspendedUntil = until;
 
@@ -160,6 +174,13 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                newRole = newRole.Trim();
+                if (!ManagedPlatformRoles.Contains(newRole))
+                {
+                    result.Message = $"Role {newRole} is not a managed platform role";
+                    return result;
+                }
+
                 var user = await _userManager.FindByIdAsync(userId);
                 if (user == null)
                 {
@@ -175,9 +196,25 @@ namespace platform_core_service.Business.Services
                 }
 
                 var currentRoles = await _userManager.GetRolesAsync(user);
-                if (currentRoles.Count > 0)
+                if (currentRoles.Any(role => string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
+                    && !string.Equals(newRole, "Admin", StringComparison.OrdinalIgnoreCase))
                 {
-                    var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                    var profile = await _context.Profiles.FirstOrDefaultAsync(p => p.ApplicationUserId == user.Id);
+                    if (profile != null && await IsLastActiveAdminAsync(profile))
+                    {
+                        result.Message = LastActiveAdminMessage;
+                        return result;
+                    }
+                }
+
+                var managedRolesToRemove = currentRoles
+                    .Where(role => ManagedPlatformRoles.Contains(role)
+                        && !string.Equals(role, newRole, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (managedRolesToRemove.Count > 0)
+                {
+                    var removeResult = await _userManager.RemoveFromRolesAsync(user, managedRolesToRemove);
                     if (!removeResult.Succeeded)
                     {
                         result.Message = string.Join("; ", removeResult.Errors.Select(e => e.Description));
@@ -185,11 +222,14 @@ namespace platform_core_service.Business.Services
                     }
                 }
 
-                var addResult = await _userManager.AddToRoleAsync(user, newRole);
-                if (!addResult.Succeeded)
+                if (!currentRoles.Any(role => string.Equals(role, newRole, StringComparison.OrdinalIgnoreCase)))
                 {
-                    result.Message = string.Join("; ", addResult.Errors.Select(e => e.Description));
-                    return result;
+                    var addResult = await _userManager.AddToRoleAsync(user, newRole);
+                    if (!addResult.Succeeded)
+                    {
+                        result.Message = string.Join("; ", addResult.Errors.Select(e => e.Description));
+                        return result;
+                    }
                 }
 
                 DevNexusLogger.Instance.Debug($"[AdminUser] User {userId} role changed to {newRole}");
@@ -201,6 +241,28 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while updating role: {ex.Message}";
             }
             return result;
+        }
+
+        private async Task<bool> IsLastActiveAdminAsync(ProfileEntity profile)
+        {
+            var user = await _userManager.FindByIdAsync(profile.ApplicationUserId);
+            if (user == null || !await _userManager.IsInRoleAsync(user, "Admin") || !IsActive(profile))
+            {
+                return false;
+            }
+
+            var now = DateTimeOffset.UtcNow;
+            var activeAdminCount = await _context.Profiles
+                .Where(p => p.ApplicationUser.UserRoles.Any(ur => ur.Role.Name == "Admin"))
+                .CountAsync(p => !p.IsSuspended || (p.SuspendedUntil != null && p.SuspendedUntil <= now));
+
+            return activeAdminCount <= 1;
+        }
+
+        private static bool IsActive(ProfileEntity profile)
+        {
+            return !profile.IsSuspended
+                || (profile.SuspendedUntil != null && profile.SuspendedUntil <= DateTimeOffset.UtcNow);
         }
     }
 }

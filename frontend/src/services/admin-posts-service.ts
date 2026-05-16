@@ -4,6 +4,11 @@ import { PagedData } from "@/types/common/paged-data";
 import { Page } from "@/types/common/page";
 import { ReturnResult } from "@/types/common/return-result";
 
+export interface AdminForceRejectPostDTO {
+  reasonText: string;
+  moderatorNote?: string;
+}
+
 export const adminPostsService = {
   getPaging: async (payload: Page<string>): Promise<PagedData<AdminPostDTO, string>> => {
     const { data } = await api.post<ReturnResult<PagedData<AdminPostDTO, string>>>('/adminposts/paging', payload);
@@ -15,8 +20,8 @@ export const adminPostsService = {
     return data.result;
   },
 
-  reject: async (id: string): Promise<boolean> => {
-    const { data } = await api.post<ReturnResult<boolean>>(`/adminposts/${id}/reject`);
+  reject: async (id: string, dto: AdminForceRejectPostDTO): Promise<boolean> => {
+    const { data } = await api.post<ReturnResult<boolean>>(`/adminposts/${id}/reject`, dto);
     return data.result;
   },
 };
