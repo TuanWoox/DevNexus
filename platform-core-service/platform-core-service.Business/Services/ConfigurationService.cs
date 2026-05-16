@@ -11,37 +11,37 @@ using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
-using System.Text.Json;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 
 namespace platform_core_service.Business.Services
 {
     public class ConfigurationService : IConfigurationService
     {
         private readonly ApplicationDbContext _context;
-        private readonly IDistributedCache _cache;
+        private readonly ICacheService _cacheService;
         private readonly IRepository<Setting, string> _repo;
         private readonly IMapper _mapper;
         private const string CACHE_KEY = "ALL_SETTINGS_CACHE";
 
-        public ConfigurationService(ApplicationDbContext context, IDistributedCache cache, IRepository<Setting, string> repository, IMapper mapper)
+        public ConfigurationService(ApplicationDbContext context, ICacheService cacheService, IRepository<Setting, string> repository, IMapper mapper)
         {
             _context = context;
-            _cache = cache;
+            _cacheService = cacheService;
             _repo = repository;
             _mapper = mapper;
         }
 
         public async Task<Dictionary<string, string>> GetAllSettingsDynamicAsync()
         {
-            var cachedJson = await _cache.GetStringAsync(CACHE_KEY);
-            if (!string.IsNullOrEmpty(cachedJson))
-                return JsonSerializer.Deserialize<Dictionary<string, string>>(cachedJson) ?? new();
+            var cachedSettings = await _cacheService.GetCacheAsync<Dictionary<string, string>>(CACHE_KEY);
+            if (cachedSettings != null)
+                return cachedSettings;
 
             var dict = await _context.Settings.AsNoTracking()
                 .ToDictionaryAsync(x => $"{x.Group}:{x.Key}", x => x.Value);
 
-            await _cache.SetStringAsync(CACHE_KEY, JsonSerializer.Serialize(dict),
+            await _cacheService.SetCacheAsync(CACHE_KEY, dict,
                 new DistributedCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromDays(7)));
 
             return dict;
@@ -67,7 +67,7 @@ namespace platform_core_service.Business.Services
                 rs.Result = await _context.SaveChangesAsync() > 0;
                 if (rs.Result)
                 {
-                    await _cache.RemoveAsync(CACHE_KEY);
+                    await _cacheService.RemoveCacheAsync(CACHE_KEY);
                 }
             }
             catch (Exception ex)
@@ -96,7 +96,7 @@ namespace platform_core_service.Business.Services
                 rs.Result = await _context.SaveChangesAsync() > 0;
                 if (rs.Result)
                 {
-                    await _cache.RemoveAsync(CACHE_KEY);
+                    await _cacheService.RemoveCacheAsync(CACHE_KEY);
                 }
             }
             catch (Exception ex)
@@ -167,10 +167,10 @@ namespace platform_core_service.Business.Services
                     return rs;
                 }
 
-                _context.Settings.RemoveRange(entitiesToDelete);
-                await _context.SaveChangesAsync();
-                await _cache.RemoveAsync(CACHE_KEY);
-                rs.Result = true;
+            _context.Settings.RemoveRange(entitiesToDelete);
+            await _context.SaveChangesAsync();
+            await _cacheService.RemoveCacheAsync(CACHE_KEY);
+            rs.Result = true;
             }
             catch (Exception ex)
             {

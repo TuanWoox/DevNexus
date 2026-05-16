@@ -30,6 +30,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(opts =>
 
 // ── Caching ─────────────────────────────────────────────────────────────────
 builder.Services.AddDistributedMemoryCache();
+builder.Services.TryAddScoped<ICacheService, CacheService>();
 
 // ── Hangfire ─────────────────────────────────────────────────────────────────
 HangfireConfiguration.ConfigureGlobalFilters();

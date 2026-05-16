@@ -257,8 +257,8 @@ public static class ServiceExtensions
         // Register Redis distributed cache
         services.AddStackExchangeRedisCache(options =>
         {
-            options.Configuration = configuration["Redis:Configuration"];
-            options.InstanceName = configuration["Redis:InstanceName"];
+            options.Configuration = configuration["RedisCacheOptions:Configuration"];
+            options.InstanceName = configuration["RedisCacheOptions:InstanceName"];
         });
         return services;
     }
