@@ -171,15 +171,20 @@ namespace platform_core_service.Business.Services
 
         private async Task ResolveOpenQueueEntryAsync(string postId, string resolution, string? moderatorNote)
         {
-            var entry = await _context.ModerationQueueEntries
-                .FirstOrDefaultAsync(e => e.PostId == postId && e.ResolvedAt == null);
+            var openEntries = await _context.ModerationQueueEntries
+                .Where(e => e.PostId == postId && e.ResolvedAt == null)
+                .ToListAsync();
 
-            if (entry == null) return;
+            if (openEntries.Count == 0) return;
 
-            entry.AssignedModeratorId = _userContext.ProfileId;
-            entry.Resolution = resolution;
-            entry.ResolvedAt = DateTimeOffset.UtcNow;
-            entry.ModeratorNote = moderatorNote;
+            var resolvedAt = DateTimeOffset.UtcNow;
+            foreach (var entry in openEntries)
+            {
+                entry.AssignedModeratorId = _userContext.ProfileId;
+                entry.Resolution = resolution;
+                entry.ResolvedAt = resolvedAt;
+                entry.ModeratorNote = moderatorNote;
+            }
         }
     }
 }
