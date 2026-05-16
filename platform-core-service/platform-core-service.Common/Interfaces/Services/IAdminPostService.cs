@@ -22,6 +22,6 @@ namespace platform_core_service.Common.Interfaces.Services
         /// Admin force-flags a post — overrides AI decision.
         /// Sets Post.ModerationStatus = Flagged, keeping it hidden from public feed.
         /// </summary>
-        Task<ReturnResult<bool>> ForceRejectAsync(string postId);
+        Task<ReturnResult<bool>> ForceRejectAsync(string postId, AdminForceRejectPostDTO dto);
     }
 }

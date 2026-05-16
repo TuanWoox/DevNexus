@@ -1,5 +1,6 @@
 'use client';
 
+import { type MouseEvent, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -10,6 +11,8 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { AdminPostDTO } from '@/types/admin/admin-post-dto';
 import { ModerationStatusBadge } from './moderation-status-badge';
 
@@ -18,7 +21,7 @@ interface AdminPostActionDialogProps {
   onClose: () => void;
   post: AdminPostDTO;
   action: 'approve' | 'reject';
-  onConfirm: () => void;
+  onConfirm: (reasonText?: string, moderatorNote?: string) => void;
 }
 
 export function AdminPostActionDialog({
@@ -28,14 +31,47 @@ export function AdminPostActionDialog({
   action,
   onConfirm,
 }: AdminPostActionDialogProps) {
+  const [reasonText, setReasonText] = useState('');
+  const [moderatorNote, setModeratorNote] = useState('');
+  const [showReasonError, setShowReasonError] = useState(false);
+
   const isApprove = action === 'approve';
   const title = isApprove ? 'Force Approve Post' : 'Force Reject Post';
   const description = isApprove
     ? 'This post will be approved and made visible to all users.'
     : 'This post will be rejected and hidden from public view.';
+  const trimmedReason = reasonText.trim();
+
+  function resetForm() {
+    setReasonText('');
+    setModeratorNote('');
+    setShowReasonError(false);
+  }
+
+  function handleConfirm(event: MouseEvent<HTMLButtonElement>) {
+    if (isApprove) {
+      onConfirm();
+      resetForm();
+      return;
+    }
+
+    if (!trimmedReason) {
+      event.preventDefault();
+      setShowReasonError(true);
+      return;
+    }
+
+    onConfirm(trimmedReason, moderatorNote.trim() || undefined);
+    resetForm();
+  }
+
+  function handleClose() {
+    resetForm();
+    onClose();
+  }
 
   return (
-    <AlertDialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <AlertDialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
@@ -51,13 +87,54 @@ export function AdminPostActionDialog({
             <p className="text-sm font-semibold text-foreground">Current Status</p>
             <ModerationStatusBadge status={post.moderationStatus} />
           </div>
+          {!isApprove && (
+            <>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="force-reject-public-reason">Public Reason</Label>
+                <Textarea
+                  id="force-reject-public-reason"
+                  value={reasonText}
+                  onChange={(e) => {
+                    setReasonText(e.target.value);
+                    if (e.target.value.trim()) setShowReasonError(false);
+                  }}
+                  maxLength={1000}
+                  rows={4}
+                  aria-invalid={showReasonError}
+                  placeholder="Explain why this post was rejected."
+                  className="resize-none"
+                />
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-destructive">
+                    {showReasonError ? 'Public reason is required.' : ''}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{reasonText.length}/1000</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="force-reject-internal-note">
+                  Internal Note <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Textarea
+                  id="force-reject-internal-note"
+                  value={moderatorNote}
+                  onChange={(e) => setModeratorNote(e.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  placeholder="Add a moderator-only note."
+                  className="resize-none"
+                />
+                <p className="text-xs text-muted-foreground text-right">{moderatorNote.length}/500</p>
+              </div>
+            </>
+          )}
         </div>
 
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel onClick={handleClose}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             variant={isApprove ? 'custom' : 'destructive'}
-            onClick={onConfirm}
+            onClick={handleConfirm}
             className={isApprove ? 'btn-emerald' : undefined}
           >
             {isApprove ? 'Approve' : 'Reject'}

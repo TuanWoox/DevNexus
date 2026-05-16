@@ -100,6 +100,7 @@ namespace platform_core_service.Business.Services
                 entry.Resolution = "Approved";
                 entry.ResolvedAt = DateTimeOffset.UtcNow;
                 entry.AssignedModeratorId = adminId;
+                entry.ModeratorNote = dto.ModeratorNote?.Trim();
 
                 // Step 4: Update post to Approved — makes it visible in feed
                 entry.Post.ModerationStatus = ModerationStatus.Approved;
@@ -179,6 +180,7 @@ namespace platform_core_service.Business.Services
                 entry.Resolution = "Rejected";
                 entry.ResolvedAt = DateTimeOffset.UtcNow;
                 entry.AssignedModeratorId = adminId;
+                entry.ModeratorNote = dto.ModeratorNote?.Trim();
 
                 // Step 4: Update post to Flagged — keeps it hidden from feed
                 entry.Post.ModerationStatus = ModerationStatus.Flagged;

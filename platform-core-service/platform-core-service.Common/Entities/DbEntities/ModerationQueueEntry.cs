@@ -32,5 +32,8 @@ namespace platform_core_service.Common.Entities.DbEntities
 
         [MaxLength(50)]
         public string? Resolution { get; set; }
+
+        [MaxLength(500)]
+        public string? ModeratorNote { get; set; }
     }
 }

@@ -244,10 +244,16 @@ namespace platform_core_service.Business.Services
             ReturnResult<int> returnResult = new();
             try
             {
-                var hasAuthorization = await IsOwnerOrModeratorAsync(communityId, _userContext.ProfileId);
-                if (hasAuthorization)
+                if (string.IsNullOrWhiteSpace(communityId) || ids == null || ids.Count == 0)
                 {
-                    returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
+                    returnResult.Message = "Community ID and request IDs are required";
+                    return returnResult;
+                }
+
+                var hasAuthorization = await IsOwnerOrModeratorAsync(communityId, _userContext.ProfileId);
+                if (!hasAuthorization)
+                {
+                    returnResult.Message = "Only the community owner or a moderator can approve membership requests";
                     return returnResult;
                 }
                 var existingRequest = await _context.CommunityMembershipRequests.Where(x => x.CommunityId == communityId
@@ -262,6 +268,7 @@ namespace platform_core_service.Business.Services
                 //Select => IEnumarable => List
                 var newMembers = existingRequest.Select(x => new CommunityMember
                 {
+                    Id = Guid.NewGuid().ToString(),
                     CommunityId = x.CommunityId,
                     ProfileId = x.RequesterId
                 }).ToList();
@@ -288,10 +295,16 @@ namespace platform_core_service.Business.Services
             ReturnResult<int> returnResult = new();
             try
             {
-                var hasAuthorization = await IsOwnerOrModeratorAsync(communityId, _userContext.ProfileId);
-                if (hasAuthorization)
+                if (string.IsNullOrWhiteSpace(communityId) || ids == null || ids.Count == 0)
                 {
-                    returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
+                    returnResult.Message = "Community ID and request IDs are required";
+                    return returnResult;
+                }
+
+                var hasAuthorization = await IsOwnerOrModeratorAsync(communityId, _userContext.ProfileId);
+                if (!hasAuthorization)
+                {
+                    returnResult.Message = "Only the community owner or a moderator can reject membership requests";
                     return returnResult;
                 }
                 var existingRequest = await _context.CommunityMembershipRequests.Where(x => x.CommunityId == communityId
