@@ -49,5 +49,11 @@ namespace platform_core_service.Common.Models.DTOs.AIDTO
 
         /// <summary>Always false in Phase 1 — keeps the frontend contract ready for Phase 2 cache.</summary>
         public bool Cached { get; set; } = false;
+
+        public string Status { get; set; } = "Completed";
+
+        public string? Message { get; set; }
+
+        public DateTimeOffset? GeneratedAt { get; set; }
     }
 }

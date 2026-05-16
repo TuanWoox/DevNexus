@@ -7,7 +7,7 @@ import { SummarizePostResponseDTO } from '@/types/ai/post-summary-dto';
 
 const MIN_CONTENT_LENGTH = 300;
 
-type SummaryState = 'idle' | 'loading' | 'success' | 'error' | 'hidden';
+type SummaryState = 'idle' | 'loading' | 'success' | 'generating' | 'error' | 'hidden';
 
 interface AiPostSummaryProps {
   postId: string;
@@ -35,10 +35,28 @@ export function AiPostSummary({ postId, contentLength, language = 'vi' }: AiPost
       { postId, payload: { language } },
       {
         onSuccess: (data) => {
-          if (!data || !data.summaryPoints?.length) {
+          if (!data) {
             setSummaryState('error');
             return;
           }
+
+          setSummaryData(data);
+
+          if (data.status === 'Generating') {
+            setSummaryState('generating');
+            return;
+          }
+
+          if (data.status === 'Failed') {
+            setSummaryState('error');
+            return;
+          }
+
+          if (!data.summaryPoints?.length) {
+            setSummaryState('error');
+            return;
+          }
+
           setSummaryData(data);
           setSummaryState('success');
         },
@@ -101,6 +119,43 @@ export function AiPostSummary({ postId, contentLength, language = 'vi' }: AiPost
     );
   }
 
+  // ── Generating Elsewhere ───────────────────────────────────────────────────
+  if (summaryState === 'generating') {
+    return (
+      <div
+        className="
+          rounded-lg border-l-2 border-amber-400
+          bg-amber-50/60 dark:bg-amber-950/20
+          border border-amber-200 dark:border-amber-800/40
+          px-4 py-3 flex items-center justify-between gap-3
+        "
+        role="status"
+        aria-live="polite"
+      >
+        <span className="text-sm text-amber-700 dark:text-amber-300">
+          {summaryData?.message ?? 'AI summary is being prepared. Please try again shortly.'}
+        </span>
+        <button
+          id="ai-summarize-generating-retry-btn"
+          onClick={handleSummarize}
+          disabled={isPending}
+          aria-disabled={isPending}
+          className="
+            inline-flex items-center gap-1.5 px-2.5 py-1
+            text-xs font-semibold text-amber-700 dark:text-amber-300
+            border border-amber-300 dark:border-amber-700
+            rounded-md hover:bg-amber-100 dark:hover:bg-amber-900/40
+            transition-colors active:scale-95
+            disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100
+          "
+        >
+          <RefreshCw className="w-3 h-3" aria-hidden />
+          Try again
+        </button>
+      </div>
+    );
+  }
+
   // ── Error ───────────────────────────────────────────────────────────────────
   if (summaryState === 'error') {
     return (
@@ -114,7 +169,7 @@ export function AiPostSummary({ postId, contentLength, language = 'vi' }: AiPost
         role="alert"
       >
         <span className="text-sm text-rose-600 dark:text-rose-400">
-          Could not generate summary.
+          {summaryData?.message ?? 'Could not generate summary.'}
         </span>
         <button
           id="ai-summarize-retry-btn"
