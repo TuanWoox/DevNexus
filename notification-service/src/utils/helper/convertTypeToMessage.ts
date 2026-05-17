@@ -1,9 +1,12 @@
 import { Notification } from "src/generated/prisma/client";
 import { NotificationEventEnum } from "src/shared/enums/NotificationEventEnum";
 
-type NotificationMessageSource = Pick<Notification, 'Type' | 'EntityTitle' | 'AggregatedCount'>;
+type NotificationMessageSource = Pick<Notification, 'Type' | 'EntityTitle' | 'AggregatedCount' | 'Message'>;
 
 export function convertTypeToMessage(event: NotificationMessageSource, actor: string | undefined): string {
+    if (event.Message && event.Message.trim() !== '') {
+        return event.Message;
+    }
     const a = actor ?? 'Someone';
     const title = event.EntityTitle ? `"${event.EntityTitle}"` : 'your content';
     const count = event.AggregatedCount ?? 1;
@@ -28,7 +31,7 @@ export function convertTypeToMessage(event: NotificationMessageSource, actor: st
         [NotificationEventEnum.FOLLOW_REQUEST]: `${a}${others} sent you a follow request`,
         [NotificationEventEnum.FOLLOW_ACCEPTED]: `${a} accepted your follow request`,
         [NotificationEventEnum.COMMUNITY_INVITE]: `${a}${others} invited you to a community`,
-        [NotificationEventEnum.COMMUNITY_JOIN_REQUEST]: `${a}${others} requested to join your community`,
+        [NotificationEventEnum.COMMUNITY_JOIN_REQUEST]: `${a}${others} requested to join ${title}`,
         [NotificationEventEnum.COMMUNITY_POST]: `New post in your community`,
         [NotificationEventEnum.COMMUNITY_ROLE_CHANGE]: `Your role in the community has changed`,
         [NotificationEventEnum.COMMUNITY_BAN]: `You have been banned from a community`,

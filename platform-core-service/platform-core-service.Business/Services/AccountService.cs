@@ -298,6 +298,67 @@ namespace platform_core_service.Business.Services
             return returnResult;
         }
 
+        public async Task<ReturnResult<bool>> HasPassword()
+        {
+            var result = new ReturnResult<bool>();
+            try
+            {
+                var userId = _userContext.UserId;
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    result.Message = "User not found.";
+                    return result;
+                }
+
+                var hasPwd = await _userManager.HasPasswordAsync(user);
+                result.Result = hasPwd;
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while check if user has a password: {ex.Message}";
+            }
+            return result;
+        }
+
+        public async Task<ReturnResult<bool>> SetPassword(SetPasswordDTO setPasswordDTO)
+        {
+            var result = new ReturnResult<bool>();
+            try
+            {
+                var userId = _userContext.UserId;
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    result.Message = "User not found.";
+                    return result;
+                }
+
+                var hasPwd = await _userManager.HasPasswordAsync(user);
+                if (hasPwd)
+                {
+                    result.Message = "Account already has a password. Use ChangePassword endpoint instead.";
+                    return result;
+                }
+
+                var addResult = await _userManager.AddPasswordAsync(user, setPasswordDTO.NewPassword);
+                if (!addResult.Succeeded)
+                {
+                    result.Message = "Set password failed: " +
+                        string.Join(", ", addResult.Errors.Select(e => e.Description));
+                    return result;
+                }
+                result.Result = true;
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while set a new password: {ex.Message}";
+            }
+            return result;
+        }
+
         public async Task<ReturnResult<bool>> RequestResetPassword(RequestResetPasswordDTO requestResetPasswordDTO)
         {
             ReturnResult<bool> returnResult = new ReturnResult<bool>();

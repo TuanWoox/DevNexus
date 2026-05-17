@@ -165,7 +165,7 @@ export function ModeratorsManagement({ community }: ModeratorsManagementProps) {
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            className="h-8 border-red-200 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300"
+                                            className="h-8 border-red-200 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300 cursor-pointer"
                                             onClick={() => removeModerator(mod.id)}
                                             disabled={isRemoving}
                                         >

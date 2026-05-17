@@ -10,6 +10,9 @@ using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using Hangfire;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
+using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 
 namespace platform_core_service.Business.Services
 {
@@ -17,12 +20,14 @@ namespace platform_core_service.Business.Services
         ApplicationDbContext context,
         IMapper mapper,
         IUserContext userContext,
-        IRepository<CommunityMembershipRequest, string> requestRepository) : ICommunityMembershipRequestService
+        IRepository<CommunityMembershipRequest, string> requestRepository,
+        IBackgroundJobClient backgroundJobClient) : ICommunityMembershipRequestService
     {
         private readonly ApplicationDbContext _context = context;
         private readonly IMapper _mapper = mapper;
         private readonly IUserContext _userContext = userContext;
         private readonly IRepository<CommunityMembershipRequest, string> _requestRepository = requestRepository;
+        private readonly IBackgroundJobClient _backgroundJobClient = backgroundJobClient;
 
         private async Task<bool> IsOwnerOrModeratorAsync(string communityId, string profileId)
         {
@@ -133,6 +138,8 @@ namespace platform_core_service.Business.Services
                 var saved = await _context.CommunityMembers
                     .Include(m => m.Profile)
                     .FirstAsync(m => m.Id == member.Id);
+
+                await PublishRequestApprovedNotificationAsync(request.CommunityId, request.RequesterId, profileId);
 
                 result.Result = _mapper.Map<SelectCommunityMemberDTO>(saved);
             }
@@ -277,6 +284,10 @@ namespace platform_core_service.Business.Services
                 _context.CommunityMembers.AddRange(newMembers);
                 if (await _context.SaveChangesAsync() > 0)
                 {
+                    foreach(var req in existingRequest)
+                    {
+                        await PublishRequestApprovedNotificationAsync(communityId, req.RequesterId, _userContext.ProfileId);
+                    }
                     returnResult.Result = newMembers.Count;
                 }
                 else returnResult.Message = ResponseMessage.MESSAGE_OPERATION_CANT_BE_DONE;
@@ -329,6 +340,31 @@ namespace platform_core_service.Business.Services
                 returnResult.Message = ex.Message;
             }
             return returnResult;
+        }
+
+        private async Task PublishRequestApprovedNotificationAsync(string communityId, string requesterId, string actorId)
+        {
+            var community = await _context.Communities
+                .FirstOrDefaultAsync(c => c.Id == communityId);
+
+            if (community == null) return;
+
+            var notificationEvent = new NotiicationCreatedEntityDTO
+            {
+                EventType = NotificationEventType.COMMUNITY_ROLE_CHANGE,
+                ActorId = actorId,
+                RecipientId = requesterId,
+                EntityType = NotificationEntityType.COMMUNITY,
+                EntityId = community.Id,
+                EntityTitle = community.Name,
+                EntityPreview = null,
+                ActionUrl = $"/communities/{community.Id}",
+                Timestamp = DateTime.UtcNow,
+                Message = $"Welcome to {community.Name}. Now you can post, connect with other members and more."
+            };
+
+            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                x => x.PublicNotification(notificationEvent, "notifications.community"));
         }
     }
 }

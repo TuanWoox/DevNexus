@@ -114,6 +114,7 @@ export default function CommentSection({ postId, isQAPost }: Props) {
                                 answer={comment as SelectAnswerDTO} 
                                 currentUserId={user?.profileId as string} 
                                 isDisabled={!isApproved}
+                                isQuestionAuthor={post?.authorId === user?.profileId}
                             />
                         ) : (
                             <CommentItem 

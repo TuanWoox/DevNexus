@@ -155,6 +155,26 @@ namespace platform_core_service.Business.Services
                     .Include(a => a.Author)
                     .AsQueryable();
 
+                // Override sorting: IsAccepted DESC -> TotalVote DESC -> DateCreated DESC
+                page.Orders = new List<platform_core_service.Common.Models.DTOs.PagingDTO.OrderMapping>
+                {
+                    new platform_core_service.Common.Models.DTOs.PagingDTO.OrderMapping
+                    {
+                        Sort = "IsAccepted",
+                        SortDir = platform_core_service.Common.Utils.Enums.SortOrderType.DESC
+                    },
+                    new platform_core_service.Common.Models.DTOs.PagingDTO.OrderMapping
+                    {
+                        Sort = "UpvoteCount - DownvoteCount",
+                        SortDir = platform_core_service.Common.Utils.Enums.SortOrderType.DESC
+                    },
+                    new platform_core_service.Common.Models.DTOs.PagingDTO.OrderMapping
+                    {
+                        Sort = "DateCreated",
+                        SortDir = platform_core_service.Common.Utils.Enums.SortOrderType.DESC
+                    }
+                };
+
                 result.Result = await _answerRepository.GetPagingAsync<Page<string>, SelectAnswerDTO>(query, page);
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
@@ -312,6 +332,8 @@ namespace platform_core_service.Business.Services
 
                 await _dbContext.SaveChangesAsync();
 
+                await PublishAcceptAnswerNotificationAsync(answer.Id, profileId);
+
                 result.Result = true;
             }
             catch (Exception ex)
@@ -376,6 +398,39 @@ namespace platform_core_service.Business.Services
             var notificationEvent = new NotiicationCreatedEntityDTO
             {
                 EventType = NotificationEventType.NEW_ANSWER,
+                ActorId = actorId,
+                RecipientId = recipientId,
+                EntityType = NotificationEntityType.POST,
+                EntityId = answer.QAPost.Id,
+                EntityTitle = answer.QAPost.Title,
+                EntityPreview = answer.Content?.Substring(0, Math.Min(200, answer.Content?.Length ?? 0)),
+                ActionUrl = $"/questions/{answer.QAPostId}#answer-{answerId}"
+            };
+
+            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                x => x.PublicNotification(notificationEvent, "notifications.answer"));
+        }
+
+        private async Task PublishAcceptAnswerNotificationAsync(string answerId, string actorId)
+        {
+            var answer = await _dbContext.Answers
+                .Include(a => a.QAPost)
+                .FirstOrDefaultAsync(a => a.Id == answerId);
+
+            if (answer?.QAPost == null)
+            {
+                return;
+            }
+
+            var recipientId = answer.AuthorId;
+            if (string.IsNullOrEmpty(recipientId) || recipientId == actorId)
+            {
+                return;
+            }
+
+            var notificationEvent = new NotiicationCreatedEntityDTO
+            {
+                EventType = NotificationEventType.ANSWER_ACCEPTED,
                 ActorId = actorId,
                 RecipientId = recipientId,
                 EntityType = NotificationEntityType.POST,
