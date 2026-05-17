@@ -84,7 +84,7 @@ export function RequestsManagement({ community }: RequestsManagementProps) {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <Button type="submit" variant="secondary">Search</Button>
+                <Button type="submit" variant="custom" className="btn-secondary">Search</Button>
             </form>
 
             <div className="rounded-md border bg-card overflow-hidden">
@@ -142,7 +142,7 @@ export function RequestsManagement({ community }: RequestsManagementProps) {
                                             <Button
                                                 size="sm"
                                                 variant="outline"
-                                                className="h-8 border-green-200 text-green-600 hover:text-green-700 hover:bg-green-50 hover:border-green-300"
+                                                className="h-8 border-green-200 text-green-600 hover:text-green-700 hover:bg-green-50 hover:border-green-300 cursor-pointer"
                                                 onClick={() => approveRequest(req.id)}
                                                 disabled={isProcessing}
                                             >
@@ -151,7 +151,7 @@ export function RequestsManagement({ community }: RequestsManagementProps) {
                                             <Button
                                                 size="sm"
                                                 variant="outline"
-                                                className="h-8 border-red-200 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300"
+                                                className="h-8 border-red-200 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300 cursor-pointer"
                                                 onClick={() => rejectRequest(req.id)}
                                                 disabled={isProcessing}
                                             >

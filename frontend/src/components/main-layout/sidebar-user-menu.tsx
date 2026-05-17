@@ -72,7 +72,7 @@ export function SidebarUserMenu({ isCollapsed }: { isCollapsed?: boolean }) {
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <button className={cn(
-                    "flex items-center gap-3 p-2 w-full rounded-xl hover:bg-subtle transition-colors group",
+                    "flex items-center gap-3 p-2 w-full rounded-xl hover:bg-subtle transition-colors group cursor-pointer",
                     isCollapsed ? "justify-center" : "justify-center lg:justify-start"
                 )}>
                     <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
@@ -109,7 +109,7 @@ export function SidebarUserMenu({ isCollapsed }: { isCollapsed?: boolean }) {
                     asChild
                     className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer"
                 >
-                    <Link href="/settings">
+                    <Link href="/profile/settings">
                         <Settings className="w-5 h-5 shrink-0" />
                         <span className="text-sm font-medium">Settings</span>
                     </Link>

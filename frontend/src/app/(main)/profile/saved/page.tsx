@@ -91,7 +91,7 @@ const SavedPage = () => {
     });
 
     // --- Mutations ---
-    const { mutate: deleteBookmark } = useDeleteBookmarkById();
+    const { mutate: deleteBookmark, isPending: isDeletingBookmark } = useDeleteBookmarkById();
     const { mutate: updateBookmark, isPending: isUpdatingBookmark } = useUpdateBookmark();
     const { mutate: createBookmark, isPending: isCreatingBookmark } = useCreateBookmark();
 
@@ -153,6 +153,7 @@ const SavedPage = () => {
                     }
                 }}
                 onDelete={handleDeleteCollection}
+                isDeleting={isDeletingBookmark}
                 sentinelRef={itemsSentinelRef}
                 collectionsCount={collections.length}
             />

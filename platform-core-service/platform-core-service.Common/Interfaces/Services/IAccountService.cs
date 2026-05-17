@@ -10,6 +10,8 @@ namespace platform_core_service.Common.Interfaces.Services
         public Task<ReturnResult<TokenResponseDTO>> RefreshToken(RefreshTokenDTO refreshTokenDTO);
         public Task<ReturnResult<bool>> Logout();
         public Task<ReturnResult<bool>> ChangePassword(ChangePasswordDTO changePasswordDTO);
+        public Task<ReturnResult<bool>> HasPassword();
+        public Task<ReturnResult<bool>> SetPassword(SetPasswordDTO setPasswordDTO);
         public Task<ReturnResult<bool>> RequestResetPassword(RequestResetPasswordDTO requestResetPasswordDTO);
         public Task<ReturnResult<bool>> ResetPassword(ResetPasswordDTO resetPasswordDTO);
         public Task<ReturnResult<bool>> RequestConfirmEmail(RequestConfirmEmailDTO emailConfirmDTO);

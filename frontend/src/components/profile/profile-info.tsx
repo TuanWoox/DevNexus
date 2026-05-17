@@ -11,7 +11,7 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Lock, Star, UserPlus, UserCheck, Clock, MessageSquare, MoreHorizontal, Share2, ShieldAlert, UserX, Edit3, Loader2, Users } from "lucide-react";
+import { Lock, Star, UserPlus, UserCheck, Clock, MessageSquare, MoreHorizontal, Share2, ShieldAlert, UserX, Edit3, Loader2, Users, KeyRound } from "lucide-react";
 import { useOpenChatByProfile } from "@/features/messages/hooks/chats/use-open-chat-by-profile";
 import { useCreateUserFollow } from "@/hooks/user-follow-hooks/use-create-user-follow";
 import { useDeleteFollowById } from "@/hooks/user-follow-hooks/use-delete-follow-by-id";
@@ -23,9 +23,10 @@ interface ProfileInfoProps {
     profile: SelectProfileDTO;
     isOwnProfile: boolean;
     onEdit?: () => void;
+    onChangePassword?: () => void;
 }
 
-export function ProfileInfo({ profile, isOwnProfile, onEdit }: ProfileInfoProps) {
+export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }: ProfileInfoProps) {
     const dropdownTriggerId = `profile-menu-trigger-${profile.id}`;
     const { openMessagePopup, isCheckingChat } = useOpenChatByProfile({
         id: profile.id,
@@ -193,15 +194,26 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit }: ProfileInfoProps)
             {/* Actions Row - Positioned "under the tags" */}
             <div className="flex items-center gap-2 mt-6">
                 {isOwnProfile ? (
-                    <Button
-                        onClick={onEdit}
-                        variant="secondary"
-                        size="default"
-                        className="h-10 font-semibold px-8 border shadow-sm cursor-pointer"
-                    >
-                        <Edit3 className="w-4 h-4 mr-2" />
-                        Edit Profile
-                    </Button>
+                    <>
+                        <Button
+                            onClick={onEdit}
+                            variant="secondary"
+                            size="default"
+                            className="h-10 font-semibold px-8 border shadow-sm cursor-pointer"
+                        >
+                            <Edit3 className="w-4 h-4 mr-2" />
+                            Edit Profile
+                        </Button>
+                        <Button
+                            onClick={onChangePassword}
+                            variant="secondary"
+                            size="default"
+                            className="h-10 font-semibold px-5 border shadow-sm cursor-pointer"
+                        >
+                            <KeyRound className="w-4 h-4 mr-2" />
+                            Change Password
+                        </Button>
+                    </>
                 ) : (
                     <>
                         <Button

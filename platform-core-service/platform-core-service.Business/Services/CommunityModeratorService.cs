@@ -9,6 +9,9 @@ using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using CommunityModeratorEntity = platform_core_service.Common.Entities.DbEntities.CommunityModerator;
+using Hangfire;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
+using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 
 namespace platform_core_service.Business.Services
 {
@@ -16,12 +19,14 @@ namespace platform_core_service.Business.Services
         ApplicationDbContext context,
         IMapper mapper,
         IUserContext userContext,
-        IRepository<CommunityModeratorEntity, string> moderatorRepository) : ICommunityModeratorService
+        IRepository<CommunityModeratorEntity, string> moderatorRepository,
+        IBackgroundJobClient backgroundJobClient) : ICommunityModeratorService
     {
         private readonly ApplicationDbContext _context = context;
         private readonly IMapper _mapper = mapper;
         private readonly IUserContext _userContext = userContext;
         private readonly IRepository<CommunityModeratorEntity, string> _moderatorRepository = moderatorRepository;
+        private readonly IBackgroundJobClient _backgroundJobClient = backgroundJobClient;
 
         public async Task<ReturnResult<SelectCommunityModeratorDTO>> AddAsync(CreateCommunityModeratorDTO createDTO)
         {
@@ -118,6 +123,8 @@ namespace platform_core_service.Business.Services
                     .Include(m => m.Moderator)
                     .FirstAsync(m => m.Id == moderator.Id);
 
+                await PublishModeratorRoleNotificationAsync(createDTO.CommunityId, createDTO.ModeratorId, profileId, true);
+
                 result.Result = _mapper.Map<SelectCommunityModeratorDTO>(savedEntry);
             }
             catch (Exception ex)
@@ -169,8 +176,13 @@ namespace platform_core_service.Business.Services
                 }
 
                 // Step 5: Remove
+                var communityId = entry.CommunityId;
+                var moderatorId = entry.ModeratorId;
+
                 _context.CommunityModerators.Remove(entry);
                 await _context.SaveChangesAsync();
+
+                await PublishModeratorRoleNotificationAsync(communityId, moderatorId, profileId, false);
 
                 result.Result = true;
             }
@@ -210,6 +222,33 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while retrieving moderators: {ex.Message}";
             }
             return result;
+        }
+
+        private async Task PublishModeratorRoleNotificationAsync(string communityId, string targetProfileId, string actorId, bool isAdded)
+        {
+            var community = await _context.Communities
+                .FirstOrDefaultAsync(c => c.Id == communityId);
+
+            if (community == null) return;
+
+            var notificationEvent = new NotiicationCreatedEntityDTO
+            {
+                EventType = NotificationEventType.COMMUNITY_ROLE_CHANGE,
+                ActorId = actorId,
+                RecipientId = targetProfileId,
+                EntityType = NotificationEntityType.COMMUNITY,
+                EntityId = community.Id,
+                EntityTitle = community.Name,
+                EntityPreview = null,
+                ActionUrl = $"/communities/{community.Id}",
+                Timestamp = DateTime.UtcNow,
+                Message = isAdded
+                    ? $"You have been promoted to a moderator of {community.Name}."
+                    : $"You have been removed as a moderator of {community.Name}."
+            };
+
+            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                x => x.PublicNotification(notificationEvent, "notifications.community"));
         }
     }
 }
