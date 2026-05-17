@@ -33,6 +33,8 @@ namespace platform_core_service.Data
         public DbSet<CommunityMedia> CommunityMedias { get;set; }
         public DbSet<PostMedia> PostMedias { get; set; }
         public DbSet<QAMedia> QAMedias { get; set; }
+        public DbSet<AnswerMedia> AnswerMedias { get; set; }
+        public DbSet<CommentMedia> CommentMedias { get; set; }
         public DbSet<PostModerationResult> PostModerationResults { get; set; }
         public DbSet<ModerationQueueEntry> ModerationQueueEntries { get; set; }
         public DbSet<AdminAuditLog> AdminAuditLogs { get; set; }
@@ -83,6 +85,16 @@ namespace platform_core_service.Data
                 .HasOne(a => a.QAPost)
                 .WithMany(q => q.Answers)
                 .HasForeignKey(a => a.QAPostId);
+
+            builder.Entity<AnswerMedia>()
+                .HasOne(m => m.Answer)
+                .WithMany()
+                .HasForeignKey(m => m.AnswerId);
+
+            builder.Entity<CommentMedia>()
+                .HasOne(m => m.Comment)
+                .WithMany()
+                .HasForeignKey(m => m.CommentId);
             builder.Entity<Vote>(entity =>
             {
                 entity.HasIndex(v => new { v.AuthorId, v.PostId })

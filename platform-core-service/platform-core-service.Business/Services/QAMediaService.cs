@@ -1,316 +1,40 @@
 using AutoMapper;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using platform_core_service.Common.Attributes;
+using platform_core_service.Business.Services.Base;
 using platform_core_service.Common.Entities.DbEntities;
-using platform_core_service.Common.Helper;
-using platform_core_service.Common.Helpers;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.QAMedia;
-using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Utils.Enums;
-using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
-
 
 namespace platform_core_service.Business.Services
 {
-    public class QAMediaService
-    (
-        ApplicationDbContext context,
-        ICacheService cacheService,
-        ISocialGuardService socialGuardService,
-        IConfigurationService configurationService,
-        IUserContext userContext,
-        IMapper mapper
-    ): IQAMediaService
+    public class QAMediaService : BaseContentMediaService<QAMedia, SelectQAMediaDTO>, IQAMediaService
     {
-        private readonly ApplicationDbContext _context = context;
-        private readonly ICacheService _cacheService = cacheService;
-        private readonly ISocialGuardService _socialGuard = socialGuardService;
-        private readonly IConfigurationService _configurationService = configurationService;
-        private readonly IUserContext _userContext = userContext;
-        private readonly IMapper _mapper = mapper;
-
-        public async Task<string> GetQAMedia([TrimmedRequired] string Id)
+        public QAMediaService(
+            ApplicationDbContext context,
+            ICacheService cacheService,
+            ISocialGuardService socialGuardService,
+            IConfigurationService configurationService,
+            IUserContext userContext,
+            IMapper mapper)
+            : base(context, cacheService, socialGuardService, configurationService, userContext, mapper)
         {
-            string fileDestination = "";
-            try
-            {
-                var QAMedia = await _context.QAMedias.Where(x => x.Id == Id)
-                                                        .Include(x => x.QAPost)
-                                                        .FirstOrDefaultAsync();
-
-
-                if(QAMedia?.QAPost != null)
-                {
-                    string? communityId = QAMedia.QAPost.CommunityId;
-                    var canAccess = (await _socialGuard.CheckVisibleContent(QAMedia.QAPost.AuthorId, communityId)).Result;
-                    if(canAccess) 
-                    {
-                        var cacheDestination = await _cacheService.GetCacheAsync<string>($"qa-media-{QAMedia.Id}");
-                        if (!string.IsNullOrEmpty(cacheDestination)) return cacheDestination;
-                        else
-                        {
-                            if (!string.IsNullOrEmpty(QAMedia.StoreDestination))
-                            {
-                                await _cacheService.SetCacheAsync($"qa-media-{QAMedia.Id}", QAMedia.StoreDestination, HelperUtils.CacheEntryOptions);
-                                fileDestination = QAMedia.StoreDestination;
-                            }                
-                        }
-                    }
-                }
-            }
-            catch(Exception ex)
-            {
-                DevNexusLogger.Instance.Error(ex);
-            }
-            return fileDestination;
         }
-        public async Task<ReturnResult<SelectQAMediaDTO>> UploadImage(IFormFile file)
-        {
-            ReturnResult<SelectQAMediaDTO> returnResult = new();
-            string fileDestination = "";
-            var newQAMedia = new QAMedia();
-            try
-            {
-                // Guard to check image extension
-                if (!file.HasValidImageExtension())
-                {
-                    returnResult.Message = "Image extension not allow";
-                    return returnResult;
-                }
 
-                var rootUploadFolder = (await this._configurationService.GetOneByKeyAndGroup("UPLOAD_FOLDER", "UPLOAD")).Result.Value;
-                if (string.IsNullOrEmpty(rootUploadFolder)) rootUploadFolder = HelperUtils.IsWindow ? @"D:\Uploads" : "/var/www/uploads";
-                string profileMediaFolder = Path.Combine(rootUploadFolder, "qa-media", _userContext.UserId);
-                if (!Directory.Exists(profileMediaFolder)) Directory.CreateDirectory(profileMediaFolder);
-                string fileGuidName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-                fileDestination = Path.Combine(profileMediaFolder, fileGuidName);
+        protected override DbSet<QAMedia> DbSet => _context.QAMedias;
+        protected override string MediaFolderName => "qa-media";
+        protected override string CacheKeyPrefix => "qa-media-";
+        protected override IQueryable<QAMedia> IncludeNavigation(IQueryable<QAMedia> query) => query.Include(x => x.QAPost);
+        protected override PostMediaType GetMediaType(QAMedia entity) => entity.QAMediaType;
+        protected override IQueryable<QAMedia> GetDuplicateQuery(string sha256Hash, PostMediaType mediaType)
+            => DbSet.IgnoreQueryFilters().Where(x => x.SHA256Hash == sha256Hash && x.QAMediaType == mediaType);
 
-                string sha256HashProfileMedia = await HelperUtils.HashFileAsync(file);
+        protected override QAMedia CreateEntity(string storeDestination, string sha256Hash, PostMediaType mediaType)
+            => new() { StoreDestination = storeDestination, SHA256Hash = sha256Hash, QAMediaType = mediaType };
 
-                var sameHashQAMedia = await _context.QAMedias.Where(x => x.SHA256Hash == sha256HashProfileMedia
-                                                                         && x.QAPost.AuthorId == _userContext.UserId)
-                                                                        .Include(x => x.QAPost)
-                                                                        .IgnoreQueryFilters()
-                                                                        .FirstOrDefaultAsync();
-                if (sameHashQAMedia != null)
-                {
-                    if (sameHashQAMedia.Deleted)
-                    {
-                        // FIX #1: Restore the file to disk since it was deleted alongside the soft-delete
-                        using (var stream = new FileStream(fileDestination, FileMode.Create))
-                        {
-                            await file.CopyToAsync(stream);
-                        }
-                        sameHashQAMedia.StoreDestination = fileDestination;
-                        sameHashQAMedia.Deleted = false;
-                        sameHashQAMedia.DateDeleted = null;
-                    }
-                    else
-                    {
-                        returnResult.Result = _mapper.Map<SelectQAMediaDTO>(sameHashQAMedia);
-                        return returnResult;
-                    }
-                }
-                else
-                {
-                    using (var stream = new FileStream(fileDestination, FileMode.Create))
-                    {
-                        await file.CopyToAsync(stream);
-                    }
-                }
-
-                if (sameHashQAMedia == null)
-                {
-                    newQAMedia = new QAMedia
-                    {
-                        StoreDestination = fileDestination,
-                        QAMediaType = PostMediaType.Image,
-                        SHA256Hash = sha256HashProfileMedia,
-                    };
-
-                    await _context.QAMedias.AddAsync(newQAMedia);
-                }
-
-                // FIX #2: Prioritize sameHashQAMedia over newQAMedia when mapping
-                if (await _context.SaveChangesAsync() > 0)
-                {
-                    returnResult.Result = _mapper.Map<SelectQAMediaDTO>(sameHashQAMedia ?? newQAMedia);
-                }
-                else
-                {
-                    if (File.Exists(fileDestination)) File.Delete(fileDestination);
-                    returnResult.Message = ResponseMessage.MESSAGE_TECHNICAL_ISSUE;
-                    return returnResult;
-                }
-            }
-            catch (Exception ex)
-            {
-                if (File.Exists(fileDestination)) File.Delete(fileDestination);
-                DevNexusLogger.Instance.Error(ex);
-                returnResult.Message = ex.Message;
-            }
-            return returnResult;
-        }
-        public async Task<ReturnResult<InitUploadQAVideoDTO>> InitVideoUpload(CreateVideoUploadDTO createVideoUploadDTO)
-        {
-            ReturnResult<InitUploadQAVideoDTO> returnResult = new();
-            try
-            {
-                if (!createVideoUploadDTO.FileName.HasValidVideoExtension())
-                {
-                    returnResult.Message = "Video extension not allowed";
-                    return returnResult;
-                }
-
-                //Duplicate check
-                var existing = _context.QAMedias.Where(x => x.SHA256Hash == createVideoUploadDTO.HashFile
-                                                    && x.QAPost != null
-                                                    && x.QAPost.AuthorId == _userContext.UserId
-                                                    && x.QAMediaType == PostMediaType.Video)
-                                                .Include(x => x.QAPost)
-                                                .AsNoTracking()
-                                                .FirstOrDefaultAsync();
-
-                if (existing != null)
-                {
-                    returnResult.Result = new InitUploadQAVideoDTO
-                    {
-                        IsDuplicate = true,
-                        ExistingMedia = _mapper.Map<SelectQAMediaDTO>(existing)
-                    };
-                    return returnResult;
-                }
-
-                var rootUploadFolder = (await _configurationService.GetOneByKeyAndGroup("UPLOAD_FOLDER", "UPLOAD")).Result.Value;
-                if (string.IsNullOrEmpty(rootUploadFolder))
-                    rootUploadFolder = HelperUtils.IsWindow ? @"D:\Uploads" : "/var/www/uploads";
-
-                string sessionId = Guid.NewGuid().ToString();
-                string tempFolder = Path.Combine(rootUploadFolder, "qa-media", _userContext.UserId, "temp", sessionId);
-                if (!Directory.Exists(tempFolder)) Directory.CreateDirectory(tempFolder);
-
-                returnResult.Result = new InitUploadQAVideoDTO
-                {
-                    SessionId = sessionId,
-                    TempPath = tempFolder
-                };
-            }
-            catch (Exception ex)
-            {
-                DevNexusLogger.Instance.Error(ex);
-                returnResult.Message = ex.Message;
-            }
-            return returnResult;
-        }
-        public async Task<ReturnResult<VideoChunkProgressDTO>> UploadVideoChunk(UploadVideoChunkDTO dto)
-        {
-            ReturnResult<VideoChunkProgressDTO> returnResult = new();
-            try
-            {
-                var rootUploadFolder = (await _configurationService.GetOneByKeyAndGroup("UPLOAD_FOLDER", "UPLOAD")).Result.Value;
-                if (string.IsNullOrEmpty(rootUploadFolder))
-                    rootUploadFolder = HelperUtils.IsWindow ? @"D:\Uploads" : "/var/www/uploads";
-
-                string tempFolder = Path.Combine(rootUploadFolder, "qa-media", _userContext.UserId, "temp", dto.SessionId);
-                if (!Directory.Exists(tempFolder))
-                {
-                    returnResult.Message = "Invalid session";
-                    return returnResult;
-                }
-
-                string chunkPath = Path.Combine(tempFolder, $"chunk_{dto.ChunkIndex}");
-                using (var stream = new FileStream(chunkPath, FileMode.Create))
-                {
-                    await dto.Chunk.CopyToAsync(stream);
-                }
-
-                int receivedChunks = Directory.GetFiles(tempFolder, "chunk_*").Length;
-                returnResult.Result = new VideoChunkProgressDTO
-                {
-                    ReceivedChunks = receivedChunks,
-                    TotalChunks = dto.TotalChunks,
-                    IsComplete = false
-                };
-            }
-            catch (Exception ex)
-            {
-                DevNexusLogger.Instance.Error(ex);
-                returnResult.Message = ex.Message;
-            }
-            return returnResult;
-        }
-        public async Task<ReturnResult<SelectQAMediaDTO>> MergeVideoChunks(MergeVideoChunkDTO dto)
-        {
-            ReturnResult<SelectQAMediaDTO> returnResult = new();
-            string finalDestination = "";
-            try
-            {
-                var rootUploadFolder = (await _configurationService.GetOneByKeyAndGroup("UPLOAD_FOLDER", "UPLOAD")).Result.Value;
-                if (string.IsNullOrEmpty(rootUploadFolder))
-                    rootUploadFolder = HelperUtils.IsWindow ? @"D:\Uploads" : "/var/www/uploads";
-
-                string tempFolder = Path.Combine(rootUploadFolder, "qa-media", _userContext.UserId, "temp", dto.SessionId);
-                if (!Directory.Exists(tempFolder))
-                {
-                    returnResult.Message = "Invalid session";
-                    return returnResult;
-                }
-
-                string videoFolder = Path.Combine(rootUploadFolder, "qa-media", _userContext.UserId);
-                if (!Directory.Exists(videoFolder)) Directory.CreateDirectory(videoFolder);
-
-                string fileGuidName = $"{Guid.NewGuid()}{Path.GetExtension(dto.FileName)}";
-                finalDestination = Path.Combine(videoFolder, fileGuidName);
-
-                using (var finalStream = new FileStream(finalDestination, FileMode.Create))
-                {
-                    for (int i = 0; i < dto.TotalChunks; i++)
-                    {
-                        string chunkPath = Path.Combine(tempFolder, $"chunk_{i}");
-                        if (!File.Exists(chunkPath))
-                        {
-                            if (File.Exists(finalDestination)) File.Delete(finalDestination);
-                            returnResult.Message = $"Missing chunk {i}, upload failed";
-                            return returnResult;
-                        }
-                        byte[] chunkBytes = await File.ReadAllBytesAsync(chunkPath);
-                        await finalStream.WriteAsync(chunkBytes);
-                    }
-                }
-
-                var newQAMedia = new QAMedia
-                {
-                    StoreDestination = finalDestination,
-                        QAMediaType = PostMediaType.Video,
-                    SHA256Hash = dto.FileHash
-                };
-
-                await _context.QAMedias.AddAsync(newQAMedia);
-
-                if (await _context.SaveChangesAsync() > 0)
-                {
-                    Directory.Delete(tempFolder, true);
-                    returnResult.Result = _mapper.Map<SelectQAMediaDTO>(newQAMedia);
-                }
-                else
-                {
-                    if (File.Exists(finalDestination)) File.Delete(finalDestination);
-                    returnResult.Message = ResponseMessage.MESSAGE_TECHNICAL_ISSUE;
-                }
-            }
-            catch (Exception ex)
-            {
-                if (File.Exists(finalDestination)) File.Delete(finalDestination);
-                DevNexusLogger.Instance.Error(ex);
-                returnResult.Message = ex.Message;
-            }
-            return returnResult;
-        }
+        public Task<string> GetQAMedia(string Id) => GetMedia(Id);
     }
 }
-

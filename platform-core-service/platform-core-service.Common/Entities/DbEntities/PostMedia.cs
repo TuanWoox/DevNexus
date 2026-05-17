@@ -10,12 +10,15 @@ using System.Threading.Tasks;
 
 namespace platform_core_service.Common.Entities.DbEntities
 {
-    public class PostMedia: BaseMediaEntity<string>
+    public class PostMedia: BaseMediaEntity<string>, IContentMedia
     {
         [ForeignKey(nameof(Post))]
         public string? PostId { get; set; }
         [JsonIgnore]
         public Post? Post { get; set; }
         public PostMediaType PostMediaType { get; set; }
+
+        public string GetAuthorId() => Post?.AuthorId ?? "";
+        public string? GetCommunityId() => Post?.CommunityId;
     }
 }

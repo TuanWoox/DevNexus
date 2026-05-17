@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace platform_core_service.Common.Entities.DbEntities
 {
-    public class QAMedia : BaseMediaEntity<string>
+    public class QAMedia : BaseMediaEntity<string>, IContentMedia
     {
         [ForeignKey(nameof(QAPost))]
         public string? QAPostId { get; set; }
@@ -14,5 +14,8 @@ namespace platform_core_service.Common.Entities.DbEntities
         public QAPost? QAPost { get; set; }
         
         public PostMediaType QAMediaType { get; set; }
+
+        public string GetAuthorId() => QAPost?.AuthorId ?? "";
+        public string? GetCommunityId() => QAPost?.CommunityId;
     }
 }

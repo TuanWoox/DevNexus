@@ -10,11 +10,13 @@ using System.Threading.Tasks;
 
 namespace platform_core_service.Common.Entities.DbEntities
 {
-    public class CommunityMedia: BasePrimaryMediaEntity<string>
+    public class CommunityMedia: BasePrimaryMediaEntity<string>, IPrimaryMedia
     {
         [ForeignKey(nameof(Community))]
         public string CommunityId { get; set; } = null!;
         [JsonIgnore]
         public Community Community { get; set; } = null!;
+
+        public string GetOwnerId() => CommunityId;
     }
 }
