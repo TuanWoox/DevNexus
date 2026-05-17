@@ -51,10 +51,12 @@ export const CollectionItemsFeed = ({
 }: CollectionItemsFeedProps) => {
     const isSelected = !!selectedCollection;
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [prevCollectionId, setPrevCollectionId] = useState(selectedCollection?.id);
 
-    useEffect(() => {
+    if (selectedCollection?.id !== prevCollectionId) {
+        setPrevCollectionId(selectedCollection?.id);
         setIsDeleteConfirmOpen(false);
-    }, [selectedCollection?.id]);
+    }
 
     if (!isLoading && collectionsCount === 0) {
         return (
