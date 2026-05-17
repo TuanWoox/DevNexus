@@ -21,7 +21,7 @@ interface UpdateRoleDialogProps {
   isPending: boolean;
 }
 
-const ROLES = ['User', 'Moderator', 'Admin'];
+const ROLES = ['Developer', 'Moderator', 'Admin'];
 
 export function UpdateRoleDialog({
   user,
@@ -30,13 +30,13 @@ export function UpdateRoleDialog({
   onConfirm,
   isPending,
 }: UpdateRoleDialogProps) {
-  const [selectedRole, setSelectedRole] = useState<string>(user?.role ?? 'User');
+  const [selectedRole, setSelectedRole] = useState<string>(user?.role ?? 'Developer');
 
   const [prevUser, setPrevUser] = useState<AdminProfileDTO | null>(user);
 
   if (user !== prevUser) {
     setPrevUser(user);
-    setSelectedRole(user?.role ?? 'User');
+    setSelectedRole(user?.role ?? 'Developer');
   }
 
   if (!user) return null;

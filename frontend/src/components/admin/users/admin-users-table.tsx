@@ -42,7 +42,7 @@ function getInitial(displayName: string): string {
 function RoleBadge({ role }: { role?: string | null }) {
   if (role === 'Admin') return <span className="badge-red">Admin</span>
   if (role === 'Moderator') return <span className="badge-purple">Moderator</span>
-  return <span className="badge-default">User</span>
+  return <span className="badge-default">Developer</span>
 }
 
 function StatusBadge({ isSuspended }: { isSuspended: boolean }) {

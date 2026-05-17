@@ -29,6 +29,11 @@ export const adminQueryKeys = {
     paging: (payload: Page<string>) => ['admin', 'ai-usage', 'paging', payload] as const,
   },
 
+  auditLogs: {
+    all: ['admin', 'audit-logs'] as const,
+    paging: (payload: Page<string>) => ['admin', 'audit-logs', 'paging', payload] as const,
+  },
+
   settings: {
     all: ['admin', 'settings'] as const,
     bannedKeywords: ['admin', 'settings', 'banned-keywords'] as const,
