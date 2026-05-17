@@ -19,7 +19,7 @@ namespace platform_core_service.Business.Mappings
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.ApplicationUserId))
                 .ForMember(dest => dest.DisplayName, opt => opt.MapFrom(src => src.FullName))
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.ApplicationUser.Email))
-                .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.ApplicationUser.UserRoles.FirstOrDefault() != null ? src.ApplicationUser.UserRoles.FirstOrDefault()!.Role.Name : "User"))
+                .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.ApplicationUser.UserRoles.FirstOrDefault() != null ? src.ApplicationUser.UserRoles.FirstOrDefault()!.Role.Name : "Developer"))
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.DateCreated))
                 .ForMember(dest => dest.PostCount, opt => opt.MapFrom(src => src.Posts.Count));
             CreateMap<ProfileEntity, ProfilePublishDTO>();

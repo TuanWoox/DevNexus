@@ -1,5 +1,6 @@
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using platform_core_service.Business.Helper;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
@@ -21,17 +22,20 @@ namespace platform_core_service.Business.Services
         private readonly IUserContext _userContext;
         private readonly IRepository<ModerationQueueEntry, string> _queueRepository;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IAdminAuditLogService _adminAuditLogService;
 
         public AdminModerationService(
             ApplicationDbContext context,
             IUserContext userContext,
             IRepository<ModerationQueueEntry, string> queueRepository,
-            IBackgroundJobClient backgroundJobClient)
+            IBackgroundJobClient backgroundJobClient,
+            IAdminAuditLogService adminAuditLogService)
         {
             _context = context;
             _userContext = userContext;
             _queueRepository = queueRepository;
             _backgroundJobClient = backgroundJobClient;
+            _adminAuditLogService = adminAuditLogService;
         }
 
         public async Task<ReturnResult<PagedData<AdminQueueEntryDTO, string>>> GetPendingQueueAsync(Page<string> page)
@@ -96,6 +100,16 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var oldState = new
+                {
+                    queueResolution = entry.Resolution,
+                    entry.ResolvedAt,
+                    entry.AssignedModeratorId,
+                    entry.ModeratorNote,
+                    postModerationStatus = entry.Post.ModerationStatus.ToString(),
+                    entry.Post.ModerationReason
+                };
+
                 // Step 3: Resolve the queue entry
                 entry.Resolution = "Approved";
                 entry.ResolvedAt = DateTimeOffset.UtcNow;
@@ -105,6 +119,26 @@ namespace platform_core_service.Business.Services
                 // Step 4: Update post to Approved — makes it visible in feed
                 entry.Post.ModerationStatus = ModerationStatus.Approved;
                 entry.Post.ModerationReason = null;
+
+                await _adminAuditLogService.AddAsync(AdminAuditLogFactory.ForQueueAction(
+                    AuditActionType.ModerationQueueApproved,
+                    entry.Id,
+                    entry.Post.Title,
+                    oldState,
+                    new
+                    {
+                        queueResolution = entry.Resolution,
+                        entry.ResolvedAt,
+                        entry.AssignedModeratorId,
+                        entry.ModeratorNote,
+                        postModerationStatus = entry.Post.ModerationStatus.ToString(),
+                        entry.Post.ModerationReason
+                    },
+                    new
+                    {
+                        entry.PostId
+                    },
+                    internalNote: entry.ModeratorNote));
 
                 await _context.SaveChangesAsync();
 
@@ -176,6 +210,18 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var oldState = new
+                {
+                    queueResolution = entry.Resolution,
+                    entry.ResolvedAt,
+                    entry.AssignedModeratorId,
+                    entry.ModeratorNote,
+                    postModerationStatus = entry.Post.ModerationStatus.ToString(),
+                    entry.Post.ModerationReason
+                };
+
+                var rejectionReason = BuildRejectionReason(dto.ModeratorNote, entry.Tier2Reasoning, entry.Reason);
+
                 // Step 3: Resolve the queue entry
                 entry.Resolution = "Rejected";
                 entry.ResolvedAt = DateTimeOffset.UtcNow;
@@ -184,7 +230,28 @@ namespace platform_core_service.Business.Services
 
                 // Step 4: Update post to Flagged — keeps it hidden from feed
                 entry.Post.ModerationStatus = ModerationStatus.Flagged;
-                entry.Post.ModerationReason = BuildRejectionReason(dto.ModeratorNote, entry.Tier2Reasoning, entry.Reason);
+                entry.Post.ModerationReason = rejectionReason;
+
+                await _adminAuditLogService.AddAsync(AdminAuditLogFactory.ForQueueAction(
+                    AuditActionType.ModerationQueueRejected,
+                    entry.Id,
+                    entry.Post.Title,
+                    oldState,
+                    new
+                    {
+                        queueResolution = entry.Resolution,
+                        entry.ResolvedAt,
+                        entry.AssignedModeratorId,
+                        entry.ModeratorNote,
+                        postModerationStatus = entry.Post.ModerationStatus.ToString(),
+                        entry.Post.ModerationReason
+                    },
+                    new
+                    {
+                        entry.PostId
+                    },
+                    publicReason: rejectionReason,
+                    internalNote: entry.ModeratorNote));
 
                 await _context.SaveChangesAsync();
                 EnqueueModerationNotification(entry.Post);

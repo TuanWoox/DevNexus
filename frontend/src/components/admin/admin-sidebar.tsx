@@ -11,6 +11,7 @@ import {
   Tag,
   BrainCircuit,
   Settings,
+  History,
   Hexagon,
   Sparkles,
   User,
@@ -39,6 +40,7 @@ const adminNavItems = [
   { name: 'User Management', href: '/admin/users', icon: Users, roles: ['Admin'] },
   { name: 'Tag Management', href: '/admin/tags', icon: Tag, roles: ['Admin', 'Moderator'] },
   { name: 'AI Usage', href: '/admin/ai-usage', icon: BrainCircuit, roles: ['Admin'] },
+  { name: 'Audit Logs', href: '/admin/audit-logs', icon: History, roles: ['Admin'] },
   { name: 'Settings', href: '/admin/settings', icon: Settings, roles: ['Admin'] },
 ]
 

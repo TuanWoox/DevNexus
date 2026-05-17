@@ -4,6 +4,7 @@ using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Profile;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 
 namespace platform_core_service.Controllers
@@ -134,7 +135,10 @@ namespace platform_core_service.Controllers
             ReturnResult<bool> returnResult = new();
             try
             {
-                returnResult = await _adminUserService.SuspendUserAsync(id, new AdminSuspendUserDTO { DaySuspend = null });
+                returnResult = await _adminUserService.SuspendUserAsync(
+                    id,
+                    new AdminSuspendUserDTO { DaySuspend = null },
+                    AuditActionType.UserPermanentlyBanned);
             }
             catch (Exception ex)
             {

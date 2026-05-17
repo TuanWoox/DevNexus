@@ -35,6 +35,7 @@ namespace platform_core_service.Data
         public DbSet<QAMedia> QAMedias { get; set; }
         public DbSet<PostModerationResult> PostModerationResults { get; set; }
         public DbSet<ModerationQueueEntry> ModerationQueueEntries { get; set; }
+        public DbSet<AdminAuditLog> AdminAuditLogs { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
@@ -113,6 +114,16 @@ namespace platform_core_service.Data
                 entity.HasIndex(p => new { p.ModerationStatus, p.DateCreated });
                 entity.HasIndex(p => new { p.AuthorId, p.ModerationStatus, p.DateCreated });
                 entity.HasIndex(p => p.Slug);
+            });
+
+            builder.Entity<AdminAuditLog>(entity =>
+            {
+                entity.Property(e => e.TargetType).HasConversion<int>();
+                entity.Property(e => e.ActionType).HasConversion<int>();
+                entity.HasIndex(e => e.CreatedAt);
+                entity.HasIndex(e => new { e.ActorId, e.CreatedAt });
+                entity.HasIndex(e => new { e.TargetType, e.TargetId, e.CreatedAt });
+                entity.HasIndex(e => new { e.ActionType, e.CreatedAt });
             });
         }
 

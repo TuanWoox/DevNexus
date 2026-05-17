@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using platform_core_service.Business.Helper;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
@@ -22,17 +23,20 @@ namespace platform_core_service.Business.Services
         private readonly IRepository<PostEntity, string> _postRepository;
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IUserContext _userContext;
+        private readonly IAdminAuditLogService _adminAuditLogService;
 
         public AdminPostService(
             ApplicationDbContext context,
             IRepository<PostEntity, string> postRepository,
             IBackgroundJobClient backgroundJobClient,
-            IUserContext userContext)
+            IUserContext userContext,
+            IAdminAuditLogService adminAuditLogService)
         {
             _context = context;
             _postRepository = postRepository;
             _backgroundJobClient = backgroundJobClient;
             _userContext = userContext;
+            _adminAuditLogService = adminAuditLogService;
         }
 
         public async Task<ReturnResult<PagedData<AdminPostDTO, string>>> GetAllPostsAsync(Page<string> page)
@@ -75,9 +79,25 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var oldState = new
+                {
+                    moderationStatus = post.ModerationStatus.ToString(),
+                    post.ModerationReason
+                };
+
                 post.ModerationStatus = ModerationStatus.Approved;
                 post.ModerationReason = null;
                 await ResolveOpenQueueEntryAsync(post.Id, "Approved", null);
+                await _adminAuditLogService.AddAsync(AdminAuditLogFactory.ForPostAction(
+                    AuditActionType.PostForceApproved,
+                    post.Id,
+                    post.Title,
+                    oldState,
+                    new
+                    {
+                        moderationStatus = post.ModerationStatus.ToString(),
+                        post.ModerationReason
+                    }));
                 await _context.SaveChangesAsync();
 
                 // Build DTO for AI First Responder
@@ -152,10 +172,28 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var oldState = new
+                {
+                    moderationStatus = post.ModerationStatus.ToString(),
+                    post.ModerationReason
+                };
+
                 // Flagged = hidden from public feed (same as human-reject in Phase 1)
                 post.ModerationStatus = ModerationStatus.Flagged;
                 post.ModerationReason = reasonText;
                 await ResolveOpenQueueEntryAsync(post.Id, "Rejected", moderatorNote);
+                await _adminAuditLogService.AddAsync(AdminAuditLogFactory.ForPostAction(
+                    AuditActionType.PostForceRejected,
+                    post.Id,
+                    post.Title,
+                    oldState,
+                    new
+                    {
+                        moderationStatus = post.ModerationStatus.ToString(),
+                        post.ModerationReason
+                    },
+                    publicReason: reasonText,
+                    internalNote: moderatorNote));
                 await _context.SaveChangesAsync();
 
                 DevNexusLogger.Instance.Debug($"[AdminPost] Post {postId} force-flagged");

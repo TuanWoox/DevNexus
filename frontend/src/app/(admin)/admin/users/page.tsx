@@ -143,7 +143,7 @@ export default function UserManagementPage() {
             <SelectItem value={ALL_ROLES}>All Roles</SelectItem>
             <SelectItem value="Admin">Admin</SelectItem>
             <SelectItem value="Moderator">Moderator</SelectItem>
-            <SelectItem value="User">User</SelectItem>
+            <SelectItem value="Developer">Developer</SelectItem>
           </SelectContent>
         </Select>
       </div>

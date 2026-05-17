@@ -58,6 +58,7 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IAdminDashboardService, AdminDashboardService>();
             services.AddScoped<IAdminUserService, AdminUserService>();
             services.AddScoped<IAdminTagService, AdminTagService>();
+            services.AddScoped<IAdminAuditLogService, AdminAuditLogService>();
             services.AddScoped<IAiUsageLogService, AiUsageLogService>();
             services.AddScoped<IAiContentService, AiContentService>();
 

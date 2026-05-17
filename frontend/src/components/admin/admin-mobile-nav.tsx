@@ -11,6 +11,7 @@ import {
   Tag,
   BrainCircuit,
   Settings,
+  History,
   User,
   LogOut,
   Moon,
@@ -29,6 +30,7 @@ const adminNavItems = [
   { name: 'Users', href: '/admin/users', icon: Users, roles: ['Admin'] },
   { name: 'Tags', href: '/admin/tags', icon: Tag, roles: ['Admin', 'Moderator'] },
   { name: 'AI Usage', href: '/admin/ai-usage', icon: BrainCircuit, roles: ['Admin'] },
+  { name: 'Audit', href: '/admin/audit-logs', icon: History, roles: ['Admin'] },
 ]
 
 export function AdminMobileNav() {
@@ -44,7 +46,7 @@ export function AdminMobileNav() {
   const userRoles = user?.roles
   const visibleItems = adminNavItems.filter((item) =>
     item.roles.some((r) => userRoles?.includes(r))
-  ).slice(0, 5) // Show max 5 items mobile nav (includes AI Usage)
+  ).slice(0, 6)
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

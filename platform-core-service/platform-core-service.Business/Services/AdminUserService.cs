@@ -2,6 +2,7 @@ using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using platform_core_service.Business.Helper;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Entities.Identities;
@@ -10,6 +11,7 @@ using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Profile;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using ProfileEntity = platform_core_service.Common.Entities.DbEntities.Profile;
@@ -31,6 +33,7 @@ namespace platform_core_service.Business.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<ApplicationRole> _roleManager;
         private readonly IUserContext _userContext;
+        private readonly IAdminAuditLogService _adminAuditLogService;
         private readonly IMapper _mapper;
         private readonly IRepository<ProfileEntity, string> _repository;
 
@@ -39,6 +42,7 @@ namespace platform_core_service.Business.Services
             UserManager<ApplicationUser> userManager,
             RoleManager<ApplicationRole> roleManager,
             IUserContext userContext,
+            IAdminAuditLogService adminAuditLogService,
             IMapper mapper,
             IRepository<ProfileEntity, string> repository)
         {
@@ -46,6 +50,7 @@ namespace platform_core_service.Business.Services
             _userManager = userManager;
             _roleManager = roleManager;
             _userContext = userContext;
+            _adminAuditLogService = adminAuditLogService;
             _mapper = mapper;
             _repository = repository;
         }
@@ -74,7 +79,7 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
-        public async Task<ReturnResult<bool>> SuspendUserAsync(string profileId, AdminSuspendUserDTO dto)
+        public async Task<ReturnResult<bool>> SuspendUserAsync(string profileId, AdminSuspendUserDTO dto, AuditActionType? auditActionType = null)
         {
             var result = new ReturnResult<bool>();
             try
@@ -109,8 +114,29 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var oldState = new
+                {
+                    profile.IsSuspended,
+                    profile.SuspendedUntil
+                };
+
                 profile.IsSuspended = true;
                 profile.SuspendedUntil = until;
+
+                await _adminAuditLogService.AddAsync(AdminAuditLogFactory.ForUserAction(
+                    auditActionType ?? AuditActionType.UserSuspended,
+                    profile.Id,
+                    profile.FullName,
+                    oldState,
+                    new
+                    {
+                        profile.IsSuspended,
+                        profile.SuspendedUntil
+                    },
+                    new
+                    {
+                        durationDays = dto?.DaySuspend
+                    }));
 
                 await _context.SaveChangesAsync();
                 DevNexusLogger.Instance.Debug($"[AdminUser] Profile {profileId} suspended");
@@ -136,8 +162,25 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var oldState = new
+                {
+                    profile.IsSuspended,
+                    profile.SuspendedUntil
+                };
+
                 profile.IsSuspended = false;
                 profile.SuspendedUntil = null;
+
+                await _adminAuditLogService.AddAsync(AdminAuditLogFactory.ForUserAction(
+                    AuditActionType.UserUnsuspended,
+                    profile.Id,
+                    profile.FullName,
+                    oldState,
+                    new
+                    {
+                        profile.IsSuspended,
+                        profile.SuspendedUntil
+                    }));
 
                 await _context.SaveChangesAsync();
                 DevNexusLogger.Instance.Debug($"[AdminUser] Profile {profileId} unsuspended");
@@ -196,6 +239,10 @@ namespace platform_core_service.Business.Services
                 }
 
                 var currentRoles = await _userManager.GetRolesAsync(user);
+                var oldManagedRoles = currentRoles
+                    .Where(role => ManagedPlatformRoles.Contains(role))
+                    .ToList();
+
                 if (currentRoles.Any(role => string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
                     && !string.Equals(newRole, "Admin", StringComparison.OrdinalIgnoreCase))
                 {
@@ -231,6 +278,29 @@ namespace platform_core_service.Business.Services
                         return result;
                     }
                 }
+
+                var profileForAudit = await _context.Profiles
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.ApplicationUserId == user.Id);
+
+                await _adminAuditLogService.AddAsync(AdminAuditLogFactory.ForUserAction(
+                    AuditActionType.UserRoleChanged,
+                    profileForAudit?.Id ?? user.Id,
+                    profileForAudit?.FullName ?? user.UserName ?? user.Email,
+                    new
+                    {
+                        roles = oldManagedRoles
+                    },
+                    new
+                    {
+                        role = newRole
+                    },
+                    new
+                    {
+                        userId = user.Id
+                    }));
+
+                await _context.SaveChangesAsync();
 
                 DevNexusLogger.Instance.Debug($"[AdminUser] User {userId} role changed to {newRole}");
                 result.Result = true;
