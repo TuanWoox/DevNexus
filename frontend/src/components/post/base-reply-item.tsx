@@ -80,7 +80,7 @@ export function BaseReplyItem({
 
     const handleSubmit = async () => {
         if (!editContent.trim() || editContent === '\n') return; // '\n' is newline char, not literal backslash-n
-        const pendingFiles = editorRef.current?.getPendingFiles(editContent) ?? new Map();
+        const pendingFiles = editorRef.current?.getPendingFiles(editContent) ?? new Map<string, File>();
         let finalContent = editContent;
         const mediaIds: string[] = [];
 

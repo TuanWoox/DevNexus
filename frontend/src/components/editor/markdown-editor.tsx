@@ -1,6 +1,6 @@
 'use client'
 
-import { ChangeEvent, ClipboardEvent, DragEvent, forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react'
+import { ChangeEvent, ClipboardEvent, DragEvent, forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import '@uiw/react-md-editor/markdown-editor.css'
@@ -64,11 +64,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
 
     useEffect(() => cleanup, []);
 
-    const emitChange = (nextValue: string) => {
+    const emitChange = useCallback((nextValue: string) => {
         props.onChange?.(nextValue);
-    };
+    }, [props]);
 
-    const insertMarkdown = (markdown: string) => {
+    const insertMarkdown = useCallback((markdown: string) => {
         const value = String(props.value || '');
         const textarea = wrapperRef.current?.querySelector('textarea');
 
@@ -95,13 +95,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             const cursor = start + markdown.length;
             textarea.setSelectionRange(cursor, cursor);
         });
-    };
+    }, [emitChange, props.value]);
 
-    const registerFile = (file: File, altText = '') => {
+    const registerFile = useCallback((file: File, altText = '') => {
         const blobUrl = URL.createObjectURL(file);
         pendingRegistry.current.set(blobUrl, file);
         insertMarkdown(`![${altText}](${blobUrl})`);
-    };
+    }, [insertMarkdown]);
 
     const isSupportedImage = (file: File) => file.type.startsWith('image/') || IMAGE_EXTENSION_REGEX.test(file.name);
 
@@ -121,13 +121,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         files.forEach((file) => registerFile(file));
     };
 
-    const handleVideoSelect = (event: ChangeEvent<HTMLInputElement>) => {
+    const handleVideoSelect = useCallback((event: ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         event.target.value = '';
         if (!file) return;
 
         registerFile(file, 'video');
-    };
+    }, [registerFile]);
 
     const editorCommands = useMemo<ICommand[]>(() => {
         const baseCommands = commands || markdownCommands.getCommands();
@@ -158,7 +158,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             videoCommand,
             ...baseCommands.slice(imageCommandIndex + 1)
         ];
-    }, [commands, contentType]);
+    }, [commands, contentType, handleVideoSelect]);
 
     return (
         <div

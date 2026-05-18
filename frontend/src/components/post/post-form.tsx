@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import type { FormEvent } from 'react'
 import { useForm, Controller, useWatch } from 'react-hook-form'
 import { Sparkles, MessageSquare, HelpCircle, Tags as TagsIcon, Globe, PenTool, X, Send, AlertCircle, Save, ChevronDown } from 'lucide-react'
 import { MarkdownEditor, MarkdownEditorHandle } from '@/components/editor/markdown-editor'
@@ -128,7 +129,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
 
     const onSubmit = async (data: PostFormData) => {
         const slug = data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-        const pendingFiles = editorRef.current?.getPendingFiles(data.content) ?? new Map();
+        const pendingFiles = editorRef.current?.getPendingFiles(data.content) ?? new Map<string, File>();
         let finalContent = data.content;
         const mediaIds: string[] = [];
 
@@ -212,6 +213,10 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
         }
     };
 
+    const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+        void handleSubmit(onSubmit)(event);
+    };
+
     return (
         <div className="w-full p-4 sm:p-6 animate-fade-in-up">
             {/* Header */}
@@ -231,7 +236,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                 </p>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            <form onSubmit={handleFormSubmit} className="space-y-8">
 
                 {/* 1. Post Type Selector (Ẩn trong chế độ Edit) */}
                 {!isEditMode && (

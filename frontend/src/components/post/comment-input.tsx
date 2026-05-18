@@ -31,7 +31,7 @@ export function CommentInput({ postId, currentUserAvatar, isQAPost, isDisabled }
     const handleSubmit = async () => {
         if (!content.trim() || content === '\n') return;
 
-        const pendingFiles = editorRef.current?.getPendingFiles(content) ?? new Map();
+        const pendingFiles = editorRef.current?.getPendingFiles(content) ?? new Map<string, File>();
         let finalContent = content;
         const mediaIds: string[] = [];
 
