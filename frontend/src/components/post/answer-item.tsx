@@ -4,14 +4,16 @@ import { SelectAnswerDTO } from '@/types/answer/select-answer-dto';
 import { useUpdateVoteByAnswerId } from '@/hooks/vote-hooks/use-update-vote-by-answer-id';
 import { useDeleteAnswerById } from '@/hooks/answer-hooks/use-delete-answer-by-id';
 import { useUpdateAnswer } from '@/hooks/answer-hooks/use-update-answer';
+import { useAcceptAnswerById } from '@/hooks/answer-hooks/use-accept-answer-by-id';
 import { UpdateAnswerDTO } from '@/types/answer/update-answer-dto';
 import { BaseReplyItem } from './base-reply-item';
 import { ContentType } from '@/types/content-media/content-type';
 
-export function AnswerItem({ answer, currentUserId, isDisabled }: { answer: SelectAnswerDTO, currentUserId: string, isDisabled?: boolean }) {
+export function AnswerItem({ answer, currentUserId, isDisabled, isQuestionAuthor }: { answer: SelectAnswerDTO, currentUserId: string, isDisabled?: boolean, isQuestionAuthor?: boolean }) {
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByAnswerId(answer.id);
     const { mutate: deleteAnswer, isPending: isDeletingAnswer } = useDeleteAnswerById();
     const { mutate: updateAnswer, isPending: isUpdatingAnswer } = useUpdateAnswer();
+    const { mutate: acceptAnswer, isPending: isAcceptingAnswer } = useAcceptAnswerById();
 
     return (
         <BaseReplyItem
@@ -35,6 +37,10 @@ export function AnswerItem({ answer, currentUserId, isDisabled }: { answer: Sele
             }}
             isUpdating={isUpdatingAnswer}
             isDisabled={isDisabled}
+            isAccepted={answer.isAccepted}
+            onAccept={() => acceptAnswer(answer.id)}
+            canAccept={isQuestionAuthor && !answer.isAccepted}
+            isAccepting={isAcceptingAnswer}
         />
     );
 }

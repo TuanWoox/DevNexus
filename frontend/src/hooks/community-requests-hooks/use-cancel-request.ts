@@ -14,6 +14,7 @@ export const useCancelRequest = () => {
             if (data) {
                 queryClient.invalidateQueries({ queryKey: communityRequestsQueryKeys.lists() });
                 queryClient.invalidateQueries({ queryKey: communityQueryKeys.lists() })
+                queryClient.invalidateQueries({ queryKey: communityQueryKeys.detail(communityId) });
                 queryClient.invalidateQueries({ queryKey: communityMembersQueryKeys.myRole(communityId) });
                 toast.success("Join request cancelled.");
             }

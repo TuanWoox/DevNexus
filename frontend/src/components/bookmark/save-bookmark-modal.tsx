@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Bookmark, Check, Loader2, Plus } from "lucide-react";
+import { Search, Bookmark, Check, Loader2, Plus, X } from "lucide-react";
 import { FilterType } from "@/constants/filterType";
 import { FilterOperator } from "@/constants/filterOperator";
 import { useGetMyBookmarksInfinite } from "@/hooks/bookmark-hooks/use-get-my-bookmarks-infinite";
@@ -73,9 +73,9 @@ export function SaveBookmarkModal({
         ] : [],
         selected: [],
     }), [debouncedSearchQuery]);
-    
-    const { 
-        data: bookmarkData, 
+
+    const {
+        data: bookmarkData,
         isLoading,
         fetchNextPage,
         hasNextPage,
@@ -121,12 +121,24 @@ export function SaveBookmarkModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-            <DialogContent className="sm:max-w-[500px] p-4 overflow-hidden flex flex-col h-[80vh]">
+            <DialogContent className="sm:max-w-[500px] p-4 overflow-hidden flex flex-col h-[80vh]" showCloseButton={false}>
                 <DialogHeader>
-                    <DialogTitle className="text-xl font-bold">Save to Bookmark</DialogTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        Select a collection or create a new one to save this post.
-                    </p>
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <DialogTitle className="text-xl font-bold">Save to Bookmark</DialogTitle>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Select a collection or create a new one to save this post.
+                            </p>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-full cursor-pointer"
+                            onClick={handleClose}
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </DialogHeader>
 
                 <div className="pb-4 border-b bg-subtle/30">
@@ -229,7 +241,7 @@ export function SaveBookmarkModal({
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4 border-t shrink-0">
-                    <Button variant="outline" type="button" className="cursor-pointer" onClick={onClose} disabled={isSavingItem}>
+                    <Button variant="outline" type="button" className="cursor-pointer" onClick={handleClose} disabled={isSavingItem}>
                         Cancel
                     </Button>
                     <Button

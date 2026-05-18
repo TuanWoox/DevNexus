@@ -107,7 +107,7 @@ export function BansManagement({ community }: BansManagementProps) {
                     </h3>
                     <Button
                         variant="outline"
-                        className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                        className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer"
                         onClick={() => setIsBanModalOpen(true)}
                         disabled={isBanning}
                     >
@@ -134,7 +134,7 @@ export function BansManagement({ community }: BansManagementProps) {
                             onChange={(e) => setBanReason(e.target.value)}
                             className="bg-background min-h-[60px]"
                         />
-                        <Button type="submit" variant="destructive" disabled={isBanning} className="w-full max-w-xs">
+                        <Button type="submit" variant="destructive" disabled={isBanning} className="w-full max-w-xs cursor-pointer">
                             {isBanning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                             Confirm Ban
                         </Button>
@@ -153,7 +153,7 @@ export function BansManagement({ community }: BansManagementProps) {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <Button type="submit" variant="secondary">Search</Button>
+                <Button type="submit" variant="custom" className="btn-secondary">Search</Button>
             </form>
 
             <div className="rounded-md border bg-card overflow-hidden">
@@ -214,7 +214,7 @@ export function BansManagement({ community }: BansManagementProps) {
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            className="h-8 border-green-200 text-green-600 hover:text-green-700 hover:bg-green-50 hover:border-green-300"
+                                            className="h-8 border-green-200 text-green-600 hover:text-green-700 hover:bg-green-50 hover:border-green-300 cursor-pointer"
                                             onClick={() => unbanMember(ban.id)}
                                             disabled={isUnbanning}
                                         >

@@ -4,6 +4,7 @@ import { ConfirmEmailDTO } from '@/types/account/confirm-email-dto';
 import { LoginAccountDTO } from '@/types/account/login-account-dto';
 import { RegisterAccountDTO } from '@/types/account/register-account-dto';
 import { ResetPasswordDTO } from '@/types/account/reset-password-dto';
+import { SetPasswordDTO } from '@/types/account/set-password-dto';
 import { ReturnResult } from '@/types/common/return-result';
 import { TokenResponseDTO } from '@/types/helper/token-response-dto';
 
@@ -28,6 +29,14 @@ export const accountService = {
     changePassword: async (changePasswordDTO: ChangePasswordDTO) => {
         const { data } = await api.post<ReturnResult<boolean>>('/Accounts/change-password', changePasswordDTO);
         return data;
+    },
+    hasPassword: async (): Promise<boolean> => {
+        const { data } = await api.get<ReturnResult<boolean>>('/Accounts/has-password');
+        return data.result;
+    },
+    setPassword: async (setPasswordDTO: SetPasswordDTO): Promise<boolean> => {
+        const { data } = await api.post<ReturnResult<boolean>>('/Accounts/set-password', setPasswordDTO);
+        return data.result;
     },
     requestResetPassword: async (email: string) => {
         const payload = { email };

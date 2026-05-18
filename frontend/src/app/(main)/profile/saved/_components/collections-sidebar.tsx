@@ -1,6 +1,6 @@
 "use client";
 
-import { Ref } from 'react';
+import { Ref, Fragment } from 'react';
 import { Loader2, Bookmark, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SelectBookmarkDTO } from '@/types/bookmark/select-bookmark-dto';
@@ -35,7 +35,7 @@ export const CollectionsSidebar = ({
                 <button
                     type="button"
                     onClick={onOpenCreateModal}
-                    className="rounded-full p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                    className="rounded-full p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
                     title="New collection"
                 >
                     <Plus className="h-5 w-5" />
@@ -43,7 +43,8 @@ export const CollectionsSidebar = ({
             </div>
 
             {/* Navigation/List */}
-            <nav className="flex-1 overflow-y-auto px-2 py-2 flex flex-col gap-0.5">
+            <nav className="flex-1 overflow-y-auto p-2 flex flex-col gap-0.5">
+                <hr />
                 {isLoading ? (
                     <div className="flex justify-center py-8">
                         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -57,24 +58,26 @@ export const CollectionsSidebar = ({
                         {collections.map((collection) => {
                             const isActive = collection.id === selectedCollectionId;
                             return (
-                                <button
-                                    key={collection.id}
-                                    onClick={() => onSelectCollection(collection.id)}
-                                    className={cn(
-                                        "flex items-center gap-4 rounded-xl transition-colors group px-3 py-3 text-left font-medium",
-                                        isActive
-                                            ? 'bg-primary/10 text-primary'
-                                            : 'text-muted-foreground hover:bg-subtle hover:text-primary',
-                                    )}
-                                >
-                                    <Bookmark className={cn(
-                                        "h-5 w-5 shrink-0",
-                                        isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary"
-                                    )} />
-                                    <span className="text-base truncate">
-                                        {collection.name}
-                                    </span>
-                                </button>
+                                <Fragment key={collection.id}>
+                                    <button
+                                        onClick={() => onSelectCollection(collection.id)}
+                                        className={cn(
+                                            "flex items-center gap-4 rounded-lg transition-colors group px-3 py-3 text-left font-medium cursor-pointer",
+                                            isActive
+                                                ? 'bg-primary/10 text-primary'
+                                                : 'text-muted-foreground hover:bg-subtle hover:text-primary',
+                                        )}
+                                    >
+                                        <Bookmark className={cn(
+                                            "h-5 w-5 shrink-0",
+                                            isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary"
+                                        )} />
+                                        <span className="text-base truncate">
+                                            {collection.name}
+                                        </span>
+                                    </button>
+                                    <hr />
+                                </Fragment>
                             );
                         })}
                         <div ref={sentinelRef} className="h-4" />
@@ -84,7 +87,8 @@ export const CollectionsSidebar = ({
                             </div>
                         )}
                     </>
-                )}
+                )
+                }
             </nav>
         </aside>
     );

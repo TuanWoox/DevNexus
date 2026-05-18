@@ -11,6 +11,9 @@ using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using Hangfire;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
+using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 
 namespace platform_core_service.Business.Services
 {
@@ -18,12 +21,14 @@ namespace platform_core_service.Business.Services
         ApplicationDbContext context,
         IMapper mapper,
         IUserContext userContext,
-        IRepository<CommunityMember, string> memberRepository) : ICommunityMemberService
+        IRepository<CommunityMember, string> memberRepository,
+        IBackgroundJobClient backgroundJobClient) : ICommunityMemberService
     {
         private readonly ApplicationDbContext _context = context;
         private readonly IMapper _mapper = mapper;
         private readonly IUserContext _userContext = userContext;
         private readonly IRepository<CommunityMember, string> _memberRepository = memberRepository;
+        private readonly IBackgroundJobClient _backgroundJobClient = backgroundJobClient;
 
         private async Task<bool> IsOwnerOrModeratorAsync(string communityId, string profileId)
         {
@@ -120,6 +125,9 @@ namespace platform_core_service.Business.Services
                         .Include(m => m.Profile)
                         .FirstAsync(m => m.Id == member.Id);
 
+                    await PublishMemberJoinedNotificationAsync(communityId, profileId);
+                    await PublishMemberJoinedToAdminsNotificationAsync(communityId, profileId);
+
                     result.Result = _mapper.Map<SelectCommunityMemberDTO>(saved);
                     return result;
                 }
@@ -138,6 +146,8 @@ namespace platform_core_service.Business.Services
                 var savedRequest = await _context.CommunityMembershipRequests
                     .Include(r => r.Requester)
                     .FirstAsync(r => r.Id == request.Id);
+
+                await PublishJoinRequestNotificationAsync(communityId, profileId);
 
                 result.Result = _mapper.Map<SelectCommunityMembershipRequestDTO>(savedRequest);
             }
@@ -276,6 +286,102 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while retrieving members: {ex.Message}";
             }
             return result;
+        }
+
+        private async Task PublishJoinRequestNotificationAsync(string communityId, string requesterId)
+        {
+            var community = await _context.Communities
+                .FirstOrDefaultAsync(c => c.Id == communityId);
+
+            if (community == null) return;
+
+            var moderators = await _context.CommunityModerators
+                .Where(m => m.CommunityId == communityId)
+                .Select(m => m.ModeratorId)
+                .ToListAsync();
+
+            var recipients = new List<string> { community.OwnerId };
+            recipients.AddRange(moderators);
+            recipients = recipients.Distinct().Where(id => id != requesterId).ToList();
+
+            if (!recipients.Any()) return;
+
+            var notificationEvent = new NotiicationCreatedEntityDTO
+            {
+                EventType = NotificationEventType.COMMUNITY_JOIN_REQUEST,
+                ActorId = requesterId,
+                RecipientId = recipients,
+                EntityType = NotificationEntityType.COMMUNITY,
+                EntityId = community.Id,
+                EntityTitle = community.Name,
+                EntityPreview = null,
+                ActionUrl = $"/communities/{community.Id}/settings?tab=requests",
+                Timestamp = DateTime.UtcNow
+            };
+
+            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                x => x.PublicNotification(notificationEvent, "notifications.community"));
+        }
+
+        private async Task PublishMemberJoinedNotificationAsync(string communityId, string newMemberId)
+        {
+            var community = await _context.Communities
+                .FirstOrDefaultAsync(c => c.Id == communityId);
+
+            if (community == null) return;
+
+            var notificationEvent = new NotiicationCreatedEntityDTO
+            {
+                EventType = NotificationEventType.COMMUNITY_ROLE_CHANGE,
+                ActorId = community.OwnerId,
+                RecipientId = newMemberId,
+                EntityType = NotificationEntityType.COMMUNITY,
+                EntityId = community.Id,
+                EntityTitle = community.Name,
+                EntityPreview = null,
+                ActionUrl = $"/communities/{community.Id}",
+                Timestamp = DateTime.UtcNow,
+                Message = $"Welcome to {community.Name}. Now you can post, connect with other members and more."
+            };
+
+            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                x => x.PublicNotification(notificationEvent, "notifications.community"));
+        }
+
+        private async Task PublishMemberJoinedToAdminsNotificationAsync(string communityId, string newMemberId)
+        {
+            var community = await _context.Communities
+                .FirstOrDefaultAsync(c => c.Id == communityId);
+
+            if (community == null) return;
+
+            var moderators = await _context.CommunityModerators
+                .Where(m => m.CommunityId == communityId)
+                .Select(m => m.ModeratorId)
+                .ToListAsync();
+
+            var recipients = new List<string> { community.OwnerId };
+            recipients.AddRange(moderators);
+            recipients = recipients.Distinct().Where(id => id != newMemberId).ToList();
+
+            if (!recipients.Any()) return;
+
+            var notificationEvent = new NotiicationCreatedEntityDTO
+            {
+                EventType = NotificationEventType.COMMUNITY_ROLE_CHANGE,
+                ActorId = newMemberId,
+                RecipientId = recipients,
+                EntityType = NotificationEntityType.COMMUNITY,
+                EntityId = community.Id,
+                EntityTitle = community.Name,
+                EntityPreview = null,
+                ActionUrl = $"/profile/{newMemberId}",
+                Timestamp = DateTime.UtcNow,
+                Message = $"A new member has joined your community - {community.Name}. Please check their profile."
+            };
+
+            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                x => x.PublicNotification(notificationEvent, "notifications.community"));
         }
     }
 }

@@ -232,6 +232,10 @@ export class RabbitMQService implements OnModuleInit {
             IsRead: false,
             ReadAt: null,
             DateModified: new Date(),
+            ...(event.Message ? { Message: event.Message } : {}),
+            DateCreated: new Date(),
+            ActionUrl: event.ActionUrl,
+            EntityPreview: event.EntityPreview
           },
           include: {
             Actor: {
@@ -254,7 +258,7 @@ export class RabbitMQService implements OnModuleInit {
           EntityId: event.EntityId,
           EntityTitle: event.EntityTitle,
           EntityPreview: event.EntityPreview,
-          Message: event.ActorId ? "" : event.Message ?? "",
+          Message: event.Message ?? "",
           ActionUrl: event.ActionUrl,
           GroupKey: groupKey,
         },
@@ -276,7 +280,7 @@ export class RabbitMQService implements OnModuleInit {
 
     try {
       const data = JSON.parse(msg.content.toString()) as PublishMessageBusDTO<any>;
-      
+
       switch (data.MessageBusEntityEnum) {
         case MessageBusEntityEnum.Profile:
           await this.profileSyncService.eventDrive(data);

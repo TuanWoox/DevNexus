@@ -1,7 +1,7 @@
 "use client";
 
 import { useGetCommunityById } from "@/hooks/community-hooks/use-get-community-by-id";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GeneralSettings } from "@/components/communities/settings/general-settings";
 import { RequestsManagement } from "@/components/communities/settings/requests-management";
@@ -17,6 +17,8 @@ const CommunitySettingsPage = () => {
     const params = useParams();
     const communityId = params.communityId as string;
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const tabParam = searchParams.get("tab");
 
     const { data: community, isLoading: isCommunityLoading, isError } = useGetCommunityById(communityId);
 
@@ -25,6 +27,15 @@ const CommunitySettingsPage = () => {
     const isModerator = role === "MODERATOR";
     const hasAccess = isOwner || isModerator;
 
+    const validTabs = isOwner ? ["general", "requests", "moderators", "bans"] : ["requests", "bans"];
+    const activeTab = validTabs.includes(tabParam || "") 
+        ? tabParam as string 
+        : (isOwner ? "general" : "requests");
+
+    const handleTabChange = (val: string) => {
+        router.replace(`/communities/${communityId}/settings?tab=${val}`, { scroll: false });
+    };
+
     // Guard: redirect if neither owner nor moderator once data is loaded
     useEffect(() => {
         if (!isCommunityLoading && role && !hasAccess) {
@@ -32,6 +43,16 @@ const CommunitySettingsPage = () => {
             router.push(`/communities/${communityId}`);
         }
     }, [isCommunityLoading, role, hasAccess, router, communityId]);
+
+    // Guard: redirect if moderator tries to access owner-only tabs
+    useEffect(() => {
+        if (!isCommunityLoading && isModerator && tabParam) {
+            if (tabParam === "general" || tabParam === "moderators") {
+                toast.error("You do not have permission to access this tab.");
+                router.replace(`/communities/${communityId}/settings?tab=requests`, { scroll: false });
+            }
+        }
+    }, [isCommunityLoading, isModerator, tabParam, router, communityId]);
 
     if (isCommunityLoading) {
         return (
@@ -78,7 +99,7 @@ const CommunitySettingsPage = () => {
                 </div>
 
                 {/* Main Content Layout */}
-                <Tabs defaultValue={isOwner ? "general" : "requests"} className="flex flex-col gap-8 fade-in">
+                <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col gap-8 fade-in">
 
                     {/* Tab List — owner sees all 4, moderator only sees Requests + Bans */}
                     <div className="border-b">

@@ -1,6 +1,6 @@
 "use client";
 
-import { Ref } from 'react';
+import { Ref, useState, useEffect } from 'react';
 import { Loader2, Bookmark, MoreHorizontal, Pen, Trash2, ChevronLeft } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,16 @@ import { PostCard } from '@/components/post/post-card';
 import { UnavailablePostCard } from '@/components/post/unavailable-post-card';
 import { cn } from '@/lib/utils';
 import { SelectBookmarkDTO } from '@/types/bookmark/select-bookmark-dto';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface CollectionItemsFeedProps {
     selectedCollection: SelectBookmarkDTO | undefined;
@@ -22,6 +32,7 @@ interface CollectionItemsFeedProps {
     onBack: () => void;
     onEdit: () => void;
     onDelete: () => void;
+    isDeleting?: boolean;
     sentinelRef: Ref<HTMLDivElement>;
     collectionsCount: number;
 }
@@ -34,10 +45,18 @@ export const CollectionItemsFeed = ({
     onBack,
     onEdit,
     onDelete,
+    isDeleting = false,
     sentinelRef,
     collectionsCount
 }: CollectionItemsFeedProps) => {
     const isSelected = !!selectedCollection;
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [prevCollectionId, setPrevCollectionId] = useState(selectedCollection?.id);
+
+    if (selectedCollection?.id !== prevCollectionId) {
+        setPrevCollectionId(selectedCollection?.id);
+        setIsDeleteConfirmOpen(false);
+    }
 
     if (!isLoading && collectionsCount === 0) {
         return (
@@ -70,7 +89,7 @@ export const CollectionItemsFeed = ({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="lg:hidden rounded-full h-9 w-9"
+                                className="lg:hidden rounded-full h-9 w-9 cursor-pointer"
                                 onClick={onBack}
                             >
                                 <ChevronLeft className="h-5 w-5" />
@@ -84,7 +103,10 @@ export const CollectionItemsFeed = ({
                         <div className="flex flex-row items-center gap-4">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <button className="w-9 h-9 rounded-full flex shrink-0 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors" aria-label="More Actions">
+                                    <button
+                                        className="w-9 h-9 rounded-full flex shrink-0 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+                                        aria-label="More Actions"
+                                    >
                                         <MoreHorizontal className="w-5 h-5" />
                                     </button>
                                 </DropdownMenuTrigger>
@@ -97,7 +119,7 @@ export const CollectionItemsFeed = ({
                                         Rename Collection
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
-                                        onClick={onDelete}
+                                        onClick={() => setIsDeleteConfirmOpen(true)}
                                         variant='destructive'
                                         className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
                                     >
@@ -142,6 +164,29 @@ export const CollectionItemsFeed = ({
                             </>
                         )}
                     </div>
+
+                    <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+                        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Collection?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Are you sure you want to delete the collection &quot;{selectedCollection.name}&quot;? All bookmarked items in this collection will be removed. This action cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel disabled={isDeleting} variant="custom" size="lg" className="btn-secondary">Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={(e) => { e.preventDefault(); onDelete(); }}
+                                    disabled={isDeleting}
+                                    variant="destructive"
+                                    size="lg"
+                                    className="cursor-pointer"
+                                >
+                                    {isDeleting ? "Deleting..." : "Delete"}
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 </>
             ) : (
                 <div className="flex flex-col items-center justify-center flex-1 text-center p-8">
