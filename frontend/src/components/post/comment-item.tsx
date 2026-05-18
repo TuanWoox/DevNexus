@@ -6,6 +6,7 @@ import { useDeleteComment } from '@/hooks/comment-hooks/use-delete-comment';
 import { useUpdateComment } from '@/hooks/comment-hooks/use-update-comment';
 import { UpdateCommentDTO } from '@/types/comment/update-comment-dto';
 import { BaseReplyItem } from './base-reply-item';
+import { ContentType } from '@/types/content-media/content-type';
 
 export function CommentItem({ comment, currentUserId, isDisabled }: { comment: SelectCommentDTO, currentUserId: string, isDisabled?: boolean }) {
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByCommentId(comment.id);
@@ -27,8 +28,9 @@ export function CommentItem({ comment, currentUserId, isDisabled }: { comment: S
             isVotePending={isVotePending}
             onDelete={() => deleteComment(comment.id)}
             isDeleting={isDeletingComment}
-            onUpdate={(newContent, onSuccess) => {
-                const payload: UpdateCommentDTO = { id: comment.id, content: newContent };
+            contentType={ContentType.Comment}
+            onUpdate={(newContent, mediaIds, onSuccess) => {
+                const payload: UpdateCommentDTO = { id: comment.id, content: newContent, mediaIds };
                 updateComment(payload, { onSuccess });
             }}
             isUpdating={isUpdatingComment}

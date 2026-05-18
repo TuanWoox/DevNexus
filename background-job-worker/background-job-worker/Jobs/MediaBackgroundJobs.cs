@@ -25,16 +25,30 @@ namespace background_job_worker.Jobs
                 var cutoffDay = DateTimeOffset.UtcNow.AddDays(-7);
 
                 var postMedias = await _dbContext.PostMedias
-                    .Where(x => x.PostId != null && x.DateCreated <= cutoffDay)
+                    .Where(x => x.PostId == null && x.DateCreated <= cutoffDay)
                     .Select(x => x.StoreDestination)
                     .ToListAsync();
 
                 var qaMedias = await _dbContext.QAMedias
-                    .Where(x => x.QAPostId != null && x.DateCreated <= cutoffDay)
+                    .Where(x => x.QAPostId == null && x.DateCreated <= cutoffDay)
                     .Select(x => x.StoreDestination)
                     .ToListAsync();
 
-                var allMedias = postMedias.Concat(qaMedias).Where(x => !string.IsNullOrEmpty(x));
+                var answerMedias = await _dbContext.AnswerMedias
+                    .Where(x => x.AnswerId == null && x.DateCreated <= cutoffDay)
+                    .Select(x => x.StoreDestination)
+                    .ToListAsync();
+
+                var commentMedias = await _dbContext.CommentMedias
+                    .Where(x => x.CommentId == null && x.DateCreated <= cutoffDay)
+                    .Select(x => x.StoreDestination)
+                    .ToListAsync();
+
+                var allMedias = postMedias
+                    .Concat(qaMedias)
+                    .Concat(answerMedias)
+                    .Concat(commentMedias)
+                    .Where(x => !string.IsNullOrEmpty(x));
 
                 if (allMedias.Any())
                 {
@@ -63,12 +77,14 @@ namespace background_job_worker.Jobs
                 // Build paths for each media type root folder
                 string qaMediaRoot = Path.Combine(rootUploadFolder, "qa-media");
                 string postMediaRoot = Path.Combine(rootUploadFolder, "post-media");
+                string answerMediaRoot = Path.Combine(rootUploadFolder, "answer-media");
+                string commentMediaRoot = Path.Combine(rootUploadFolder, "comment-media");
 
                 // Only process folders older than 24 hours (considered abandoned)
                 var cutoff = DateTimeOffset.UtcNow.AddHours(-24);
 
                 // Filter out roots that don't exist on disk yet
-                var roots = new[] { qaMediaRoot, postMediaRoot }.Where(Directory.Exists);
+                var roots = new[] { qaMediaRoot, postMediaRoot, answerMediaRoot, commentMediaRoot }.Where(Directory.Exists);
 
                 // Find all "temp" folders across both qa-media and post-media
                 // Structure: {root}/{userId}/temp/{sessionId}
@@ -128,6 +144,44 @@ namespace background_job_worker.Jobs
                         media.QAPostId = qaPostId;
                 }
                 if (mediaToLink.Any(m => m.QAPostId == qaPostId)) await _dbContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error(ex.Message);
+            }
+        }
+        public async Task UpdateAnswerMediaAnswerId(string userId, string answerId, List<string> ids)
+        {
+            try
+            {
+                var mediaToLink = await _dbContext.AnswerMedias.Where(m => ids.Contains(m.Id)
+                                                            && m.AnswerId == null)
+                                                            .ToListAsync();
+                foreach (var media in mediaToLink)
+                {
+                    if (HelperUtils.BelongsToUser(media.StoreDestination, userId))
+                        media.AnswerId = answerId;
+                }
+                if (mediaToLink.Any(m => m.AnswerId == answerId)) await _dbContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error(ex.Message);
+            }
+        }
+        public async Task UpdateCommentMediaCommentId(string userId, string commentId, List<string> ids)
+        {
+            try
+            {
+                var mediaToLink = await _dbContext.CommentMedias.Where(m => ids.Contains(m.Id)
+                                                            && m.CommentId == null)
+                                                            .ToListAsync();
+                foreach (var media in mediaToLink)
+                {
+                    if (HelperUtils.BelongsToUser(media.StoreDestination, userId))
+                        media.CommentId = commentId;
+                }
+                if (mediaToLink.Any(m => m.CommentId == commentId)) await _dbContext.SaveChangesAsync();
             }
             catch (Exception ex)
             {

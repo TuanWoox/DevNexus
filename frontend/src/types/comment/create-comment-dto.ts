@@ -3,4 +3,5 @@ export interface CreateCommentDTO {
     postId?: string;
     answerId?: string;
     replyToCommentId?: string;
+    mediaIds?: string[];
 }

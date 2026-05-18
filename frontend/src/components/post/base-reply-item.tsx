@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ArrowBigUp, ArrowBigDown, MoreHorizontal, Flag, UserPlus, Edit, Trash, CheckCircle, Check } from 'lucide-react';
 import Image from 'next/image';
 import { MarkdownViewer } from '../editor/markdown-viewer';
-import { MarkdownEditor } from '../editor/markdown-editor';
+import { MarkdownEditor, MarkdownEditorHandle } from '../editor/markdown-editor';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from 'next/link';
 import { ProfileHoverCard } from '@/components/profile/profile-hover-card';
+import { ContentType } from '@/types/content-media/content-type';
+import { useUploadContentMedia } from '@/hooks/media/useUploadContentMedia';
 
 export interface ReplyAuthor {
     fullName: string;
@@ -38,7 +40,8 @@ export interface BaseReplyItemProps {
     isVotePending: boolean;
     onDelete: () => void;
     isDeleting: boolean;
-    onUpdate: (newContent: string, onSuccess: () => void) => void;
+    contentType: ContentType;
+    onUpdate: (newContent: string, mediaIds: string[], onSuccess: () => void) => void;
     isUpdating: boolean;
     isDisabled?: boolean;
     isAccepted?: boolean;
@@ -60,6 +63,7 @@ export function BaseReplyItem({
     isVotePending,
     onDelete,
     isDeleting,
+    contentType,
     onUpdate,
     isUpdating,
     isDisabled,
@@ -71,13 +75,35 @@ export function BaseReplyItem({
     const isAuthor = authorId === currentUserId;
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(content);
+    const editorRef = useRef<MarkdownEditorHandle>(null);
+    const { uploadPendingMedia, isUploading: isUploadingMedia, progress: uploadProgress } = useUploadContentMedia();
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!editContent.trim() || editContent === '\n') return; // '\n' is newline char, not literal backslash-n
-        onUpdate(editContent, () => setIsEditing(false));
+        const pendingFiles = editorRef.current?.getPendingFiles(editContent) ?? new Map<string, File>();
+        let finalContent = editContent;
+        const mediaIds: string[] = [];
+
+        if (pendingFiles.size > 0) {
+            try {
+                const uploadResults = await uploadPendingMedia(contentType, pendingFiles);
+                uploadResults.forEach(({ blobUrl, serverUrl, mediaId }) => {
+                    finalContent = finalContent.replaceAll(blobUrl, serverUrl);
+                    mediaIds.push(mediaId);
+                });
+            } catch {
+                return;
+            }
+        }
+
+        onUpdate(finalContent, mediaIds, () => {
+            editorRef.current?.cleanup();
+            setIsEditing(false);
+        });
     };
 
     const handleCancel = () => {
+        editorRef.current?.cleanup();
         setEditContent(content);
         setIsEditing(false);
     };
@@ -120,10 +146,17 @@ export function BaseReplyItem({
                         {isEditing ? (
                             <>
                                 <MarkdownEditor
+                                    ref={editorRef}
                                     value={editContent}
                                     onChange={(val?: string) => setEditContent(val || '')}
+                                    contentType={contentType}
                                 />
                                 <div className="flex items-center justify-end px-2 py-2 sm:px-3 bg-subtle/50 mt-auto border-t border-default/50">
+                                    {isUploadingMedia && uploadProgress && (
+                                        <div className="mr-auto text-xs text-muted-foreground">
+                                            Uploading media: {uploadProgress.current} / {uploadProgress.total}
+                                        </div>
+                                    )}
                                     <div className="flex items-center gap-2">
                                         <button
                                             onClick={handleCancel}
@@ -133,10 +166,10 @@ export function BaseReplyItem({
                                         </button>
                                         <button
                                             onClick={handleSubmit}
-                                            disabled={!editContent.trim() || isUpdating}
+                                            disabled={!editContent.trim() || isUpdating || isUploadingMedia}
                                             className="btn-ai disabled:opacity-50 disabled:cursor-not-allowed px-4 py-1.5 text-sm font-semibold"
                                         >
-                                            {isUpdating ? 'Saving...' : 'Save'}
+                                            {isUploadingMedia ? 'Uploading...' : (isUpdating ? 'Saving...' : 'Save')}
                                         </button>
                                     </div>
                                 </div>

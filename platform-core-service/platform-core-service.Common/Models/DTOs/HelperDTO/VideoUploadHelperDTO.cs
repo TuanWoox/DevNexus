@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Http;
-using platform_core_service.Common.Models.DTOs.EntityDTO.PostMedia;
 using System.ComponentModel.DataAnnotations;
 
 namespace platform_core_service.Common.Models.DTOs.HelperDTO
@@ -15,26 +14,12 @@ namespace platform_core_service.Common.Models.DTOs.HelperDTO
         [RegularExpression("^[a-fA-F0-9]+$", ErrorMessage = "Hash must be hexadecimal.")]
         public string HashFile { get; set; } = null!;
     }
-    public class InitUploadVideoDTO
+    public class ContentInitUploadVideoDTO<TSelectMediaDTO>
     {
-        [Required]
         public string SessionId { get; set; } = null!;
-
-        [Required]
-        public string TempPath { get; set; } = null!;
-
-        public bool IsDuplicate { get; set; }
-
-        public SelectPostMediaDTO? ExistingMedia { get; set; }
-    }
-    public class InitUploadQAVideoDTO
-    {
-        [Required]
-        public string SessionId { get; set; } = null!;
-        [Required]
         public string TempPath { get; set; } = null!;
         public bool IsDuplicate { get; set; }
-        public platform_core_service.Common.Models.DTOs.EntityDTO.QAMedia.SelectQAMediaDTO? ExistingMedia { get; set; }
+        public TSelectMediaDTO? ExistingMedia { get; set; }
     }
     public class VideoChunkProgressDTO
     {

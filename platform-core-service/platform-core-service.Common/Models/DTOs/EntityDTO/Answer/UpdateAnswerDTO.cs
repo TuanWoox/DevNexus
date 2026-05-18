@@ -10,5 +10,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Answer
         [Required]
         [StringLength(50000, MinimumLength = 10, ErrorMessage = "Content must be between 10 and 50000 characters")]
         public string Content { get; set; } = null!;
+
+        public List<string>? MediaIds { get; set; }
     }
 }
