@@ -5,6 +5,7 @@ export interface CreatePostDTO {
     slug?: string;
     tagNames: string[];
     communityId?: string;
+    mediaIds?: string[];
 }
 
 export enum PostType {

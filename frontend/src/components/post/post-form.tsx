@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm, Controller, useWatch } from 'react-hook-form'
 import { Sparkles, MessageSquare, HelpCircle, Tags as TagsIcon, Globe, PenTool, X, Send, AlertCircle, Save, ChevronDown } from 'lucide-react'
-import { MarkdownEditor } from '@/components/editor/markdown-editor'
+import { MarkdownEditor, MarkdownEditorHandle } from '@/components/editor/markdown-editor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,6 +20,8 @@ import { useRouter } from 'next/navigation'
 import { CommunitySelectModal } from './community-select-modal'
 import Image from 'next/image'
 import { AiMetadataAssist } from './ai-metadata-assist'
+import { ContentType } from '@/types/content-media/content-type'
+import { useUploadContentMedia } from '@/hooks/media/useUploadContentMedia'
 
 export type PostFormData = {
     title: string;
@@ -60,13 +62,16 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
         name: initialData?.communityName || '',
         iconUrl: initialData?.communityIconUrl || ''
     });
+    const editorRef = useRef<MarkdownEditorHandle>(null);
 
     const { mutate: createPost, isPending: isCreatingPost } = useCreatePost();
     const { mutate: createQAPost, isPending: isCreatingQAPost } = useCreateQAPost();
     const { mutate: updatePost, isPending: isUpdatingPost } = useUpdatePost();
     const { mutate: updateQAPost, isPending: isUpdatingQAPost } = useUpdateQAPost();
+    const { uploadPendingMedia, isUploading: isUploadingMedia, progress: uploadProgress } = useUploadContentMedia();
 
     const isPending = isCreatingPost || isCreatingQAPost || isUpdatingPost || isUpdatingQAPost;
+    const contentType = isQAPost ? ContentType.QA : ContentType.Post;
 
     const {
         register,
@@ -121,17 +126,32 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
         setValue('tags', suggestion.tags, { shouldValidate: true, shouldDirty: true });
     };
 
-    const onSubmit = (data: PostFormData) => {
+    const onSubmit = async (data: PostFormData) => {
         const slug = data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+        const pendingFiles = editorRef.current?.getPendingFiles(data.content) ?? new Map();
+        let finalContent = data.content;
+        const mediaIds: string[] = [];
+
+        if (pendingFiles.size > 0) {
+            try {
+                const uploadResults = await uploadPendingMedia(contentType, pendingFiles);
+                uploadResults.forEach(({ blobUrl, serverUrl, mediaId }) => {
+                    finalContent = finalContent.replaceAll(blobUrl, serverUrl);
+                    mediaIds.push(mediaId);
+                });
+            } catch {
+                return;
+            }
+        }
 
         if (isEditMode && initialData) {
-            handleEdit(data, slug);
+            handleEdit({ ...data, content: finalContent }, slug, mediaIds);
         } else {
-            handleCreate(data, slug);
+            handleCreate({ ...data, content: finalContent }, slug, mediaIds);
         }
     }
 
-    const handleEdit = (data: PostFormData, slug: string) => {
+    const handleEdit = (data: PostFormData, slug: string, mediaIds: string[]) => {
         const payload = {
             id: initialData!.id,
             title: data.title,
@@ -139,33 +159,42 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
             postType: 0,
             slug,
             tagNames: data.tags,
-            communityId: initialData?.communityId || undefined
+            communityId: initialData?.communityId || undefined,
+            mediaIds
         };
 
         if (isQAPost) {
             updateQAPost(payload as UpdateQAPostDTO, {
-                onSuccess: () => router.push(`/questions/${initialData!.id}`)
+                onSuccess: () => {
+                    editorRef.current?.cleanup();
+                    router.push(`/questions/${initialData!.id}`);
+                }
             });
         } else {
             updatePost(payload as UpdatePostDTO, {
-                onSuccess: () => router.push(`/post/${initialData!.id}`)
+                onSuccess: () => {
+                    editorRef.current?.cleanup();
+                    router.push(`/post/${initialData!.id}`);
+                }
             });
         }
     };
 
-    const handleCreate = (data: PostFormData, slug: string) => {
+    const handleCreate = (data: PostFormData, slug: string, mediaIds: string[]) => {
         const basePayload = {
             title: data.title,
             content: data.content,
             postType: 0,
             slug,
             tagNames: data.tags,
+            mediaIds,
             ...(data.communityId && data.communityId !== "" ? { communityId: data.communityId } : {})
         };
 
         if (isQAPost) {
             createQAPost(basePayload as CreateQAPostDTO, {
                 onSuccess: (res) => {
+                    editorRef.current?.cleanup();
                     reset();
                     setTagInput('');
                     if (res?.id) router.push(`/questions/${res.id}`);
@@ -174,6 +203,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
         } else {
             createPost(basePayload as CreatePostDTO, {
                 onSuccess: (res) => {
+                    editorRef.current?.cleanup();
                     reset();
                     setTagInput('');
                     if (res?.id) router.push(`/post/${res.id}`);
@@ -373,8 +403,10 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                                 render={({ field }) => (
                                     <div className={`rounded-lg overflow-hidden border ${errors.content ? 'border-destructive shadow-sm' : 'border-default shadow-sm'} focus-within:ring-2 focus-within:ring-ring focus-within:border-ring transition-all`}>
                                         <MarkdownEditor
+                                            ref={editorRef}
                                             value={field.value}
                                             onChange={(val?: string) => field.onChange(val || '')}
+                                            contentType={contentType}
                                             height={400}
                                         />
                                     </div>
@@ -390,7 +422,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                                 content={content || ''}
                                 currentTitle={title || ''}
                                 currentTags={selectedTags || []}
-                                isSubmitting={isPending}
+                                isSubmitting={isPending || isUploadingMedia}
                                 onApply={handleApplyMetadataSuggestion}
                             />
                         </div>
@@ -400,22 +432,27 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
 
                 {/* Actions */}
                 <div className="flex justify-end gap-4">
+                    {isUploadingMedia && uploadProgress && (
+                        <div className="flex items-center text-sm text-muted-foreground">
+                            Uploading media: {uploadProgress.current} / {uploadProgress.total}
+                        </div>
+                    )}
                     <Button
                         type="button"
                         variant="custom"
                         className="btn-secondary px-6 py-2 h-auto"
-                        disabled={isPending}
+                        disabled={isPending || isUploadingMedia}
                         onClick={() => router.back()}
                     >
                         Cancel
                     </Button>
-                    <Button type="submit" className="btn-ai text-white text-sm px-6 py-2 h-auto flex items-center gap-2 group" disabled={isPending}>
+                    <Button type="submit" className="btn-ai text-white text-sm px-6 py-2 h-auto flex items-center gap-2 group" disabled={isPending || isUploadingMedia}>
                         {isEditMode ? (
                             <Save className="w-4 h-4 group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" />
                         ) : (
                             <Send className="w-4 h-4 group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" />
                         )}
-                        {isPending ? (isEditMode ? 'Saving...' : 'Publishing...') : (isEditMode ? 'Save Changes' : 'Publish Post')}
+                        {isUploadingMedia ? 'Uploading media...' : (isPending ? (isEditMode ? 'Saving...' : 'Publishing...') : (isEditMode ? 'Save Changes' : 'Publish Post'))}
                     </Button>
                 </div>
             </form>
