@@ -45,10 +45,10 @@ namespace platform_core_service.Business.Services.Base
         protected abstract string MediaFolderName { get; }
         protected abstract string CacheKeyPrefix { get; }
         protected abstract IQueryable<TEntity> IncludeNavigation(IQueryable<TEntity> query);
-        protected abstract PostMediaType GetMediaType(TEntity entity);
-        protected abstract TEntity CreateEntity(string storeDestination, string sha256Hash, PostMediaType mediaType);
+        protected abstract ContentMediaType GetMediaType(TEntity entity);
+        protected abstract TEntity CreateEntity(string storeDestination, string sha256Hash, ContentMediaType mediaType);
 
-        protected virtual IQueryable<TEntity> GetDuplicateQuery(string sha256Hash, PostMediaType mediaType)
+        protected virtual IQueryable<TEntity> GetDuplicateQuery(string sha256Hash, ContentMediaType mediaType)
             => DbSet.IgnoreQueryFilters()
                 .Where(x => x.SHA256Hash == sha256Hash)
                 .Where(x => GetMediaType(x) == mediaType);
@@ -98,7 +98,7 @@ namespace platform_core_service.Business.Services.Base
 
                 fileDestination = await BuildFinalDestination(file.FileName);
                 var hash = await HelperUtils.HashFileAsync(file);
-                var sameHashMedia = await GetDuplicateQuery(hash, PostMediaType.Image).FirstOrDefaultAsync();
+                var sameHashMedia = await GetDuplicateQuery(hash, ContentMediaType.Image).FirstOrDefaultAsync();
 
                 if (sameHashMedia != null)
                 {
@@ -118,7 +118,7 @@ namespace platform_core_service.Business.Services.Base
                 else
                 {
                     await SaveFile(file, fileDestination);
-                    sameHashMedia = CreateEntity(fileDestination, hash, PostMediaType.Image);
+                    sameHashMedia = CreateEntity(fileDestination, hash, ContentMediaType.Image);
                     await DbSet.AddAsync(sameHashMedia);
                 }
 
@@ -153,7 +153,7 @@ namespace platform_core_service.Business.Services.Base
                     return returnResult;
                 }
 
-                var existing = await GetDuplicateQuery(dto.HashFile, PostMediaType.Video).FirstOrDefaultAsync();
+                var existing = await GetDuplicateQuery(dto.HashFile, ContentMediaType.Video).FirstOrDefaultAsync();
                 if (existing != null)
                 {
                     if (existing.Deleted)
@@ -229,7 +229,7 @@ namespace platform_core_service.Business.Services.Base
 
             try
             {
-                var existing = await GetDuplicateQuery(dto.FileHash, PostMediaType.Video).FirstOrDefaultAsync();
+                var existing = await GetDuplicateQuery(dto.FileHash, ContentMediaType.Video).FirstOrDefaultAsync();
                 if (existing != null && !existing.Deleted)
                 {
                     returnResult.Result = _mapper.Map<TSelectDto>(existing);
@@ -262,7 +262,7 @@ namespace platform_core_service.Business.Services.Base
                     }
                 }
 
-                var media = existing ?? CreateEntity(finalDestination, dto.FileHash, PostMediaType.Video);
+                var media = existing ?? CreateEntity(finalDestination, dto.FileHash, ContentMediaType.Video);
                 if (existing == null)
                 {
                     await DbSet.AddAsync(media);

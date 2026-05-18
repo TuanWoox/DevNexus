@@ -30,11 +30,11 @@ namespace platform_core_service.Business.Services
         protected override IQueryable<CommentMedia> IncludeNavigation(IQueryable<CommentMedia> query)
             => query.Include(x => x.Comment).ThenInclude(x => x.Post)
                 .Include(x => x.Comment).ThenInclude(x => x.Answer).ThenInclude(x => x.QAPost);
-        protected override PostMediaType GetMediaType(CommentMedia entity) => entity.CommentMediaType;
-        protected override IQueryable<CommentMedia> GetDuplicateQuery(string sha256Hash, PostMediaType mediaType)
+        protected override ContentMediaType GetMediaType(CommentMedia entity) => entity.CommentMediaType;
+        protected override IQueryable<CommentMedia> GetDuplicateQuery(string sha256Hash, ContentMediaType mediaType)
             => DbSet.IgnoreQueryFilters().Where(x => x.SHA256Hash == sha256Hash && x.CommentMediaType == mediaType);
 
-        protected override CommentMedia CreateEntity(string storeDestination, string sha256Hash, PostMediaType mediaType)
+        protected override CommentMedia CreateEntity(string storeDestination, string sha256Hash, ContentMediaType mediaType)
             => new() { StoreDestination = storeDestination, SHA256Hash = sha256Hash, CommentMediaType = mediaType };
     }
 }

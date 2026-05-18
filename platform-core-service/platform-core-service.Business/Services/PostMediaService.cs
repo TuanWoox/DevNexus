@@ -28,11 +28,11 @@ namespace platform_core_service.Business.Services
         protected override string MediaFolderName => "post-media";
         protected override string CacheKeyPrefix => "post-media-";
         protected override IQueryable<PostMedia> IncludeNavigation(IQueryable<PostMedia> query) => query.Include(x => x.Post);
-        protected override PostMediaType GetMediaType(PostMedia entity) => entity.PostMediaType;
-        protected override IQueryable<PostMedia> GetDuplicateQuery(string sha256Hash, PostMediaType mediaType)
+        protected override ContentMediaType GetMediaType(PostMedia entity) => entity.PostMediaType;
+        protected override IQueryable<PostMedia> GetDuplicateQuery(string sha256Hash, ContentMediaType mediaType)
             => DbSet.IgnoreQueryFilters().Where(x => x.SHA256Hash == sha256Hash && x.PostMediaType == mediaType);
 
-        protected override PostMedia CreateEntity(string storeDestination, string sha256Hash, PostMediaType mediaType)
+        protected override PostMedia CreateEntity(string storeDestination, string sha256Hash, ContentMediaType mediaType)
             => new() { StoreDestination = storeDestination, SHA256Hash = sha256Hash, PostMediaType = mediaType };
 
         public Task<string> GetPostMedia(string Id) => GetMedia(Id);

@@ -29,11 +29,11 @@ namespace platform_core_service.Business.Services
         protected override string CacheKeyPrefix => "answer-media-";
         protected override IQueryable<AnswerMedia> IncludeNavigation(IQueryable<AnswerMedia> query)
             => query.Include(x => x.Answer).ThenInclude(x => x.QAPost);
-        protected override PostMediaType GetMediaType(AnswerMedia entity) => entity.AnswerMediaType;
-        protected override IQueryable<AnswerMedia> GetDuplicateQuery(string sha256Hash, PostMediaType mediaType)
+        protected override ContentMediaType GetMediaType(AnswerMedia entity) => entity.AnswerMediaType;
+        protected override IQueryable<AnswerMedia> GetDuplicateQuery(string sha256Hash, ContentMediaType mediaType)
             => DbSet.IgnoreQueryFilters().Where(x => x.SHA256Hash == sha256Hash && x.AnswerMediaType == mediaType);
 
-        protected override AnswerMedia CreateEntity(string storeDestination, string sha256Hash, PostMediaType mediaType)
+        protected override AnswerMedia CreateEntity(string storeDestination, string sha256Hash, ContentMediaType mediaType)
             => new() { StoreDestination = storeDestination, SHA256Hash = sha256Hash, AnswerMediaType = mediaType };
     }
 }

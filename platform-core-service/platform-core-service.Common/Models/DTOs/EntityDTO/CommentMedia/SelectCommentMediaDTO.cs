@@ -6,6 +6,6 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.CommentMedia
     public class SelectCommentMediaDTO : BaseMediaEntity<string>
     {
         public string? CommentId { get; set; }
-        public PostMediaType CommentMediaType { get; set; }
+        public ContentMediaType CommentMediaType { get; set; }
     }
 }

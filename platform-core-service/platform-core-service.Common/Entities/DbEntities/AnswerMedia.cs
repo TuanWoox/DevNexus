@@ -13,7 +13,7 @@ namespace platform_core_service.Common.Entities.DbEntities
         [JsonIgnore]
         public Answer? Answer { get; set; }
 
-        public PostMediaType AnswerMediaType { get; set; }
+        public ContentMediaType AnswerMediaType { get; set; }
 
         public string GetAuthorId() => Answer?.AuthorId ?? "";
         public string? GetCommunityId() => Answer?.QAPost?.CommunityId;

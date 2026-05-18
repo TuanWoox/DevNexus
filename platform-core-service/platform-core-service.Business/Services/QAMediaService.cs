@@ -28,11 +28,11 @@ namespace platform_core_service.Business.Services
         protected override string MediaFolderName => "qa-media";
         protected override string CacheKeyPrefix => "qa-media-";
         protected override IQueryable<QAMedia> IncludeNavigation(IQueryable<QAMedia> query) => query.Include(x => x.QAPost);
-        protected override PostMediaType GetMediaType(QAMedia entity) => entity.QAMediaType;
-        protected override IQueryable<QAMedia> GetDuplicateQuery(string sha256Hash, PostMediaType mediaType)
+        protected override ContentMediaType GetMediaType(QAMedia entity) => entity.QAMediaType;
+        protected override IQueryable<QAMedia> GetDuplicateQuery(string sha256Hash, ContentMediaType mediaType)
             => DbSet.IgnoreQueryFilters().Where(x => x.SHA256Hash == sha256Hash && x.QAMediaType == mediaType);
 
-        protected override QAMedia CreateEntity(string storeDestination, string sha256Hash, PostMediaType mediaType)
+        protected override QAMedia CreateEntity(string storeDestination, string sha256Hash, ContentMediaType mediaType)
             => new() { StoreDestination = storeDestination, SHA256Hash = sha256Hash, QAMediaType = mediaType };
 
         public Task<string> GetQAMedia(string Id) => GetMedia(Id);

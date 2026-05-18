@@ -11,6 +11,6 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.QAMedia
     public class SelectQAMediaDTO : BaseMediaEntity<string>
     {
         public string? QAPostId { get; set; }
-        public PostMediaType QAMediaType { get; set; }
+        public ContentMediaType QAMediaType { get; set; }
     }
 }

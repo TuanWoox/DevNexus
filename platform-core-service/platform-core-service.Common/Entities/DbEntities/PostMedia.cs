@@ -1,4 +1,4 @@
-﻿using platform_core_service.Common.Entities.BaseEntity;
+using platform_core_service.Common.Entities.BaseEntity;
 using platform_core_service.Common.Utils.Enums;
 using System;
 using System.Collections.Generic;
@@ -16,7 +16,7 @@ namespace platform_core_service.Common.Entities.DbEntities
         public string? PostId { get; set; }
         [JsonIgnore]
         public Post? Post { get; set; }
-        public PostMediaType PostMediaType { get; set; }
+        public ContentMediaType PostMediaType { get; set; }
 
         public string GetAuthorId() => Post?.AuthorId ?? "";
         public string? GetCommunityId() => Post?.CommunityId;
