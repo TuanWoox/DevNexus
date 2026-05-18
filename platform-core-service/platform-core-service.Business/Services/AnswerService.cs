@@ -78,6 +78,12 @@ namespace platform_core_service.Business.Services
                 _dbContext.Answers.Add(answer);
                 await _dbContext.SaveChangesAsync();
 
+                if (answerDTO.MediaIds.Count > 0)
+                {
+                    _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x =>
+                        x.UpdateAnswerMediaAnswerId(_userContext.UserId, answer.Id, answerDTO.MediaIds));
+                }
+
                 await PublishAnswerNotificationAsync(answer.Id, profileId);
 
                 // Step 6: Reload with author and return
@@ -201,6 +207,12 @@ namespace platform_core_service.Business.Services
                 _mapper.Map(answerDTO, answer);
                 _dbContext.Answers.Update(answer);
                 await _dbContext.SaveChangesAsync();
+
+                if (answerDTO.MediaIds?.Count > 0)
+                {
+                    _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x =>
+                        x.UpdateAnswerMediaAnswerId(_userContext.UserId, answerDTO.Id, answerDTO.MediaIds));
+                }
 
                 var saved = await _dbContext.Answers
                     .Include(a => a.Author)

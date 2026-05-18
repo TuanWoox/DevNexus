@@ -117,6 +117,12 @@ namespace platform_core_service.Business.Services
                 _context.Comments.Add(comment);
                 await _context.SaveChangesAsync();
 
+                if (createDTO.MediaIds.Count > 0)
+                {
+                    _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x =>
+                        x.UpdateCommentMediaCommentId(_userContext.UserId, comment.Id, createDTO.MediaIds));
+                }
+
                 // Step 7: Return mapped DTO with includes
                 var savedComment = await _context.Comments
                     .Include(c => c.Author)
@@ -312,6 +318,12 @@ namespace platform_core_service.Business.Services
                 // Step 5: Save changes
                 _context.Comments.Update(comment);
                 await _context.SaveChangesAsync();
+
+                if (updateDTO.MediaIds?.Count > 0)
+                {
+                    _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x =>
+                        x.UpdateCommentMediaCommentId(_userContext.UserId, commentId, updateDTO.MediaIds));
+                }
 
                 // Step 6: Reload and return
                 var updatedComment = await _context.Comments
