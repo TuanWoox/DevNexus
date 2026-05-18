@@ -15,8 +15,6 @@ using platform_core_service.Data;
 using PostTagEntity = platform_core_service.Common.Entities.DbEntities.PostTag;
 using TagEntity = platform_core_service.Common.Entities.DbEntities.Tag;
 using platform_core_service.Common.Utils.Enums;
-using Hangfire;
-using platform_core_service.Common.Interfaces.BackgroundJobs;
 
 namespace platform_core_service.Business.Services
 {
@@ -26,33 +24,33 @@ namespace platform_core_service.Business.Services
         private readonly IUserContext _userContext;
         private readonly IMapper _mapper;
         private readonly IRepository<QAPost, string> _qaPostRepository;
-        private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IAiWorkerClient _aiWorkerClient;
         private readonly IConfigurationService _configurationService;
         private readonly ISocialGuardService _socialGuardService;
         private readonly IModerationService _moderationService;
+        private readonly IContentMediaLinkService _contentMediaLinkService;
 
         public QAPostService(
             ApplicationDbContext dbContext,
             IUserContext userContext,
             IMapper mapper,
             IRepository<QAPost, string> qaPostRepository,
-            IBackgroundJobClient backgroundJobClient,
             IAiWorkerClient aiWorkerClient,
             IConfigurationService configurationService,
             ISocialGuardService socialGuardService,
-            IModerationService moderationService
+            IModerationService moderationService,
+            IContentMediaLinkService contentMediaLinkService
             )
         {
             _dbContext = dbContext;
             _userContext = userContext;
             _mapper = mapper;
             _qaPostRepository = qaPostRepository;
-            _backgroundJobClient = backgroundJobClient;
             _aiWorkerClient = aiWorkerClient;
             _configurationService = configurationService;
             _socialGuardService = socialGuardService;
             _moderationService = moderationService;
+            _contentMediaLinkService = contentMediaLinkService;
         }
 
         public async Task<ReturnResult<SelectQAPostDTO>> CreateAsync(CreateQAPostDTO createDTO)
@@ -101,8 +99,8 @@ namespace platform_core_service.Business.Services
                 _dbContext.Posts.Add(qaPost);
                 await _dbContext.SaveChangesAsync();
 
-                // Step 7: Link pre-uploaded QA media (upload-first flow)
-                if(createDTO.MediaIds.Count > 0 ) _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x => x.UpdateQAPostMediaQAPostId(_userContext.UserId, qaPost.Id, createDTO.MediaIds));
+                // Step 7: Link pre-uploaded QA media before returning so media URLs render immediately.
+                await _contentMediaLinkService.LinkQAMediaAsync(_userContext.UserId, qaPost.Id, createDTO.MediaIds);
 
                 // Step 8: Reload with relations and return mapped DTO
                 var savedPost = await _dbContext.Posts
@@ -413,8 +411,8 @@ namespace platform_core_service.Business.Services
                 _dbContext.Posts.Update(qaPost);
                 await _dbContext.SaveChangesAsync();
 
-                // Step 8: Link any newly provided pre-uploaded QA media
-                if (updateDTO.MediaIds?.Count > 0) _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x => x.UpdateQAPostMediaQAPostId(_userContext.UserId, postId, updateDTO.MediaIds));
+                // Step 8: Link any newly provided pre-uploaded QA media before returning.
+                await _contentMediaLinkService.LinkQAMediaAsync(_userContext.UserId, postId, updateDTO.MediaIds);
 
                 // Step 9: Reset and re-submit for moderation.
                 // Edited content must pass the pipeline again before becoming visible.

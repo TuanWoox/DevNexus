@@ -21,7 +21,7 @@ export function rehypeVideoPlugin() {
                 node.properties = {
                     src: node.properties.src,
                     controls: true,
-                    style: 'max-width: 100%; height: auto; border-radius: 0.75rem; margin-top: 0.5rem;'
+                    style: 'display: block; width: min(100%, 840px); max-height: 480px; height: auto; object-fit: contain; border-radius: 0.75rem; margin: 0.75rem auto 0;'
                 };
                 node.children = [];
             }

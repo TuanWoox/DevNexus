@@ -1,12 +1,14 @@
 'use client'
 
-import { ChangeEvent, ClipboardEvent, DragEvent, forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
+import { ChangeEvent, ClipboardEvent, DragEvent, forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import rehypeSanitize from 'rehype-sanitize'
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import '@uiw/react-md-editor/markdown-editor.css'
 import '@uiw/react-markdown-preview/markdown.css'
 
 import { MDEditorProps } from '@uiw/react-md-editor'
+import type { ICommand } from '@uiw/react-md-editor/commands'
+import * as markdownCommands from '@uiw/react-md-editor/commands'
 import { Video } from 'lucide-react'
 import { ContentType } from '@/types/content-media/content-type'
 import { rehypeVideoPlugin } from './rehype-video-plugin'
@@ -27,10 +29,16 @@ interface MarkdownEditorProps extends MDEditorProps {
 
 const IMAGE_EXTENSION_REGEX = /\.(jpg|jpeg|png|gif|webp)$/i;
 const VIDEO_ACCEPT = '.mp4,.mov,.avi,.mkv,.webm,.flv,.wmv';
+const editorPreviewSchema = {
+    ...defaultSchema,
+    protocols: {
+        ...defaultSchema.protocols,
+        src: [...(defaultSchema.protocols?.src || []), 'blob']
+    }
+};
 
-export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(({ contentType, ...props }, ref) => {
+export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(({ contentType, commands, ...props }, ref) => {
     const wrapperRef = useRef<HTMLDivElement>(null);
-    const videoInputRef = useRef<HTMLInputElement>(null);
     const pendingRegistry = useRef<Map<string, File>>(new Map());
 
     const cleanup = () => {
@@ -71,6 +79,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
 
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
+
+        textarea.focus();
+        textarea.setSelectionRange(start, end);
+
+        if (document.execCommand('insertText', false, markdown)) {
+            return;
+        }
+
         const nextValue = `${value.slice(0, start)}${markdown}${value.slice(end)}`;
         emitChange(nextValue);
 
@@ -113,39 +129,53 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         registerFile(file, 'video');
     };
 
+    const editorCommands = useMemo<ICommand[]>(() => {
+        const baseCommands = commands || markdownCommands.getCommands();
+        if (contentType === undefined) return baseCommands;
+
+        const videoCommand: ICommand = {
+            name: 'upload-video',
+            keyCommand: 'upload-video',
+            buttonProps: { 'aria-label': 'Attach video', title: 'Attach video' },
+            render: () => (
+                <label className="inline-flex h-full cursor-pointer items-center px-1" title="Attach video">
+                    <Video className="h-3.5 w-3.5" />
+                    <input
+                        type="file"
+                        accept={VIDEO_ACCEPT}
+                        className="hidden"
+                        onChange={handleVideoSelect}
+                    />
+                </label>
+            )
+        };
+
+        const imageCommandIndex = baseCommands.findIndex((command) => command.name === 'image' || command.keyCommand === 'image');
+        if (imageCommandIndex < 0) return [...baseCommands, videoCommand];
+
+        return [
+            ...baseCommands.slice(0, imageCommandIndex + 1),
+            videoCommand,
+            ...baseCommands.slice(imageCommandIndex + 1)
+        ];
+    }, [commands, contentType]);
+
     return (
         <div
             ref={wrapperRef}
             onPaste={handlePaste}
             onDrop={handleDrop}
             onDragOver={(event) => event.preventDefault()}
-            className="relative w-full [&_.w-md-editor]:border-0 [&_.w-md-editor]:bg-transparent [&_.w-md-editor-toolbar]:bg-subtle [&_.w-md-editor-toolbar]:border-b [&_.w-md-editor-toolbar]:border-default [&_.wmde-markdown_ul]:list-disc [&_.wmde-markdown_ul]:ml-5 [&_.wmde-markdown_ol]:list-decimal [&_.wmde-markdown_ol]:ml-5 [&_.wmde-markdown_li]:mb-1 [&_video]:max-w-full [&_video]:rounded-xl [&_video]:mt-2"
+            className="relative w-full [&_.w-md-editor]:border-0 [&_.w-md-editor]:bg-transparent [&_.w-md-editor-toolbar]:bg-subtle [&_.w-md-editor-toolbar]:border-b [&_.w-md-editor-toolbar]:border-default [&_.wmde-markdown_ul]:list-disc [&_.wmde-markdown_ul]:ml-5 [&_.wmde-markdown_ol]:list-decimal [&_.wmde-markdown_ol]:ml-5 [&_.wmde-markdown_li]:mb-1 [&_img]:mx-auto [&_img]:max-w-full [&_img]:max-h-[560px] [&_img]:object-contain [&_video]:mx-auto [&_video]:max-w-full [&_video]:max-h-[480px] [&_video]:object-contain [&_video]:rounded-xl [&_video]:mt-3"
         >
-            {contentType !== undefined && (
-                <button
-                    type="button"
-                    onClick={() => videoInputRef.current?.click()}
-                    className="absolute right-2 top-2 z-10 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-heading transition-colors"
-                    aria-label="Attach video"
-                    title="Attach video"
-                >
-                    <Video className="h-4 w-4" />
-                    <input
-                        ref={videoInputRef}
-                        type="file"
-                        accept={VIDEO_ACCEPT}
-                        className="hidden"
-                        onChange={handleVideoSelect}
-                    />
-                </button>
-            )}
             <MDEditor
                 previewOptions={{
-                    rehypePlugins: [[rehypeSanitize], rehypeVideoPlugin]
+                    rehypePlugins: [[rehypeSanitize, editorPreviewSchema], rehypeVideoPlugin]
                 }}
                 minHeight={100}
                 height={150}
                 preview="edit"
+                commands={editorCommands}
                 {...props}
             />
         </div>

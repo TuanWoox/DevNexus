@@ -16,8 +16,8 @@ export const MarkdownViewer = ({ source }: MarkdownViewerProps) => {
                 source={source}
                 rehypePlugins={[[rehypeSanitize], rehypeVideoPlugin]}
                 className="!bg-transparent text-sm break-words [overflow-wrap:anywhere] [&_pre]:max-w-full [&_pre]:overflow-x-auto
-                [&_code]:break-words [&_img]:max-w-full [&_img]:rounded-xl [&_img]:mt-2 prose prose-sm dark:prose-invert
-                [&_video]:max-w-full [&_video]:rounded-xl [&_video]:mt-2 max-w-none prose-p:my-0 prose-pre:my-2 prose-pre:p-3 prose-a:text-primary
+                [&_code]:break-words [&_img]:mx-auto [&_img]:max-w-full [&_img]:max-h-[560px] [&_img]:object-contain [&_img]:rounded-xl [&_img]:mt-2 prose prose-sm dark:prose-invert
+                [&_video]:mx-auto [&_video]:max-w-full [&_video]:max-h-[480px] [&_video]:object-contain [&_video]:rounded-xl [&_video]:mt-3 max-w-none prose-p:my-0 prose-pre:my-2 prose-pre:p-3 prose-a:text-primary
                 [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_li]:mb-1"
             />
         </div>

@@ -24,19 +24,22 @@ namespace platform_core_service.Business.Services
         private readonly IUserContext _userContext;
         private readonly IRepository<CommentEntity, string> _commentRepository;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IContentMediaLinkService _contentMediaLinkService;
 
         public CommentService(
             ApplicationDbContext context,
             IMapper mapper,
             IUserContext userContext,
             IRepository<CommentEntity, string> commentRepository,
-            IBackgroundJobClient backgroundJobClient)
+            IBackgroundJobClient backgroundJobClient,
+            IContentMediaLinkService contentMediaLinkService)
         {
             _context = context;
             _mapper = mapper;
             _userContext = userContext;
             _commentRepository = commentRepository;
             _backgroundJobClient = backgroundJobClient;
+            _contentMediaLinkService = contentMediaLinkService;
         }
 
         public async Task<ReturnResult<SelectCommentDTO>> CreateAsync(CreateCommentDTO createDTO)
@@ -117,11 +120,7 @@ namespace platform_core_service.Business.Services
                 _context.Comments.Add(comment);
                 await _context.SaveChangesAsync();
 
-                if (createDTO.MediaIds.Count > 0)
-                {
-                    _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x =>
-                        x.UpdateCommentMediaCommentId(_userContext.UserId, comment.Id, createDTO.MediaIds));
-                }
+                await _contentMediaLinkService.LinkCommentMediaAsync(_userContext.UserId, comment.Id, createDTO.MediaIds);
 
                 // Step 7: Return mapped DTO with includes
                 var savedComment = await _context.Comments
@@ -319,11 +318,7 @@ namespace platform_core_service.Business.Services
                 _context.Comments.Update(comment);
                 await _context.SaveChangesAsync();
 
-                if (updateDTO.MediaIds?.Count > 0)
-                {
-                    _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x =>
-                        x.UpdateCommentMediaCommentId(_userContext.UserId, commentId, updateDTO.MediaIds));
-                }
+                await _contentMediaLinkService.LinkCommentMediaAsync(_userContext.UserId, commentId, updateDTO.MediaIds);
 
                 // Step 6: Reload and return
                 var updatedComment = await _context.Comments

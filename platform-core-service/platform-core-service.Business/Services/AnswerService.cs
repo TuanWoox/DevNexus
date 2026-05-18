@@ -23,19 +23,22 @@ namespace platform_core_service.Business.Services
         private readonly IMapper _mapper;
         private readonly IRepository<Answer, string> _answerRepository;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IContentMediaLinkService _contentMediaLinkService;
 
         public AnswerService(
             ApplicationDbContext dbContext,
             IUserContext userContext,
             IMapper mapper,
             IRepository<Answer, string> answerRepository,
-            IBackgroundJobClient backgroundJobClient)
+            IBackgroundJobClient backgroundJobClient,
+            IContentMediaLinkService contentMediaLinkService)
         {
             _dbContext = dbContext;
             _userContext = userContext;
             _mapper = mapper;
             _answerRepository = answerRepository;
             _backgroundJobClient = backgroundJobClient;
+            _contentMediaLinkService = contentMediaLinkService;
         }
 
         public async Task<ReturnResult<SelectAnswerDTO>> CreateAsync(CreateAnswerDTO answerDTO)
@@ -78,11 +81,7 @@ namespace platform_core_service.Business.Services
                 _dbContext.Answers.Add(answer);
                 await _dbContext.SaveChangesAsync();
 
-                if (answerDTO.MediaIds.Count > 0)
-                {
-                    _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x =>
-                        x.UpdateAnswerMediaAnswerId(_userContext.UserId, answer.Id, answerDTO.MediaIds));
-                }
+                await _contentMediaLinkService.LinkAnswerMediaAsync(_userContext.UserId, answer.Id, answerDTO.MediaIds);
 
                 await PublishAnswerNotificationAsync(answer.Id, profileId);
 
@@ -208,11 +207,7 @@ namespace platform_core_service.Business.Services
                 _dbContext.Answers.Update(answer);
                 await _dbContext.SaveChangesAsync();
 
-                if (answerDTO.MediaIds?.Count > 0)
-                {
-                    _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x =>
-                        x.UpdateAnswerMediaAnswerId(_userContext.UserId, answerDTO.Id, answerDTO.MediaIds));
-                }
+                await _contentMediaLinkService.LinkAnswerMediaAsync(_userContext.UserId, answerDTO.Id, answerDTO.MediaIds);
 
                 var saved = await _dbContext.Answers
                     .Include(a => a.Author)

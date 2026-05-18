@@ -42,7 +42,9 @@ namespace platform_core_service.Controllers
             };
 
             if (string.IsNullOrEmpty(fileDestination) || !System.IO.File.Exists(fileDestination)) return NotFound();
-            return PhysicalFile(fileDestination, GetMimeType(fileDestination));
+            var fileResult = PhysicalFile(fileDestination, GetMimeType(fileDestination));
+            fileResult.EnableRangeProcessing = true;
+            return fileResult;
         }
 
         [HttpPost("upload-image")]
@@ -118,6 +120,12 @@ namespace platform_core_service.Controllers
                 ".gif" => "image/gif",
                 ".webp" => "image/webp",
                 ".mp4" => "video/mp4",
+                ".webm" => "video/webm",
+                ".mov" => "video/quicktime",
+                ".avi" => "video/x-msvideo",
+                ".mkv" => "video/x-matroska",
+                ".flv" => "video/x-flv",
+                ".wmv" => "video/x-ms-wmv",
                 _ => "application/octet-stream"
             };
         }
