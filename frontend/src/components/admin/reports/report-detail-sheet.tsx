@@ -1,23 +1,30 @@
 "use client";
 
 import { Calendar, FileText, ShieldAlert, User } from "lucide-react";
+import { useSelector } from "react-redux";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetAdminReportDetail } from "@/hooks/admin/use-get-admin-report-detail";
 import { AdminReportDTO } from "@/types/admin/admin-report-dto";
+import { RootState } from "@/store/store";
 import { reportReasonLabels } from "@/types/report/report-reason";
+import { ReportStatus } from "@/types/report/report-status";
 import { ReportStatusBadge } from "./report-status-badge";
+import { ReportActionType } from "./report-action-dialog";
 
 interface ReportDetailSheetProps {
   open: boolean;
   onClose: () => void;
   report: AdminReportDTO | null;
+  onAction?: (report: AdminReportDTO, action: ReportActionType) => void;
 }
 
 function formatDate(iso?: string | null) {
@@ -52,9 +59,20 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
-export function ReportDetailSheet({ open, onClose, report }: ReportDetailSheetProps) {
+function isClosed(report: AdminReportDTO) {
+  return report.status === ReportStatus.Resolved || report.status === ReportStatus.Dismissed;
+}
+
+export function ReportDetailSheet({ open, onClose, report, onAction }: ReportDetailSheetProps) {
+  const userRoles = useSelector((state: RootState) => state.auth.user?.roles ?? []);
+  const isAdmin = userRoles.includes("Admin");
   const { data, isLoading } = useGetAdminReportDetail(report?.id, open);
   const activeReport = data?.report ?? report;
+  const canEscalate = !!activeReport && (activeReport.status === ReportStatus.Pending || activeReport.status === ReportStatus.InReview);
+  const canAct = !!activeReport &&
+    !isClosed(activeReport) &&
+    (activeReport.status !== ReportStatus.Escalated || isAdmin) &&
+    (!activeReport.isStaffSensitive || isAdmin);
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
@@ -143,6 +161,33 @@ export function ReportDetailSheet({ open, onClose, report }: ReportDetailSheetPr
             </section>
           </div>
         )}
+        <SheetFooter className="border-t border-border bg-background/95 px-6 py-4">
+          <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Close
+            </Button>
+            {activeReport && canAct && (
+              <Button type="button" variant="secondary" onClick={() => onAction?.(activeReport, "assign")}>
+                Assign to me
+              </Button>
+            )}
+            {activeReport && canAct && (
+              <Button type="button" onClick={() => onAction?.(activeReport, "resolve")}>
+                Resolve
+              </Button>
+            )}
+            {activeReport && canAct && (
+              <Button type="button" variant="destructive" onClick={() => onAction?.(activeReport, "dismiss")}>
+                Dismiss
+              </Button>
+            )}
+            {activeReport && canEscalate && (
+              <Button type="button" variant="outline" onClick={() => onAction?.(activeReport, "escalate")}>
+                Escalate
+              </Button>
+            )}
+          </div>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );

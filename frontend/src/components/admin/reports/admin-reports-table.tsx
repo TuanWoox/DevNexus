@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, MoreHorizontal } from "lucide-react";
+import { CheckCircle2, Eye, MoreHorizontal, ShieldAlert, UserCheck, XCircle } from "lucide-react";
+import { useSelector } from "react-redux";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -11,10 +12,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AdminReportDTO } from "@/types/admin/admin-report-dto";
+import { RootState } from "@/store/store";
 import { reportReasonLabels } from "@/types/report/report-reason";
 import { ReportStatus } from "@/types/report/report-status";
 import { ReportStatusBadge } from "./report-status-badge";
 import { ReportDetailSheet } from "./report-detail-sheet";
+import { ReportActionDialog, ReportActionPayload, ReportActionType } from "./report-action-dialog";
+import { useAssignReportToMe } from "@/hooks/admin/use-assign-report-to-me";
+import { useResolveReport } from "@/hooks/admin/use-resolve-report";
+import { useDismissReport } from "@/hooks/admin/use-dismiss-report";
+import { useEscalateReport } from "@/hooks/admin/use-escalate-report";
+import { ReportResolution } from "@/types/report/report-resolution";
 
 type TabValue = "open" | "pending" | "inreview" | "escalated" | "closed" | "all";
 
@@ -35,7 +43,85 @@ function targetTypeLabel(value: number) {
 }
 
 export function AdminReportsTable({ reports, isLoading, activeTab, onTabChange }: AdminReportsTableProps) {
+  const userRoles = useSelector((state: RootState) => state.auth.user?.roles ?? []);
+  const isAdmin = userRoles.includes("Admin");
   const [selectedReport, setSelectedReport] = useState<AdminReportDTO | null>(null);
+  const [actionState, setActionState] = useState<{
+    open: boolean;
+    action: ReportActionType;
+    report: AdminReportDTO | null;
+  }>({ open: false, action: "assign", report: null });
+  const assignMutation = useAssignReportToMe();
+  const resolveMutation = useResolveReport();
+  const dismissMutation = useDismissReport();
+  const escalateMutation = useEscalateReport();
+  const isActionPending = assignMutation.isPending || resolveMutation.isPending || dismissMutation.isPending || escalateMutation.isPending;
+
+  function isClosed(report: AdminReportDTO) {
+    return report.status === ReportStatus.Resolved || report.status === ReportStatus.Dismissed;
+  }
+
+  function canModify(report: AdminReportDTO) {
+    if (isClosed(report)) return false;
+    if (report.status === ReportStatus.Escalated && !isAdmin) return false;
+    return !report.isStaffSensitive || isAdmin;
+  }
+
+  function canEscalate(report: AdminReportDTO) {
+    return report.status === ReportStatus.Pending || report.status === ReportStatus.InReview;
+  }
+
+  function openAction(report: AdminReportDTO, action: ReportActionType) {
+    setActionState({ open: true, action, report });
+  }
+
+  function closeAction() {
+    if (!isActionPending) {
+      setActionState((current) => ({ ...current, open: false }));
+    }
+  }
+
+  function handleActionConfirm(payload: ReportActionPayload) {
+    if (!actionState.report) return;
+    const id = actionState.report.id;
+    const options = { onSuccess: () => setActionState((current) => ({ ...current, open: false })) };
+
+    if (actionState.action === "assign") {
+      assignMutation.mutate({ id, payload: { note: payload.note } }, options);
+      return;
+    }
+
+    if (actionState.action === "resolve") {
+      resolveMutation.mutate({
+        id,
+        payload: {
+          resolution: payload.resolution ?? ReportResolution.ViolationConfirmed,
+          moderatorNote: payload.note,
+          resolutionNote: payload.resolutionNote,
+        },
+      }, options);
+      return;
+    }
+
+    if (actionState.action === "dismiss") {
+      dismissMutation.mutate({
+        id,
+        payload: {
+          resolution: payload.resolution ?? ReportResolution.NoViolation,
+          moderatorNote: payload.note,
+        },
+      }, options);
+      return;
+    }
+
+    escalateMutation.mutate({
+      id,
+      payload: {
+        moderatorNote: payload.note,
+        escalationReason: payload.escalationReason,
+      },
+    }, options);
+  }
 
   if (isLoading) {
     return (
@@ -117,6 +203,30 @@ export function AdminReportsTable({ reports, isLoading, activeTab, onTabChange }
                             <Eye className="h-4 w-4" />
                             View detail
                           </DropdownMenuItem>
+                          {canModify(report) && (
+                            <DropdownMenuItem onClick={() => openAction(report, "assign")}>
+                              <UserCheck className="h-4 w-4" />
+                              Assign to me
+                            </DropdownMenuItem>
+                          )}
+                          {canModify(report) && (
+                            <DropdownMenuItem onClick={() => openAction(report, "resolve")}>
+                              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                              Resolve
+                            </DropdownMenuItem>
+                          )}
+                          {canModify(report) && (
+                            <DropdownMenuItem onClick={() => openAction(report, "dismiss")}>
+                              <XCircle className="h-4 w-4" />
+                              Dismiss
+                            </DropdownMenuItem>
+                          )}
+                          {canEscalate(report) && (
+                            <DropdownMenuItem onClick={() => openAction(report, "escalate")}>
+                              <ShieldAlert className="h-4 w-4 text-amber-500" />
+                              Escalate
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -132,7 +242,17 @@ export function AdminReportsTable({ reports, isLoading, activeTab, onTabChange }
         open={!!selectedReport}
         onClose={() => setSelectedReport(null)}
         report={selectedReport}
+        onAction={openAction}
       />
+      {actionState.open && (
+        <ReportActionDialog
+          open={actionState.open}
+          action={actionState.action}
+          isPending={isActionPending}
+          onClose={closeAction}
+          onConfirm={handleActionConfirm}
+        />
+      )}
     </>
   );
 }
