@@ -13,7 +13,7 @@ using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 
-namespace platform_core_service.Business.Services.Base
+namespace platform_core_service.Business.Abstracts
 {
     public abstract class BasePrimaryMediaService<TEntity, TCreateDto, TUpdateDto, TSelectDto, TDisplayDto>
         where TEntity : class, IPrimaryMedia, new()

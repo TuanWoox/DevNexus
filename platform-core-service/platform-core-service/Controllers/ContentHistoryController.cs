@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using platform_core_service.Common.Interfaces.Factories;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.AnswerHistory;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommentHistory;

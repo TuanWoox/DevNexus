@@ -1,13 +1,14 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using platform_core_service.Business.Factories;
 using platform_core_service.Business.Contexts;
+using platform_core_service.Business.Factories;
 using platform_core_service.Business.Helper;
 using platform_core_service.Business.MessageBus;
 using platform_core_service.Business.Services;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces;
 using platform_core_service.Common.Interfaces.Contexts;
+using platform_core_service.Common.Interfaces.Factories;
 using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.MessageBus;
 using platform_core_service.Common.Interfaces.Services;
@@ -59,6 +60,7 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IQAMediaService, QAMediaService>();
             services.AddScoped<IAnswerMediaService, AnswerMediaService>();
             services.AddScoped<ICommentMediaService, CommentMediaService>();
+            services.AddScoped<IContentMediaServiceFactory, ContentMediaServiceFactory>();
             services.AddScoped<IContentMediaLinkService, ContentMediaLinkService>();
             services.AddScoped<IModerationService, ModerationService>();
             services.AddScoped<IMicroserviceSyncService, MicroserviceSyncService>();

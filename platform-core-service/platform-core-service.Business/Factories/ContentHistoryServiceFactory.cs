@@ -1,3 +1,4 @@
+using platform_core_service.Common.Interfaces.Factories;
 using platform_core_service.Common.Interfaces.Services;
 
 namespace platform_core_service.Business.Factories
@@ -21,9 +22,24 @@ namespace platform_core_service.Business.Factories
             _answerHistoryService = answerHistoryService;
         }
 
-        public IPostHistoryService GetPostHistoryService() => _postHistoryService;
-        public IQAPostHistoryService GetQAPostHistoryService() => _qaPostHistoryService;
-        public ICommentHistoryService GetCommentHistoryService() => _commentHistoryService;
-        public IAnswerHistoryService GetAnswerHistoryService() => _answerHistoryService;
+        public IPostHistoryService GetPostHistoryService()
+        {
+            return _postHistoryService;
+        }
+
+        public IQAPostHistoryService GetQAPostHistoryService()
+        {
+            return _qaPostHistoryService;
+        }
+
+        public ICommentHistoryService GetCommentHistoryService()
+        {
+            return _commentHistoryService;
+        }
+
+        public IAnswerHistoryService GetAnswerHistoryService()
+        {
+            return _answerHistoryService;
+        }
     }
 }
