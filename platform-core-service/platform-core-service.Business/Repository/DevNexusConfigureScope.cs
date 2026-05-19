@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using platform_core_service.Business.Factories;
 using platform_core_service.Business.Contexts;
 using platform_core_service.Business.Helper;
 using platform_core_service.Business.MessageBus;
@@ -35,6 +36,11 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IAnswerService, AnswerService>();
             services.AddScoped<IVoteService, VoteService>();
             services.AddScoped<ICommentService, CommentService>();
+            services.AddScoped<IPostHistoryService, PostHistoryService>();
+            services.AddScoped<IQAPostHistoryService, QAPostHistoryService>();
+            services.AddScoped<ICommentHistoryService, CommentHistoryService>();
+            services.AddScoped<IAnswerHistoryService, AnswerHistoryService>();
+            services.AddScoped<IContentHistoryServiceFactory, ContentHistoryServiceFactory>();
             services.AddScoped<ICommunityService, CommunityService>();
             services.AddScoped<ICommunityModeratorService, CommunityModeratorService>();
             services.AddScoped<ICommunityMemberService, CommunityMemberService>();

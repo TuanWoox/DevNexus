@@ -24,6 +24,7 @@ namespace platform_core_service.Business.Services
         private readonly IRepository<Answer, string> _answerRepository;
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IContentMediaLinkService _contentMediaLinkService;
+        private readonly IAnswerHistoryService _answerHistoryService;
 
         public AnswerService(
             ApplicationDbContext dbContext,
@@ -31,7 +32,8 @@ namespace platform_core_service.Business.Services
             IMapper mapper,
             IRepository<Answer, string> answerRepository,
             IBackgroundJobClient backgroundJobClient,
-            IContentMediaLinkService contentMediaLinkService)
+            IContentMediaLinkService contentMediaLinkService,
+            IAnswerHistoryService answerHistoryService)
         {
             _dbContext = dbContext;
             _userContext = userContext;
@@ -39,6 +41,7 @@ namespace platform_core_service.Business.Services
             _answerRepository = answerRepository;
             _backgroundJobClient = backgroundJobClient;
             _contentMediaLinkService = contentMediaLinkService;
+            _answerHistoryService = answerHistoryService;
         }
 
         public async Task<ReturnResult<SelectAnswerDTO>> CreateAsync(CreateAnswerDTO answerDTO)
@@ -84,6 +87,7 @@ namespace platform_core_service.Business.Services
                 await _contentMediaLinkService.LinkAnswerMediaAsync(_userContext.UserId, answer.Id, answerDTO.MediaIds);
 
                 await PublishAnswerNotificationAsync(answer.Id, profileId);
+                await _answerHistoryService.RecordHistoryAsync(answer.Id);
 
                 // Step 6: Reload with author and return
                 var saved = await _dbContext.Answers
@@ -228,6 +232,7 @@ namespace platform_core_service.Business.Services
                 await _dbContext.SaveChangesAsync();
 
                 await _contentMediaLinkService.LinkAnswerMediaAsync(_userContext.UserId, answerDTO.Id, answerDTO.MediaIds);
+                await _answerHistoryService.RecordHistoryAsync(answerDTO.Id);
 
                 var saved = await _dbContext.Answers
                     .Include(a => a.Author)

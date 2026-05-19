@@ -38,6 +38,10 @@ namespace platform_core_service.Data
         public DbSet<PostModerationResult> PostModerationResults { get; set; }
         public DbSet<ModerationQueueEntry> ModerationQueueEntries { get; set; }
         public DbSet<AdminAuditLog> AdminAuditLogs { get; set; }
+        public DbSet<PostHistory> PostHistories { get; set; }
+        public DbSet<QAPostHistory> QAPostHistories { get; set; }
+        public DbSet<CommentHistory> CommentHistories { get; set; }
+        public DbSet<AnswerHistory> AnswerHistories { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
@@ -136,6 +140,42 @@ namespace platform_core_service.Data
                 entity.HasIndex(e => new { e.ActorId, e.CreatedAt });
                 entity.HasIndex(e => new { e.TargetType, e.TargetId, e.CreatedAt });
                 entity.HasIndex(e => new { e.ActionType, e.CreatedAt });
+            });
+
+            builder.Entity<PostHistory>(entity =>
+            {
+                entity.HasIndex(e => new { e.PostId, e.DateCreated });
+                entity.HasOne(e => e.Post)
+                    .WithMany()
+                    .HasForeignKey(e => e.PostId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<QAPostHistory>(entity =>
+            {
+                entity.HasIndex(e => new { e.QAPostId, e.DateCreated });
+                entity.HasOne(e => e.QAPost)
+                    .WithMany()
+                    .HasForeignKey(e => e.QAPostId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<CommentHistory>(entity =>
+            {
+                entity.HasIndex(e => new { e.CommentId, e.DateCreated });
+                entity.HasOne(e => e.Comment)
+                    .WithMany()
+                    .HasForeignKey(e => e.CommentId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<AnswerHistory>(entity =>
+            {
+                entity.HasIndex(e => new { e.AnswerId, e.DateCreated });
+                entity.HasOne(e => e.Answer)
+                    .WithMany()
+                    .HasForeignKey(e => e.AnswerId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
 

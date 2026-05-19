@@ -29,6 +29,7 @@ namespace platform_core_service.Business.Services
         private readonly ISocialGuardService _socialGuardService;
         private readonly IModerationService _moderationService;
         private readonly IContentMediaLinkService _contentMediaLinkService;
+        private readonly IQAPostHistoryService _qaPostHistoryService;
 
         public QAPostService(
             ApplicationDbContext dbContext,
@@ -39,7 +40,8 @@ namespace platform_core_service.Business.Services
             IConfigurationService configurationService,
             ISocialGuardService socialGuardService,
             IModerationService moderationService,
-            IContentMediaLinkService contentMediaLinkService
+            IContentMediaLinkService contentMediaLinkService,
+            IQAPostHistoryService qaPostHistoryService
             )
         {
             _dbContext = dbContext;
@@ -51,6 +53,7 @@ namespace platform_core_service.Business.Services
             _socialGuardService = socialGuardService;
             _moderationService = moderationService;
             _contentMediaLinkService = contentMediaLinkService;
+            _qaPostHistoryService = qaPostHistoryService;
         }
 
         public async Task<ReturnResult<SelectQAPostDTO>> CreateAsync(CreateQAPostDTO createDTO)
@@ -130,6 +133,8 @@ namespace platform_core_service.Business.Services
                 {
                     await _aiWorkerClient.SubmitForModerationAsync(qaPost.Id, createDTO.Title, createDTO.Content);
                 }
+
+                await _qaPostHistoryService.RecordHistoryAsync(qaPost.Id);
             }
             catch (Exception ex)
             {
@@ -432,6 +437,8 @@ namespace platform_core_service.Business.Services
                         await _aiWorkerClient.SubmitForModerationAsync(postId, qaPost.Title, qaPost.Content);
                     }
                 }
+
+                await _qaPostHistoryService.RecordHistoryAsync(postId);
 
                 // Step 10: Reload after moderation changes so response matches persisted state
                 var updatedPost = await _dbContext.Posts
