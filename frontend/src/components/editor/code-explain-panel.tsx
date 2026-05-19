@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { RefreshCw, Sparkles } from 'lucide-react';
 import { ExplainCodeResponseDTO } from '@/types/ai/code-tools-dto';
 
@@ -33,6 +34,8 @@ export function CodeExplainPanel({
     errorMessage,
     onRetry,
 }: CodeExplainPanelProps) {
+    const [showDetails, setShowDetails] = useState(false);
+
     if (isLoading) {
         return (
             <div className="border-t border-default bg-amber-50/50 px-4 py-3 text-sm text-amber-700 dark:bg-amber-950/20 dark:text-amber-300">
@@ -62,37 +65,60 @@ export function CodeExplainPanel({
 
     if (!result) return null;
 
+    if (result.status === 'Generating') {
+        return (
+            <div className="border-t border-default bg-sky-50/70 px-4 py-3 text-sm text-sky-700 dark:bg-sky-950/20 dark:text-sky-300">
+                {result.message || 'AI is already generating this result. Please try again in a few seconds.'}
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-4 border-t border-default bg-page px-4 py-4">
             <section className="space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="text-sm font-bold text-heading">AI Explanation</h3>
-                    {result.complexityRating && (
-                        <span className="rounded-md border border-default bg-subtle px-2 py-0.5 text-xs font-semibold text-muted-foreground">
-                            {result.complexityRating}
-                        </span>
-                    )}
+                    <button
+                        type="button"
+                        onClick={() => setShowDetails((current) => !current)}
+                        className="rounded-md border border-default px-2.5 py-1 text-xs font-semibold text-muted-foreground hover:bg-subtle hover:text-heading"
+                    >
+                        {showDetails ? 'Hide details' : 'Show details'}
+                    </button>
                 </div>
-                <p className="text-sm leading-relaxed text-body">{result.purpose}</p>
+                <p className="text-sm leading-relaxed text-body">{result.summary}</p>
             </section>
 
-            <SectionList title="How it works" items={result.howItWorks} />
-            <SectionList title="Important details" items={result.importantDetails} />
-            <SectionList title="Potential issues" items={result.potentialIssues} />
-            <SectionList title="Suggested improvements" items={result.suggestedImprovements} />
+            <SectionList title="Key flow" items={result.keyFlow.slice(0, 5)} />
+            <SectionList title="Watch out" items={result.watchOut.slice(0, 3)} />
 
-            {result.concepts?.length ? (
-                <div className="flex flex-wrap gap-1.5">
-                    {result.concepts.map((concept) => (
-                        <span
-                            key={concept}
-                            className="rounded-md border border-default bg-subtle px-2 py-0.5 text-xs text-muted-foreground"
-                        >
-                            {concept}
-                        </span>
-                    ))}
+            {showDetails && (
+                <div className="space-y-4 rounded-md border border-default bg-subtle p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-xs font-bold uppercase text-muted-foreground">Details</h4>
+                        {result.details.complexityRating && (
+                            <span className="rounded-md border border-default bg-page px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+                                {result.details.complexityRating}
+                            </span>
+                        )}
+                    </div>
+                    <SectionList title="Important details" items={result.details.importantDetails} />
+                    <SectionList title="Suggested improvements" items={result.details.suggestedImprovements} />
+
+                    {result.details.concepts.length ? (
+                        <div className="flex flex-wrap gap-1.5">
+                            {result.details.concepts.map((concept) => (
+                                <span
+                                    key={concept}
+                                    className="rounded-md border border-default bg-page px-2 py-0.5 text-xs text-muted-foreground"
+                                >
+                                    {concept}
+                                </span>
+                            ))}
+                        </div>
+                    ) : null}
                 </div>
-            ) : null}
+            )}
         </div>
     );
 }

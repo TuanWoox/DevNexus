@@ -13,28 +13,42 @@ namespace platform_core_service.Common.Models.DTOs.AIDTO
         [JsonPropertyName("language")]
         public string? Language { get; set; } = "auto";
 
-        [JsonProperty("post_id")]
         [JsonPropertyName("post_id")]
         public string? PostId { get; set; }
     }
 
     public class AICodeExplainResponseDTO
     {
-        [JsonProperty("purpose")]
-        [JsonPropertyName("purpose")]
-        public string Purpose { get; set; } = string.Empty;
+        [JsonProperty("summary")]
+        [JsonPropertyName("summary")]
+        public string Summary { get; set; } = string.Empty;
 
-        [JsonProperty("how_it_works")]
-        [JsonPropertyName("how_it_works")]
-        public List<string> HowItWorks { get; set; } = [];
+        [JsonProperty("key_flow")]
+        [JsonPropertyName("key_flow")]
+        public List<string> KeyFlow { get; set; } = [];
 
+        [JsonProperty("watch_out")]
+        [JsonPropertyName("watch_out")]
+        public List<string> WatchOut { get; set; } = [];
+
+        [JsonProperty("details")]
+        [JsonPropertyName("details")]
+        public AICodeExplainDetailsDTO Details { get; set; } = new();
+
+        public string Status { get; set; } = "Completed";
+
+        public string? Message { get; set; }
+
+        public bool Cached { get; set; }
+
+        public DateTimeOffset? GeneratedAt { get; set; }
+    }
+
+    public class AICodeExplainDetailsDTO
+    {
         [JsonProperty("important_details")]
         [JsonPropertyName("important_details")]
         public List<string> ImportantDetails { get; set; } = [];
-
-        [JsonProperty("potential_issues")]
-        [JsonPropertyName("potential_issues")]
-        public List<string> PotentialIssues { get; set; } = [];
 
         [JsonProperty("suggested_improvements")]
         [JsonPropertyName("suggested_improvements")]
@@ -59,13 +73,15 @@ namespace platform_core_service.Common.Models.DTOs.AIDTO
         [JsonPropertyName("language")]
         public string? Language { get; set; } = "auto";
 
-        [JsonProperty("diagram_type")]
         [JsonPropertyName("diagram_type")]
         public string DiagramType { get; set; } = "auto";
 
-        [JsonProperty("post_id")]
         [JsonPropertyName("post_id")]
         public string? PostId { get; set; }
+
+        [JsonProperty("forceRegenerate")]
+        [JsonPropertyName("forceRegenerate")]
+        public bool ForceRegenerate { get; set; }
     }
 
     public class AICodeDiagramResponseDTO
@@ -77,5 +93,13 @@ namespace platform_core_service.Common.Models.DTOs.AIDTO
         [JsonProperty("diagram_type")]
         [JsonPropertyName("diagram_type")]
         public string DiagramType { get; set; } = "flowchart";
+
+        public string Status { get; set; } = "Completed";
+
+        public string? Message { get; set; }
+
+        public bool Cached { get; set; }
+
+        public DateTimeOffset? GeneratedAt { get; set; }
     }
 }

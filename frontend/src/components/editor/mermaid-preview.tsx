@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useId, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 interface MermaidPreviewProps {
     code: string;
+    className?: string;
 }
 
-export function MermaidPreview({ code }: MermaidPreviewProps) {
+export function MermaidPreview({ code, className }: MermaidPreviewProps) {
     const reactId = useId();
     const [svg, setSvg] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
@@ -69,7 +71,10 @@ export function MermaidPreview({ code }: MermaidPreviewProps) {
 
     return (
         <div
-            className="overflow-x-auto rounded-md border border-default bg-white p-3 text-slate-900 dark:bg-slate-100"
+            className={cn(
+                "overflow-auto rounded-md border border-default bg-white p-3 text-slate-900 dark:bg-slate-100",
+                className
+            )}
             dangerouslySetInnerHTML={{ __html: svg }}
         />
     );

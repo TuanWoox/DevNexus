@@ -48,10 +48,21 @@ class CodeToolsService:
         )
 
         prompt = (
-            f"You are an expert Senior Software Engineer and technical mentor. "
-            f"{language_instruction} Explain the code in simple Vietnamese for a junior developer. "
-            f"Return concise structured JSON with purpose, how_it_works, important_details, "
-            f"potential_issues, suggested_improvements, concepts, and complexity_rating.\n\n"
+            "You are an AI code helper inside a developer post detail page. "
+            f"{language_instruction} Explain for a developer quickly reading the post. "
+            "Use simple Vietnamese.\n\n"
+            "Rules:\n"
+            "- Keep it concise and scannable.\n"
+            "- Do not over-explain basic syntax.\n"
+            "- Do not produce long documentation.\n"
+            "- Prefer practical understanding over exhaustive explanation.\n"
+            "- Summary: 1-2 short sentences.\n"
+            "- key_flow: maximum 5 bullets, main execution flow only.\n"
+            "- watch_out: maximum 3 bullets, only relevant bugs, edge cases, missing persistence, security, or performance concerns.\n"
+            "- details.important_details: maximum 4 short bullets.\n"
+            "- details.suggested_improvements: maximum 3 short bullets.\n"
+            "- details.concepts: maximum 5 short concepts.\n"
+            "- Return JSON matching the response schema only.\n\n"
             f"Code:\n```\n{safe_code}\n```"
         )
 
@@ -104,10 +115,27 @@ class CodeToolsService:
         )
 
         prompt = (
-            f"You are an expert software architect. {language_instruction} Analyze the provided code. "
-            f"{diagram_instruction} Return JSON containing mermaid_syntax and diagram_type. "
-            f"diagram_type MUST be either flowchart or sequence. mermaid_syntax MUST contain valid Mermaid.js syntax only, "
-            f"without markdown fences.\n\n"
+            f"Generate a Mermaid diagram for this code. {language_instruction} {diagram_instruction}\n\n"
+            "Rules:\n"
+            "- Create a high-level developer-friendly diagram, not a line-by-line trace.\n"
+            "- Limit the diagram to 5-8 meaningful nodes.\n"
+            "- Merge repetitive assignments or simple statements into a single node.\n"
+            "- Prefer readability over completeness.\n"
+            "- For loops, use one node that summarizes the repeated operation.\n"
+            "- For conditionals, show only meaningful branches.\n"
+            "- Avoid very tall diagrams unless the code truly requires it.\n"
+            "- Use short node labels.\n"
+            "- Return valid Mermaid only in mermaid_syntax.\n\n"
+            "For flowchart:\n"
+            "- Use flowchart TD unless there is a strong reason otherwise.\n"
+            "- Keep node labels short.\n"
+            "- Avoid unnecessary intermediate nodes.\n\n"
+            "For sequence diagram:\n"
+            "- Include only key actors/components.\n"
+            "- Avoid one message per line of code.\n"
+            "- Show the main interaction flow only.\n\n"
+            "Return JSON containing mermaid_syntax and diagram_type. "
+            "diagram_type MUST be either flowchart or sequence. mermaid_syntax MUST contain valid Mermaid.js syntax only, without markdown fences.\n\n"
             f"Code:\n```\n{safe_code}\n```"
         )
 

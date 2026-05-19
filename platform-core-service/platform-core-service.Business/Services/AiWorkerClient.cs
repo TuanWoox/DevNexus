@@ -199,10 +199,15 @@ namespace platform_core_service.Business.Services
 
                 result.Result = explanation;
             }
+            catch (TaskCanceledException ex)
+            {
+                DevNexusLogger.Instance.Warn($"[AiWorkerClient] ExplainCodeAsync timed out: {ex.Message}");
+                result.Message = "AI generation timed out. Please try again shortly.";
+            }
             catch (Exception ex)
             {
                 DevNexusLogger.Instance.Error($"[AiWorkerClient] ExplainCodeAsync failed: {ex.Message}");
-                result.Message = $"Failed to explain code: {ex.Message}";
+                result.Message = "Could not generate AI result. Please try again.";
             }
 
             return result;
@@ -217,7 +222,13 @@ namespace platform_core_service.Business.Services
                     HttpMethod.Post,
                     $"{_baseUrl}/ai/code/diagram")
                 {
-                    Content = JsonContent.Create(request),
+                    Content = JsonContent.Create(new AICodeDiagramRequestDTO
+                    {
+                        Code = request.Code,
+                        Language = request.Language,
+                        DiagramType = request.DiagramType,
+                        PostId = request.PostId,
+                    }),
                 };
 
                 ForwardAuthorizationHeader(httpRequest);
@@ -241,10 +252,15 @@ namespace platform_core_service.Business.Services
 
                 result.Result = diagram;
             }
+            catch (TaskCanceledException ex)
+            {
+                DevNexusLogger.Instance.Warn($"[AiWorkerClient] GenerateCodeDiagramAsync timed out: {ex.Message}");
+                result.Message = "AI generation timed out. Please try again shortly.";
+            }
             catch (Exception ex)
             {
                 DevNexusLogger.Instance.Error($"[AiWorkerClient] GenerateCodeDiagramAsync failed: {ex.Message}");
-                result.Message = $"Failed to generate code diagram: {ex.Message}";
+                result.Message = "Could not generate AI result. Please try again.";
             }
 
             return result;

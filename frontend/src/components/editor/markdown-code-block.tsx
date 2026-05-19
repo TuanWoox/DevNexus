@@ -5,6 +5,7 @@ import { Check, Copy, GitBranch, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useExplainCode } from '@/hooks/ai-hooks/use-explain-code';
 import { useGenerateCodeDiagram } from '@/hooks/ai-hooks/use-generate-code-diagram';
+import { getAiCodeErrorMessage } from '@/services/ai-code-service';
 import {
     CodeToolContext,
     DiagramType,
@@ -12,7 +13,7 @@ import {
     GenerateCodeDiagramResponseDTO,
 } from '@/types/ai/code-tools-dto';
 import { CodeExplainPanel } from './code-explain-panel';
-import { CodeDiagramPanel } from './code-diagram-panel';
+import { CodeDiagramDialog } from './code-diagram-dialog';
 
 interface MarkdownCodeBlockProps {
     code: string;
@@ -22,7 +23,7 @@ interface MarkdownCodeBlockProps {
     postId?: string;
 }
 
-type ActiveTool = 'explain' | 'diagram' | null;
+type ActiveTool = 'explain' | null;
 
 function getDisplayLanguage(language?: string) {
     return language?.trim() ? language.trim() : 'Auto';
@@ -42,6 +43,7 @@ export function MarkdownCodeBlock({
     const [diagramType, setDiagramType] = useState<DiagramType>('auto');
     const [diagramResult, setDiagramResult] = useState<GenerateCodeDiagramResponseDTO | null>(null);
     const [diagramError, setDiagramError] = useState<string | null>(null);
+    const [isDiagramDialogOpen, setIsDiagramDialogOpen] = useState(false);
 
     const explainMutation = useExplainCode();
     const diagramMutation = useGenerateCodeDiagram();
@@ -64,6 +66,8 @@ export function MarkdownCodeBlock({
     };
 
     const requestExplanation = () => {
+        if (explainMutation.isPending) return;
+
         setExplainError(null);
         explainMutation.mutate(
             { code, language: normalizedLanguage, postId },
@@ -74,10 +78,15 @@ export function MarkdownCodeBlock({
                         return;
                     }
 
+                    if (data.status === 'Failed') {
+                        setExplainError(data.message || 'Could not explain this code.');
+                        return;
+                    }
+
                     setExplainResult(data);
                 },
-                onError: () => {
-                    setExplainError('Could not explain this code.');
+                onError: (error) => {
+                    setExplainError(getAiCodeErrorMessage(error));
                 },
             }
         );
@@ -89,30 +98,40 @@ export function MarkdownCodeBlock({
         requestExplanation();
     };
 
-    const handleGenerateDiagram = () => {
+    const handleGenerateDiagram = ({ forceRegenerate = false }: { forceRegenerate?: boolean } = {}) => {
+        if (diagramMutation.isPending) return;
+
         setDiagramError(null);
         diagramMutation.mutate(
-            { code, language: normalizedLanguage, diagramType, postId },
+            { code, language: normalizedLanguage, diagramType, postId, forceRegenerate },
             {
                 onSuccess: (data) => {
-                    if (!data?.mermaidCode) {
+                    if (!data) {
+                        setDiagramError('Could not generate a diagram for this code.');
+                        return;
+                    }
+
+                    if (data.status === 'Failed') {
+                        setDiagramError(data.message || 'Could not generate a diagram for this code.');
+                        return;
+                    }
+
+                    if (data.status !== 'Generating' && !data.mermaidCode) {
                         setDiagramError('Could not generate a diagram for this code.');
                         return;
                     }
 
                     setDiagramResult(data);
                 },
-                onError: () => {
-                    setDiagramError('Could not generate a diagram for this code.');
+                onError: (error) => {
+                    setDiagramError(getAiCodeErrorMessage(error));
                 },
             }
         );
     };
 
     const handleDiagram = () => {
-        setActiveTool((current) => (current === 'diagram' ? null : 'diagram'));
-        if (diagramResult || diagramMutation.isPending) return;
-        handleGenerateDiagram();
+        setIsDiagramDialogOpen(true);
     };
 
     return (
@@ -135,11 +154,12 @@ export function MarkdownCodeBlock({
                             <button
                                 type="button"
                                 onClick={handleExplain}
+                                disabled={explainMutation.isPending}
                                 className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold ${
                                     activeTool === 'explain'
                                         ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/20 dark:text-amber-300'
                                         : 'border-default text-muted-foreground hover:bg-subtle hover:text-heading'
-                                }`}
+                                } disabled:cursor-not-allowed disabled:opacity-60`}
                             >
                                 <Sparkles className="h-3 w-3" aria-hidden />
                                 Explain
@@ -147,11 +167,7 @@ export function MarkdownCodeBlock({
                             <button
                                 type="button"
                                 onClick={handleDiagram}
-                                className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold ${
-                                    activeTool === 'diagram'
-                                        ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-300'
-                                        : 'border-default text-muted-foreground hover:bg-subtle hover:text-heading'
-                                }`}
+                                className="inline-flex items-center gap-1.5 rounded-md border border-default px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-subtle hover:text-heading"
                             >
                                 <GitBranch className="h-3 w-3" aria-hidden />
                                 Diagram
@@ -175,17 +191,10 @@ export function MarkdownCodeBlock({
                 <code className={language ? `language-${language}` : undefined}>{code}</code>
             </pre>
 
-            {activeTool === 'explain' && (
-                <CodeExplainPanel
-                    result={explainResult}
-                    isLoading={explainMutation.isPending}
-                    errorMessage={explainError}
-                    onRetry={requestExplanation}
-                />
-            )}
-
-            {activeTool === 'diagram' && (
-                <CodeDiagramPanel
+            {canUseAiTools && (
+                <CodeDiagramDialog
+                    open={isDiagramDialogOpen}
+                    onOpenChange={setIsDiagramDialogOpen}
                     selectedDiagramType={diagramType}
                     onDiagramTypeChange={(nextType) => {
                         setDiagramType(nextType);
@@ -195,12 +204,22 @@ export function MarkdownCodeBlock({
                     result={diagramResult}
                     isLoading={diagramMutation.isPending}
                     errorMessage={diagramError}
-                    onGenerate={handleGenerateDiagram}
+                    onGenerate={() => handleGenerateDiagram({ forceRegenerate: false })}
+                    onRegenerate={() => handleGenerateDiagram({ forceRegenerate: true })}
                     onCopyMermaid={() => {
                         if (diagramResult?.mermaidCode) {
                             copyText(diagramResult.mermaidCode, 'Mermaid source copied.');
                         }
                     }}
+                />
+            )}
+
+            {activeTool === 'explain' && (
+                <CodeExplainPanel
+                    result={explainResult}
+                    isLoading={explainMutation.isPending}
+                    errorMessage={explainError}
+                    onRetry={requestExplanation}
                 />
             )}
         </div>

@@ -18,9 +18,16 @@ namespace platform_core_service.Business.Services
         private const int MinSummaryContentLength = 300;
         private static readonly TimeSpan CompletedSummaryCacheTtl = TimeSpan.FromHours(6);
         private static readonly TimeSpan SummaryLockTtl = TimeSpan.FromSeconds(60);
+        private const string CodeExplainVersion = "v2-compact";
+        private const string CodeDiagramVersion = "v2-high-level";
+        private static readonly TimeSpan CompletedCodeToolCacheTtl = TimeSpan.FromHours(6);
+        private static readonly TimeSpan CodeToolLockTtl = TimeSpan.FromSeconds(60);
+        private const int CodeExplainHourlyLimit = 20;
+        private const int CodeDiagramHourlyLimit = 10;
         private const string CompletedStatus = "Completed";
         private const string GeneratingStatus = "Generating";
         private const string FailedStatus = "Failed";
+        private const string RateLimitMessage = "You have reached the AI usage limit. Please try again later.";
 
         private readonly IAiWorkerClient _aiWorkerClient;
         private readonly ApplicationDbContext _context;
@@ -211,12 +218,93 @@ namespace platform_core_service.Business.Services
                 }
 
                 request.Language = NormalizeCodeLanguage(request.Language);
-                returnResult = await _aiWorkerClient.ExplainCodeAsync(request);
+                if (await IsRateLimitExceededAsync("explain", CodeExplainHourlyLimit))
+                {
+                    returnResult.Message = RateLimitMessage;
+                    returnResult.Result = BuildFailedExplainResponse(RateLimitMessage);
+                    return returnResult;
+                }
+
+                if (!_redis.IsConnected)
+                {
+                    DevNexusLogger.Instance.Warn("[AiContentService] Redis is unavailable. Falling back to uncached code explanation generation.");
+                    return await GenerateUncachedCodeExplanationAsync(request);
+                }
+
+                var codeHash = ComputeCodeExplainHash(request.Code, request.Language);
+                var cacheKey = BuildCodeExplainCacheKey(codeHash);
+                var lockKey = BuildCodeExplainLockKey(codeHash);
+
+                var cachedExplanation = await _cacheService.GetCacheAsync<AICodeExplainResponseDTO>(cacheKey);
+                if (cachedExplanation != null)
+                {
+                    DevNexusLogger.Instance.Debug($"[AiContentService] Code explain cache hit {CodeExplainVersion}:{codeHash[..8]}.");
+                    cachedExplanation.Cached = true;
+                    cachedExplanation.Status = CompletedStatus;
+                    cachedExplanation.Message = null;
+                    returnResult.Result = cachedExplanation;
+                    return returnResult;
+                }
+
+                DevNexusLogger.Instance.Debug($"[AiContentService] Code explain cache miss {CodeExplainVersion}:{codeHash[..8]}.");
+                var database = _redis.GetDatabase();
+                var lockToken = Guid.NewGuid().ToString("N");
+                var ownsLock = await database.StringSetAsync(lockKey, lockToken, CodeToolLockTtl, When.NotExists);
+                if (!ownsLock)
+                {
+                    DevNexusLogger.Instance.Debug($"[AiContentService] Code explain lock conflict {CodeExplainVersion}:{codeHash[..8]}.");
+                    await Task.Delay(250);
+                    cachedExplanation = await _cacheService.GetCacheAsync<AICodeExplainResponseDTO>(cacheKey);
+                    if (cachedExplanation != null)
+                    {
+                        cachedExplanation.Cached = true;
+                        cachedExplanation.Status = CompletedStatus;
+                        cachedExplanation.Message = null;
+                        returnResult.Result = cachedExplanation;
+                        return returnResult;
+                    }
+
+                    returnResult.Result = BuildGeneratingExplainResponse();
+                    return returnResult;
+                }
+
+                try
+                {
+                    DevNexusLogger.Instance.Debug($"[AiContentService] Code explain lock acquired {CodeExplainVersion}:{codeHash[..8]}.");
+                    var aiResult = await _aiWorkerClient.ExplainCodeAsync(request);
+                    if (aiResult?.Result == null || string.IsNullOrWhiteSpace(aiResult.Result.Summary))
+                    {
+                        returnResult.Result = BuildFailedExplainResponse("AI worker could not explain code. Please try again shortly.");
+                        returnResult.Message = aiResult?.Message ?? "AI worker could not explain code.";
+                        return returnResult;
+                    }
+
+                    var completedExplanation = aiResult.Result;
+                    completedExplanation.Status = CompletedStatus;
+                    completedExplanation.Cached = false;
+                    completedExplanation.Message = null;
+                    completedExplanation.GeneratedAt = DateTimeOffset.UtcNow;
+
+                    await _cacheService.SetCacheAsync(
+                        cacheKey,
+                        completedExplanation,
+                        new DistributedCacheEntryOptions
+                        {
+                            AbsoluteExpirationRelativeToNow = CompletedCodeToolCacheTtl,
+                        });
+
+                    returnResult.Result = completedExplanation;
+                }
+                finally
+                {
+                    await ReleaseLockIfOwnedAsync(database, lockKey, lockToken);
+                }
             }
             catch (Exception ex)
             {
                 DevNexusLogger.Instance.Error($"[AiContentService] ExplainCodeAsync failed: {ex.Message}");
                 returnResult.Message = "An error occurred while explaining code.";
+                returnResult.Result = BuildFailedExplainResponse("AI explanation could not be generated. Please try again shortly.");
             }
 
             return returnResult;
@@ -235,15 +323,107 @@ namespace platform_core_service.Business.Services
 
                 request.Language = NormalizeCodeLanguage(request.Language);
                 request.DiagramType = NormalizeDiagramType(request.DiagramType);
-                returnResult = await _aiWorkerClient.GenerateCodeDiagramAsync(request);
+                if (await IsRateLimitExceededAsync("diagram", CodeDiagramHourlyLimit))
+                {
+                    returnResult.Message = RateLimitMessage;
+                    returnResult.Result = BuildFailedDiagramResponse(request.DiagramType, RateLimitMessage);
+                    return returnResult;
+                }
+
+                if (!_redis.IsConnected)
+                {
+                    DevNexusLogger.Instance.Warn("[AiContentService] Redis is unavailable. Falling back to uncached code diagram generation.");
+                    return await GenerateUncachedCodeDiagramAsync(request);
+                }
+
+                var codeHash = ComputeCodeDiagramHash(request.Code, request.Language, request.DiagramType);
+                var cacheKey = BuildCodeDiagramCacheKey(codeHash);
+                var lockKey = BuildCodeDiagramLockKey(codeHash);
+
+                if (!request.ForceRegenerate)
+                {
+                    var cachedDiagram = await _cacheService.GetCacheAsync<AICodeDiagramResponseDTO>(cacheKey);
+                    if (cachedDiagram != null)
+                    {
+                        DevNexusLogger.Instance.Debug($"[AiContentService] Code diagram cache hit {CodeDiagramVersion}:{codeHash[..8]}.");
+                        cachedDiagram.Cached = true;
+                        cachedDiagram.Status = CompletedStatus;
+                        cachedDiagram.Message = null;
+                        returnResult.Result = cachedDiagram;
+                        return returnResult;
+                    }
+                }
+
+                DevNexusLogger.Instance.Debug($"[AiContentService] Code diagram cache miss {CodeDiagramVersion}:{codeHash[..8]}.");
+                var database = _redis.GetDatabase();
+                var lockToken = Guid.NewGuid().ToString("N");
+                var ownsLock = await database.StringSetAsync(lockKey, lockToken, CodeToolLockTtl, When.NotExists);
+                if (!ownsLock)
+                {
+                    DevNexusLogger.Instance.Debug($"[AiContentService] Code diagram lock conflict {CodeDiagramVersion}:{codeHash[..8]}.");
+                    if (!request.ForceRegenerate)
+                    {
+                        await Task.Delay(250);
+                        var cachedDiagram = await _cacheService.GetCacheAsync<AICodeDiagramResponseDTO>(cacheKey);
+                        if (cachedDiagram != null)
+                        {
+                            cachedDiagram.Cached = true;
+                            cachedDiagram.Status = CompletedStatus;
+                            cachedDiagram.Message = null;
+                            returnResult.Result = cachedDiagram;
+                            return returnResult;
+                        }
+                    }
+
+                    returnResult.Result = BuildGeneratingDiagramResponse(request.DiagramType);
+                    return returnResult;
+                }
+
+                try
+                {
+                    DevNexusLogger.Instance.Debug($"[AiContentService] Code diagram lock acquired {CodeDiagramVersion}:{codeHash[..8]}.");
+                    var aiResult = await _aiWorkerClient.GenerateCodeDiagramAsync(request);
+                    if (aiResult?.Result == null || string.IsNullOrWhiteSpace(aiResult.Result.MermaidCode))
+                    {
+                        returnResult.Result = BuildFailedDiagramResponse(request.DiagramType, "AI worker could not generate a diagram. Please try again shortly.");
+                        returnResult.Message = aiResult?.Message ?? "AI worker could not generate a diagram.";
+                        return returnResult;
+                    }
+
+                    var completedDiagram = aiResult.Result;
+                    completedDiagram.Status = CompletedStatus;
+                    completedDiagram.Cached = false;
+                    completedDiagram.Message = null;
+                    completedDiagram.GeneratedAt = DateTimeOffset.UtcNow;
+
+                    await _cacheService.SetCacheAsync(
+                        cacheKey,
+                        completedDiagram,
+                        new DistributedCacheEntryOptions
+                        {
+                            AbsoluteExpirationRelativeToNow = CompletedCodeToolCacheTtl,
+                        });
+
+                    returnResult.Result = completedDiagram;
+                }
+                finally
+                {
+                    await ReleaseLockIfOwnedAsync(database, lockKey, lockToken);
+                }
             }
             catch (Exception ex)
             {
                 DevNexusLogger.Instance.Error($"[AiContentService] GenerateCodeDiagramAsync failed: {ex.Message}");
                 returnResult.Message = "An error occurred while generating the code diagram.";
+                returnResult.Result = BuildFailedDiagramResponse(request.DiagramType, "AI diagram could not be generated. Please try again shortly.");
             }
 
             return returnResult;
+        }
+
+        public static bool IsRateLimitMessage(string? message)
+        {
+            return string.Equals(message, RateLimitMessage, StringComparison.Ordinal);
         }
 
         private static SummarizePostResponseDTO BuildFailedResponse(string postId, string message)
@@ -295,6 +475,136 @@ namespace platform_core_service.Business.Services
             return returnResult;
         }
 
+        private async Task<ReturnResult<AICodeExplainResponseDTO>> GenerateUncachedCodeExplanationAsync(AICodeExplainRequestDTO request)
+        {
+            var returnResult = new ReturnResult<AICodeExplainResponseDTO>();
+            var aiResult = await _aiWorkerClient.ExplainCodeAsync(request);
+            if (aiResult?.Result == null || string.IsNullOrWhiteSpace(aiResult.Result.Summary))
+            {
+                returnResult.Result = BuildFailedExplainResponse("AI worker could not explain code. Please try again shortly.");
+                returnResult.Message = aiResult?.Message ?? "AI worker could not explain code.";
+                return returnResult;
+            }
+
+            aiResult.Result.Status = CompletedStatus;
+            aiResult.Result.Cached = false;
+            aiResult.Result.Message = null;
+            aiResult.Result.GeneratedAt = DateTimeOffset.UtcNow;
+            returnResult.Result = aiResult.Result;
+            return returnResult;
+        }
+
+        private async Task<ReturnResult<AICodeDiagramResponseDTO>> GenerateUncachedCodeDiagramAsync(AICodeDiagramRequestDTO request)
+        {
+            var returnResult = new ReturnResult<AICodeDiagramResponseDTO>();
+            var aiResult = await _aiWorkerClient.GenerateCodeDiagramAsync(request);
+            if (aiResult?.Result == null || string.IsNullOrWhiteSpace(aiResult.Result.MermaidCode))
+            {
+                returnResult.Result = BuildFailedDiagramResponse(request.DiagramType, "AI worker could not generate a diagram. Please try again shortly.");
+                returnResult.Message = aiResult?.Message ?? "AI worker could not generate a diagram.";
+                return returnResult;
+            }
+
+            aiResult.Result.Status = CompletedStatus;
+            aiResult.Result.Cached = false;
+            aiResult.Result.Message = null;
+            aiResult.Result.GeneratedAt = DateTimeOffset.UtcNow;
+            returnResult.Result = aiResult.Result;
+            return returnResult;
+        }
+
+        private static AICodeExplainResponseDTO BuildGeneratingExplainResponse()
+        {
+            return new AICodeExplainResponseDTO
+            {
+                Status = GeneratingStatus,
+                Summary = string.Empty,
+                KeyFlow = [],
+                WatchOut = [],
+                Cached = false,
+                Message = "AI is already generating this result. Please try again in a few seconds.",
+            };
+        }
+
+        private static AICodeDiagramResponseDTO BuildGeneratingDiagramResponse(string diagramType)
+        {
+            return new AICodeDiagramResponseDTO
+            {
+                Status = GeneratingStatus,
+                MermaidCode = string.Empty,
+                DiagramType = diagramType == "sequence" ? "sequence" : "flowchart",
+                Cached = false,
+                Message = "AI is already generating this diagram. Please try again in a few seconds.",
+            };
+        }
+
+        private static AICodeExplainResponseDTO BuildFailedExplainResponse(string message)
+        {
+            return new AICodeExplainResponseDTO
+            {
+                Status = FailedStatus,
+                Summary = string.Empty,
+                KeyFlow = [],
+                WatchOut = [],
+                Cached = false,
+                Message = message,
+            };
+        }
+
+        private static AICodeDiagramResponseDTO BuildFailedDiagramResponse(string diagramType, string message)
+        {
+            return new AICodeDiagramResponseDTO
+            {
+                Status = FailedStatus,
+                MermaidCode = string.Empty,
+                DiagramType = diagramType == "sequence" ? "sequence" : "flowchart",
+                Cached = false,
+                Message = message,
+            };
+        }
+
+        private async Task<bool> IsRateLimitExceededAsync(string feature, int limit)
+        {
+            if (!_redis.IsConnected)
+            {
+                DevNexusLogger.Instance.Warn($"[AiContentService] Redis is unavailable. Skipping code {feature} rate limit.");
+                return false;
+            }
+
+            try
+            {
+                var userKey = !string.IsNullOrWhiteSpace(_userContext.ProfileId)
+                    ? _userContext.ProfileId
+                    : _userContext.UserId;
+                if (string.IsNullOrWhiteSpace(userKey))
+                {
+                    userKey = "unknown";
+                }
+
+                var now = DateTimeOffset.UtcNow;
+                var key = $"ai:rate:user:{userKey}:code:{feature}:{now:yyyyMMddHH}";
+                var database = _redis.GetDatabase();
+                var count = await database.StringIncrementAsync(key);
+                if (count == 1)
+                {
+                    var expiresAt = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, 0, 0, TimeSpan.Zero).AddHours(1);
+                    await database.KeyExpireAsync(key, expiresAt - now);
+                }
+
+                if (count > limit)
+                {
+                    DevNexusLogger.Instance.Warn($"[AiContentService] Code {feature} rate limit exceeded for user {userKey}.");
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Warn($"[AiContentService] Failed to apply code {feature} rate limit: {ex.Message}");
+            }
+
+            return false;
+        }
+
         private static string NormalizeLanguage(string? language)
         {
             var normalized = string.IsNullOrWhiteSpace(language)
@@ -328,6 +638,31 @@ namespace platform_core_service.Business.Services
                 .Trim();
         }
 
+        private static string ComputeCodeExplainHash(string code, string language)
+        {
+            var input = string.Join(
+                "\n",
+                "tool=explain",
+                $"version={CodeExplainVersion}",
+                $"language={language}",
+                $"code={NormalizeForHash(code)}");
+            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+            return Convert.ToHexString(bytes).ToLowerInvariant();
+        }
+
+        private static string ComputeCodeDiagramHash(string code, string language, string diagramType)
+        {
+            var input = string.Join(
+                "\n",
+                "tool=diagram",
+                $"version={CodeDiagramVersion}",
+                $"language={language}",
+                $"diagramType={diagramType}",
+                $"code={NormalizeForHash(code)}");
+            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+            return Convert.ToHexString(bytes).ToLowerInvariant();
+        }
+
         private static string ComputeContentHash(string title, string content)
         {
             var input = $"{NormalizeForHash(title)}\n\n{NormalizeForHash(content)}";
@@ -343,6 +678,26 @@ namespace platform_core_service.Business.Services
         private static string BuildSummaryLockKey(string postId, string language, string contentHash)
         {
             return $"ai:post-summary-lock:{postId}:{language}:{contentHash}";
+        }
+
+        private static string BuildCodeExplainCacheKey(string hash)
+        {
+            return $"ai:code:explain:{CodeExplainVersion}:{hash}";
+        }
+
+        private static string BuildCodeDiagramCacheKey(string hash)
+        {
+            return $"ai:code:diagram:{CodeDiagramVersion}:{hash}";
+        }
+
+        private static string BuildCodeExplainLockKey(string hash)
+        {
+            return $"lock:ai:code:explain:{CodeExplainVersion}:{hash}";
+        }
+
+        private static string BuildCodeDiagramLockKey(string hash)
+        {
+            return $"lock:ai:code:diagram:{CodeDiagramVersion}:{hash}";
         }
 
         private static async Task ReleaseLockIfOwnedAsync(IDatabase database, string lockKey, string lockToken)

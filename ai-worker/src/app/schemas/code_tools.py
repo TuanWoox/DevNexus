@@ -13,14 +13,18 @@ class CodeExplainRequest(BaseModel):
     post_id: str | None = Field(None, description="Optional source post id for request context.")
 
 
+class CodeExplainDetails(BaseModel):
+    important_details: list[str] = Field(default_factory=list, max_length=4)
+    suggested_improvements: list[str] = Field(default_factory=list, max_length=3)
+    concepts: list[str] = Field(default_factory=list, max_length=5)
+    complexity_rating: Literal["Low", "Medium", "High"] = "Medium"
+
+
 class CodeExplainResponse(BaseModel):
-    purpose: str = Field(..., description="Short statement of what the snippet does.")
-    how_it_works: list[str] = Field(..., description="Step-by-step explanation of the snippet.")
-    important_details: list[str] = Field(..., description="Important implementation details.")
-    potential_issues: list[str] = Field(default_factory=list, description="Potential bugs or risks.")
-    suggested_improvements: list[str] = Field(default_factory=list, description="Suggested improvements.")
-    concepts: list[str] = Field(default_factory=list, description="Key programming concepts used.")
-    complexity_rating: Literal["Low", "Medium", "High"] = Field("Medium", description="Estimated complexity.")
+    summary: str = Field(..., description="1-2 short sentences explaining what the code does.")
+    key_flow: list[str] = Field(..., min_length=1, max_length=5)
+    watch_out: list[str] = Field(default_factory=list, max_length=3)
+    details: CodeExplainDetails = Field(default_factory=CodeExplainDetails)
 
 
 # ---------------------------------------------------------------------------

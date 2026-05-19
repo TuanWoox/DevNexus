@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using platform_core_service.Business.Services;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.AIDTO;
 
@@ -41,6 +42,11 @@ namespace platform_core_service.Controllers
         public async Task<IActionResult> ExplainCode([FromBody] AICodeExplainRequestDTO request)
         {
             var result = await _aiContentService.ExplainCodeAsync(request);
+            if (AiContentService.IsRateLimitMessage(result.Message))
+            {
+                return StatusCode(StatusCodes.Status429TooManyRequests, result);
+            }
+
             return Ok(result);
         }
 
@@ -48,6 +54,11 @@ namespace platform_core_service.Controllers
         public async Task<IActionResult> GenerateCodeDiagram([FromBody] AICodeDiagramRequestDTO request)
         {
             var result = await _aiContentService.GenerateCodeDiagramAsync(request);
+            if (AiContentService.IsRateLimitMessage(result.Message))
+            {
+                return StatusCode(StatusCodes.Status429TooManyRequests, result);
+            }
+
             return Ok(result);
         }
     }
