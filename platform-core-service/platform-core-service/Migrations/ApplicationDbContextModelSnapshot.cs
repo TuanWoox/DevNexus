@@ -117,7 +117,6 @@ namespace platform_core_service.Migrations
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.AdminAuditLog", b =>
                 {
                     b.Property<string>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("text");
 
                     b.Property<int>("ActionType")
@@ -244,6 +243,47 @@ namespace platform_core_service.Migrations
                     b.HasIndex("QAPostId");
 
                     b.ToTable("Answers");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.AnswerMedia", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AnswerId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("AnswerMediaType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SHA256Hash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StoreDestination")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnswerId");
+
+                    b.HasIndex("Deleted");
+
+                    b.ToTable("AnswerMedias");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.BookMark", b =>
@@ -374,6 +414,47 @@ namespace platform_core_service.Migrations
                     b.HasIndex("ReplyToCommentId");
 
                     b.ToTable("Comments");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommentMedia", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommentId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("CommentMediaType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SHA256Hash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StoreDestination")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommentId");
+
+                    b.HasIndex("Deleted");
+
+                    b.ToTable("CommentMedias");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Community", b =>
@@ -1449,6 +1530,15 @@ namespace platform_core_service.Migrations
                     b.Navigation("QAPost");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.AnswerMedia", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Answer", "Answer")
+                        .WithMany()
+                        .HasForeignKey("AnswerId");
+
+                    b.Navigation("Answer");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.BookMark", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Owner")
@@ -1511,6 +1601,15 @@ namespace platform_core_service.Migrations
                     b.Navigation("Post");
 
                     b.Navigation("ReplyToComment");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommentMedia", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Comment", "Comment")
+                        .WithMany()
+                        .HasForeignKey("CommentId");
+
+                    b.Navigation("Comment");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Community", b =>

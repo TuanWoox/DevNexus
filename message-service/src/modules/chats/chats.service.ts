@@ -171,65 +171,32 @@ export class ChatsService {
       };
 
       const collected: any[] = [];
-      let pinnedChatId: string | null = null;
-
-      // On page 1 for default type, fetch the pinned chat first
-      if (page.pageNumber === 1 && isDefaultType) {
-        const pinnedChat = await this.prismaService.chat.findFirst({
-          where: {
-            Members: { some: { MemberId: profileId } },
-            ChatSettings: {
-              some: {
-                ...chatSettingWhere,
-                IsPinned: true,
-              },
-            },
-          },
-          include: includeClause,
-        });
-
-        if (pinnedChat) {
-          collected.push(pinnedChat);
-          pinnedChatId = pinnedChat.Id;
-        }
-      }
-
-      // For page 2+, find the pinned chat ID to exclude it
-      if (page.pageNumber > 1 && isDefaultType) {
-        const pinnedSetting = await this.prismaService.chatSetting.findFirst({
-          where: {
-            ProfileId: profileId,
-            IsPinned: true,
-            IsArchived: false,
-            IsRequested: false,
-          },
-          select: { ChatId: true },
-        });
-        if (pinnedSetting) pinnedChatId = pinnedSetting.ChatId;
-      }
-
-      const remainingSize = page.size - collected.length;
-      let skip = page.pageNumber === 1 ? 0 : remainingSize * (page.pageNumber - 2) + page.size - (pinnedChatId ? 1 : 0);
+      let skip = (page.pageNumber - 1) * page.size;
       let iterations = 0;
 
       while (collected.length < page.size && iterations < 10) {
         iterations++;
 
-        const batch = await this.prismaService.chat.findMany({
-          where: {
-            Members: { some: { MemberId: profileId } },
-            ChatSettings: { some: chatSettingWhere },
-            ...(pinnedChatId && { Id: { not: pinnedChatId } }),
+        const batchSettings = await this.prismaService.chatSetting.findMany({
+          where: chatSettingWhere,
+          include: {
+            Chat: {
+              include: includeClause,
+            },
           },
-          include: includeClause,
-          orderBy: [{ DateModified: "desc" }, { DateCreated: "desc" }],
+          orderBy: [
+            ...(isDefaultType ? [{ IsPinned: "desc" as const }] : []),
+            { Chat: { DateModified: "desc" as const } },
+            { Chat: { DateCreated: "desc" as const } },
+          ],
           skip,
           take: page.size,
         });
 
-        if (batch.length === 0) break;
+        if (batchSettings.length === 0) break;
 
-        for (const chat of batch) {
+        for (const chatSetting of batchSettings) {
+          const chat = chatSetting.Chat;
           const setting = chat.ChatSettings[0];
 
           if (setting?.DeleteUpToMessageId != null) {
@@ -241,7 +208,7 @@ export class ChatsService {
           if (collected.length >= page.size) break;
         }
 
-        skip += batch.length;
+        skip += batchSettings.length;
       }
 
       returnResult.Result = { page, data: collected };

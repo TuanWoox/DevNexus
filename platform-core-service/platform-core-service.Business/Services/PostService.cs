@@ -1,10 +1,8 @@
 using AutoMapper;
-using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
-using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
@@ -29,10 +27,10 @@ namespace platform_core_service.Business.Services
         private readonly IUserContext _userContext;
         private readonly IRepository<PostEntity, string> _postRepository;
         private readonly ISocialGuardService _socialGuardService;
-        private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IAiWorkerClient _aiWorkerClient;
         private readonly IConfigurationService _configurationService;
         private readonly IModerationService _moderationService;
+        private readonly IContentMediaLinkService _contentMediaLinkService;
 
         public PostService(
             ApplicationDbContext context,
@@ -40,10 +38,10 @@ namespace platform_core_service.Business.Services
             IUserContext userContext,
             IRepository<PostEntity, string> postRepository,
             ISocialGuardService socialGuardService,
-            IBackgroundJobClient backgroundJobClient,
             IAiWorkerClient aiWorkerClient,
             IConfigurationService configurationService,
-            IModerationService moderationService
+            IModerationService moderationService,
+            IContentMediaLinkService contentMediaLinkService
         )
         {
             _context = context;
@@ -51,10 +49,10 @@ namespace platform_core_service.Business.Services
             _userContext = userContext;
             _postRepository = postRepository;
             _socialGuardService = socialGuardService;
-            _backgroundJobClient = backgroundJobClient;
             _aiWorkerClient = aiWorkerClient;
             _configurationService = configurationService;
             _moderationService = moderationService;
+            _contentMediaLinkService = contentMediaLinkService;
         }
 
         public async Task<ReturnResult<SelectPostDTO>> CreateAsync(CreatePostDTO createDTO)
@@ -96,8 +94,8 @@ namespace platform_core_service.Business.Services
                 _context.Posts.Add(post);
                 await _context.SaveChangesAsync();
 
-                // Step 7: Link pre-uploaded media (upload-first flow)
-                if (createDTO.MediaIds.Count > 0) _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x => x.UpdatePostMediaPostId(_userContext.UserId, post.Id, createDTO.MediaIds));
+                // Step 7: Link pre-uploaded media before returning so media URLs render immediately.
+                await _contentMediaLinkService.LinkPostMediaAsync(_userContext.UserId, post.Id, createDTO.MediaIds);
 
                 // Step 8: Return mapped DTO
                 var savedPost = await _context.Posts
@@ -509,8 +507,8 @@ namespace platform_core_service.Business.Services
                 _context.Posts.Update(post);
                 await _context.SaveChangesAsync();
 
-                // Step 8: Link any newly provided pre-uploaded media
-                if (updateDTO.MediaIds?.Count > 0) _backgroundJobClient.Enqueue<IMediaBackgroundJobs>(x => x.UpdatePostMediaPostId(_userContext.UserId, postId, updateDTO.MediaIds));
+                // Step 8: Link any newly provided pre-uploaded media before returning.
+                await _contentMediaLinkService.LinkPostMediaAsync(_userContext.UserId, postId, updateDTO.MediaIds);
 
                 // Step 9: Reset and re-submit for moderation.
                 // Edited content must pass the pipeline again before becoming visible.

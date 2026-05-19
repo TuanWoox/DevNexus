@@ -9,7 +9,7 @@ namespace platform_core_service.Common.Interfaces.Services
     {
         Task<string> GetPostMedia([TrimmedRequired] string Id);
         Task<ReturnResult<SelectPostMediaDTO>> UploadImage(IFormFile file);
-        Task<ReturnResult<InitUploadVideoDTO>> InitVideoUpload(CreateVideoUploadDTO createVideoUploadDTO);
+        Task<ReturnResult<ContentInitUploadVideoDTO<SelectPostMediaDTO>>> InitVideoUpload(CreateVideoUploadDTO createVideoUploadDTO);
         Task<ReturnResult<VideoChunkProgressDTO>> UploadVideoChunk(UploadVideoChunkDTO dto);
         Task<ReturnResult<SelectPostMediaDTO>> MergeVideoChunks(MergeVideoChunkDTO dto);
     }

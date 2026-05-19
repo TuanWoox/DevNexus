@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace platform_core_service.Common.Entities.DbEntities
 {
-    public class ProfileMedia: BasePrimaryMediaEntity<string>
+    public class ProfileMedia: BasePrimaryMediaEntity<string>, IPrimaryMedia
     {
         [ForeignKey(nameof(Profile))]
         public string ProfileId { get; set; } = null!;
@@ -18,5 +18,7 @@ namespace platform_core_service.Common.Entities.DbEntities
         public Profile Profile { get; set; } = null!;
         // Default to avatar
         public ProfileMediaType ProfileMediaType { get; set; } = ProfileMediaType.Avatar;
+
+        public string GetOwnerId() => ProfileId;
     }
 }

@@ -143,6 +143,13 @@ public static class ServiceExtensions
                             context.Token = accessToken;
                         }
                     }
+                    else if (context.Request.Path.StartsWithSegments("/api/ContentMedia")
+                             && HttpMethods.IsGet(context.Request.Method)
+                             && context.Request.Cookies.TryGetValue("accessToken", out var cookieToken)
+                             && !string.IsNullOrEmpty(cookieToken))
+                    {
+                        context.Token = cookieToken;
+                    }
                     return Task.CompletedTask;
                 }
             };

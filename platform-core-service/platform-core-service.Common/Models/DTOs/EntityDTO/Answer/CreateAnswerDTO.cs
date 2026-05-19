@@ -11,5 +11,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Answer
         
         [Required]
         public string QAPostId { get; set; } = null!;
+
+        public List<string> MediaIds { get; set; } = new();
     }
 }

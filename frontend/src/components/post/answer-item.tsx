@@ -7,6 +7,7 @@ import { useUpdateAnswer } from '@/hooks/answer-hooks/use-update-answer';
 import { useAcceptAnswerById } from '@/hooks/answer-hooks/use-accept-answer-by-id';
 import { UpdateAnswerDTO } from '@/types/answer/update-answer-dto';
 import { BaseReplyItem } from './base-reply-item';
+import { ContentType } from '@/types/content-media/content-type';
 import { useState } from 'react';
 import { CommentInput } from './comment-input';
 import { CommentItem } from './comment-item';
@@ -35,8 +36,9 @@ export function AnswerItem({ answer, currentUserId, currentUserAvatar, isDisable
                 isVotePending={isVotePending}
                 onDelete={() => deleteAnswer(answer.id)}
                 isDeleting={isDeletingAnswer}
-                onUpdate={(newContent, onSuccess) => {
-                    const payload: UpdateAnswerDTO = { id: answer.id, content: newContent };
+                contentType={ContentType.Answer}
+                onUpdate={(newContent, mediaIds, onSuccess) => {
+                    const payload: UpdateAnswerDTO = { id: answer.id, content: newContent, mediaIds };
                     updateAnswer(payload, { onSuccess });
                 }}
                 isUpdating={isUpdatingAnswer}

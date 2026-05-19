@@ -13,5 +13,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Comment
         public string? AnswerId { get; set; }
 
         public string? ReplyToCommentId { get; set; }
+
+        public List<string> MediaIds { get; set; } = new();
     }
 }
