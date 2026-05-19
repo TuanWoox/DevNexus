@@ -16,6 +16,8 @@ import { ProfileHoverCard } from '@/components/profile/profile-hover-card';
 import { ContentType } from '@/types/content-media/content-type';
 import { useUploadContentMedia } from '@/hooks/media/useUploadContentMedia';
 import { ContentHistoryOverlay, ContentHistoryKind } from '@/components/history/content-history-overlay';
+import { ReportDialog } from '@/components/report/report-dialog';
+import { ReportTargetType } from '@/types/report/report-target-type';
 
 export interface ReplyAuthor {
     fullName: string;
@@ -85,6 +87,7 @@ export function BaseReplyItem({
     const isAuthor = authorId === currentUserId;
     const [isEditing, setIsEditing] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [isReportOpen, setIsReportOpen] = useState(false);
     const [editContent, setEditContent] = useState(content);
     const editorRef = useRef<MarkdownEditorHandle>(null);
     const { uploadPendingMedia, isUploading: isUploadingMedia, progress: uploadProgress } = useUploadContentMedia();
@@ -120,6 +123,8 @@ export function BaseReplyItem({
     };
 
     const historyType: ContentHistoryKind = contentType === ContentType.Answer ? "answer" : "comment";
+    const reportTargetType = contentType === ContentType.Answer ? ReportTargetType.Answer : ReportTargetType.Comment;
+    const reportTargetLabel = contentType === ContentType.Answer ? "Answer" : "Comment";
 
     return (
         <div className="flex gap-3 sm:gap-4 group">
@@ -253,7 +258,11 @@ export function BaseReplyItem({
                                         <UserPlus className="w-4 h-4" />
                                         <span>Follow User</span>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem variant='destructive' className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium">
+                                    <DropdownMenuItem
+                                        onSelect={() => setIsReportOpen(true)}
+                                        variant='destructive'
+                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
+                                    >
                                         <Flag className="w-4 h-4" />
                                         <span>Report</span>
                                     </DropdownMenuItem>
@@ -308,6 +317,15 @@ export function BaseReplyItem({
                 open={isHistoryOpen}
                 onClose={() => setIsHistoryOpen(false)}
             />
+            {!isAuthor && !isDisabled && (
+                <ReportDialog
+                    open={isReportOpen}
+                    onOpenChange={setIsReportOpen}
+                    targetType={reportTargetType}
+                    targetId={id}
+                    targetLabel={reportTargetLabel}
+                />
+            )}
         </div>
     );
 }
