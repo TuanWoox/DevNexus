@@ -25,6 +25,7 @@ namespace platform_core_service.Business.Services
         private readonly IRepository<CommentEntity, string> _commentRepository;
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IContentMediaLinkService _contentMediaLinkService;
+        private readonly ICommentHistoryService _commentHistoryService;
 
         public CommentService(
             ApplicationDbContext context,
@@ -32,7 +33,8 @@ namespace platform_core_service.Business.Services
             IUserContext userContext,
             IRepository<CommentEntity, string> commentRepository,
             IBackgroundJobClient backgroundJobClient,
-            IContentMediaLinkService contentMediaLinkService)
+            IContentMediaLinkService contentMediaLinkService,
+            ICommentHistoryService commentHistoryService)
         {
             _context = context;
             _mapper = mapper;
@@ -40,6 +42,7 @@ namespace platform_core_service.Business.Services
             _commentRepository = commentRepository;
             _backgroundJobClient = backgroundJobClient;
             _contentMediaLinkService = contentMediaLinkService;
+            _commentHistoryService = commentHistoryService;
         }
 
         public async Task<ReturnResult<SelectCommentDTO>> CreateAsync(CreateCommentDTO createDTO)
@@ -138,6 +141,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 result.Result = _mapper.Map<SelectCommentDTO>(savedComment);
+                await _commentHistoryService.RecordHistoryAsync(comment.Id);
             }
             catch (Exception ex)
             {
@@ -319,6 +323,7 @@ namespace platform_core_service.Business.Services
                 await _context.SaveChangesAsync();
 
                 await _contentMediaLinkService.LinkCommentMediaAsync(_userContext.UserId, commentId, updateDTO.MediaIds);
+                await _commentHistoryService.RecordHistoryAsync(commentId);
 
                 // Step 6: Reload and return
                 var updatedComment = await _context.Comments

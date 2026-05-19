@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using platform_core_service.Business.Repository;
-using platform_core_service.Business.Services.Base;
+using platform_core_service.Business.Abstracts;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces.Contexts;

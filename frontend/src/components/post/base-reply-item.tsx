@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { ArrowBigUp, ArrowBigDown, MoreHorizontal, Flag, UserPlus, Edit, Trash, CheckCircle, Check } from 'lucide-react';
+import { ArrowBigUp, ArrowBigDown, MoreHorizontal, Flag, UserPlus, Edit, Trash, CheckCircle, Check, History } from 'lucide-react';
 import Image from 'next/image';
 import { MarkdownViewer } from '../editor/markdown-viewer';
 import { MarkdownEditor, MarkdownEditorHandle } from '../editor/markdown-editor';
@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { ProfileHoverCard } from '@/components/profile/profile-hover-card';
 import { ContentType } from '@/types/content-media/content-type';
 import { useUploadContentMedia } from '@/hooks/media/useUploadContentMedia';
+import { ContentHistoryOverlay, ContentHistoryKind } from '@/components/history/content-history-overlay';
 
 export interface ReplyAuthor {
     fullName: string;
@@ -55,6 +56,7 @@ export interface BaseReplyItemProps {
 }
 
 export function BaseReplyItem({
+    id,
     content,
     upvoteCount,
     downvoteCount,
@@ -82,6 +84,7 @@ export function BaseReplyItem({
 }: BaseReplyItemProps) {
     const isAuthor = authorId === currentUserId;
     const [isEditing, setIsEditing] = useState(false);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [editContent, setEditContent] = useState(content);
     const editorRef = useRef<MarkdownEditorHandle>(null);
     const { uploadPendingMedia, isUploading: isUploadingMedia, progress: uploadProgress } = useUploadContentMedia();
@@ -115,6 +118,8 @@ export function BaseReplyItem({
         setEditContent(content);
         setIsEditing(false);
     };
+
+    const historyType: ContentHistoryKind = contentType === ContentType.Answer ? "answer" : "comment";
 
     return (
         <div className="flex gap-3 sm:gap-4 group">
@@ -254,6 +259,15 @@ export function BaseReplyItem({
                                     </DropdownMenuItem>
                                 </>
                             )}
+                            {!isDisabled && (
+                                <DropdownMenuItem
+                                    onClick={() => setIsHistoryOpen(true)}
+                                    className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium"
+                                >
+                                    <History className="w-4 h-4" />
+                                    <span>History</span>
+                                </DropdownMenuItem>
+                            )}
                             {isAuthor && !isDisabled && (
                                 <>
                                     <DropdownMenuItem
@@ -288,6 +302,12 @@ export function BaseReplyItem({
                     </div>
                 )}
             </div>
+            <ContentHistoryOverlay
+                contentId={id}
+                type={historyType}
+                open={isHistoryOpen}
+                onClose={() => setIsHistoryOpen(false)}
+            />
         </div>
     );
 }

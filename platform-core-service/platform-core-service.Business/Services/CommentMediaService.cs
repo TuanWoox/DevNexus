@@ -1,6 +1,6 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
-using platform_core_service.Business.Services.Base;
+using platform_core_service.Business.Abstracts;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Helper;

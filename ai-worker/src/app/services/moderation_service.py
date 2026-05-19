@@ -3,6 +3,7 @@ import logging
 
 import httpx
 from google import genai
+from google.genai.errors import ServerError
 from google.genai import types
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -120,7 +121,30 @@ class ModerationService:
             "[Moderation][T2] Gray zone — escalating to Gemini. post=%s has_image=%s",
             post_id, image_bytes is not None,
         )
-        t2 = await self._run_tier_two(text_content, post_id, image_bytes, image_mime_type)
+        try:
+            t2 = await self._run_tier_two(text_content, post_id, image_bytes, image_mime_type)
+        except ServerError as exc:
+            logger.warning(
+                "[Moderation][T2] Gemini unavailable — escalating to human queue. post=%s error=%s",
+                post_id, exc,
+            )
+            t2 = TierTwoResult(
+                decision=ModerationDecision.ESCALATE,
+                confidence=0.0,
+                reasoning="Gemini moderation unavailable; local model result was inconclusive.",
+            )
+            t3 = await self._run_tier_three(post_id, t1, t2)
+            await self._notify_platform(post_id, ModerationDecision.ESCALATE, t1=t1, t2=t2)
+            return ModerationTaskResult(
+                post_id=post_id,
+                final_status=ModerationStatus.IN_REVIEW,
+                decision=ModerationDecision.ESCALATE,
+                tier_reached=3,
+                tier_one=t1,
+                tier_two=t2,
+                tier_three=t3,
+                error=str(exc),
+            )
         logger.info(
             "[Moderation][T2] decision=%s confidence=%.3f post=%s",
             t2.decision, t2.confidence, post_id,

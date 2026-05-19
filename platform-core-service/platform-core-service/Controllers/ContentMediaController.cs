@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using platform_core_service.Common.Interfaces.Factories;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Utils.Enums;
@@ -12,21 +13,11 @@ namespace platform_core_service.Controllers
     [Authorize]
     public class ContentMediaController : ControllerBase
     {
-        private readonly IPostMediaService _postMediaService;
-        private readonly IQAMediaService _qaMediaService;
-        private readonly IAnswerMediaService _answerMediaService;
-        private readonly ICommentMediaService _commentMediaService;
+        private readonly IContentMediaServiceFactory _mediaFactory;
 
-        public ContentMediaController(
-            IPostMediaService postMediaService,
-            IQAMediaService qaMediaService,
-            IAnswerMediaService answerMediaService,
-            ICommentMediaService commentMediaService)
+        public ContentMediaController(IContentMediaServiceFactory mediaFactory)
         {
-            _postMediaService = postMediaService;
-            _qaMediaService = qaMediaService;
-            _answerMediaService = answerMediaService;
-            _commentMediaService = commentMediaService;
+            _mediaFactory = mediaFactory;
         }
 
         [HttpGet("{id}")]
@@ -34,10 +25,10 @@ namespace platform_core_service.Controllers
         {
             var fileDestination = contentType switch
             {
-                ContentType.Post => await _postMediaService.GetPostMedia(id),
-                ContentType.QA => await _qaMediaService.GetQAMedia(id),
-                ContentType.Answer => await _answerMediaService.GetMedia(id),
-                ContentType.Comment => await _commentMediaService.GetMedia(id),
+                ContentType.Post => await _mediaFactory.GetPostMediaService().GetPostMedia(id),
+                ContentType.QA => await _mediaFactory.GetQAMediaService().GetQAMedia(id),
+                ContentType.Answer => await _mediaFactory.GetAnswerMediaService().GetMedia(id),
+                ContentType.Comment => await _mediaFactory.GetCommentMediaService().GetMedia(id),
                 _ => ""
             };
 
@@ -54,10 +45,10 @@ namespace platform_core_service.Controllers
 
             object result = contentType switch
             {
-                ContentType.Post => await _postMediaService.UploadImage(file),
-                ContentType.QA => await _qaMediaService.UploadImage(file),
-                ContentType.Answer => await _answerMediaService.UploadImage(file),
-                ContentType.Comment => await _commentMediaService.UploadImage(file),
+                ContentType.Post => await _mediaFactory.GetPostMediaService().UploadImage(file),
+                ContentType.QA => await _mediaFactory.GetQAMediaService().UploadImage(file),
+                ContentType.Answer => await _mediaFactory.GetAnswerMediaService().UploadImage(file),
+                ContentType.Comment => await _mediaFactory.GetCommentMediaService().UploadImage(file),
                 _ => new ReturnResult<object> { Message = "Invalid content type" }
             };
 
@@ -69,10 +60,10 @@ namespace platform_core_service.Controllers
         {
             object result = contentType switch
             {
-                ContentType.Post => await _postMediaService.InitVideoUpload(dto),
-                ContentType.QA => await _qaMediaService.InitVideoUpload(dto),
-                ContentType.Answer => await _answerMediaService.InitVideoUpload(dto),
-                ContentType.Comment => await _commentMediaService.InitVideoUpload(dto),
+                ContentType.Post => await _mediaFactory.GetPostMediaService().InitVideoUpload(dto),
+                ContentType.QA => await _mediaFactory.GetQAMediaService().InitVideoUpload(dto),
+                ContentType.Answer => await _mediaFactory.GetAnswerMediaService().InitVideoUpload(dto),
+                ContentType.Comment => await _mediaFactory.GetCommentMediaService().InitVideoUpload(dto),
                 _ => new ReturnResult<object> { Message = "Invalid content type" }
             };
 
@@ -86,10 +77,10 @@ namespace platform_core_service.Controllers
 
             object result = contentType switch
             {
-                ContentType.Post => await _postMediaService.UploadVideoChunk(dto),
-                ContentType.QA => await _qaMediaService.UploadVideoChunk(dto),
-                ContentType.Answer => await _answerMediaService.UploadVideoChunk(dto),
-                ContentType.Comment => await _commentMediaService.UploadVideoChunk(dto),
+                ContentType.Post => await _mediaFactory.GetPostMediaService().UploadVideoChunk(dto),
+                ContentType.QA => await _mediaFactory.GetQAMediaService().UploadVideoChunk(dto),
+                ContentType.Answer => await _mediaFactory.GetAnswerMediaService().UploadVideoChunk(dto),
+                ContentType.Comment => await _mediaFactory.GetCommentMediaService().UploadVideoChunk(dto),
                 _ => new ReturnResult<object> { Message = "Invalid content type" }
             };
 
@@ -101,10 +92,10 @@ namespace platform_core_service.Controllers
         {
             object result = contentType switch
             {
-                ContentType.Post => await _postMediaService.MergeVideoChunks(dto),
-                ContentType.QA => await _qaMediaService.MergeVideoChunks(dto),
-                ContentType.Answer => await _answerMediaService.MergeVideoChunks(dto),
-                ContentType.Comment => await _commentMediaService.MergeVideoChunks(dto),
+                ContentType.Post => await _mediaFactory.GetPostMediaService().MergeVideoChunks(dto),
+                ContentType.QA => await _mediaFactory.GetQAMediaService().MergeVideoChunks(dto),
+                ContentType.Answer => await _mediaFactory.GetAnswerMediaService().MergeVideoChunks(dto),
+                ContentType.Comment => await _mediaFactory.GetCommentMediaService().MergeVideoChunks(dto),
                 _ => new ReturnResult<object> { Message = "Invalid content type" }
             };
 

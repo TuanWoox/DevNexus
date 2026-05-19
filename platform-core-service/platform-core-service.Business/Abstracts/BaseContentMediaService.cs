@@ -12,7 +12,7 @@ using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 
-namespace platform_core_service.Business.Services.Base
+namespace platform_core_service.Business.Abstracts
 {
     public abstract class BaseContentMediaService<TEntity, TSelectDto>
         where TEntity : class, IContentMedia, new()

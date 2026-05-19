@@ -9,12 +9,11 @@ import {
     Bookmark,
     Share2,
     Globe,
+    History,
     HelpCircle,
     Code2,
 } from 'lucide-react';
 import { useGetPostById } from '@/hooks/post-hooks';
-
-import { SortOrderType } from '@/constants/sortOrderType';
 import { useUpdateVoteByPostId } from '@/hooks/vote-hooks/use-update-vote-by-post-id';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -43,6 +42,7 @@ import {
 import { useDeleteBookmarkedItemById } from "@/hooks/bookmarked-item-hooks/use-delete-bookmarked-item-by-id";
 import { cn } from '@/lib/utils';
 import { AiPostSummary } from './ai-post-summary';
+import { ContentHistoryOverlay } from '@/components/history/content-history-overlay';
 import { SelectQAPostDTO } from '@/types/qa-post/select-qa-post-dto';
 
 interface Props {
@@ -55,6 +55,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
 
     const [isBookmarkModalOpen, setIsBookmarkModalOpen] = useState(false);
     const [isUnsaveModalOpen, setIsUnsaveModalOpen] = useState(false);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
     const { mutate: unsaveItem, isPending: isUnsavePending } = useDeleteBookmarkedItemById();
 
@@ -199,12 +200,12 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                                     </ProfileHoverCard>
                                 </div>
                                 <div className="flex flex-col">
-                                    <Link href={`/communities/${community.id}`} className="text-sm font-bold text-heading hover:underline transition-colors truncate max-w-[150px] sm:max-w-[300px]">
+                                    <Link href={`/communities/${community.id}`} className="text-sm font-bold text-heading hover:underline transition-colors truncate max-w-37.5 sm:max-w-75">
                                         {community.name}
                                     </Link>
                                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                                         <ProfileHoverCard profileId={post.authorId} author={author}>
-                                            <Link href={`/profile/${post.authorId}`} className="font-semibold hover:underline text-muted-foreground transition-colors truncate max-w-[120px]">
+                                            <Link href={`/profile/${post.authorId}`} className="font-semibold hover:underline text-muted-foreground transition-colors truncate max-w-30">
                                                 {author?.fullName || 'Unknown'}
                                             </Link>
                                         </ProfileHoverCard>
@@ -299,7 +300,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                 {/* Content */}
                 <div className={cn(
                     "text-body text-sm sm:text-base leading-relaxed whitespace-pre-wrap transition-all",
-                    !isApproved && "opacity-70 grayscale-[20%]"
+                    !isApproved && "opacity-70 grayscale-20"
                 )}>
                     <MarkdownViewer source={post.content} />
                 </div>
@@ -376,6 +377,14 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                         <Share2 className="w-5 h-5" />
                         <span className="text-sm font-medium hidden sm:block">Share</span>
                     </button>
+                    <button
+                        onClick={() => setIsHistoryOpen(true)}
+                        disabled={!isApproved}
+                        className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg cursor-pointer disabled:cursor-not-allowed transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                        <History className="w-5 h-5" />
+                        <span className="text-sm font-medium hidden sm:block">History</span>
+                    </button>
                 </div>
             </div>
 
@@ -384,6 +393,13 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                 onClose={() => setIsBookmarkModalOpen(false)}
                 postId={postId}
                 isQAPost={isQAPost}
+            />
+
+            <ContentHistoryOverlay
+                contentId={postId}
+                type={isQAPost ? "qapost" : "post"}
+                open={isHistoryOpen}
+                onClose={() => setIsHistoryOpen(false)}
             />
 
             <AlertDialog open={isUnsaveModalOpen} onOpenChange={setIsUnsaveModalOpen}>

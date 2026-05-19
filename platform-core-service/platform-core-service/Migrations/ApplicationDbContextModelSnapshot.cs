@@ -245,6 +245,41 @@ namespace platform_core_service.Migrations
                     b.ToTable("Answers");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.AnswerHistory", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AnswerId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContentSnapshot")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("AnswerId", "DateCreated");
+
+                    b.ToTable("AnswerHistories");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.AnswerMedia", b =>
                 {
                     b.Property<string>("Id")
@@ -414,6 +449,41 @@ namespace platform_core_service.Migrations
                     b.HasIndex("ReplyToCommentId");
 
                     b.ToTable("Comments");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommentHistory", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommentId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContentSnapshot")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("CommentId", "DateCreated");
+
+                    b.ToTable("CommentHistories");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommentMedia", b =>
@@ -848,6 +918,41 @@ namespace platform_core_service.Migrations
                     b.UseTphMappingStrategy();
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostHistory", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContentSnapshot")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PostId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("PostId", "DateCreated");
+
+                    b.ToTable("PostHistories");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostMedia", b =>
                 {
                     b.Property<string>("Id")
@@ -1151,6 +1256,41 @@ namespace platform_core_service.Migrations
                     b.HasIndex("QAPostId");
 
                     b.ToTable("QAMedias");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.QAPostHistory", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContentSnapshot")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("QAPostId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("QAPostId", "DateCreated");
+
+                    b.ToTable("QAPostHistories");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Setting", b =>
@@ -1530,6 +1670,17 @@ namespace platform_core_service.Migrations
                     b.Navigation("QAPost");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.AnswerHistory", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Answer", "Answer")
+                        .WithMany()
+                        .HasForeignKey("AnswerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Answer");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.AnswerMedia", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.Answer", "Answer")
@@ -1601,6 +1752,17 @@ namespace platform_core_service.Migrations
                     b.Navigation("Post");
 
                     b.Navigation("ReplyToComment");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommentHistory", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Comment", "Comment")
+                        .WithMany()
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Comment");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommentMedia", b =>
@@ -1765,6 +1927,17 @@ namespace platform_core_service.Migrations
                     b.Navigation("Community");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostHistory", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Post", "Post")
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostMedia", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.Post", "Post")
@@ -1850,6 +2023,17 @@ namespace platform_core_service.Migrations
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.QAPost", "QAPost")
                         .WithMany("QAMedias")
                         .HasForeignKey("QAPostId");
+
+                    b.Navigation("QAPost");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.QAPostHistory", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.QAPost", "QAPost")
+                        .WithMany()
+                        .HasForeignKey("QAPostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("QAPost");
                 });
