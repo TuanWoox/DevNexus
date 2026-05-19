@@ -37,13 +37,21 @@ class CodeToolsService:
         request: CodeExplainRequest,
         user_id: str | None = None,
     ) -> CodeExplainResponse:
-        logger.info("CodeToolsService: explain_code for language %s", request.language)
+        language = self._normalize_language(request.language)
+        logger.info("CodeToolsService: explain_code for language %s", language)
 
         safe_code = truncate_input(request.code)
+        language_instruction = (
+            "Infer the programming language from the snippet before explaining it."
+            if language == "auto"
+            else f"The snippet is written in {language}."
+        )
 
         prompt = (
             f"You are an expert Senior Software Engineer and technical mentor. "
-            f"Explain the following {request.language} code step-by-step in simple Vietnamese for a junior developer.\n\n"
+            f"{language_instruction} Explain the code in simple Vietnamese for a junior developer. "
+            f"Return concise structured JSON with purpose, how_it_works, important_details, "
+            f"potential_issues, suggested_improvements, concepts, and complexity_rating.\n\n"
             f"Code:\n```\n{safe_code}\n```"
         )
 
@@ -79,14 +87,27 @@ class CodeToolsService:
         request: DiagramRequest,
         user_id: str | None = None,
     ) -> DiagramResponse:
-        logger.info("CodeToolsService: generate_diagram format %s", request.diagram_type)
+        diagram_type = self._normalize_diagram_type(request.diagram_type)
+        language = self._normalize_language(request.language)
+        logger.info("CodeToolsService: generate_diagram format %s", diagram_type)
 
         safe_code = truncate_input(request.code)
+        diagram_instruction = (
+            "Choose either a flowchart or sequence diagram, whichever best represents the code."
+            if diagram_type == "auto"
+            else f"Generate a {diagram_type} diagram."
+        )
+        language_instruction = (
+            "Infer the programming language from the snippet."
+            if language == "auto"
+            else f"The snippet is written in {language}."
+        )
 
         prompt = (
-            f"You are an expert software architect. Analyze the the provided code and generate a {request.diagram_type} "
-            f"representing its logic using Mermaid.js syntax.\n"
-            f"Output MUST be valid Mermaid.js syntax ONLY. Do not wrap it in markdown block. Just pure mermaid code.\n\n"
+            f"You are an expert software architect. {language_instruction} Analyze the provided code. "
+            f"{diagram_instruction} Return JSON containing mermaid_syntax and diagram_type. "
+            f"diagram_type MUST be either flowchart or sequence. mermaid_syntax MUST contain valid Mermaid.js syntax only, "
+            f"without markdown fences.\n\n"
             f"Code:\n```\n{safe_code}\n```"
         )
 
@@ -104,13 +125,7 @@ class CodeToolsService:
             result = DiagramResponse.model_validate_json(response.text)
 
             # Sanitize: Gemini occasionally wraps the syntax in markdown fences even when asked not to.
-            result.mermaid_syntax = (
-                result.mermaid_syntax.replace("```mermaid\n", "")
-                .replace("```mermaid", "")
-                .replace("```\n", "")
-                .replace("```", "")
-                .strip()
-            )
+            result.mermaid_syntax = self._strip_mermaid_fence(result.mermaid_syntax)
 
             await self._usage.log_from_response(
                 response=response,
@@ -125,6 +140,31 @@ class CodeToolsService:
             raise
         except Exception as exc:
             raise handle_genai_error("CodeToolsService.generate_diagram", exc) from exc
+
+    @staticmethod
+    def _normalize_language(language: str | None) -> str:
+        normalized = (language or "auto").strip().lower()
+        return normalized or "auto"
+
+    @staticmethod
+    def _normalize_diagram_type(diagram_type: str | None) -> str:
+        normalized = (diagram_type or "auto").strip().lower()
+        return normalized if normalized in {"auto", "flowchart", "sequence"} else "auto"
+
+    @staticmethod
+    def _strip_mermaid_fence(value: str) -> str:
+        lines = value.strip().splitlines()
+        if not lines:
+            return ""
+
+        first_line = lines[0].strip().lower()
+        if first_line in {"```", "```mermaid"}:
+            lines = lines[1:]
+
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+
+        return "\n".join(lines).strip()
 
     async def generate_first_response(
         self,

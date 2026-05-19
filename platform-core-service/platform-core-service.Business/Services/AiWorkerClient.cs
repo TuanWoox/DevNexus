@@ -166,6 +166,90 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
+        public async Task<ReturnResult<AICodeExplainResponseDTO>> ExplainCodeAsync(AICodeExplainRequestDTO request)
+        {
+            var result = new ReturnResult<AICodeExplainResponseDTO>();
+            try
+            {
+                using var httpRequest = new HttpRequestMessage(
+                    HttpMethod.Post,
+                    $"{_baseUrl}/ai/code/explain")
+                {
+                    Content = JsonContent.Create(request),
+                };
+
+                ForwardAuthorizationHeader(httpRequest);
+
+                var response = await _httpClient.SendAsync(httpRequest);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync();
+                    DevNexusLogger.Instance.Warn(
+                        $"[AiWorkerClient] ExplainCode returned {(int)response.StatusCode}: {errorBody}");
+                    result.Message = $"AI worker could not explain code. Status: {(int)response.StatusCode}.";
+                    return result;
+                }
+
+                var explanation = await response.Content.ReadFromJsonAsync<AICodeExplainResponseDTO>();
+                if (explanation == null)
+                {
+                    result.Message = "AI worker returned an empty code explanation response.";
+                    return result;
+                }
+
+                result.Result = explanation;
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error($"[AiWorkerClient] ExplainCodeAsync failed: {ex.Message}");
+                result.Message = $"Failed to explain code: {ex.Message}";
+            }
+
+            return result;
+        }
+
+        public async Task<ReturnResult<AICodeDiagramResponseDTO>> GenerateCodeDiagramAsync(AICodeDiagramRequestDTO request)
+        {
+            var result = new ReturnResult<AICodeDiagramResponseDTO>();
+            try
+            {
+                using var httpRequest = new HttpRequestMessage(
+                    HttpMethod.Post,
+                    $"{_baseUrl}/ai/code/diagram")
+                {
+                    Content = JsonContent.Create(request),
+                };
+
+                ForwardAuthorizationHeader(httpRequest);
+
+                var response = await _httpClient.SendAsync(httpRequest);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync();
+                    DevNexusLogger.Instance.Warn(
+                        $"[AiWorkerClient] GenerateCodeDiagram returned {(int)response.StatusCode}: {errorBody}");
+                    result.Message = $"AI worker could not generate a code diagram. Status: {(int)response.StatusCode}.";
+                    return result;
+                }
+
+                var diagram = await response.Content.ReadFromJsonAsync<AICodeDiagramResponseDTO>();
+                if (diagram == null)
+                {
+                    result.Message = "AI worker returned an empty code diagram response.";
+                    return result;
+                }
+
+                result.Result = diagram;
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error($"[AiWorkerClient] GenerateCodeDiagramAsync failed: {ex.Message}");
+                result.Message = $"Failed to generate code diagram: {ex.Message}";
+            }
+
+            return result;
+        }
+
         public async Task<ReturnResult<bool>> UpdateUsageInteractionAsync(
             int usageLogId,
             AIUsageInteractionUpdateRequestDTO request)

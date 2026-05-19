@@ -36,5 +36,19 @@ namespace platform_core_service.Controllers
             var result = await _aiContentService.SummarizePostAsync(postId, request);
             return Ok(result);
         }
+
+        [HttpPost("code/explain")]
+        public async Task<IActionResult> ExplainCode([FromBody] AICodeExplainRequestDTO request)
+        {
+            var result = await _aiContentService.ExplainCodeAsync(request);
+            return Ok(result);
+        }
+
+        [HttpPost("code/diagram")]
+        public async Task<IActionResult> GenerateCodeDiagram([FromBody] AICodeDiagramRequestDTO request)
+        {
+            var result = await _aiContentService.GenerateCodeDiagramAsync(request);
+            return Ok(result);
+        }
     }
 }

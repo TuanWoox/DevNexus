@@ -9,13 +9,18 @@ from pydantic import BaseModel, Field
 
 class CodeExplainRequest(BaseModel):
     code: str = Field(..., min_length=1, description="The code block to explain.")
-    language: str = Field(..., min_length=1, description="Programming language (e.g., python, javascript).")
+    language: str | None = Field("auto", min_length=1, description="Programming language (e.g., python, javascript).")
+    post_id: str | None = Field(None, description="Optional source post id for request context.")
 
 
 class CodeExplainResponse(BaseModel):
-    explanation: str = Field(..., description="Step-by-step natural language explanation.")
-    concepts: list[str] = Field(..., description="List of key programming concepts used (e.g., 'for loop', 'recursion').")
-    complexity_rating: int = Field(..., ge=1, le=10, description="Estimated complexity from 1 to 10.")
+    purpose: str = Field(..., description="Short statement of what the snippet does.")
+    how_it_works: list[str] = Field(..., description="Step-by-step explanation of the snippet.")
+    important_details: list[str] = Field(..., description="Important implementation details.")
+    potential_issues: list[str] = Field(default_factory=list, description="Potential bugs or risks.")
+    suggested_improvements: list[str] = Field(default_factory=list, description="Suggested improvements.")
+    concepts: list[str] = Field(default_factory=list, description="Key programming concepts used.")
+    complexity_rating: Literal["Low", "Medium", "High"] = Field("Medium", description="Estimated complexity.")
 
 
 # ---------------------------------------------------------------------------
@@ -24,12 +29,14 @@ class CodeExplainResponse(BaseModel):
 
 class DiagramRequest(BaseModel):
     code: str = Field(..., min_length=1, description="The code block to generate a diagram for.")
-    diagram_type: Literal["flowchart", "sequence"] = Field("flowchart", description="Type of Mermaid diagram to generate.")
+    language: str | None = Field("auto", min_length=1, description="Programming language, or auto.")
+    diagram_type: Literal["auto", "flowchart", "sequence"] = Field("auto", description="Type of Mermaid diagram to generate.")
+    post_id: str | None = Field(None, description="Optional source post id for request context.")
 
 
 class DiagramResponse(BaseModel):
     mermaid_syntax: str = Field(..., description="Valid Mermaid.js syntax without markdown fences.")
-    diagram_type: str = Field(..., description="The type of diagram generated.")
+    diagram_type: Literal["flowchart", "sequence"] = Field(..., description="The type of diagram generated.")
 
 
 # ---------------------------------------------------------------------------

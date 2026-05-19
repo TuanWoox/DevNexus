@@ -199,6 +199,53 @@ namespace platform_core_service.Business.Services
             return returnResult;
         }
 
+        public async Task<ReturnResult<AICodeExplainResponseDTO>> ExplainCodeAsync(AICodeExplainRequestDTO request)
+        {
+            var returnResult = new ReturnResult<AICodeExplainResponseDTO>();
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.Code))
+                {
+                    returnResult.Message = "Code is required.";
+                    return returnResult;
+                }
+
+                request.Language = NormalizeCodeLanguage(request.Language);
+                returnResult = await _aiWorkerClient.ExplainCodeAsync(request);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error($"[AiContentService] ExplainCodeAsync failed: {ex.Message}");
+                returnResult.Message = "An error occurred while explaining code.";
+            }
+
+            return returnResult;
+        }
+
+        public async Task<ReturnResult<AICodeDiagramResponseDTO>> GenerateCodeDiagramAsync(AICodeDiagramRequestDTO request)
+        {
+            var returnResult = new ReturnResult<AICodeDiagramResponseDTO>();
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.Code))
+                {
+                    returnResult.Message = "Code is required.";
+                    return returnResult;
+                }
+
+                request.Language = NormalizeCodeLanguage(request.Language);
+                request.DiagramType = NormalizeDiagramType(request.DiagramType);
+                returnResult = await _aiWorkerClient.GenerateCodeDiagramAsync(request);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error($"[AiContentService] GenerateCodeDiagramAsync failed: {ex.Message}");
+                returnResult.Message = "An error occurred while generating the code diagram.";
+            }
+
+            return returnResult;
+        }
+
         private static SummarizePostResponseDTO BuildFailedResponse(string postId, string message)
         {
             return new SummarizePostResponseDTO
@@ -255,6 +302,22 @@ namespace platform_core_service.Business.Services
                 : language.Trim().ToLowerInvariant();
 
             return normalized is "auto" or "vi" or "en" ? normalized : "auto";
+        }
+
+        private static string NormalizeCodeLanguage(string? language)
+        {
+            return string.IsNullOrWhiteSpace(language)
+                ? "auto"
+                : language.Trim().ToLowerInvariant();
+        }
+
+        private static string NormalizeDiagramType(string? diagramType)
+        {
+            var normalized = string.IsNullOrWhiteSpace(diagramType)
+                ? "auto"
+                : diagramType.Trim().ToLowerInvariant();
+
+            return normalized is "auto" or "flowchart" or "sequence" ? normalized : "auto";
         }
 
         private static string NormalizeForHash(string? value)
