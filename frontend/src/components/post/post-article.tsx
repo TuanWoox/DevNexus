@@ -9,6 +9,7 @@ import {
     Bookmark,
     Share2,
     Globe,
+    History,
 } from 'lucide-react';
 import { useGetPostById } from '@/hooks/post-hooks';
 import { useGetCommentsByPostId } from '@/hooks/comment-hooks/use-get-comments-by-post-id';
@@ -41,6 +42,7 @@ import {
 import { useDeleteBookmarkedItemById } from "@/hooks/bookmarked-item-hooks/use-delete-bookmarked-item-by-id";
 import { cn } from '@/lib/utils';
 import { AiPostSummary } from './ai-post-summary';
+import { ContentHistoryOverlay } from '@/components/history/content-history-overlay';
 
 interface Props {
     postId: string;
@@ -52,6 +54,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
 
     const [isBookmarkModalOpen, setIsBookmarkModalOpen] = useState(false);
     const [isUnsaveModalOpen, setIsUnsaveModalOpen] = useState(false);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
     const { mutate: unsaveItem, isPending: isUnsavePending } = useDeleteBookmarkedItemById();
 
@@ -371,6 +374,14 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                         <Share2 className="w-5 h-5" />
                         <span className="text-sm font-medium hidden sm:block">Share</span>
                     </button>
+                    <button
+                        onClick={() => setIsHistoryOpen(true)}
+                        disabled={!isApproved}
+                        className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg cursor-pointer disabled:cursor-not-allowed transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                        <History className="w-5 h-5" />
+                        <span className="text-sm font-medium hidden sm:block">History</span>
+                    </button>
                 </div>
             </div>
 
@@ -379,6 +390,13 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                 onClose={() => setIsBookmarkModalOpen(false)}
                 postId={postId}
                 isQAPost={isQAPost}
+            />
+
+            <ContentHistoryOverlay
+                contentId={postId}
+                type={isQAPost ? "qapost" : "post"}
+                open={isHistoryOpen}
+                onClose={() => setIsHistoryOpen(false)}
             />
 
             <AlertDialog open={isUnsaveModalOpen} onOpenChange={setIsUnsaveModalOpen}>
