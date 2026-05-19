@@ -58,5 +58,73 @@ namespace platform_core_service.Controllers
 
             return Ok(returnResult);
         }
+
+        [HttpPost("{id}/assign-to-me")]
+        public async Task<IActionResult> AssignToMe(string id, [FromBody] AssignReportDTO dto)
+        {
+            var returnResult = new ReturnResult<AdminReportDetailDTO>();
+            try
+            {
+                returnResult = await _adminReportService.AssignToMeAsync(id, dto ?? new AssignReportDTO());
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+
+            return Ok(returnResult);
+        }
+
+        [HttpPost("{id}/resolve")]
+        public async Task<IActionResult> Resolve(string id, [FromBody] ResolveReportDTO dto)
+        {
+            var returnResult = new ReturnResult<AdminReportDetailDTO>();
+            try
+            {
+                returnResult = await _adminReportService.ResolveAsync(id, dto ?? new ResolveReportDTO());
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+
+            return Ok(returnResult);
+        }
+
+        [HttpPost("{id}/dismiss")]
+        public async Task<IActionResult> Dismiss(string id, [FromBody] DismissReportDTO dto)
+        {
+            var returnResult = new ReturnResult<AdminReportDetailDTO>();
+            try
+            {
+                returnResult = await _adminReportService.DismissAsync(id, dto ?? new DismissReportDTO());
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+
+            return Ok(returnResult);
+        }
+
+        [HttpPost("{id}/escalate")]
+        public async Task<IActionResult> Escalate(string id, [FromBody] EscalateReportDTO dto)
+        {
+            var returnResult = new ReturnResult<AdminReportDetailDTO>();
+            try
+            {
+                returnResult = await _adminReportService.EscalateAsync(id, dto ?? new EscalateReportDTO());
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+
+            return Ok(returnResult);
+        }
     }
 }

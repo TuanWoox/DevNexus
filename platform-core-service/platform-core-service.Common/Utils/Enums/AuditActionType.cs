@@ -11,6 +11,11 @@ namespace platform_core_service.Common.Utils.Enums
         PostForceRejected = 11,
 
         ModerationQueueApproved = 20,
-        ModerationQueueRejected = 21
+        ModerationQueueRejected = 21,
+
+        ReportAssigned = 30,
+        ReportResolved = 31,
+        ReportDismissed = 32,
+        ReportEscalated = 33
     }
 }

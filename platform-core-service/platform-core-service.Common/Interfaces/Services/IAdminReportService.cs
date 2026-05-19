@@ -8,5 +8,9 @@ namespace platform_core_service.Common.Interfaces.Services
     {
         Task<ReturnResult<PagedData<AdminReportDTO, string>>> GetPagingAsync(Page<string> page);
         Task<ReturnResult<AdminReportDetailDTO>> GetByIdAsync(string id);
+        Task<ReturnResult<AdminReportDetailDTO>> AssignToMeAsync(string id, AssignReportDTO dto);
+        Task<ReturnResult<AdminReportDetailDTO>> ResolveAsync(string id, ResolveReportDTO dto);
+        Task<ReturnResult<AdminReportDetailDTO>> DismissAsync(string id, DismissReportDTO dto);
+        Task<ReturnResult<AdminReportDetailDTO>> EscalateAsync(string id, EscalateReportDTO dto);
     }
 }
