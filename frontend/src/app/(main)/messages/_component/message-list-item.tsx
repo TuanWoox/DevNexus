@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Chat } from "@/features/messages/types/contracts";
 import { cn } from "@/lib/utils";
@@ -7,7 +8,27 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { getAvatarUrl, getTitle, getInitials, toRelativeTime, getProfileId } from "@/features/messages/utils/message-service.helper";
-import { Pin, BellOff, Check } from "lucide-react";
+import { Archive, Bell, BellOff, Check, Loader2, MoreHorizontal, Pin, Trash2, UserPlus } from "lucide-react";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useUpdateChatSetting } from "@/features/messages/hooks/chatsettings/use-update-chat-setting";
+import { useDeleteAllMessages } from "@/features/messages/hooks/chatsettings/use-delete-all-messages";
+import { toast } from "sonner";
 
 interface MessageListItemProps {
     item: Chat;
@@ -17,12 +38,21 @@ interface MessageListItemProps {
 
 export function MessageListItem({ item, isActive = false, onSelect }: MessageListItemProps) {
     const router = useRouter();
+    const [clearMessagesOpen, setClearMessagesOpen] = useState(false);
+    const updateChatSetting = useUpdateChatSetting();
+    const deleteAllMessages = useDeleteAllMessages();
     const currentProfileId = useSelector((state: RootState) => getProfileId(state.auth.user?.profileId));
     const handleSelect = () => {
         if (onSelect) {
             onSelect(item);
         } else {
             router.push(`/messages/${item.Id}`);
+        }
+    };
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            handleSelect();
         }
     };
     const title = getTitle(item, currentProfileId);
@@ -38,6 +68,7 @@ export function MessageListItem({ item, isActive = false, onSelect }: MessageLis
 
     const isPinned = currentSetting?.IsPinned;
     const isMuted = currentSetting?.IsMuted;
+    const canPin = !!currentSetting && !currentSetting.IsArchived && !currentSetting.IsRequested;
 
     const mediaLabel: Record<string, string> = {
         Image: " Image",
@@ -49,13 +80,81 @@ export function MessageListItem({ item, isActive = false, onSelect }: MessageLis
         ? "Message deleted"
         : messageContent || (firstMedia ? mediaLabel[firstMedia.Type] || " Media" : "No messages yet");
 
+    const handleTogglePin = () => {
+        if (!currentSetting || !canPin) return;
+        updateChatSetting.mutate({
+            Id: currentSetting.Id,
+            IsPinned: !currentSetting.IsPinned,
+            IsArchived: null,
+            IsMuted: null,
+            IsRequested: null,
+            MuteUntil: null,
+        });
+    };
+
+    const handleToggleMute = () => {
+        if (!currentSetting) return;
+        updateChatSetting.mutate({
+            Id: currentSetting.Id,
+            IsMuted: !currentSetting.IsMuted,
+            IsArchived: null,
+            IsPinned: null,
+            IsRequested: null,
+            MuteUntil: null,
+        });
+    };
+
+    const handleToggleArchive = () => {
+        if (!currentSetting) return;
+        updateChatSetting.mutate({
+            Id: currentSetting.Id,
+            IsArchived: !currentSetting.IsArchived,
+            IsRequested: false,
+            IsMuted: null,
+            IsPinned: null,
+            MuteUntil: null,
+        });
+    };
+
+    const handleAcceptRequest = () => {
+        if (!currentSetting) return;
+        updateChatSetting.mutate({
+            Id: currentSetting.Id,
+            IsRequested: false,
+            IsArchived: false,
+            IsMuted: null,
+            IsPinned: null,
+            MuteUntil: null,
+        });
+    };
+
+    const handleClearMessages = () => {
+        if (!currentSetting) return;
+        deleteAllMessages.mutate(currentSetting.Id, {
+            onSuccess: (data) => {
+                if (data.result) {
+                    toast.success("Messages cleared");
+                    setClearMessagesOpen(false);
+                } else {
+                    toast.error(data.message ?? "Failed to clear messages");
+                }
+            },
+            onError: () => {
+                toast.error("Failed to clear messages");
+            },
+        });
+    };
+
     return (
-        <button
-            type="button"
+        <>
+        <div
+            role="button"
+            tabIndex={0}
             onClick={handleSelect}
+            onKeyDown={handleKeyDown}
             className={cn(
                 "group flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors duration-150",
-                "hover:bg-accent/40",
+                "hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 isActive && "bg-accent shadow-sm ring-1 ring-primary/10",
             )}
         >
@@ -95,6 +194,57 @@ export function MessageListItem({ item, isActive = false, onSelect }: MessageLis
                         )}>
                             {lastMessage ? toRelativeTime(lastMessage.DateCreated) : ""}
                         </span>
+                        {currentSetting && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button
+                                        type="button"
+                                        aria-label="Chat actions"
+                                        onClick={(event) => event.stopPropagation()}
+                                        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground opacity-0 transition hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+                                    >
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-44">
+                                    {canPin && (
+                                        <DropdownMenuItem onSelect={handleTogglePin}>
+                                            <Pin className="h-4 w-4" />
+                                            {currentSetting.IsPinned ? "Unpin chat" : "Pin chat"}
+                                        </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuItem onSelect={handleToggleMute}>
+                                        {currentSetting.IsMuted ? (
+                                            <Bell className="h-4 w-4" />
+                                        ) : (
+                                            <BellOff className="h-4 w-4" />
+                                        )}
+                                        {currentSetting.IsMuted ? "Unmute chat" : "Mute chat"}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={handleToggleArchive}>
+                                        <Archive className="h-4 w-4" />
+                                        {currentSetting.IsArchived ? "Unarchive chat" : "Archive chat"}
+                                    </DropdownMenuItem>
+                                    {currentSetting.IsRequested && (
+                                        <DropdownMenuItem onSelect={handleAcceptRequest}>
+                                            <UserPlus className="h-4 w-4" />
+                                            Accept request
+                                        </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        variant="destructive"
+                                        onSelect={(event) => {
+                                            event.preventDefault();
+                                            setClearMessagesOpen(true);
+                                        }}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                        Clear messages
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
                     </div>
                 </div>
 
@@ -149,6 +299,33 @@ export function MessageListItem({ item, isActive = false, onSelect }: MessageLis
                     )}
                 </div>
             </div>
-        </button>
+        </div>
+        {currentSetting && (
+            <AlertDialog open={clearMessagesOpen} onOpenChange={setClearMessagesOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Clear messages?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently clear all messages in this conversation for you.
+                            This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={deleteAllMessages.isPending}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleClearMessages}
+                            disabled={deleteAllMessages.isPending}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {deleteAllMessages.isPending ? (
+                                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                            ) : null}
+                            Clear
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        )}
+        </>
     );
 }
