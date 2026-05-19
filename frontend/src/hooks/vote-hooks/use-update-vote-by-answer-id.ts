@@ -2,7 +2,7 @@ import { voteService } from "@/services/vote-service";
 import { VoteRequestDTO } from "@/types/vote/vote-request-dto";
 import { SelectAnswerDTO } from "@/types/answer/select-answer-dto";
 import { PagedData } from "@/types/common/paged-data";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, InfiniteData } from "@tanstack/react-query";
 import { answerQueryKeys } from "../answer-hooks/use-answer-query-keys";
 
 const applyVoteToAnswer = (answer: SelectAnswerDTO, voteRequestDTO: VoteRequestDTO): SelectAnswerDTO => {
@@ -33,6 +33,37 @@ const applyVoteToAnswer = (answer: SelectAnswerDTO, voteRequestDTO: VoteRequestD
     };
 };
 
+const applyVoteToAnswerInfiniteList = (
+    oldData: InfiniteData<PagedData<SelectAnswerDTO, string>> | undefined,
+    answerId: string,
+    voteRequestDTO: VoteRequestDTO
+): InfiniteData<PagedData<SelectAnswerDTO, string>> | undefined => {
+    if (!oldData) return oldData;
+    return {
+        ...oldData,
+        pages: oldData.pages.map((page) => ({
+            ...page,
+            data: page.data.map((answer) =>
+                answer.id === answerId ? applyVoteToAnswer(answer, voteRequestDTO) : answer
+            ),
+        })),
+    };
+};
+
+const applyVoteToAnswerPagedList = (
+    oldData: PagedData<SelectAnswerDTO, string> | undefined,
+    answerId: string,
+    voteRequestDTO: VoteRequestDTO
+): PagedData<SelectAnswerDTO, string> | undefined => {
+    if (!oldData) return oldData;
+    return {
+        ...oldData,
+        data: oldData.data.map((answer) =>
+            answer.id === answerId ? applyVoteToAnswer(answer, voteRequestDTO) : answer
+        ),
+    };
+};
+
 export const useUpdateVoteByAnswerId = (answerId: string) => {
     const queryClient = useQueryClient();
 
@@ -43,24 +74,20 @@ export const useUpdateVoteByAnswerId = (answerId: string) => {
             await queryClient.cancelQueries({ queryKey: answerQueryKeys.all });
 
             const previousDetail = queryClient.getQueryData<SelectAnswerDTO>(answerQueryKeys.detail(answerId));
-            const previousLists = queryClient.getQueriesData<PagedData<SelectAnswerDTO, string>>({ queryKey: answerQueryKeys.lists() });
+            const previousLists = queryClient.getQueriesData<any>({ queryKey: answerQueryKeys.lists() });
 
             if (previousDetail) {
                 queryClient.setQueryData(answerQueryKeys.detail(answerId), applyVoteToAnswer(previousDetail, voteRequestDTO));
             }
 
-            queryClient.setQueriesData<PagedData<SelectAnswerDTO, string>>(
-                { queryKey: answerQueryKeys.lists() },
-                (old) => {
-                    if (!old) return old;
-                    return {
-                        ...old,
-                        data: old.data.map((answer) =>
-                            answer.id === answerId ? applyVoteToAnswer(answer, voteRequestDTO) : answer
-                        ),
-                    };
+            previousLists.forEach(([queryKey, oldData]) => {
+                if (!oldData) return;
+                if ("pages" in oldData) {
+                    queryClient.setQueryData(queryKey, applyVoteToAnswerInfiniteList(oldData, answerId, voteRequestDTO));
+                } else {
+                    queryClient.setQueryData(queryKey, applyVoteToAnswerPagedList(oldData, answerId, voteRequestDTO));
                 }
-            );
+            });
 
             return { previousDetail, previousLists };
         },
@@ -73,8 +100,5 @@ export const useUpdateVoteByAnswerId = (answerId: string) => {
                 queryClient.setQueryData(queryKey, data);
             });
         },
-
-        // onSuccess: intentionally empty — onMutate already patched RAM via setQueryData/setQueriesData.
-        // Zero-refetch pattern: no invalidateQueries here.
     });
 };

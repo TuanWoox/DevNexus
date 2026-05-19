@@ -1,6 +1,6 @@
 "use client";
 
-import { Ref, useState, useEffect } from 'react';
+import { Ref, useState } from 'react';
 import { Loader2, Bookmark, MoreHorizontal, Pen, Trash2, ChevronLeft } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import {

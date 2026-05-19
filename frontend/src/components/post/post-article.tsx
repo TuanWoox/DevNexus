@@ -10,10 +10,10 @@ import {
     Share2,
     Globe,
     History,
+    HelpCircle,
+    Code2,
 } from 'lucide-react';
 import { useGetPostById } from '@/hooks/post-hooks';
-import { useGetCommentsByPostId } from '@/hooks/comment-hooks/use-get-comments-by-post-id';
-import { SortOrderType } from '@/constants/sortOrderType';
 import { useUpdateVoteByPostId } from '@/hooks/vote-hooks/use-update-vote-by-post-id';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -43,6 +43,7 @@ import { useDeleteBookmarkedItemById } from "@/hooks/bookmarked-item-hooks/use-d
 import { cn } from '@/lib/utils';
 import { AiPostSummary } from './ai-post-summary';
 import { ContentHistoryOverlay } from '@/components/history/content-history-overlay';
+import { SelectQAPostDTO } from '@/types/qa-post/select-qa-post-dto';
 
 interface Props {
     postId: string;
@@ -62,6 +63,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     const { data: qaPost, isLoading: isQALoading } = useGetQAPostById(postId, isQAPost);
     const { data: normalPost, isLoading: isNormalLoading } = useGetPostById(postId, !isQAPost);
     const post = isQAPost ? qaPost : normalPost;
+    const PostTypeIcon = isQAPost ? HelpCircle : Code2;
     const isPostLoading = isQAPost ? isQALoading : isNormalLoading;
     const isAuthor = user?.profileId === post?.authorId;
     const isAdmin = user?.roles?.includes('Admin') || user?.roles?.includes('Moderator');
@@ -96,20 +98,9 @@ export default function PostArticle({ postId, isQAPost }: Props) {
         updateVote({ isUpvote });
     };
 
-    // QA posts already include answerCount in the DTO — no extra fetch needed.
-    // Use the same payload as CommentSection so React Query deduplicates into one request.
-    const { data: commentCountData } = useGetCommentsByPostId(postId, !isQAPost, {
-        size: 20,
-        pageNumber: 0,
-        totalElements: 0,
-        orders: [{ sort: 'dateCreated', sortDir: SortOrderType.DESC, dynamicProperty: '', delimiter: '', dataType: '' }],
-        filter: [],
-        selected: []
-    });
-
     const commentCount = isQAPost
-        ? (post as import('@/types/qa-post/select-qa-post-dto').SelectQAPostDTO)?.answerCount ?? 0
-        : commentCountData?.page?.totalElements ?? 0;
+        ? (post as SelectQAPostDTO)?.answerCount ?? 0
+        : (post as SelectPostDTO)?.commentCount ?? 0;
 
     const isLoading = isPostLoading;
 
@@ -209,12 +200,12 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                                     </ProfileHoverCard>
                                 </div>
                                 <div className="flex flex-col">
-                                    <Link href={`/communities/${community.id}`} className="text-sm font-bold text-heading hover:underline transition-colors truncate max-w-[150px] sm:max-w-[300px]">
+                                    <Link href={`/communities/${community.id}`} className="text-sm font-bold text-heading hover:underline transition-colors truncate max-w-37.5 sm:max-w-75">
                                         {community.name}
                                     </Link>
                                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                                         <ProfileHoverCard profileId={post.authorId} author={author}>
-                                            <Link href={`/profile/${post.authorId}`} className="font-semibold hover:underline text-muted-foreground transition-colors truncate max-w-[120px]">
+                                            <Link href={`/profile/${post.authorId}`} className="font-semibold hover:underline text-muted-foreground transition-colors truncate max-w-30">
                                                 {author?.fullName || 'Unknown'}
                                             </Link>
                                         </ProfileHoverCard>
@@ -264,12 +255,24 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                         )}
                     </div>
                     {/* Post Actions Dropdown (Edit / Delete / Follow / Report) */}
-                    <PostActionsDropdown
+                    {/* <PostActionsDropdown
                         postId={postId}
                         isQAPost={isQAPost}
                         isAuthor={isAuthor}
                         onDeleted={() => router.push('/feed')}
-                    />
+                    /> */}
+                    <div className="relative z-10 flex items-center gap-2">
+                        <div className="hidden items-center gap-1.5 rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary sm:flex">
+                            <PostTypeIcon className="h-3.5 w-3.5" />
+                            <span className="text-sm">{isQAPost ? 'Q&A' : 'Discussion'}</span>
+                        </div>
+                        <PostActionsDropdown
+                            postId={postId}
+                            isQAPost={isQAPost}
+                            isAuthor={isAuthor}
+                            onDeleted={() => router.push('/feed')}
+                        />
+                    </div>
                 </div>
 
                 {/* Moderation Banner — only visible to author or admin */}
@@ -297,7 +300,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                 {/* Content */}
                 <div className={cn(
                     "text-body text-sm sm:text-base leading-relaxed whitespace-pre-wrap transition-all",
-                    !isApproved && "opacity-70 grayscale-[20%]"
+                    !isApproved && "opacity-70 grayscale-20"
                 )}>
                     <MarkdownViewer source={post.content} />
                 </div>
