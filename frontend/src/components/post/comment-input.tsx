@@ -11,13 +11,16 @@ import { ContentType } from '@/types/content-media/content-type';
 import { useUploadContentMedia } from '@/hooks/media/useUploadContentMedia';
 
 interface CommentInputProps {
-    postId: string;
+    postId?: string;
+    answerId?: string;
+    replyToCommentId?: string;
     currentUserAvatar?: string;
-    isQAPost: boolean;
+    isQAPost?: boolean;
     isDisabled?: boolean;
+    onSuccess?: () => void;
 }
 
-export function CommentInput({ postId, currentUserAvatar, isQAPost, isDisabled }: CommentInputProps) {
+export function CommentInput({ postId, answerId, replyToCommentId, currentUserAvatar, isQAPost, isDisabled, onSuccess }: CommentInputProps) {
     const [content, setContent] = useState('');
     const [isExpanded, setIsExpanded] = useState(false);
     const editorRef = useRef<MarkdownEditorHandle>(null);
@@ -25,7 +28,9 @@ export function CommentInput({ postId, currentUserAvatar, isQAPost, isDisabled }
     const { mutate: createAnswer, isPending: isCreatingAnswer } = useCreateAnswer();
     const { uploadPendingMedia, isUploading: isUploadingMedia, progress: uploadProgress } = useUploadContentMedia();
 
-    const isSubmitting = isQAPost ? isCreatingAnswer : isCreatingComment;
+    // If answerId or replyToCommentId is provided, we are creating a Comment.
+    const isCreatingAnswerPost = isQAPost && !answerId && !replyToCommentId;
+    const isSubmitting = isCreatingAnswerPost ? isCreatingAnswer : isCreatingComment;
     const contentType = isQAPost ? ContentType.Answer : ContentType.Comment;
 
     const handleSubmit = async () => {
@@ -47,7 +52,7 @@ export function CommentInput({ postId, currentUserAvatar, isQAPost, isDisabled }
             }
         }
 
-        if (isQAPost) {
+        if (isCreatingAnswerPost && postId) {
             const payload: CreateAnswerDTO = {
                 content: finalContent,
                 qaPostId: postId,
@@ -58,19 +63,23 @@ export function CommentInput({ postId, currentUserAvatar, isQAPost, isDisabled }
                     editorRef.current?.cleanup();
                     setContent('');
                     setIsExpanded(false);
+                    onSuccess?.();
                 }
             });
         } else {
             const payload: CreateCommentDTO = {
                 content: finalContent,
-                postId,
-                mediaIds
+                postId: postId,
+                answerId: answerId,
+                replyToCommentId: replyToCommentId,
+                mediaIds,
             };
             createComment(payload, {
                 onSuccess: () => {
                     editorRef.current?.cleanup();
                     setContent('');
                     setIsExpanded(false);
+                    onSuccess?.();
                 }
             });
         }

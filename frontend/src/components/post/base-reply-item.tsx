@@ -48,6 +48,10 @@ export interface BaseReplyItemProps {
     onAccept?: () => void;
     canAccept?: boolean;
     isAccepting?: boolean;
+    isReplying?: boolean;
+    onToggleReply?: () => void;
+    replyInput?: React.ReactNode;
+    hideReplyButton?: boolean;
 }
 
 export function BaseReplyItem({
@@ -71,6 +75,10 @@ export function BaseReplyItem({
     onAccept,
     canAccept,
     isAccepting,
+    isReplying,
+    onToggleReply,
+    replyInput,
+    hideReplyButton,
 }: BaseReplyItemProps) {
     const isAuthor = authorId === currentUserId;
     const [isEditing, setIsEditing] = useState(false);
@@ -205,12 +213,15 @@ export function BaseReplyItem({
                         <ArrowBigDown className={`w-4 h-4 transition-all ${currentUserVote === false ? 'fill-rose-500' : ''}`} />
                         {downvoteCount}
                     </button>
-                    <button
-                        disabled={isDisabled}
-                        className="text-xs text-muted-foreground hover:text-heading font-medium transition-colors disabled:opacity-50 cursor-pointer"
-                    >
-                        Reply
-                    </button>
+                    {!hideReplyButton && (
+                        <button
+                            onClick={onToggleReply}
+                            disabled={isDisabled}
+                            className={`text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer ${isReplying ? 'text-primary' : 'text-muted-foreground hover:text-heading'}`}
+                        >
+                            Reply
+                        </button>
+                    )}
                     {canAccept && (
                         <button
                             onClick={onAccept}
@@ -271,6 +282,11 @@ export function BaseReplyItem({
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
+                {isReplying && replyInput && (
+                    <div className="mt-4">
+                        {replyInput}
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -1,4 +1,5 @@
 using platform_core_service.Common.Entities.BaseEntity;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Comment;
 
 namespace platform_core_service.Common.Models.DTOs.EntityDTO.Answer
 {
@@ -15,6 +16,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Answer
         public DateTimeOffset DateCreated { get; set; }
         public DateTimeOffset? DateModified { get; set; }
         public bool? CurrentUserVote { get; set; }
+        public List<SelectCommentDTO> Replies { get; set; } = new List<SelectCommentDTO>();
     }
 
     public class SelectAnswerAuthorDTO

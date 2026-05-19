@@ -163,9 +163,9 @@ export function PostCard({ post }: PostCardProps) {
                 </div>
 
                 <div className="relative z-10 flex items-center gap-2">
-                    <div className="hidden items-center gap-1.5 rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary sm:flex">
+                    <div className="hidden items-center gap-1.5 rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 font-semibold text-primary sm:flex">
                         <PostTypeIcon className="h-3.5 w-3.5" />
-                        <span>{isQaPost ? 'Q&A' : 'Discussion'}</span>
+                        <span className="text-sm">{isQaPost ? 'Q&A' : 'Discussion'}</span>
                     </div>
                     <PostActionsDropdown
                         postId={post.id}

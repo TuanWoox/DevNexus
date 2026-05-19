@@ -1,3 +1,5 @@
+import { SelectCommentDTO } from '../comment/select-comment-dto';
+
 export interface SelectAnswerAuthorDTO {
     id: string;
     fullName: string;
@@ -21,4 +23,5 @@ export interface SelectAnswerDTO {
     dateCreated: string;
     dateModified?: string;
     currentUserVote?: boolean | null; // null = no vote, true = upvoted, false = downvoted
+    replies: SelectCommentDTO[];
 }
