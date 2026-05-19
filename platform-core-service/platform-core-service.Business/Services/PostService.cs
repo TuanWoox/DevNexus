@@ -188,6 +188,7 @@ namespace platform_core_service.Business.Services
                 returnResult.Result = _mapper.Map<SelectPostDTO>(post);
                 await SetCurrentUserVoteAsync(returnResult.Result);
                 await SetCurrentUserSavedAsync(returnResult.Result);
+                await SetCommentCountForListAsync(new List<SelectPostDTO> { returnResult.Result });
             }
             catch (Exception ex)
             {
@@ -237,6 +238,7 @@ namespace platform_core_service.Business.Services
                 returnResult.Result = _mapper.Map<SelectPostDTO>(post);
                 await SetCurrentUserVoteAsync(returnResult.Result);
                 await SetCurrentUserSavedAsync(returnResult.Result);
+                await SetCommentCountForListAsync(new List<SelectPostDTO> { returnResult.Result });
             }
             catch (Exception ex)
             {
@@ -540,6 +542,7 @@ namespace platform_core_service.Business.Services
                 result.Result = _mapper.Map<SelectPostDTO>(updatedPost);
                 await SetCurrentUserVoteAsync(result.Result);
                 await SetCurrentUserSavedAsync(result.Result);
+                await SetCommentCountForListAsync(new List<SelectPostDTO> { result.Result });
             }
             catch (Exception ex)
             {

@@ -7,6 +7,7 @@ using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Answer;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Comment;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
@@ -179,6 +180,7 @@ namespace platform_core_service.Business.Services
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
+                    await PopulateRepliesForAnswersAsync(result.Result.Data.ToList());
                 }
             }
             catch (Exception ex)
@@ -376,6 +378,60 @@ namespace platform_core_service.Business.Services
                 .FirstOrDefaultAsync();
 
             dto.CurrentUserVote = vote;
+        }
+
+        private async Task PopulateRepliesForAnswersAsync(List<SelectAnswerDTO> answers)
+        {
+            if (answers == null || !answers.Any()) return;
+
+            var answerIds = answers.Select(a => a.Id).ToList();
+
+            // Load all comments for these answers in one query
+            var comments = await _dbContext.Comments
+                .Where(c => answerIds.Contains(c.AnswerId) && !c.Deleted)
+                .Include(c => c.Author)
+                .OrderBy(c => c.DateCreated)
+                .ToListAsync();
+
+            if (!comments.Any()) return;
+
+            // Get current user's votes on these comments
+            string profileId = _userContext.ProfileId;
+            Dictionary<string, bool?> commentVotes = new Dictionary<string, bool?>();
+            
+            if (!string.IsNullOrEmpty(profileId))
+            {
+                var commentIds = comments.Select(c => c.Id).ToList();
+                var votes = await _dbContext.Votes
+                    .Where(v => v.AuthorId == profileId && commentIds.Contains(v.CommentId))
+                    .Select(v => new { v.CommentId, v.IsUpvote })
+                    .ToListAsync();
+
+                commentVotes = votes.ToDictionary(v => v.CommentId, v => (bool?)v.IsUpvote);
+            }
+
+            // Map comments to DTOs and group by AnswerId
+            var commentDTOs = _mapper.Map<List<SelectCommentDTO>>(comments);
+            
+            // Set current user votes
+            foreach (var commentDTO in commentDTOs)
+            {
+                if (commentVotes.TryGetValue(commentDTO.Id, out var vote))
+                {
+                    commentDTO.CurrentUserVote = vote;
+                }
+            }
+
+            var commentsByAnswer = commentDTOs.GroupBy(c => c.AnswerId).ToDictionary(g => g.Key, g => g.ToList());
+
+            // Assign replies to each answer
+            foreach (var answer in answers)
+            {
+                if (commentsByAnswer.TryGetValue(answer.Id, out var replies))
+                {
+                    answer.Replies = replies;
+                }
+            }
         }
 
         private async Task PublishAnswerNotificationAsync(string answerId, string actorId)

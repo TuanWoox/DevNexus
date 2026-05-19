@@ -6,14 +6,18 @@ import { useDeleteComment } from '@/hooks/comment-hooks/use-delete-comment';
 import { useUpdateComment } from '@/hooks/comment-hooks/use-update-comment';
 import { UpdateCommentDTO } from '@/types/comment/update-comment-dto';
 import { BaseReplyItem } from './base-reply-item';
+import { useState } from 'react';
+import { CommentInput } from './comment-input';
 
-export function CommentItem({ comment, currentUserId, isDisabled }: { comment: SelectCommentDTO, currentUserId: string, isDisabled?: boolean }) {
+export function CommentItem({ comment, currentUserId, currentUserAvatar, isDisabled }: { comment: SelectCommentDTO, currentUserId: string, currentUserAvatar?: string, isDisabled?: boolean }) {
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByCommentId(comment.id);
     const { mutate: deleteComment, isPending: isDeletingComment } = useDeleteComment();
     const { mutate: updateComment, isPending: isUpdatingComment } = useUpdateComment();
+    const [isReplying, setIsReplying] = useState(false);
 
     return (
-        <BaseReplyItem
+        <div className="flex flex-col gap-4">
+            <BaseReplyItem
             id={comment.id}
             content={comment.content}
             upvoteCount={comment.upvoteCount}
@@ -33,6 +37,32 @@ export function CommentItem({ comment, currentUserId, isDisabled }: { comment: S
             }}
             isUpdating={isUpdatingComment}
             isDisabled={isDisabled}
+            isReplying={isReplying}
+            onToggleReply={() => setIsReplying(!isReplying)}
+            hideReplyButton={!!comment.answerId || !!comment.replyToCommentId}
+            replyInput={
+                <CommentInput 
+                    postId={comment.postId} 
+                    answerId={comment.answerId} 
+                    replyToCommentId={comment.id}
+                    currentUserAvatar={currentUserAvatar}
+                    onSuccess={() => setIsReplying(false)}
+                />
+            }
         />
+        {comment.replies && comment.replies.length > 0 && (
+            <div className="ml-8 sm:ml-12 border-l-2 border-default/50 pl-4 space-y-6">
+                {comment.replies.map(reply => (
+                    <CommentItem 
+                        key={reply.id} 
+                        comment={reply} 
+                        currentUserId={currentUserId} 
+                        currentUserAvatar={currentUserAvatar}
+                        isDisabled={isDisabled} 
+                    />
+                ))}
+            </div>
+        )}
+        </div>
     );
 }

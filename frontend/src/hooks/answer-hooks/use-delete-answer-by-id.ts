@@ -1,6 +1,7 @@
 import { answerService } from "@/services/answer-service";
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { answerQueryKeys } from "./use-answer-query-keys";
+import { qaPostQueryKeys } from "../qa-post-hooks/use-qa-post-query-key";
 
 export const useDeleteAnswerById = () => {
     const queryClient = useQueryClient();
@@ -9,6 +10,7 @@ export const useDeleteAnswerById = () => {
         mutationFn: (answerId: string) => answerService.deleteAnswerById(answerId),
         onSuccess: (data, answerId) => {
             if (data) {
+                queryClient.invalidateQueries({ queryKey: qaPostQueryKeys.all });
                 queryClient.invalidateQueries({ queryKey: answerQueryKeys.lists() });
                 queryClient.removeQueries({ queryKey: answerQueryKeys.detail(answerId) });
             }

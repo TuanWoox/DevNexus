@@ -1,9 +1,11 @@
 import { voteService } from "@/services/vote-service";
 import { VoteRequestDTO } from "@/types/vote/vote-request-dto";
 import { SelectCommentDTO } from "@/types/comment/select-comment-dto";
+import { SelectAnswerDTO } from "@/types/answer/select-answer-dto";
 import { PagedData } from "@/types/common/paged-data";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, InfiniteData } from "@tanstack/react-query";
 import { commentQueryKeys } from "@/hooks/comment-hooks/use-comment-query-keys";
+import { answerQueryKeys } from "@/hooks/answer-hooks/use-answer-query-keys";
 
 const applyVoteToComment = (comment: SelectCommentDTO, voteRequestDTO: VoteRequestDTO): SelectCommentDTO => {
     const isToggleOff = comment.currentUserVote === voteRequestDTO.isUpvote;
@@ -33,18 +35,94 @@ const applyVoteToComment = (comment: SelectCommentDTO, voteRequestDTO: VoteReque
     };
 };
 
-// All comment list queries return PagedData, not a plain array
-const applyVoteToPagedComments = (
-    old: PagedData<SelectCommentDTO, string> | undefined,
+const applyVoteToCommentOrReplies = (
+    comment: SelectCommentDTO,
+    commentId: string,
+    voteRequestDTO: VoteRequestDTO
+): SelectCommentDTO => {
+    if (comment.id === commentId) {
+        return applyVoteToComment(comment, voteRequestDTO);
+    }
+    if (comment.replies && comment.replies.length > 0) {
+        return {
+            ...comment,
+            replies: comment.replies.map((reply) =>
+                reply.id === commentId ? applyVoteToComment(reply, voteRequestDTO) : reply
+            ),
+        };
+    }
+    return comment;
+};
+
+const applyVoteToCommentInfiniteList = (
+    oldData: InfiniteData<PagedData<SelectCommentDTO, string>> | undefined,
+    commentId: string,
+    voteRequestDTO: VoteRequestDTO
+): InfiniteData<PagedData<SelectCommentDTO, string>> | undefined => {
+    if (!oldData) return oldData;
+    return {
+        ...oldData,
+        pages: oldData.pages.map((page) => ({
+            ...page,
+            data: page.data.map((comment) =>
+                applyVoteToCommentOrReplies(comment, commentId, voteRequestDTO)
+            ),
+        })),
+    };
+};
+
+const applyVoteToCommentPagedList = (
+    oldData: PagedData<SelectCommentDTO, string> | undefined,
     commentId: string,
     voteRequestDTO: VoteRequestDTO
 ): PagedData<SelectCommentDTO, string> | undefined => {
-    if (!old) return old;
+    if (!oldData) return oldData;
     return {
-        ...old,
-        data: old.data.map((comment) =>
-            comment.id === commentId ? applyVoteToComment(comment, voteRequestDTO) : comment
+        ...oldData,
+        data: oldData.data.map((comment) =>
+            applyVoteToCommentOrReplies(comment, commentId, voteRequestDTO)
         ),
+    };
+};
+
+const applyVoteToCommentInAnswer = (
+    answer: SelectAnswerDTO,
+    commentId: string,
+    voteRequestDTO: VoteRequestDTO
+): SelectAnswerDTO => {
+    if (!answer.replies || answer.replies.length === 0) return answer;
+    return {
+        ...answer,
+        replies: answer.replies.map((reply) =>
+            reply.id === commentId ? applyVoteToComment(reply, voteRequestDTO) : reply
+        ),
+    };
+};
+
+const applyVoteToCommentInAnswerInfiniteList = (
+    oldData: InfiniteData<PagedData<SelectAnswerDTO, string>> | undefined,
+    commentId: string,
+    voteRequestDTO: VoteRequestDTO
+): InfiniteData<PagedData<SelectAnswerDTO, string>> | undefined => {
+    if (!oldData) return oldData;
+    return {
+        ...oldData,
+        pages: oldData.pages.map((page) => ({
+            ...page,
+            data: page.data.map((answer) => applyVoteToCommentInAnswer(answer, commentId, voteRequestDTO)),
+        })),
+    };
+};
+
+const applyVoteToCommentInAnswerPagedList = (
+    oldData: PagedData<SelectAnswerDTO, string> | undefined,
+    commentId: string,
+    voteRequestDTO: VoteRequestDTO
+): PagedData<SelectAnswerDTO, string> | undefined => {
+    if (!oldData) return oldData;
+    return {
+        ...oldData,
+        data: oldData.data.map((answer) => applyVoteToCommentInAnswer(answer, commentId, voteRequestDTO)),
     };
 };
 
@@ -56,40 +134,52 @@ export const useUpdateVoteByCommentId = (commentId: string) => {
 
         onMutate: async (voteRequestDTO) => {
             await queryClient.cancelQueries({ queryKey: commentQueryKeys.all });
+            await queryClient.cancelQueries({ queryKey: answerQueryKeys.all });
 
             const previousDetail = queryClient.getQueryData<SelectCommentDTO>(commentQueryKeys.detail(commentId));
-            const previousLists = queryClient.getQueriesData<PagedData<SelectCommentDTO, string>>({ queryKey: commentQueryKeys.all });
+            const previousCommentLists = queryClient.getQueriesData<any>({ queryKey: commentQueryKeys.all });
+            const previousAnswerLists = queryClient.getQueriesData<any>({ queryKey: answerQueryKeys.lists() });
 
             if (previousDetail) {
                 queryClient.setQueryData(commentQueryKeys.detail(commentId), applyVoteToComment(previousDetail, voteRequestDTO));
             }
 
-            queryClient.setQueriesData<PagedData<SelectCommentDTO, string>>(
-                {
-                    queryKey: commentQueryKeys.all,
-                    // Exclude 'detail' entries — they hold SelectCommentDTO, not PagedData.
-                    // detail keys have the shape: ['comments', 'detail', id]
-                    predicate: (query) => {
-                        const key = query.queryKey as string[];
-                        return key[1] !== 'detail';
-                    },
-                },
-                (old) => applyVoteToPagedComments(old, commentId, voteRequestDTO)
-            );
+            // Update comments queries (excluding details)
+            previousCommentLists.forEach(([queryKey, oldData]) => {
+                if (!oldData) return;
+                const keyArray = queryKey as string[];
+                if (keyArray[1] === 'detail') return;
 
-            return { previousDetail, previousLists };
+                if ("pages" in oldData) {
+                    queryClient.setQueryData(queryKey, applyVoteToCommentInfiniteList(oldData, commentId, voteRequestDTO));
+                } else {
+                    queryClient.setQueryData(queryKey, applyVoteToCommentPagedList(oldData, commentId, voteRequestDTO));
+                }
+            });
+
+            // Update comment nested inside answers queries
+            previousAnswerLists.forEach(([queryKey, oldData]) => {
+                if (!oldData) return;
+                if ("pages" in oldData) {
+                    queryClient.setQueryData(queryKey, applyVoteToCommentInAnswerInfiniteList(oldData, commentId, voteRequestDTO));
+                } else {
+                    queryClient.setQueryData(queryKey, applyVoteToCommentInAnswerPagedList(oldData, commentId, voteRequestDTO));
+                }
+            });
+
+            return { previousDetail, previousCommentLists, previousAnswerLists };
         },
 
         onError: (_error, _variables, context) => {
             if (context?.previousDetail) {
                 queryClient.setQueryData(commentQueryKeys.detail(commentId), context.previousDetail);
             }
-            context?.previousLists?.forEach(([queryKey, data]) => {
+            context?.previousCommentLists?.forEach(([queryKey, data]) => {
+                queryClient.setQueryData(queryKey, data);
+            });
+            context?.previousAnswerLists?.forEach(([queryKey, data]) => {
                 queryClient.setQueryData(queryKey, data);
             });
         },
-
-        // onSuccess: intentionally empty — onMutate already patched RAM via setQueryData/setQueriesData.
-        // Zero-refetch pattern: no invalidateQueries here.
     });
 };

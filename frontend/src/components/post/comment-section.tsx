@@ -1,13 +1,12 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useGetCommentsByPostId } from '@/hooks/comment-hooks/use-get-comments-by-post-id';
-import { Page } from '@/types/common/page';
+import { useGetCommentsByPostIdInfinite } from '@/hooks/comment-hooks/use-get-comments-by-post-id-infinite';
 import { SortOrderType } from '@/constants/sortOrderType';
 import { CommentInput } from './comment-input';
 import { Skeleton } from '../ui/skeleton';
 import { SelectCommentDTO } from '@/types/comment/select-comment-dto';
-import { useGetAnswersByPostId } from '@/hooks/answer-hooks/use-get-answers-by-post-id';
+import { useGetAnswersByPostIdInfinite } from '@/hooks/answer-hooks/use-get-answers-by-post-id-infinite';
 import { SelectAnswerDTO } from '@/types/answer/select-answer-dto';
 import { useGetProfileById } from '@/hooks/profile-hooks/use-get-profile-by-id';
 import { useSelector } from 'react-redux';
@@ -17,6 +16,10 @@ import { CommentItem } from './comment-item';
 import { useGetPostById } from '@/hooks/post-hooks';
 import { useGetQAPostById } from '@/hooks/qa-post-hooks/use-get-qa-post-by-id';
 import { normalizeModerationStatus } from '@/types/post/moderation-status';
+import { useIntersectionObserver } from '@/hooks/use-intersection-observer';
+import { Loader2 } from 'lucide-react';
+import { SelectPostDTO } from '@/types/post/select-post-dto';
+import { SelectQAPostDTO } from '@/types/qa-post/select-qa-post-dto';
 
 interface Props {
     postId: string;
@@ -24,29 +27,33 @@ interface Props {
 }
 
 export default function CommentSection({ postId, isQAPost }: Props) {
-    // TODO: implement pagination for comments/answers — currently loads first 20
-    const commentConfig = useMemo<Page<string>>(() => ({
-        size: 20,
-        pageNumber: 0,
+    const itemsPayload = useMemo(() => ({
         totalElements: 0,
         orders: [
-            {
-                sort: 'dateCreated',
-                sortDir: SortOrderType.DESC,
-                dynamicProperty: '',
-                delimiter: '',
-                dataType: ''
-            }
+            { sort: 'dateModified', sortDir: SortOrderType.DESC, dynamicProperty: '', delimiter: '', dataType: '' }
         ],
         filter: [],
-        selected: []
+        selected: [],
     }), []);
 
     const { user } = useSelector((state: RootState) => state.auth)
     const { data: userProfile } = useGetProfileById(user?.profileId as string);
 
-    const { data: answerData, isPending: isAnswerLoading } = useGetAnswersByPostId(postId, isQAPost, commentConfig)
-    const { data: commentData, isPending: isCommentLoading } = useGetCommentsByPostId(postId, !isQAPost, commentConfig);
+    const {
+        data: answerData,
+        isPending: isAnswerLoading,
+        hasNextPage: hasNextAnswerPage,
+        fetchNextPage: fetchNextAnswerPage,
+        isFetchingNextPage: isFetchingNextAnswerPage
+    } = useGetAnswersByPostIdInfinite(postId, isQAPost, itemsPayload)
+
+    const {
+        data: commentData,
+        isPending: isCommentLoading,
+        hasNextPage: hasNextCommentPage,
+        fetchNextPage: fetchNextCommentPage,
+        isFetchingNextPage: isFetchingNextCommentPage
+    } = useGetCommentsByPostIdInfinite(postId, !isQAPost, itemsPayload);
 
     const { data: qaPost } = useGetQAPostById(postId, isQAPost);
     const { data: normalPost } = useGetPostById(postId, !isQAPost);
@@ -55,13 +62,30 @@ export default function CommentSection({ postId, isQAPost }: Props) {
     const moderationStatus = normalizeModerationStatus(post?.moderationStatus);
     const isApproved = moderationStatus === "Approved";
 
-    const commentsData = isQAPost ? answerData : commentData;
+    // const commentsData = isQAPost ? answerData : commentData;
     const isLoading = isQAPost ? isAnswerLoading : isCommentLoading;
+    const hasNextPage = isQAPost ? hasNextAnswerPage : hasNextCommentPage;
+    const isFetchingNextPage = isQAPost ? isFetchingNextAnswerPage : isFetchingNextCommentPage;
+    const fetchNextPage = isQAPost ? fetchNextAnswerPage : fetchNextCommentPage;
+
+    const loadMoreRef = useIntersectionObserver(() => {
+        if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    });
+
+    const items = isQAPost
+        ? answerData?.pages?.flatMap(p => p.data) || []
+        : commentData?.pages?.flatMap(p => p.data) || [];
+
+    const totalElements = isQAPost
+        ? (post as SelectQAPostDTO)?.answerCount ?? 0
+        : (post as SelectPostDTO)?.commentCount ?? 0;
 
     return (
         <div className="mt-4 sm:mt-6 sm:mx-6 px-4 sm:px-0">
             <h3 className="text-lg font-bold text-heading mb-4">
-                {isQAPost ? 'Answers' : 'Comments'} ({commentsData?.page?.totalElements || 0})
+                {isQAPost ? 'Answers' : 'Comments'} ({totalElements})
             </h3>
 
             {/* Create Comment Input */}
@@ -107,24 +131,31 @@ export default function CommentSection({ postId, isQAPost }: Props) {
                 </div>
             ) : (
                 <div className="space-y-6">
-                    {commentsData?.data?.map((comment) => (
+                    {items.map((comment) => (
                         isQAPost ? (
-                            <AnswerItem 
-                                key={comment.id} 
-                                answer={comment as SelectAnswerDTO} 
-                                currentUserId={user?.profileId as string} 
+                            <AnswerItem
+                                key={comment.id}
+                                answer={comment as SelectAnswerDTO}
+                                currentUserId={user?.profileId as string}
+                                currentUserAvatar={userProfile?.avatarUrl}
                                 isDisabled={!isApproved}
                                 isQuestionAuthor={post?.authorId === user?.profileId}
                             />
                         ) : (
-                            <CommentItem 
-                                key={comment.id} 
-                                comment={comment as SelectCommentDTO} 
-                                currentUserId={user?.profileId as string} 
+                            <CommentItem
+                                key={comment.id}
+                                comment={comment as SelectCommentDTO}
+                                currentUserId={user?.profileId as string}
+                                currentUserAvatar={userProfile?.avatarUrl}
                                 isDisabled={!isApproved}
                             />
                         )
                     ))}
+
+                    {/* Infinite Scroll Sentinel */}
+                    <div ref={loadMoreRef} className="h-4 w-full flex justify-center items-center py-4">
+                        {isFetchingNextPage && <Loader2 className="w-6 h-6 animate-spin text-primary" />}
+                    </div>
                 </div>
             )}
         </div>

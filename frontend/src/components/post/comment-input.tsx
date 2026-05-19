@@ -9,46 +9,52 @@ import Image from 'next/image';
 import { CreateAnswerDTO } from '@/types/answer/create-answer-dto';
 
 interface CommentInputProps {
-    postId: string;
+    postId?: string;
+    answerId?: string;
+    replyToCommentId?: string;
     currentUserAvatar?: string;
-    isQAPost: boolean;
+    isQAPost?: boolean;
     isDisabled?: boolean;
+    onSuccess?: () => void;
 }
 
-export function CommentInput({ postId, currentUserAvatar, isQAPost, isDisabled }: CommentInputProps) {
+export function CommentInput({ postId, answerId, replyToCommentId, currentUserAvatar, isQAPost, isDisabled, onSuccess }: CommentInputProps) {
     const [content, setContent] = useState('');
     const { mutate: createComment, isPending: isCreatingComment } = useCreateComment();
     const { mutate: createAnswer, isPending: isCreatingAnswer } = useCreateAnswer();
     const [isExpanded, setIsExpanded] = useState(false);
 
-    // loading state for submit button
-    const isSubmitting = isQAPost ? isCreatingAnswer : isCreatingComment;
+    // If answerId or replyToCommentId is provided, we are creating a Comment.
+    const isCreatingAnswerPost = isQAPost && !answerId && !replyToCommentId;
+    const isSubmitting = isCreatingAnswerPost ? isCreatingAnswer : isCreatingComment;
 
     const handleSubmit = () => {
         if (!content.trim() || content === '\\n') return;
 
-        if (isQAPost) {
+        if (isCreatingAnswerPost && postId) {
             const payload: CreateAnswerDTO = {
                 content: content,
                 qaPostId: postId
             }
             createAnswer(payload, {
                 onSuccess: () => {
-                    // Reset sau khi gửi
                     setContent('');
                     setIsExpanded(false);
+                    onSuccess?.();
                 }
             });
         } else {
             const payload: CreateCommentDTO = {
                 content: content,
-                postId: postId
+                postId: postId,
+                answerId: answerId,
+                replyToCommentId: replyToCommentId
             }
             createComment(payload, {
                 onSuccess: () => {
-                    // Reset sau khi gửi
                     setContent('');
                     setIsExpanded(false);
+                    onSuccess?.();
                 }
             });
         }

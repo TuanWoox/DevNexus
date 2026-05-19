@@ -436,6 +436,8 @@ namespace platform_core_service.Business.Services
                 var query = _context.Comments
                     .Where(c => c.AnswerId == answerId && string.IsNullOrEmpty(c.ReplyToCommentId))
                     .Include(c => c.Author)
+                    .Include(c => c.Replies)
+                        .ThenInclude(r => r.Author)
                     .AsQueryable();
 
                 // Step 3: Get paged results
