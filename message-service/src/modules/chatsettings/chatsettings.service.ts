@@ -82,18 +82,6 @@ export class ChatsettingsService {
         return returnResult;
       }
 
-      // If pinning this chat, unpin any other currently pinned chat first
-      if (updateInfo.IsPinned === true) {
-        await this.prismaService.chatSetting.updateMany({
-          where: {
-            ProfileId: this.userContext.getProfileId(),
-            IsPinned: true,
-            NOT: { Id: updateInfo.Id },
-          },
-          data: { IsPinned: false },
-        });
-      }
-
       // Convert null to undefined so Prisma ignores those fields
       const updatedData = Object.fromEntries(
         Object.entries(updateInfo).map(([key, value]) => [

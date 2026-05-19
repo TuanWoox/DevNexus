@@ -33,18 +33,21 @@ export function MessageEditHistoryOverlay({ messageId, open, onClose }: Props) {
 
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-            <DialogContent className="max-w-md max-h-[60vh] flex flex-col">
-                <DialogHeader>
-                    <DialogTitle>Edit History</DialogTitle>
+            <DialogContent className="max-w-md max-h-[60vh] flex flex-col border border-border bg-popover shadow-xl">
+                <DialogHeader className="border-b border-border/60 pb-3 pr-8">
+                    <DialogTitle className="text-heading">Edit History</DialogTitle>
                 </DialogHeader>
                 <div className="flex-1 overflow-y-auto flex flex-col gap-3 py-2 pr-1">
                     {history.length === 0 ? (
                         <p className="text-sm text-muted-foreground text-center py-4">No history available</p>
                     ) : (
                         history.map((entry) => (
-                            <div key={entry.Id} className="flex flex-col gap-0.5 rounded-lg border border-border/40 px-3 py-2">
-                                <p className="text-sm text-foreground">{entry.Content}</p>
-                                <span className="text-[10px] text-muted-foreground">
+                            <div
+                                key={entry.Id}
+                                className="flex flex-col gap-1 rounded-lg border border-border bg-background px-3 py-2.5 shadow-sm"
+                            >
+                                <p className="text-sm leading-relaxed text-foreground">{entry.Content}</p>
+                                <span className="text-[10px] font-medium text-muted-foreground">
                                     {toRelativeTime(entry.EditedAt)}
                                 </span>
                             </div>
