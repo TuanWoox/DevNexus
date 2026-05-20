@@ -25,6 +25,10 @@ interface ProfileHoverCardContentProps {
     profileId: string;
     author?: ProfileHoverCardAuthor;
     onClose?: () => void;
+    showMessageAction?: boolean;
+    showBlockAction?: boolean;
+    showProfileAction?: boolean;
+    variant?: 'default' | 'admin';
 }
 
 function getInitials(fullName?: string): string {
@@ -42,7 +46,11 @@ function getInitials(fullName?: string): string {
 export function ProfileHoverCardContent({
     profileId,
     author,
-    onClose
+    onClose,
+    showMessageAction = true,
+    showBlockAction = true,
+    showProfileAction = true,
+    variant = 'default'
 }: ProfileHoverCardContentProps) {
     const router = useRouter();
     const { user } = useSelector((state: RootState) => state.auth);
@@ -52,6 +60,10 @@ export function ProfileHoverCardContent({
     const avatarUrl = author?.avatarUrl || '/images/default-avatar.webp';
     const backgroundUrl = author?.backgroundUrl || '/images/default-background.webp';
     const isOwnProfile = user?.profileId === profileId;
+    const canShowProfile = showProfileAction;
+    const canShowMessage = showMessageAction && !isOwnProfile;
+    const canShowBlock = showBlockAction && !isOwnProfile;
+    const actionCount = Number(canShowProfile) + Number(canShowMessage);
     const { openMessagePopup, isCheckingChat } = useOpenChatByProfile({
         id: profileId,
         fullName,
@@ -70,7 +82,7 @@ export function ProfileHoverCardContent({
     };
 
     return (
-        <div className="relative w-80 overflow-hidden bg-popover text-popover-foreground">
+        <div className="relative w-80 overflow-hidden bg-popover text-popover-foreground" data-variant={variant}>
             <div className="relative h-20 w-full bg-muted">
                 <Image
                     src={backgroundUrl}
@@ -132,12 +144,15 @@ export function ProfileHoverCardContent({
                 ) : null}
             </div>
 
-            <div className={isOwnProfile ? 'border-t border-border px-4 py-3' : 'grid grid-cols-2 gap-2 border-t border-border px-4 py-3'}>
-                <Button variant="outline" size="sm" onClick={handleViewProfile} className="w-full">
-                    <User className="mr-2 h-4 w-4" />
-                    {isOwnProfile ? 'View My Profile' : 'Profile'}
-                </Button>
-                {!isOwnProfile ? (
+            {actionCount > 0 ? (
+                <div className={actionCount === 1 ? 'border-t border-border px-4 py-3' : 'grid grid-cols-2 gap-2 border-t border-border px-4 py-3'}>
+                    {canShowProfile ? (
+                        <Button variant="outline" size="sm" onClick={handleViewProfile} className="w-full">
+                            <User className="mr-2 h-4 w-4" />
+                            {isOwnProfile ? 'View My Profile' : 'Profile'}
+                        </Button>
+                    ) : null}
+                    {canShowMessage ? (
                     <Button size="sm" onClick={handleMessage} disabled={isCheckingChat} className="w-full">
                         {isCheckingChat ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -146,10 +161,11 @@ export function ProfileHoverCardContent({
                         )}
                         Message
                     </Button>
-                ) : null}
-            </div>
+                    ) : null}
+                </div>
+            ) : null}
 
-            {!isOwnProfile ? <ProfileHoverCardActions profileId={profileId} onClose={onClose} /> : null}
+            {canShowBlock ? <ProfileHoverCardActions profileId={profileId} onClose={onClose} /> : null}
         </div>
     );
 }

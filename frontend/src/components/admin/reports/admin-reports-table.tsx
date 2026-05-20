@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Eye, MoreHorizontal, ShieldAlert, UserCheck, XCircle } from "lucide-react";
 import { useSelector } from "react-redux";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { AdminReportDTO } from "@/types/admin/admin-report-dto";
 import { RootState } from "@/store/store";
@@ -23,6 +23,7 @@ import { useResolveReport } from "@/hooks/admin/use-resolve-report";
 import { useDismissReport } from "@/hooks/admin/use-dismiss-report";
 import { useEscalateReport } from "@/hooks/admin/use-escalate-report";
 import { ReportResolution } from "@/types/report/report-resolution";
+import { AdminReportProfileHoverCard } from "./admin-report-profile-hover-card";
 
 type TabValue = "open" | "pending" | "inreview" | "escalated" | "closed" | "all";
 
@@ -38,8 +39,20 @@ function formatDate(iso?: string | null) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function targetTypeLabel(value: number) {
-  return ["Profile", "Post", "Question", "Comment", "Answer"][value] ?? String(value);
+function TargetTypeBadge({ value }: { value: number }) {
+  const label = ["Profile", "Post", "Question", "Comment", "Answer"][value] ?? String(value);
+  switch (value) {
+    case 0: // Profile
+      return <span className="badge-purple font-mono text-2xs">{label}</span>;
+    case 1: // Post
+    case 2: // Question
+      return <span className="badge-default font-mono text-2xs">{label}</span>;
+    case 3: // Comment
+    case 4: // Answer
+      return <span className="badge-amber font-mono text-2xs">{label}</span>;
+    default:
+      return <span className="badge-default font-mono text-2xs">{label}</span>;
+  }
 }
 
 export function AdminReportsTable({ reports, isLoading, activeTab, onTabChange }: AdminReportsTableProps) {
@@ -68,6 +81,7 @@ export function AdminReportsTable({ reports, isLoading, activeTab, onTabChange }
   }
 
   function canEscalate(report: AdminReportDTO) {
+    if (isAdmin) return false;
     return report.status === ReportStatus.Pending || report.status === ReportStatus.InReview;
   }
 
@@ -153,79 +167,92 @@ export function AdminReportsTable({ reports, isLoading, activeTab, onTabChange }
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border">
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Created</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Target</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Preview</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Reason</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Reporter</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Owner</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Assignee</th>
-                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
+              <tr className="border-b border-border bg-muted/5">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Created</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Target</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Preview</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Reason</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Reporter</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Owner</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Assignee</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Actions</th>
               </tr>
             </thead>
             <tbody>
               {reports.map((report) => (
-                <tr key={report.id} className="border-b border-border last:border-0 hover:bg-subtle">
+                <tr key={report.id} className="border-b border-border last:border-0 hover:bg-subtle transition-colors">
                   <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-muted-foreground">{formatDate(report.dateCreated)}</td>
                   <td className="px-4 py-3"><ReportStatusBadge status={report.status} /></td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-col gap-1">
-                      <span className="font-medium text-foreground/85">{targetTypeLabel(report.targetType)}</span>
-                      {report.isStaffSensitive && <span className="text-xs text-red-500">Staff sensitive</span>}
+                    <div className="flex flex-col gap-1 items-start">
+                      <TargetTypeBadge value={report.targetType} />
+                      {report.isStaffSensitive && (
+                        <span className="badge-red text-2xs mt-1">Staff-owned target</span>
+                      )}
                     </div>
                   </td>
                   <td className="max-w-[260px] px-4 py-3">
                     <button
                       type="button"
                       onClick={() => setSelectedReport(report)}
-                      className="block w-full truncate text-left font-medium text-foreground/85 hover:text-primary hover:underline"
+                      className="block w-full truncate text-left font-medium text-heading hover:text-primary hover:underline"
                     >
                       {report.targetTitle || report.targetPreview || report.targetId}
                     </button>
                     {report.targetPreview && <p className="mt-1 truncate text-xs text-muted-foreground">{report.targetPreview}</p>}
                   </td>
-                  <td className="px-4 py-3 text-xs">{reportReasonLabels[report.reason]}</td>
-                  <td className="px-4 py-3 text-xs">{report.reporter?.displayName ?? "—"}</td>
-                  <td className="px-4 py-3 text-xs">{report.targetOwner?.displayName ?? "—"}</td>
-                  <td className="px-4 py-3 text-xs">{report.assignedModerator?.displayName ?? "—"}</td>
+                  <td className="px-4 py-3 text-xs text-body">{reportReasonLabels[report.reason]}</td>
+                  <td className="max-w-[160px] px-4 py-3 text-xs">
+                    <AdminReportProfileHoverCard profile={report.reporter} />
+                  </td>
+                  <td className="max-w-[160px] px-4 py-3 text-xs">
+                    <AdminReportProfileHoverCard profile={report.targetOwner} />
+                  </td>
+                  <td className="max-w-[160px] px-4 py-3 text-xs">
+                    <AdminReportProfileHoverCard profile={report.assignedModerator} fallbackId={report.assignedModeratorId} />
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button type="button" className="rounded-md p-1.5 text-muted-foreground hover:bg-subtle hover:text-foreground">
-                            <MoreHorizontal className="h-4 w-4" />
+                          <button type="button" className="rounded-md border border-default px-2.5 py-1 text-2xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-subtle hover:text-heading transition-all select-none">
+                            Actions
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setSelectedReport(report)}>
-                            <Eye className="h-4 w-4" />
-                            View detail
+                        <DropdownMenuContent align="end" className="w-40 border-default bg-card">
+                          <DropdownMenuItem onClick={() => setSelectedReport(report)} className="cursor-pointer">
+                            View details
                           </DropdownMenuItem>
+                          
                           {canModify(report) && (
-                            <DropdownMenuItem onClick={() => openAction(report, "assign")}>
-                              <UserCheck className="h-4 w-4" />
-                              Assign to me
-                            </DropdownMenuItem>
+                            <>
+                              <DropdownMenuSeparator className="border-default" />
+                              <DropdownMenuItem onClick={() => openAction(report, "assign")} className="cursor-pointer">
+                                Assign to me
+                              </DropdownMenuItem>
+                            </>
                           )}
+                          
                           {canModify(report) && (
-                            <DropdownMenuItem onClick={() => openAction(report, "resolve")}>
-                              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                              Resolve
-                            </DropdownMenuItem>
+                            <>
+                              <DropdownMenuSeparator className="border-default" />
+                              <DropdownMenuItem onClick={() => openAction(report, "resolve")} className="cursor-pointer text-emerald-600 dark:text-emerald-400 font-semibold">
+                                Resolve
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openAction(report, "dismiss")} className="cursor-pointer text-red-600 dark:text-red-400">
+                                Dismiss
+                              </DropdownMenuItem>
+                            </>
                           )}
-                          {canModify(report) && (
-                            <DropdownMenuItem onClick={() => openAction(report, "dismiss")}>
-                              <XCircle className="h-4 w-4" />
-                              Dismiss
-                            </DropdownMenuItem>
-                          )}
+                          
                           {canEscalate(report) && (
-                            <DropdownMenuItem onClick={() => openAction(report, "escalate")}>
-                              <ShieldAlert className="h-4 w-4 text-amber-500" />
-                              Escalate
-                            </DropdownMenuItem>
+                            <>
+                              <DropdownMenuSeparator className="border-default" />
+                              <DropdownMenuItem onClick={() => openAction(report, "escalate")} className="cursor-pointer text-amber-600 dark:text-amber-400">
+                                Escalate
+                              </DropdownMenuItem>
+                            </>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
