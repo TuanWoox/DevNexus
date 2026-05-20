@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -58,7 +57,7 @@ function getCopy(action: ReportActionType) {
     case "resolve":
       return {
         title: "Resolve report",
-        description: "Close this report as handled. This does not hide, reject, or suspend the reported target — content actions must be done separately.",
+        description: "Close this report as handled. Review and verify the final resolution before submitting.",
         button: "Resolve",
       };
     case "dismiss":
@@ -94,27 +93,34 @@ export function ReportActionDialog({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && !isPending && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-page border-default">
         <DialogHeader>
-          <DialogTitle>{copy.title}</DialogTitle>
-          <DialogDescription>{copy.description}</DialogDescription>
+          <DialogTitle className="text-xl font-bold text-heading">{copy.title}</DialogTitle>
+          <DialogDescription className="text-muted-foreground text-sm leading-relaxed">{copy.description}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 my-2">
+          {action === "resolve" && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300 font-medium">
+              <span className="font-bold uppercase tracking-wider block mb-1">Ticket State Separation Warning</span>
+              Resolving a report only updates the moderation ticket state. Hiding, rejecting, or deleting the underlying profile/content must be performed through separate content actions.
+            </div>
+          )}
+
           {needsResolution && (
             <div className="space-y-2">
-              <Label htmlFor="report-action-resolution">Resolution</Label>
+              <Label htmlFor="report-action-resolution" className="text-heading font-semibold text-xs uppercase tracking-wider">Resolution</Label>
               <Select
                 value={String(resolution)}
                 onValueChange={(value) => setResolution(Number(value) as ReportResolution)}
                 disabled={isPending}
               >
-                <SelectTrigger id="report-action-resolution" className="h-10">
+                <SelectTrigger id="report-action-resolution" className="h-10 border-default bg-background">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="border-default bg-card">
                   {closeResolutions.map((item) => (
-                    <SelectItem key={item} value={String(item)}>
+                    <SelectItem key={item} value={String(item)} className="cursor-pointer">
                       {reportResolutionLabels[item]}
                     </SelectItem>
                   ))}
@@ -124,7 +130,7 @@ export function ReportActionDialog({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="report-action-note">
+            <Label htmlFor="report-action-note" className="text-heading font-semibold text-xs uppercase tracking-wider">
               {action === "escalate" ? "Escalation reason" : "Moderator note"}
             </Label>
             <Textarea
@@ -133,27 +139,29 @@ export function ReportActionDialog({
               onChange={(event) => setNote(event.target.value)}
               disabled={isPending}
               maxLength={1000}
-              className="min-h-24"
+              className="min-h-24 border-default bg-background text-body text-sm"
+              placeholder={action === "escalate" ? "Explain why admin intervention is required..." : "Add internal log details..."}
             />
           </div>
 
           {action === "resolve" && (
             <div className="space-y-2">
-              <Label htmlFor="report-action-resolution-note">Resolution note</Label>
+              <Label htmlFor="report-action-resolution-note" className="text-heading font-semibold text-xs uppercase tracking-wider">Resolution note</Label>
               <Textarea
                 id="report-action-resolution-note"
                 value={resolutionNote}
                 onChange={(event) => setResolutionNote(event.target.value)}
                 disabled={isPending}
                 maxLength={1000}
-                className="min-h-20"
+                className="min-h-20 border-default bg-background text-body text-sm"
+                placeholder="Explain the public resolution outcome..."
               />
             </div>
           )}
         </div>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button type="button" variant="outline" onClick={onClose} disabled={isPending} className="border-default text-body">
             Cancel
           </Button>
           <Button type="button" onClick={() => onConfirm({
@@ -161,9 +169,8 @@ export function ReportActionDialog({
             resolution: needsResolution ? resolution : undefined,
             resolutionNote: resolutionNote.trim() || undefined,
             escalationReason: action === "escalate" ? note.trim() || undefined : undefined,
-          })} disabled={isPending}>
-            {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {copy.button}
+          })} disabled={isPending} className="font-bold">
+            {isPending ? "Processing..." : copy.button}
           </Button>
         </DialogFooter>
       </DialogContent>

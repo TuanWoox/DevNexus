@@ -287,6 +287,12 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                if (_userContext.IsAdmin)
+                {
+                    result.Message = "Admins cannot escalate reports — you are already the highest authority.";
+                    return result;
+                }
+
                 if (report.Status != ReportStatus.Pending && report.Status != ReportStatus.InReview)
                 {
                     result.Message = "Only pending or in-review reports can be escalated.";

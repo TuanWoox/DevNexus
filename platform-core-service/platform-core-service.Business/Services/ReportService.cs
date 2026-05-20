@@ -101,39 +101,31 @@ namespace platform_core_service.Business.Services
             }
 
             ModerationReport report;
-            await using var transaction = await _context.Database.BeginTransactionAsync();
+            var targetHistoryId = await EnsureCurrentTargetHistoryAsync(dto.TargetType, dto.TargetId);
+
+            report = new ModerationReport
+            {
+                Id = Guid.NewGuid().ToString(),
+                ReporterId = reporterId,
+                TargetType = dto.TargetType,
+                TargetId = dto.TargetId,
+                TargetOwnerId = target.OwnerId,
+                TargetHistoryId = targetHistoryId,
+                TargetSnapshotJson = target.SnapshotJson,
+                Reason = dto.Reason,
+                Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim(),
+                Status = ReportStatus.Pending
+            };
+
             try
             {
-                var targetHistoryId = await EnsureCurrentTargetHistoryAsync(dto.TargetType, dto.TargetId);
-
-                report = new ModerationReport
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    ReporterId = reporterId,
-                    TargetType = dto.TargetType,
-                    TargetId = dto.TargetId,
-                    TargetOwnerId = target.OwnerId,
-                    TargetHistoryId = targetHistoryId,
-                    TargetSnapshotJson = target.SnapshotJson,
-                    Reason = dto.Reason,
-                    Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim(),
-                    Status = ReportStatus.Pending
-                };
-
                 _context.ModerationReports.Add(report);
                 await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
             }
             catch (DbUpdateException ex) when (IsOpenReportDuplicateViolation(ex))
             {
-                await transaction.RollbackAsync();
                 result.Message = "You already have an open report for this target.";
                 return result;
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
             }
 
             result.Result = _mapper.Map<SelectReportDTO>(report);

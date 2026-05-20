@@ -21,6 +21,13 @@ export interface ProfileHoverCardAuthor {
     isPrivate?: boolean;
 }
 
+interface ProfileHoverCardMessageButtonProps {
+    profileId: string;
+    fullName: string;
+    avatarUrl: string;
+    onClose?: () => void;
+}
+
 interface ProfileHoverCardContentProps {
     profileId: string;
     author?: ProfileHoverCardAuthor;
@@ -41,6 +48,36 @@ function getInitials(fullName?: string): string {
         .join('')
         .toUpperCase()
         .slice(0, 2);
+}
+
+function ProfileHoverCardMessageButton({
+    profileId,
+    fullName,
+    avatarUrl,
+    onClose,
+}: ProfileHoverCardMessageButtonProps) {
+    const { openMessagePopup, isCheckingChat } = useOpenChatByProfile({
+        id: profileId,
+        fullName,
+        avatarUrl,
+    });
+
+    const handleMessage = async () => {
+        if (isCheckingChat) return;
+        await openMessagePopup();
+        onClose?.();
+    };
+
+    return (
+        <Button size="sm" onClick={handleMessage} disabled={isCheckingChat} className="w-full">
+            {isCheckingChat ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+                <MessageSquare className="mr-2 h-4 w-4" />
+            )}
+            Message
+        </Button>
+    );
 }
 
 export function ProfileHoverCardContent({
@@ -64,20 +101,8 @@ export function ProfileHoverCardContent({
     const canShowMessage = showMessageAction && !isOwnProfile;
     const canShowBlock = showBlockAction && !isOwnProfile;
     const actionCount = Number(canShowProfile) + Number(canShowMessage);
-    const { openMessagePopup, isCheckingChat } = useOpenChatByProfile({
-        id: profileId,
-        fullName,
-        avatarUrl,
-    });
-
     const handleViewProfile = () => {
         router.push(`/profile/${profileId}`);
-        onClose?.();
-    };
-
-    const handleMessage = async () => {
-        if (isCheckingChat) return;
-        await openMessagePopup();
         onClose?.();
     };
 
@@ -153,14 +178,12 @@ export function ProfileHoverCardContent({
                         </Button>
                     ) : null}
                     {canShowMessage ? (
-                    <Button size="sm" onClick={handleMessage} disabled={isCheckingChat} className="w-full">
-                        {isCheckingChat ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <MessageSquare className="mr-2 h-4 w-4" />
-                        )}
-                        Message
-                    </Button>
+                        <ProfileHoverCardMessageButton
+                            profileId={profileId}
+                            fullName={fullName}
+                            avatarUrl={avatarUrl}
+                            onClose={onClose}
+                        />
                     ) : null}
                 </div>
             ) : null}
