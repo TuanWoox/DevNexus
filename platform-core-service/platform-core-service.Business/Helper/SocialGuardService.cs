@@ -207,6 +207,50 @@ namespace platform_core_service.Business.Helper
             return returnResult;
         }
 
+        public async Task<ReturnResult<bool>> CheckIsCommunityAdminOrModeratorAsync(string profileId, string communityId)
+        {
+            ReturnResult<bool> returnResult = new();
+            try
+            {
+                if (string.IsNullOrWhiteSpace(profileId) || string.IsNullOrWhiteSpace(communityId))
+                {
+                    returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
+                    return returnResult;
+                }
+
+                var communityRole = await _dbContext.Communities
+                    .AsNoTracking()
+                    .Where(c => c.Id == communityId)
+                    .Select(c => new
+                    {
+                        IsAdmin = c.OwnerId == profileId,
+                        IsModerator = _dbContext.CommunityModerators
+                            .Any(m => m.CommunityId == communityId && m.ModeratorId == profileId)
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (communityRole == null)
+                {
+                    returnResult.Message = "Community not found";
+                    return returnResult;
+                }
+
+                if (!communityRole.IsAdmin && !communityRole.IsModerator)
+                {
+                    returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
+                    return returnResult;
+                }
+
+                returnResult.Result = true;
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+            }
+
+            return returnResult;
+        }
+
         public async Task<ReturnResult<bool>> CheckProfileBlocking([TrimmedRequired] string authorId)
         {
             ReturnResult<bool> returnResult = new();

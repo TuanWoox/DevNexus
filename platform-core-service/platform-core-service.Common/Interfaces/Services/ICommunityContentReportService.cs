@@ -1,16 +1,18 @@
-﻿using platform_core_service.Common.Attributes;
+using platform_core_service.Common.Entities.BaseEntity;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityContentReport;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using platform_core_service.Common.Models.Paging;
 
 namespace platform_core_service.Common.Interfaces.Services
 {
     public interface ICommunityContentReportService
     {
-        public Task<ReturnResult<bool>> ReportContent(ReportContentDTO reportContentDTO);
+        Task<ReturnResult<bool>> ReportContent(string communityId, ReportContentDTO reportContentDTO);
+
+        Task<ReturnResult<PagedData<TReportDTO, string>>> GetPagingDataForAdminAndModerator<TReportDTO>(Page<string> page, string communityId)
+            where TReportDTO : IBaseKey<string>;
+
+        Task<ReturnResult<PagedData<TReportDTO, string>>> GetPagingDataForCurrentUser<TReportDTO>(Page<string> page, string communityId)
+            where TReportDTO : IBaseKey<string>;
     }
 }

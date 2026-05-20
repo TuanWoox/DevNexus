@@ -3,9 +3,15 @@ import { ReportContentDTO } from "@/types/community-content-report/report-conten
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+interface CreateCommunityContentReportPayload {
+    communityId: string;
+    payload: ReportContentDTO;
+}
+
 export const useCreateCommunityContentReport = () => {
     return useMutation({
-        mutationFn: (payload: ReportContentDTO) => communityContentReportService.reportContent(payload),
+        mutationFn: ({ communityId, payload }: CreateCommunityContentReportPayload) =>
+            communityContentReportService.reportContent(communityId, payload),
         onSuccess: (created) => {
             if (created) {
                 toast.success("Report submitted to community moderators.");

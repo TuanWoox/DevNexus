@@ -71,9 +71,11 @@ export function PostActionsDropdown({
         reportMutation.mutate(
             {
                 communityId,
-                contentId: postId,
-                contentType: isQAPost ? ContentType.QA : ContentType.Post,
-                reason: reportReason.trim(),
+                payload: {
+                    contentId: postId,
+                    contentType: isQAPost ? ContentType.QA : ContentType.Post,
+                    reason: reportReason.trim(),
+                },
             },
             {
                 onSuccess: (created) => {

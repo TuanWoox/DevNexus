@@ -9,11 +9,6 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.CommunityContentRep
         [Required]
         [StringLength(100, MinimumLength = 1)]
         [TrimmedRequired]
-        public string CommunityId { get; set; } = null!;
-
-        [Required]
-        [StringLength(100, MinimumLength = 1)]
-        [TrimmedRequired]
         public string ContentId { get; set; } = null!;
 
         [Required]
