@@ -154,6 +154,10 @@ namespace platform_core_service.Data
                 entity.HasIndex(e => new { e.Status, e.DateCreated });
                 entity.HasIndex(e => new { e.TargetType, e.TargetId, e.Status });
                 entity.HasIndex(e => new { e.ReporterId, e.TargetType, e.TargetId, e.Status });
+                entity.HasIndex(e => new { e.ReporterId, e.TargetType, e.TargetId })
+                    .IsUnique()
+                    .HasDatabaseName("IX_ModerationReports_OpenDuplicateGuard")
+                    .HasFilter("\"Deleted\" = false AND \"Status\" IN (0, 1, 4)");
                 entity.HasIndex(e => new { e.AssignedModeratorId, e.Status, e.DateCreated });
                 entity.HasIndex(e => new { e.TargetOwnerId, e.Status, e.DateCreated });
             });

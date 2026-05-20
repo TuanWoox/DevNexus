@@ -927,6 +927,11 @@ namespace platform_core_service.Migrations
 
                     b.HasIndex("ReporterId", "TargetType", "TargetId", "Status");
 
+                    b.HasIndex("ReporterId", "TargetType", "TargetId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ModerationReports_OpenDuplicateGuard")
+                        .HasFilter("\"Deleted\" = false AND \"Status\" IN (0, 1, 4)");
+
                     b.ToTable("ModerationReports");
                 });
 

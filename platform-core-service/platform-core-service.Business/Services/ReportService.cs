@@ -100,28 +100,51 @@ namespace platform_core_service.Business.Services
                 return result;
             }
 
-            var targetHistoryId = await EnsureCurrentTargetHistoryAsync(dto.TargetType, dto.TargetId);
-
-            var report = new ModerationReport
+            ModerationReport report;
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                Id = Guid.NewGuid().ToString(),
-                ReporterId = reporterId,
-                TargetType = dto.TargetType,
-                TargetId = dto.TargetId,
-                TargetOwnerId = target.OwnerId,
-                TargetHistoryId = targetHistoryId,
-                TargetSnapshotJson = target.SnapshotJson,
-                Reason = dto.Reason,
-                Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim(),
-                Status = ReportStatus.Pending
-            };
+                var targetHistoryId = await EnsureCurrentTargetHistoryAsync(dto.TargetType, dto.TargetId);
 
-            _context.ModerationReports.Add(report);
-            await _context.SaveChangesAsync();
+                report = new ModerationReport
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    ReporterId = reporterId,
+                    TargetType = dto.TargetType,
+                    TargetId = dto.TargetId,
+                    TargetOwnerId = target.OwnerId,
+                    TargetHistoryId = targetHistoryId,
+                    TargetSnapshotJson = target.SnapshotJson,
+                    Reason = dto.Reason,
+                    Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim(),
+                    Status = ReportStatus.Pending
+                };
+
+                _context.ModerationReports.Add(report);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (DbUpdateException ex) when (IsOpenReportDuplicateViolation(ex))
+            {
+                await transaction.RollbackAsync();
+                result.Message = "You already have an open report for this target.";
+                return result;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
 
             result.Result = _mapper.Map<SelectReportDTO>(report);
             result.Message = "Report submitted successfully.";
             return result;
+        }
+
+        private static bool IsOpenReportDuplicateViolation(DbUpdateException exception)
+        {
+            var message = exception.InnerException?.Message ?? exception.Message;
+            return message.Contains("IX_ModerationReports_OpenDuplicateGuard", StringComparison.OrdinalIgnoreCase);
         }
 
         private async Task<string?> EnsureCurrentTargetHistoryAsync(ReportTargetType targetType, string targetId)
@@ -154,7 +177,7 @@ namespace platform_core_service.Business.Services
         {
             var profile = await _context.Profiles
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.Id == targetId);
+                .FirstOrDefaultAsync(p => p.Id == targetId && !p.IsSuspended);
 
             if (profile == null)
             {
@@ -172,7 +195,7 @@ namespace platform_core_service.Business.Services
                 .Where(p => p.GetType() == typeof(Post))
                 .Include(p => p.Author)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.Id == targetId);
+                .FirstOrDefaultAsync(p => p.Id == targetId && p.ModerationStatus == ModerationStatus.Approved);
 
             if (post == null)
             {
@@ -190,7 +213,7 @@ namespace platform_core_service.Business.Services
                 .OfType<QAPost>()
                 .Include(p => p.Author)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.Id == targetId);
+                .FirstOrDefaultAsync(p => p.Id == targetId && p.ModerationStatus == ModerationStatus.Approved);
 
             if (question == null)
             {
@@ -206,10 +229,13 @@ namespace platform_core_service.Business.Services
         {
             var comment = await _context.Comments
                 .Include(c => c.Author)
+                .Include(c => c.Post)
+                .Include(c => c.Answer)
+                    .ThenInclude(a => a!.QAPost)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == targetId);
 
-            if (comment == null)
+            if (comment == null || !IsCommentReportable(comment))
             {
                 return null;
             }
@@ -224,10 +250,11 @@ namespace platform_core_service.Business.Services
         {
             var answer = await _context.Answers
                 .Include(a => a.Author)
+                .Include(a => a.QAPost)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(a => a.Id == targetId);
 
-            if (answer == null)
+            if (answer == null || !IsPostReportable(answer.QAPost))
             {
                 return null;
             }
@@ -235,6 +262,26 @@ namespace platform_core_service.Business.Services
             return new ResolvedReportTarget(
                 answer.AuthorId,
                 BuildSnapshotJson("Answer", BuildPreview(answer.Content), answer.Author?.FullName, answer.Author?.AvatarUrl, $"/questions/{answer.QAPostId}", answer.DateCreated, answer.DateModified, answer.Deleted));
+        }
+
+        private static bool IsCommentReportable(Comment comment)
+        {
+            if (comment.PostId != null)
+            {
+                return IsPostReportable(comment.Post);
+            }
+
+            if (comment.AnswerId != null)
+            {
+                return comment.Answer != null && IsPostReportable(comment.Answer.QAPost);
+            }
+
+            return false;
+        }
+
+        private static bool IsPostReportable(Post? post)
+        {
+            return post != null && !post.Deleted && post.ModerationStatus == ModerationStatus.Approved;
         }
 
         private static string BuildSnapshotJson(
