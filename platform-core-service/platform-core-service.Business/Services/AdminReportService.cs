@@ -65,6 +65,11 @@ namespace platform_core_service.Business.Services
                     .AsNoTracking()
                     .AsQueryable();
 
+                if (!_userContext.IsAdmin)
+                {
+                    query = ExcludeStaffSensitiveReports(query);
+                }
+
                 page.FormatFilter(ref query);
 
                 if (page.Orders == null || page.Orders.Count == 0)
@@ -101,6 +106,16 @@ namespace platform_core_service.Business.Services
             }
 
             return result;
+        }
+
+        private IQueryable<ModerationReport> ExcludeStaffSensitiveReports(IQueryable<ModerationReport> query)
+        {
+            return query.Where(report => !_context.Profiles
+                .IgnoreQueryFilters()
+                .Any(profile =>
+                    profile.Id == report.TargetOwnerId &&
+                    profile.ApplicationUser.UserRoles.Any(userRole =>
+                        userRole.Role.Name == "Admin" || userRole.Role.Name == "Moderator")));
         }
 
         public async Task<ReturnResult<AdminReportDetailDTO>> AssignToMeAsync(string id, AssignReportDTO dto)
