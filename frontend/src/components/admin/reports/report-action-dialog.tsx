@@ -58,7 +58,7 @@ function getCopy(action: ReportActionType) {
     case "resolve":
       return {
         title: "Resolve report",
-        description: "Close this report as handled.",
+        description: "Close this report as handled. This does not hide, reject, or suspend the reported target — content actions must be done separately.",
         button: "Resolve",
       };
     case "dismiss":

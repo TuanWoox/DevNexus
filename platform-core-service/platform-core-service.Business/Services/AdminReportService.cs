@@ -298,7 +298,6 @@ namespace platform_core_service.Business.Services
                 report.Status = ReportStatus.Escalated;
                 report.AssignedModeratorId ??= _userContext.ProfileId;
                 report.ModeratorNote = NormalizeNote(dto?.ModeratorNote) ?? NormalizeNote(dto?.EscalationReason) ?? report.ModeratorNote;
-                report.Resolution = ReportResolution.EscalatedToAdmin;
 
                 await AddReportAuditAsync(AuditActionType.ReportEscalated, report, oldState, BuildAuditState(report), dto?.EscalationReason);
                 await _context.SaveChangesAsync();

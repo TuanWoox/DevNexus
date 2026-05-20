@@ -81,7 +81,7 @@ export function ReportDetailSheet({ open, onClose, report, onAction }: ReportDet
           <div className="space-y-3 pr-8">
             <div className="flex flex-wrap items-center gap-2">
               {activeReport && <ReportStatusBadge status={activeReport.status} />}
-              <span className="badge-default">{activeReport?.targetType}</span>
+              <span className="badge-default">{activeReport?.targetType != null ? ["Profile", "Post", "Question", "Comment", "Answer"][activeReport.targetType] ?? String(activeReport.targetType) : ""}</span>
               {activeReport?.isStaffSensitive && <span className="badge-danger">Staff sensitive</span>}
             </div>
             <SheetTitle className="text-2xl font-bold text-heading">
