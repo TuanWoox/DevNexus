@@ -52,6 +52,7 @@ namespace platform_core_service.Business.Repository
             services.AddKeyedScoped<ICommunityContentReportService, CommunityQAPostReportService>(ContentType.QA);
             services.AddKeyedScoped<ICommunityContentReportService, CommunityAnswerReportService>(ContentType.Answer);
             services.AddKeyedScoped<ICommunityContentReportService, CommunityCommentReportService>(ContentType.Comment);
+            services.AddScoped<ICommunityContentReportServiceFactory, CommunityContentReportServiceFactory>();
             services.AddScoped<ICacheService, CacheService>();
             services.AddScoped<IProfileBlockService, ProfileBlockService>();
             services.AddScoped<IFollowRequestService, FollowRequestService>();

@@ -5,11 +5,12 @@ using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityContentReport;
 using platform_core_service.Data;
 using platform_core_service.Business.Utils.Extensions;
+using platform_core_service.Common.Interfaces.Services;
 
 
 namespace platform_core_service.Business.Services
 {
-    public class CommunityPostReportService : BaseCommunityContentReportService<Post, CommunityPostsReport>
+    public class CommunityPostReportService : BaseCommunityContentReportService<Post, CommunityPostsReport>, ICommunityContentReportService
     {
         public CommunityPostReportService(ApplicationDbContext context, IUserContext userContext) : base(context, userContext)
         {

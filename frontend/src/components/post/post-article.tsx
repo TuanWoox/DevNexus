@@ -268,6 +268,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                         </div>
                         <PostActionsDropdown
                             postId={postId}
+                            communityId={post.communityId}
                             isQAPost={isQAPost}
                             isAuthor={isAuthor}
                             onDeleted={() => router.push('/feed')}

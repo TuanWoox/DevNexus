@@ -169,6 +169,7 @@ export function PostCard({ post }: PostCardProps) {
                     </div>
                     <PostActionsDropdown
                         postId={post.id}
+                        communityId={post.communityId}
                         isQAPost={isQaPost}
                         isAuthor={isAuthor}
                         dropdownClassName="relative z-10"
