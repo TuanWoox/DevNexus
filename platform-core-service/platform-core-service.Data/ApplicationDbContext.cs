@@ -42,6 +42,11 @@ namespace platform_core_service.Data
         public DbSet<QAPostHistory> QAPostHistories { get; set; }
         public DbSet<CommentHistory> CommentHistories { get; set; }
         public DbSet<AnswerHistory> AnswerHistories { get; set; }
+        public DbSet<CommunityCommentsReport> CommunityCommentsReports { get; set; }
+        public DbSet<CommunityPostsReport> CommunityPostsReports { get; set; }
+        public DbSet<CommunityQAPostReports> CommunityQAPostReports { get; set; }
+        public DbSet<CommunityAnswersReport> CommunityAnswersReports { get; set; }
+        public DbSet<CommunityMuteMember> CommunityMutedMembers { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
@@ -51,6 +56,9 @@ namespace platform_core_service.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            builder.Entity<BaseCommunityReport>()
+                .UseTpcMappingStrategy();
 
             foreach (var entityType in builder.Model.GetEntityTypes())
             {
@@ -177,6 +185,79 @@ namespace platform_core_service.Data
                     .HasForeignKey(e => e.AnswerId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
+
+            builder.Entity<CommunityCommentsReport>(entity =>
+            {
+                entity.ToTable("CommunityCommentsReports");
+                entity.HasIndex(r => new { r.CommentId, r.ReporterId }).IsUnique();
+                entity.HasIndex(r => new { r.ReporterId, r.Status });
+
+                ConfigureCommunityReportRelationships(entity);
+            });
+
+            builder.Entity<CommunityPostsReport>(entity =>
+            {
+                entity.ToTable("CommunityPostsReports");
+                entity.HasIndex(r => new { r.PostId, r.ReporterId }).IsUnique();
+                entity.HasIndex(r => new { r.ReporterId, r.Status });
+
+                ConfigureCommunityReportRelationships(entity);
+            });
+
+            builder.Entity<CommunityQAPostReports>(entity =>
+            {
+                entity.ToTable("CommunityQAPostReports");
+                entity.HasIndex(r => new { r.QAPostId, r.ReporterId }).IsUnique();
+                entity.HasIndex(r => new { r.ReporterId, r.Status });
+
+                ConfigureCommunityReportRelationships(entity);
+            });
+
+            builder.Entity<CommunityAnswersReport>(entity =>
+            {
+                entity.ToTable("CommunityAnswersReports");
+                entity.HasIndex(r => new { r.AnswerId, r.ReporterId }).IsUnique();
+                entity.HasIndex(r => new { r.ReporterId, r.Status });
+
+                ConfigureCommunityReportRelationships(entity);
+            });
+
+            builder.Entity<CommunityMuteMember>(entity =>
+            {
+                entity.HasIndex(m => new { m.CommunityId, m.MutedProfileId });
+
+                entity.HasOne(m => m.MutedProfile)
+                    .WithMany()
+                    .HasForeignKey(m => m.MutedProfileId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(m => m.MutedBy)
+                    .WithMany()
+                    .HasForeignKey(m => m.MutedById)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+        }
+
+        private static void ConfigureCommunityReportRelationships<TEntity>(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TEntity> entity)
+            where TEntity : BaseCommunityReport
+        {
+            entity.Property(r => r.Status).HasConversion<int>();
+            entity.Property(r => r.ResolutionAction).HasConversion<int>();
+
+            entity.HasOne(r => r.Reporter)
+                .WithMany()
+                .HasForeignKey(r => r.ReporterId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(r => r.ReportedProfile)
+                .WithMany()
+                .HasForeignKey(r => r.ReportedProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(r => r.ResolvedBy)
+                .WithMany()
+                .HasForeignKey(r => r.ResolvedById)
+                .OnDelete(DeleteBehavior.Restrict);
         }
 
         public async Task<int> SaveChangesAsync(bool populatedICreated = true, bool populatedIModified = true, CancellationToken cancellationToken = default)

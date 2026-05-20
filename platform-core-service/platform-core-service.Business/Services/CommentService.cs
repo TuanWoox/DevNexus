@@ -5,6 +5,7 @@ using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
+using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Answer;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Comment;
@@ -26,6 +27,7 @@ namespace platform_core_service.Business.Services
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IContentMediaLinkService _contentMediaLinkService;
         private readonly ICommentHistoryService _commentHistoryService;
+        private readonly ISocialGuardService _socialGuardService;
 
         public CommentService(
             ApplicationDbContext context,
@@ -34,7 +36,8 @@ namespace platform_core_service.Business.Services
             IRepository<CommentEntity, string> commentRepository,
             IBackgroundJobClient backgroundJobClient,
             IContentMediaLinkService contentMediaLinkService,
-            ICommentHistoryService commentHistoryService)
+            ICommentHistoryService commentHistoryService,
+            ISocialGuardService socialGuardService)
         {
             _context = context;
             _mapper = mapper;
@@ -43,6 +46,7 @@ namespace platform_core_service.Business.Services
             _backgroundJobClient = backgroundJobClient;
             _contentMediaLinkService = contentMediaLinkService;
             _commentHistoryService = commentHistoryService;
+            _socialGuardService = socialGuardService;
         }
 
         public async Task<ReturnResult<SelectCommentDTO>> CreateAsync(CreateCommentDTO createDTO)
@@ -112,6 +116,17 @@ namespace platform_core_service.Business.Services
                     // Inherit PostId/AnswerId from parent comment
                     createDTO.PostId = parentComment.PostId;
                     createDTO.AnswerId = parentComment.AnswerId;
+                }
+
+                var communityId = await ResolveCommentCommunityIdAsync(createDTO);
+                if (!string.IsNullOrEmpty(communityId))
+                {
+                    var muteCheck = await _socialGuardService.CheckIsMutedInCommunityAsync(profileId, communityId);
+                    if (muteCheck.Message != null)
+                    {
+                        result.Message = muteCheck.Message;
+                        return result;
+                    }
                 }
 
                 // Step 5: Map DTO to entity
@@ -508,6 +523,27 @@ namespace platform_core_service.Business.Services
             }
 
             return content.Substring(0, Math.Min(200, content.Length));
+        }
+
+        private async Task<string?> ResolveCommentCommunityIdAsync(CreateCommentDTO createDTO)
+        {
+            if (!string.IsNullOrEmpty(createDTO.PostId))
+            {
+                return await _context.Posts
+                    .Where(p => p.Id == createDTO.PostId)
+                    .Select(p => p.CommunityId)
+                    .FirstOrDefaultAsync();
+            }
+
+            if (!string.IsNullOrEmpty(createDTO.AnswerId))
+            {
+                return await _context.Answers
+                    .Where(a => a.Id == createDTO.AnswerId)
+                    .Select(a => a.QAPost.CommunityId)
+                    .FirstOrDefaultAsync();
+            }
+
+            return null;
         }
 
         private void EnqueueNotification(NotiicationCreatedEntityDTO notificationEvent, string routingKey)

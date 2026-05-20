@@ -42,6 +42,9 @@ namespace platform_core_service.Business.Helper
                 {
                     returnResult = await CheckBelongToCommunity(createPostDTO.CommunityId);
                     if (returnResult.Message != null) return returnResult;
+
+                    returnResult = await CheckIsMutedInCommunityAsync(_userContext.ProfileId, createPostDTO.CommunityId);
+                    if (returnResult.Message != null) return returnResult;
                 }
 
                 returnResult.Result = true;
@@ -171,6 +174,36 @@ namespace platform_core_service.Business.Helper
             {
                 DevNexusLogger.Instance.Debug(ex.Message);
             }
+            return returnResult;
+        }
+
+        public async Task<ReturnResult<bool>> CheckIsMutedInCommunityAsync(string profileId, string communityId)
+        {
+            ReturnResult<bool> returnResult = new();
+            try
+            {
+                var activeMute = await _dbContext.CommunityMutedMembers
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(m => m.CommunityId == communityId
+                                           && m.MutedProfileId == profileId
+                                           && (m.MutedUntil == null || m.MutedUntil > DateTimeOffset.UtcNow));
+
+                if (activeMute != null)
+                {
+                    returnResult.Result = true;
+                    returnResult.Message = activeMute.MutedUntil.HasValue
+                        ? $"You are muted in this community until {activeMute.MutedUntil.Value:g}."
+                        : "You are muted in this community indefinitely.";
+                    return returnResult;
+                }
+
+                returnResult.Result = false;
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+            }
+
             return returnResult;
         }
 

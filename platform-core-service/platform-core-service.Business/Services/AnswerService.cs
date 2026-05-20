@@ -5,6 +5,7 @@ using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
+using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Answer;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Comment;
@@ -26,6 +27,7 @@ namespace platform_core_service.Business.Services
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IContentMediaLinkService _contentMediaLinkService;
         private readonly IAnswerHistoryService _answerHistoryService;
+        private readonly ISocialGuardService _socialGuardService;
 
         public AnswerService(
             ApplicationDbContext dbContext,
@@ -34,7 +36,8 @@ namespace platform_core_service.Business.Services
             IRepository<Answer, string> answerRepository,
             IBackgroundJobClient backgroundJobClient,
             IContentMediaLinkService contentMediaLinkService,
-            IAnswerHistoryService answerHistoryService)
+            IAnswerHistoryService answerHistoryService,
+            ISocialGuardService socialGuardService)
         {
             _dbContext = dbContext;
             _userContext = userContext;
@@ -43,6 +46,7 @@ namespace platform_core_service.Business.Services
             _backgroundJobClient = backgroundJobClient;
             _contentMediaLinkService = contentMediaLinkService;
             _answerHistoryService = answerHistoryService;
+            _socialGuardService = socialGuardService;
         }
 
         public async Task<ReturnResult<SelectAnswerDTO>> CreateAsync(CreateAnswerDTO answerDTO)
@@ -66,13 +70,25 @@ namespace platform_core_service.Business.Services
                 }
 
                 // Step 3: Verify QAPost exists
-                var postExists = await _dbContext.Posts
+                var parentPost = await _dbContext.Posts
                     .OfType<QAPost>()
-                    .AnyAsync(p => p.Id == answerDTO.QAPostId);
-                if (!postExists)
+                    .Where(p => p.Id == answerDTO.QAPostId)
+                    .Select(p => new { p.Id, p.CommunityId })
+                    .FirstOrDefaultAsync();
+                if (parentPost == null)
                 {
                     result.Message = $"QAPost {answerDTO.QAPostId} not found";
                     return result;
+                }
+
+                if (!string.IsNullOrEmpty(parentPost.CommunityId))
+                {
+                    var muteCheck = await _socialGuardService.CheckIsMutedInCommunityAsync(profileId, parentPost.CommunityId);
+                    if (muteCheck.Message != null)
+                    {
+                        result.Message = muteCheck.Message;
+                        return result;
+                    }
                 }
 
                 // Step 4: Map and set server-side fields
