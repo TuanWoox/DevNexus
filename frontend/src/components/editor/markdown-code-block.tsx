@@ -43,6 +43,7 @@ export function MarkdownCodeBlock({
     const [diagramType, setDiagramType] = useState<DiagramType>('auto');
     const [diagramResult, setDiagramResult] = useState<GenerateCodeDiagramResponseDTO | null>(null);
     const [diagramError, setDiagramError] = useState<string | null>(null);
+    const [diagramInfoMessage, setDiagramInfoMessage] = useState<string | null>(null);
     const [isDiagramDialogOpen, setIsDiagramDialogOpen] = useState(false);
 
     const explainMutation = useExplainCode();
@@ -102,6 +103,7 @@ export function MarkdownCodeBlock({
         if (diagramMutation.isPending) return;
 
         setDiagramError(null);
+        setDiagramInfoMessage(null);
         diagramMutation.mutate(
             { code, language: normalizedLanguage, diagramType, postId, forceRegenerate },
             {
@@ -116,7 +118,15 @@ export function MarkdownCodeBlock({
                         return;
                     }
 
-                    if (data.status !== 'Generating' && !data.mermaidCode) {
+                    if (data.status === 'Generating') {
+                        setDiagramInfoMessage(
+                            data.message || 'AI is already generating this diagram. Please try again in a few seconds.'
+                        );
+                        setDiagramResult((current) => current ?? data);
+                        return;
+                    }
+
+                    if (!data.mermaidCode) {
                         setDiagramError('Could not generate a diagram for this code.');
                         return;
                     }
@@ -200,10 +210,12 @@ export function MarkdownCodeBlock({
                         setDiagramType(nextType);
                         setDiagramResult(null);
                         setDiagramError(null);
+                        setDiagramInfoMessage(null);
                     }}
                     result={diagramResult}
                     isLoading={diagramMutation.isPending}
                     errorMessage={diagramError}
+                    infoMessage={diagramInfoMessage}
                     onGenerate={() => handleGenerateDiagram({ forceRegenerate: false })}
                     onRegenerate={() => handleGenerateDiagram({ forceRegenerate: true })}
                     onCopyMermaid={() => {

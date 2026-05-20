@@ -13,8 +13,16 @@ namespace platform_core_service.Common.Models.DTOs.AIDTO
         [JsonPropertyName("language")]
         public string? Language { get; set; } = "auto";
 
+        [JsonProperty("post_id")]
         [JsonPropertyName("post_id")]
         public string? PostId { get; set; }
+
+        [JsonProperty("postId")]
+        [JsonPropertyName("postId")]
+        public string? PostIdCamel
+        {
+            set => PostId = value;
+        }
     }
 
     public class AICodeExplainResponseDTO
@@ -73,15 +81,44 @@ namespace platform_core_service.Common.Models.DTOs.AIDTO
         [JsonPropertyName("language")]
         public string? Language { get; set; } = "auto";
 
+        [JsonProperty("diagram_type")]
         [JsonPropertyName("diagram_type")]
         public string DiagramType { get; set; } = "auto";
 
+        [JsonProperty("diagramType")]
+        [JsonPropertyName("diagramType")]
+        public string? DiagramTypeCamel
+        {
+            set
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    DiagramType = value;
+                }
+            }
+        }
+
+        [JsonProperty("post_id")]
         [JsonPropertyName("post_id")]
         public string? PostId { get; set; }
 
+        [JsonProperty("postId")]
+        [JsonPropertyName("postId")]
+        public string? PostIdCamel
+        {
+            set => PostId = value;
+        }
+
+        [JsonProperty("force_regenerate")]
+        [JsonPropertyName("force_regenerate")]
+        public bool ForceRegenerate { get; set; }
+
         [JsonProperty("forceRegenerate")]
         [JsonPropertyName("forceRegenerate")]
-        public bool ForceRegenerate { get; set; }
+        public bool ForceRegenerateCamel
+        {
+            set => ForceRegenerate = value;
+        }
     }
 
     public class AICodeDiagramResponseDTO

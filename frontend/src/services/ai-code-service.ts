@@ -41,6 +41,20 @@ type RawGenerateCodeDiagramResponseDTO = GenerateCodeDiagramResponseDTO & {
     generated_at?: string | null;
 };
 
+type ExplainCodeApiRequestDTO = {
+    code: string;
+    language?: string;
+    post_id?: string;
+};
+
+type GenerateCodeDiagramApiRequestDTO = {
+    code: string;
+    language?: string;
+    diagram_type: GenerateCodeDiagramRequestDTO["diagramType"];
+    post_id?: string;
+    force_regenerate?: boolean;
+};
+
 function normalizeExplainResponse(payload: RawExplainCodeResponseDTO): ExplainCodeResponseDTO {
     const details = payload.details ?? {};
     const summary = payload.summary ?? payload.purpose ?? "";
@@ -108,11 +122,29 @@ export function getAiCodeErrorMessage(error: unknown): string {
     return "Could not generate AI result. Please try again.";
 }
 
+function toExplainApiPayload(payload: ExplainCodeRequestDTO): ExplainCodeApiRequestDTO {
+    return {
+        code: payload.code,
+        language: payload.language,
+        post_id: payload.postId,
+    };
+}
+
+function toDiagramApiPayload(payload: GenerateCodeDiagramRequestDTO): GenerateCodeDiagramApiRequestDTO {
+    return {
+        code: payload.code,
+        language: payload.language,
+        diagram_type: payload.diagramType,
+        post_id: payload.postId,
+        force_regenerate: payload.forceRegenerate,
+    };
+}
+
 export const aiCodeService = {
     explainCode: async (payload: ExplainCodeRequestDTO): Promise<ExplainCodeResponseDTO> => {
         const { data } = await api.post<ReturnResult<RawExplainCodeResponseDTO>>(
             "/AiContent/code/explain",
-            payload,
+            toExplainApiPayload(payload),
             { suppressToast: true }
         );
 
@@ -124,7 +156,7 @@ export const aiCodeService = {
     ): Promise<GenerateCodeDiagramResponseDTO> => {
         const { data } = await api.post<ReturnResult<RawGenerateCodeDiagramResponseDTO>>(
             "/AiContent/code/diagram",
-            payload,
+            toDiagramApiPayload(payload),
             { suppressToast: true }
         );
 

@@ -22,6 +22,7 @@ interface CodeDiagramDialogProps {
     result: GenerateCodeDiagramResponseDTO | null;
     isLoading: boolean;
     errorMessage?: string | null;
+    infoMessage?: string | null;
     onGenerate: () => void;
     onRegenerate: () => void;
     onCopyMermaid: () => void;
@@ -41,6 +42,7 @@ export function CodeDiagramDialog({
     result,
     isLoading,
     errorMessage,
+    infoMessage,
     onGenerate,
     onRegenerate,
     onCopyMermaid,
@@ -106,9 +108,9 @@ export function CodeDiagramDialog({
                     </div>
                 )}
 
-                {isGenerating && (
+                {(isGenerating || infoMessage) && (
                     <div className="rounded-md border border-sky-300 bg-sky-50 px-3 py-2 text-sm text-sky-700 dark:border-sky-700 dark:bg-sky-950/20 dark:text-sky-300">
-                        {result?.message || 'AI is already generating this diagram. Please try again in a few seconds.'}
+                        {infoMessage || result?.message || 'AI is already generating this diagram. Please try again in a few seconds.'}
                     </div>
                 )}
 

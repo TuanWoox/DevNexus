@@ -154,6 +154,7 @@ class CodeToolsService:
 
             # Sanitize: Gemini occasionally wraps the syntax in markdown fences even when asked not to.
             result.mermaid_syntax = self._strip_mermaid_fence(result.mermaid_syntax)
+            self._validate_explicit_diagram_type(diagram_type, result)
 
             await self._usage.log_from_response(
                 response=response,
@@ -178,6 +179,36 @@ class CodeToolsService:
     def _normalize_diagram_type(diagram_type: str | None) -> str:
         normalized = (diagram_type or "auto").strip().lower()
         return normalized if normalized in {"auto", "flowchart", "sequence"} else "auto"
+
+    @classmethod
+    def _validate_explicit_diagram_type(cls, requested_type: str, result: DiagramResponse) -> None:
+        if requested_type == "auto":
+            return
+
+        actual_type = cls._normalize_diagram_type(result.diagram_type)
+        if requested_type == "sequence":
+            is_valid = actual_type == "sequence" and cls._is_sequence_mermaid(result.mermaid_syntax)
+        else:
+            is_valid = actual_type == "flowchart" and cls._is_flowchart_mermaid(result.mermaid_syntax)
+
+        if not is_valid:
+            raise AIWorkerException(
+                "AI generated a diagram that did not match the requested diagram type. Please try again.",
+                status_code=502,
+            )
+
+    @staticmethod
+    def _first_mermaid_line(value: str) -> str:
+        return next((line.strip().lower() for line in value.splitlines() if line.strip()), "")
+
+    @classmethod
+    def _is_sequence_mermaid(cls, value: str) -> bool:
+        return cls._first_mermaid_line(value).startswith("sequencediagram")
+
+    @classmethod
+    def _is_flowchart_mermaid(cls, value: str) -> bool:
+        first_line = cls._first_mermaid_line(value)
+        return first_line.startswith("flowchart") or first_line.startswith("graph ")
 
     @staticmethod
     def _strip_mermaid_fence(value: str) -> str:

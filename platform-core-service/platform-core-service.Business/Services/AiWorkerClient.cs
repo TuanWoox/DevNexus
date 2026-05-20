@@ -222,12 +222,12 @@ namespace platform_core_service.Business.Services
                     HttpMethod.Post,
                     $"{_baseUrl}/ai/code/diagram")
                 {
-                    Content = JsonContent.Create(new AICodeDiagramRequestDTO
+                    Content = JsonContent.Create(new
                     {
-                        Code = request.Code,
-                        Language = request.Language,
-                        DiagramType = request.DiagramType,
-                        PostId = request.PostId,
+                        code = request.Code,
+                        language = request.Language,
+                        diagram_type = request.DiagramType,
+                        post_id = request.PostId,
                     }),
                 };
 
