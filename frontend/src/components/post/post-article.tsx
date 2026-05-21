@@ -302,7 +302,12 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                     "text-body text-sm sm:text-base leading-relaxed whitespace-pre-wrap transition-all",
                     !isApproved && "opacity-70 grayscale-20"
                 )}>
-                    <MarkdownViewer source={post.content} />
+                    <MarkdownViewer
+                        source={post.content}
+                        enableCodeTools
+                        context="post-detail"
+                        postId={post.id}
+                    />
                 </div>
 
                 {/* Tags */}
