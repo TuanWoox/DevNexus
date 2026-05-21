@@ -130,14 +130,14 @@ namespace background_job_worker.Consumers
                 {
                     // Use the admin profile as the AI answer actor. Answer.AuthorId and
                     // notification ActorId both reference Profile.Id, not ApplicationUser.Id.
-                    var adminProfileId = await dbContext.Profiles
+                    var adminProfile = await dbContext.Profiles
                         .Where(p =>
                             p.ApplicationUser.UserName == "admin" ||
                             p.ApplicationUser.UserRoles.Any(ur => ur.Role.Name == "Admin"))
-                        .Select(p => p.Id)
+                        .Select(p => new { p.Id, p.FullName, p.AvatarUrl })
                         .FirstOrDefaultAsync();
 
-                    var authorId = adminProfileId ?? post.AuthorId; // Fallback nếu không có admin profile
+                    var authorId = adminProfile?.Id ?? post.AuthorId; // Fallback nếu không có admin profile
 
                     var answer = new Answer
                     {
@@ -158,7 +158,10 @@ namespace background_job_worker.Consumers
                         var notificationEvent = new NotiicationCreatedEntityDTO
                         {
                             EventType = NotificationEventType.NEW_ANSWER,
-                            ActorId = adminProfileId ?? authorId,
+                            ActorType = ActorType.Profile,
+                            ActorId = adminProfile?.Id ?? authorId,
+                            ActorName = adminProfile?.FullName,
+                            ActorAvatarUrl = adminProfile?.AvatarUrl,
                             RecipientId = post.AuthorId,
                             EntityType = NotificationEntityType.POST,
                             EntityId = post.Id,
@@ -207,3 +210,4 @@ namespace background_job_worker.Consumers
         }
     }
 }
+

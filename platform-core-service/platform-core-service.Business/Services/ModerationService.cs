@@ -103,7 +103,7 @@ namespace platform_core_service.Business.Services
                 DevNexusLogger.Instance.Debug(
                     $"[Moderation] Post {dto.PostId} → {post.ModerationStatus} (decision={dto.Decision})");
 
-                EnqueueModerationNotification(post);
+                await EnqueueModerationNotification(post);
 
                 if (post.ModerationStatus == ModerationStatus.Approved && post is QAPost)
                 {
@@ -142,13 +142,15 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
-        private void EnqueueModerationNotification(Post post)
+        private Task EnqueueModerationNotification(Post post)
         {
             var isQuestion = post is QAPost;
             var notificationEvent = new NotiicationCreatedEntityDTO
             {
                 EventType = NotificationEventType.MODERATION_RESULT,
-                ActorId = post.AuthorId,
+                ActorType = ActorType.System,
+                ActorId = "devnexus",
+                ActorName = "DevNexus",
                 RecipientId = post.AuthorId,
                 EntityType = isQuestion ? NotificationEntityType.QUESTION : NotificationEntityType.POST,
                 EntityId = post.Id,
@@ -161,6 +163,8 @@ namespace platform_core_service.Business.Services
 
             _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
                 x => x.PublicNotification(notificationEvent, "notifications.moderation"));
+
+            return Task.CompletedTask;
         }
 
         public async Task<ReturnResult<ModerationQueueResponseDTO>> EnqueueForReviewAsync(ModerationQueueRequestDTO dto)

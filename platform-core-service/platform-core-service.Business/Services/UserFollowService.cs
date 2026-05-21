@@ -103,10 +103,14 @@ namespace platform_core_service.Business.Services
                         returnResult.Result = selectFollowRequest;
 
                         // Publish FOLLOW_REQUEST notification
+                        var actor = await GetProfileSnapshot(_userContext.ProfileId);
                         var notificationEvent = new NotiicationCreatedEntityDTO
                         {
                             EventType = NotificationEventType.FOLLOW_REQUEST,
+                            ActorType = ActorType.Profile,
                             ActorId = _userContext.ProfileId,
+                            ActorName = actor.Name,
+                            ActorAvatarUrl = actor.AvatarUrl,
                             RecipientId = createUserFollow.FollowingProfileId,
                             EntityType = NotificationEntityType.PROFILE,
                             EntityId = "profile_requests",
@@ -135,10 +139,14 @@ namespace platform_core_service.Business.Services
                         returnResult.Result = selectUserFollow;
 
                         // Publish FOLLOW_USER notification
+                        var actor = await GetProfileSnapshot(_userContext.ProfileId);
                         var notificationEvent = new NotiicationCreatedEntityDTO
                         {
                             EventType = NotificationEventType.FOLLOW_USER,
+                            ActorType = ActorType.Profile,
                             ActorId = _userContext.ProfileId,
+                            ActorName = actor.Name,
+                            ActorAvatarUrl = actor.AvatarUrl,
                             RecipientId = createUserFollow.FollowingProfileId,
                             EntityType = NotificationEntityType.PROFILE,
                             EntityId = "profile_followers",
@@ -384,6 +392,16 @@ namespace platform_core_service.Business.Services
                 returnResult.Message = ex.Message;
             }
             return returnResult;
+        }
+
+        private async Task<(string? Name, string? AvatarUrl)> GetProfileSnapshot(string profileId)
+        {
+            var profile = await _dbContext.Profiles
+                .Where(p => p.Id == profileId)
+                .Select(p => new { p.FullName, p.AvatarUrl })
+                .FirstOrDefaultAsync();
+
+            return (profile?.FullName, profile?.AvatarUrl);
         }
 
     }

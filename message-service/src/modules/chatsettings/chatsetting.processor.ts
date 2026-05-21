@@ -5,7 +5,7 @@ import { Logger } from "@nestjs/common";
 import { RabbitMQService } from '../rabbit-mq/rabbitmq.service';
 import { PublishMessageBusDTO } from "src/shared/dtos/helper/PublishMessageBusDTO";
 import { NotiicationCreatedEntity } from "src/shared/dtos/helper/NotificationEventDTO";
-import { EntityTypeEnum, NotificationEventEnum } from "src/utils/enums/NotificationEventEnum";
+import { ActorType, EntityTypeEnum, NotificationEventEnum } from "src/utils/enums/NotificationEventEnum";
 import { MessageBusEntityEnum, MessageBusEnum } from "src/utils/enums/MessageBusEnum";
 
 interface UnmuteData {
@@ -70,6 +70,11 @@ export class ChatSettingProcessor extends WorkerHost {
         try {
             const { chatId, senderId, messageContent } = data;
 
+            const sender = await this.prismaService.profile.findFirst({
+                where: { Id: senderId },
+                select: { FullName: true, AvatarUrl: true },
+            });
+
             // Get chat with members and settings
             const chat = await this.prismaService.chat.findFirst({
                 where: { Id: chatId },
@@ -102,7 +107,10 @@ export class ChatSettingProcessor extends WorkerHost {
             const publishMessage: PublishMessageBusDTO<NotiicationCreatedEntity> = {
                 Entity: {
                     EventType: NotificationEventEnum.MESSAGE_REQUEST,
+                    ActorType: ActorType.PROFILE,
                     ActorId: senderId,
+                    ActorName: sender?.FullName ?? undefined,
+                    ActorAvatarUrl: sender?.AvatarUrl ?? undefined,
                     // Multiple recipients can receive the same notification
                     RecipientId: requestRecipients,
                     EntityType: EntityTypeEnum.MESSAGE,

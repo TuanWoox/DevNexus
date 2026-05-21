@@ -1,8 +1,11 @@
-import { NotificationEventEnum, EntityTypeEnum } from '../enums/NotificationEventEnum';
+import { ActorType, NotificationEventEnum, EntityTypeEnum } from '../enums/NotificationEventEnum';
 
 export interface NotiicationCreatedEntity {
   EventType: NotificationEventEnum;
+  ActorType?: ActorType;
   ActorId: string;
+  ActorName?: string;
+  ActorAvatarUrl?: string;
   RecipientId: string | string[];
   EntityType: EntityTypeEnum;
   EntityId: string;
