@@ -3,7 +3,6 @@ import { communityContentReportService } from "@/services/community-content-repo
 import { ResolveReportDTO } from "@/types/community-content-report/resolve-report-dto";
 import { ContentType } from "@/types/content-media/content-type";
 import { communityReportQueryKeys } from "./use-community-report-query-keys";
-import { toast } from "sonner";
 
 interface ResolveReportParams {
     contentType: ContentType;
@@ -16,16 +15,10 @@ export function useResolveCommunityReport(communityId: string) {
     return useMutation({
         mutationFn: ({ contentType, payload }: ResolveReportParams) =>
             communityContentReportService.resolveReport(communityId, contentType, payload),
-        onSuccess: (resolved) => {
-            if (resolved) {
+        onSuccess: (result) => {
+            if (result.result) {
                 queryClient.invalidateQueries({ queryKey: communityReportQueryKeys.all });
-                toast.success("Report resolved successfully");
-            } else {
-                toast.error("Failed to resolve report");
             }
-        },
-        onError: () => {
-            toast.error("Failed to resolve report");
         },
     });
 }

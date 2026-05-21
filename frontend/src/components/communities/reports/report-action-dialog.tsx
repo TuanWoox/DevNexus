@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Ban, Loader2, Trash2, VolumeX, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +16,7 @@ import { ReportResolutionAction } from "@/types/community-content-report/report-
 import { useResolveCommunityReport } from "@/hooks/community-content-report-hooks/use-resolve-community-report";
 import { AnyCommunityReportDTO } from "./reports-list-container";
 import { getReportContentDetails } from "./report-helpers";
+import { toast } from "sonner";
 
 interface ReportActionDialogProps {
     open: boolean;
@@ -119,18 +118,25 @@ export function ReportActionDialog({
                 ? new Date(Date.now() + muteHours * 60 * 60 * 1000).toISOString()
                 : undefined;
 
-        const resolved = await resolveMutation.mutateAsync({
-            contentType,
-            payload: {
-                reportId: report.id,
-                action,
-                resolutionNotes: resolutionNotes.trim() || undefined,
-                mutedUntil,
-            },
-        });
+        try {
+            const result = await resolveMutation.mutateAsync({
+                contentType,
+                payload: {
+                    reportId: report.id,
+                    action,
+                    resolutionNotes: resolutionNotes.trim() || undefined,
+                    mutedUntil,
+                },
+            });
 
-        if (resolved) {
-            onClose();
+            if (result.result) {
+                toast.success("Report resolved successfully");
+                onClose();
+            } else {
+                toast.error(result.message ?? "Failed to resolve report");
+            }
+        } catch {
+            toast.error("Failed to resolve report");
         }
     };
 

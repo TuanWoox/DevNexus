@@ -40,12 +40,12 @@ export const communityContentReportService = {
         communityId: string,
         contentType: ContentType,
         payload: ResolveReportDTO
-    ): Promise<boolean> => {
+    ): Promise<ReturnResult<boolean>> => {
         const { data } = await api.post<ReturnResult<boolean>>(
             `/CommunityContentReport/${communityId}/${contentType}/resolve`,
             payload
         );
-        return data.result ?? false;
+        return data;
     },
 };
 

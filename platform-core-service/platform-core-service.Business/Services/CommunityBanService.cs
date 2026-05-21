@@ -85,14 +85,16 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Step 4b: Moderator cannot ban another Moderator
+                var callerIsOwner = community.OwnerId == profileId;
+
+                // Step 4b: Moderator cannot ban another Moderator; owner/admin can.
                 var callerIsModerator = await _context.CommunityModerators
                     .AnyAsync(m => m.CommunityId == createDTO.CommunityId && m.ModeratorId == profileId);
 
                 var targetIsModerator = await _context.CommunityModerators
                     .AnyAsync(m => m.CommunityId == createDTO.CommunityId && m.ModeratorId == createDTO.BannedProfileId);
 
-                if (callerIsModerator && targetIsModerator)
+                if (!callerIsOwner && callerIsModerator && targetIsModerator)
                 {
                     result.Message = "A Moderator cannot ban another Moderator. Please ask the Owner.";
                     return result;
