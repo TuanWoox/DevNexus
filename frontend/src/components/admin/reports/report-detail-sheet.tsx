@@ -21,6 +21,7 @@ import { ReportStatusBadge } from "./report-status-badge";
 import { ReportActionType } from "./report-action-dialog";
 import { reportResolutionLabels } from "@/types/report/report-resolution";
 import { AdminReportProfileHoverCard } from "./admin-report-profile-hover-card";
+import { UserAvatar } from "@/components/shared/user-avatar";
 
 interface ReportDetailSheetProps {
   open: boolean;
@@ -89,13 +90,7 @@ function ReportedContentView({
       return (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt={displayName} className="h-12 w-12 rounded-full object-cover border border-default" />
-            ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-lg font-bold text-muted-foreground">
-                {displayName.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <UserAvatar avatarUrl={avatarUrl} fullName={displayName} className="h-12 w-12 border border-default" />
             <div>
               <div className="text-base font-bold text-heading">{displayName}</div>
               <div className="font-mono text-2xs text-muted-foreground">
@@ -152,13 +147,7 @@ function ReportedContentView({
         <div className="space-y-3">
           <div className="text-lg font-bold text-heading leading-tight">{title}</div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {authorAvatar ? (
-              <img src={authorAvatar} alt={authorName} className="h-5 w-5 rounded-full object-cover" />
-            ) : (
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-bold">
-                {authorName.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <UserAvatar avatarUrl={authorAvatar} fullName={authorName} className="h-5 w-5" />
             <span className="font-mono">@{authorName}</span>
             <span>&bull;</span>
             <span className="font-mono">Created: {formatDate(content.dateCreated || data.dateCreated)}</span>

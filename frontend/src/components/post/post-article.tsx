@@ -44,6 +44,7 @@ import { cn } from '@/lib/utils';
 import { AiPostSummary } from './ai-post-summary';
 import { ContentHistoryOverlay } from '@/components/history/content-history-overlay';
 import { SelectQAPostDTO } from '@/types/qa-post/select-qa-post-dto';
+import { UserAvatar } from '@/components/shared/user-avatar';
 import PostNotFound from './post-not-found';
 import PostHeader from './post-header';
 
@@ -205,13 +206,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                                         </Link>
                                         <ProfileHoverCard profileId={post.authorId} author={author}>
                                             <Link href={`/profile/${post.authorId}`} className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-card bg-page overflow-hidden">
-                                                {author?.avatarUrl ? (
-                                                    <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full bg-primary/20 flex items-center justify-center">
-                                                        <span className="text-[10px] font-bold text-primary">{author?.fullName?.charAt(0) || 'U'}</span>
-                                                    </div>
-                                                )}
+                                                <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
                                             </Link>
                                         </ProfileHoverCard>
                                     </div>
@@ -242,11 +237,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                                 <>
                                     <ProfileHoverCard profileId={post.authorId} author={author}>
                                         <Link href={`/profile/${post.authorId}`} className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
-                                            {author?.avatarUrl ? (
-                                                <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
-                                            ) : (
-                                                <span className="text-primary font-bold">{author?.fullName?.charAt(0) || 'U'}</span>
-                                            )}
+                                            <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
                                         </Link>
                                     </ProfileHoverCard>
                                     <div className="flex flex-col">

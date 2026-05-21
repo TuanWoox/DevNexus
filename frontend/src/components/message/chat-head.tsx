@@ -1,11 +1,11 @@
 "use client";
 
 import { X } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { cn } from "@/lib/utils";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
-import { getProfileId, getTitle, getAvatarUrl, getInitials } from "@/features/messages/utils/message-service.helper";
+import { getProfileId, getTitle, getAvatarUrl } from "@/features/messages/utils/message-service.helper";
 import { useChatWindows } from "@/features/messages/context/chat-windows-context";
 import { useChatById } from "@/features/messages/hooks/chats/use-chat-by-id";
 
@@ -35,12 +35,7 @@ export function ChatHead({ chatId, title: titleProp, avatarUrl: avatarUrlProp }:
                 )}
                 aria-label={`Open chat with ${title}`}
             >
-                <Avatar className="h-full w-full">
-                    <AvatarImage src={avatarUrl} />
-                    <AvatarFallback className="text-sm bg-primary/10 text-primary">
-                        {getInitials(title)}
-                    </AvatarFallback>
-                </Avatar>
+                <UserAvatar avatarUrl={avatarUrl} fullName={title} className="h-full w-full" />
             </button>
 
             {/* Unread badge */}

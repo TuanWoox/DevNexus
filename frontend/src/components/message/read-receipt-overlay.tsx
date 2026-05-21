@@ -1,9 +1,9 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useMessageReaders } from "@/features/messages/hooks/messages/use-message-readers";
-import { toRelativeTime, getInitials } from "@/features/messages/utils/message-service.helper";
+import { toRelativeTime } from "@/features/messages/utils/message-service.helper";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useCallback } from "react";
 
@@ -56,12 +56,11 @@ export function ReadReceiptOverlay({ messageId, open, onClose }: ReadReceiptOver
                     >
                         {readers.map((r) => (
                             <div key={r.ReaderId} className="flex items-center gap-3">
-                                <Avatar className="h-9 w-9 shrink-0">
-                                    <AvatarImage src={r.Reader?.AvatarUrl ?? undefined} alt={r.Reader?.FullName ?? "Unknown"} />
-                                    <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
-                                        {getInitials(r.Reader?.FullName ?? "?")}
-                                    </AvatarFallback>
-                                </Avatar>
+                                <UserAvatar
+                                    avatarUrl={r.Reader?.AvatarUrl}
+                                    fullName={r.Reader?.FullName ?? "Unknown"}
+                                    className="h-9 w-9 shrink-0"
+                                />
                                 <div className="min-w-0 flex-1">
                                     <p className="text-sm font-medium truncate">
                                         {r.Reader?.FullName ?? "Unknown"}

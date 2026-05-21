@@ -14,7 +14,7 @@ import { FilterType } from "@/constants/filterType";
 import { SortOrderType } from "@/constants/sortOrderType";
 import { FilterOperator } from "@/constants/filterOperator";
 import Link from "next/link";
-import Image from "next/image";
+import { UserAvatar } from "@/components/shared/user-avatar";
 
 interface RequestsManagementProps {
     community: SelectCommunityDTO;
@@ -111,21 +111,11 @@ export function RequestsManagement({ community }: RequestsManagementProps) {
                                             href={`/profile/${req.requesterId}`}
                                             className="flex items-center gap-3 group w-fit"
                                         >
-                                            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-muted shrink-0">
-                                                {req.requester?.avatarUrl ? (
-                                                    <Image
-                                                        src={req.requester.avatarUrl}
-                                                        alt={req.requester?.fullName ?? "Moderator"}
-                                                        fill
-                                                        unoptimized
-                                                        className="object-cover"
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground font-medium">
-                                                        {(req.requester?.fullName ?? "?")[0].toUpperCase()}
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <UserAvatar
+                                                avatarUrl={req.requester?.avatarUrl}
+                                                fullName={req.requester?.fullName ?? "User"}
+                                                className="w-8 h-8 shrink-0"
+                                            />
                                             <div className="flex flex-col">
                                                 <span className="font-medium text-sm group-hover:text-primary transition-colors">
                                                     {req.requester?.fullName || "Unknown User"}
