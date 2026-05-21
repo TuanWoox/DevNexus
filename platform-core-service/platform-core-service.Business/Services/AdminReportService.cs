@@ -373,7 +373,7 @@ namespace platform_core_service.Business.Services
                 var isStaffSensitive = await IsStaffProfileAsync(report.TargetOwnerId);
                 if (isStaffSensitive && !_userContext.IsAdmin)
                 {
-                    result.Message = "Only admins can view staff-sensitive reports.";
+                    result.Message = $"Report {id} not found";
                     return result;
                 }
 
@@ -551,9 +551,9 @@ namespace platform_core_service.Business.Services
             }
 
             var isStaffSensitive = await IsStaffProfileAsync(report.TargetOwnerId);
-            if (isStaffSensitive && !_userContext.IsAdmin && !allowEscalateStaffSensitive)
+            if (isStaffSensitive && !_userContext.IsAdmin)
             {
-                return "Only admins can modify staff-sensitive reports.";
+                return "Report not found.";
             }
 
             return null;
