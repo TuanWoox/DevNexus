@@ -84,6 +84,28 @@ namespace platform_core_service.Business.Helper
                 internalNote);
         }
 
+        public static CreateAdminAuditLogDTO ForReportAction(
+            AuditActionType actionType,
+            string targetId,
+            string? targetDisplayName,
+            object? oldState,
+            object? newState,
+            object? metadata = null,
+            string? publicReason = null,
+            string? internalNote = null)
+        {
+            return Create(
+                AuditTargetType.ModerationReport,
+                actionType,
+                targetId,
+                targetDisplayName,
+                oldState,
+                newState,
+                metadata,
+                publicReason,
+                internalNote);
+        }
+
         private static CreateAdminAuditLogDTO Create(
             AuditTargetType targetType,
             AuditActionType actionType,

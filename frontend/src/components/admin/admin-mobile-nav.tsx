@@ -12,6 +12,7 @@ import {
   BrainCircuit,
   Settings,
   History,
+  Flag,
   User,
   LogOut,
   Moon,
@@ -27,6 +28,7 @@ import useLogout from '@/hooks/auth-hooks/use-logout'
 const adminNavItems = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, roles: ['Admin'] },
   { name: 'Posts', href: '/admin/posts', icon: FileText, roles: ['Admin', 'Moderator'] },
+  { name: 'Reports', href: '/admin/reports', icon: Flag, roles: ['Admin', 'Moderator'] },
   { name: 'Users', href: '/admin/users', icon: Users, roles: ['Admin'] },
   { name: 'Tags', href: '/admin/tags', icon: Tag, roles: ['Admin', 'Moderator'] },
   { name: 'AI Usage', href: '/admin/ai-usage', icon: BrainCircuit, roles: ['Admin'] },

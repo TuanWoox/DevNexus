@@ -838,6 +838,103 @@ namespace platform_core_service.Migrations
                     b.ToTable("ModerationQueueEntries");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ModerationReport", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AssignedModeratorId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ModeratorNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReporterId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<int?>("Resolution")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ResolutionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ResolvedById")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TargetHistoryId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("TargetId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("TargetOwnerId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("TargetSnapshotJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("Status", "DateCreated");
+
+                    b.HasIndex("AssignedModeratorId", "Status", "DateCreated");
+
+                    b.HasIndex("TargetOwnerId", "Status", "DateCreated");
+
+                    b.HasIndex("TargetType", "TargetId", "Status");
+
+                    b.HasIndex("ReporterId", "TargetType", "TargetId", "Status");
+
+                    b.HasIndex("ReporterId", "TargetType", "TargetId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ModerationReports_OpenDuplicateGuard")
+                        .HasFilter("\"Deleted\" = false AND \"Status\" IN (0, 1, 4)");
+
+                    b.ToTable("ModerationReports");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
                 {
                     b.Property<string>("Id")

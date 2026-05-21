@@ -2,6 +2,7 @@ export enum AuditTargetType {
   User = 0,
   Post = 1,
   ModerationQueueEntry = 2,
+  ModerationReport = 3,
 }
 
 export enum AuditActionType {
@@ -15,6 +16,11 @@ export enum AuditActionType {
 
   ModerationQueueApproved = 20,
   ModerationQueueRejected = 21,
+
+  ReportAssigned = 30,
+  ReportResolved = 31,
+  ReportDismissed = 32,
+  ReportEscalated = 33,
 }
 
 export interface AdminAuditLogDTO {

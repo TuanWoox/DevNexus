@@ -18,6 +18,8 @@ import { useDeleteFollowById } from "@/hooks/user-follow-hooks/use-delete-follow
 import { useCancelRequest } from "@/hooks/follow-request-hooks";
 import { ConnectionsModal, type ConnectionsTabValue } from "./connections/connections-modal";
 import { cn } from "@/lib/utils";
+import { ReportDialog } from "@/components/report/report-dialog";
+import { ReportTargetType } from "@/types/report/report-target-type";
 
 interface ProfileInfoProps {
     profile: SelectProfileDTO;
@@ -42,6 +44,7 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
     // Connections modal
     const [connectionsModalOpen, setConnectionsModalOpen] = useState(false);
     const [connectionsInitialTab, setConnectionsInitialTab] = useState<ConnectionsTabValue>("followers");
+    const [reportDialogOpen, setReportDialogOpen] = useState(false);
 
     const openConnectionsModal = (tab: ConnectionsTabValue) => {
         setConnectionsInitialTab(tab);
@@ -102,6 +105,7 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
+                                onSelect={() => setReportDialogOpen(true)}
                                 variant='destructive'
                                 className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
                             >
@@ -266,6 +270,15 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
                 followerCount={profile.followerCount}
                 followingCount={profile.followingCount}
             />
+            {!isOwnProfile && (
+                <ReportDialog
+                    open={reportDialogOpen}
+                    onOpenChange={setReportDialogOpen}
+                    targetType={ReportTargetType.Profile}
+                    targetId={profile.id}
+                    targetLabel={profile.fullName || "Profile"}
+                />
+            )}
         </div>
     );
 }
