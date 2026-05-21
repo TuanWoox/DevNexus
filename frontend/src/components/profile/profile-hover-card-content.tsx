@@ -133,12 +133,12 @@ export function ProfileHoverCardContent({
             </div>
 
             <div className={isOwnProfile ? 'border-t border-border px-4 py-3' : 'grid grid-cols-2 gap-2 border-t border-border px-4 py-3'}>
-                <Button variant="outline" size="sm" onClick={handleViewProfile} className="w-full">
+                <Button variant="outline" size="sm" onClick={handleViewProfile} className="w-full cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
                     {isOwnProfile ? 'View My Profile' : 'Profile'}
                 </Button>
                 {!isOwnProfile ? (
-                    <Button size="sm" onClick={handleMessage} disabled={isCheckingChat} className="w-full">
+                    <Button size="sm" onClick={handleMessage} disabled={isCheckingChat} className="w-full cursor-pointer">
                         {isCheckingChat ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
