@@ -8,4 +8,6 @@ export interface SelectBookmarkedItemDTO {
     qaPostId?: string
     post?: SelectPostDTO,
     qaPost?: SelectQAPostDTO
+    isUnavailable: boolean
+    unavailableMessage?: string
 }
