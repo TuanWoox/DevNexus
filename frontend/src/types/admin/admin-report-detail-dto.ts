@@ -1,4 +1,5 @@
 import { ReportResolution } from "../report/report-resolution";
+import { ReportTargetAction } from "../report/report-target-action";
 import { AdminReportDTO, ProfileSummaryDTO } from "./admin-report-dto";
 
 export interface ReportTargetSnapshotDTO {
@@ -26,5 +27,6 @@ export interface AdminReportDetailDTO {
   resolvedById?: string | null;
   resolvedBy?: ProfileSummaryDTO | null;
   resolvedAt?: string | null;
+  targetAction?: ReportTargetAction | null;
 }
 

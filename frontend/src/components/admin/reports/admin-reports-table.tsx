@@ -112,6 +112,9 @@ export function AdminReportsTable({ reports, isLoading, activeTab, onTabChange }
           resolution: payload.resolution ?? ReportResolution.ViolationConfirmed,
           moderatorNote: payload.note,
           resolutionNote: payload.resolutionNote,
+          targetAction: payload.targetAction,
+          suspendDays: payload.suspendDays,
+          targetActionReason: payload.targetActionReason,
         },
       }, options);
       return;
@@ -276,6 +279,7 @@ export function AdminReportsTable({ reports, isLoading, activeTab, onTabChange }
           open={actionState.open}
           action={actionState.action}
           isPending={isActionPending}
+          targetType={actionState.report?.targetType}
           onClose={closeAction}
           onConfirm={handleActionConfirm}
         />

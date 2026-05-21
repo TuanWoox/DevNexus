@@ -34,6 +34,7 @@ namespace platform_core_service.Business.Services
         private readonly ICommentHistoryService _commentHistoryService;
         private readonly IAnswerHistoryService _answerHistoryService;
         private readonly IAdminAuditLogService _adminAuditLogService;
+        private readonly IReportTargetActionExecutor _targetActionExecutor;
 
         public AdminReportService(
             ApplicationDbContext context,
@@ -43,7 +44,8 @@ namespace platform_core_service.Business.Services
             IQAPostHistoryService qaPostHistoryService,
             ICommentHistoryService commentHistoryService,
             IAnswerHistoryService answerHistoryService,
-            IAdminAuditLogService adminAuditLogService)
+            IAdminAuditLogService adminAuditLogService,
+            IReportTargetActionExecutor targetActionExecutor)
         {
             _context = context;
             _userContext = userContext;
@@ -53,6 +55,7 @@ namespace platform_core_service.Business.Services
             _commentHistoryService = commentHistoryService;
             _answerHistoryService = answerHistoryService;
             _adminAuditLogService = adminAuditLogService;
+            _targetActionExecutor = targetActionExecutor;
         }
 
         public async Task<ReturnResult<PagedData<AdminReportDTO, string>>> GetPagingAsync(Page<string> page)
@@ -195,6 +198,26 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                // TargetAction validation: only allowed with ViolationConfirmed
+                var effectiveAction = dto.TargetAction ?? ReportTargetAction.None;
+                if (effectiveAction != ReportTargetAction.None &&
+                    dto.Resolution != ReportResolution.ViolationConfirmed)
+                {
+                    result.Message = "TargetAction can only be used with ViolationConfirmed resolution.";
+                    return result;
+                }
+
+                // Execute TargetAction BEFORE closing the report so failure causes rollback
+                if (effectiveAction != ReportTargetAction.None)
+                {
+                    var actionResult = await _targetActionExecutor.ExecuteAsync(report, effectiveAction, dto);
+                    if (!actionResult.Result)
+                    {
+                        result.Message = actionResult.Message ?? "Target action execution failed.";
+                        return result;
+                    }
+                }
+
                 var oldState = BuildAuditState(report);
                 report.Status = ReportStatus.Resolved;
                 report.AssignedModeratorId ??= _userContext.ProfileId;
@@ -203,6 +226,7 @@ namespace platform_core_service.Business.Services
                 report.ResolutionNote = NormalizeNote(dto?.ResolutionNote);
                 report.ResolvedById = _userContext.ProfileId;
                 report.ResolvedAt = DateTimeOffset.UtcNow;
+                report.TargetAction = effectiveAction;
 
                 await AddReportAuditAsync(AuditActionType.ReportResolved, report, oldState, BuildAuditState(report), dto?.ResolutionNote);
                 await _context.SaveChangesAsync();
@@ -369,7 +393,8 @@ namespace platform_core_service.Business.Services
                     ResolutionNote = report.ResolutionNote,
                     ResolvedById = report.ResolvedById,
                     ResolvedBy = report.ResolvedById == null ? null : summaries.GetValueOrDefault(report.ResolvedById),
-                    ResolvedAt = report.ResolvedAt
+                    ResolvedAt = report.ResolvedAt,
+                    TargetAction = report.TargetAction
                 };
             }
             catch (Exception ex)
@@ -413,7 +438,8 @@ namespace platform_core_service.Business.Services
                     Resolution = report.Resolution,
                     ResolvedAt = report.ResolvedAt,
                     DateCreated = report.DateCreated,
-                    IsStaffSensitive = staffIds.Contains(report.TargetOwnerId)
+                    IsStaffSensitive = staffIds.Contains(report.TargetOwnerId),
+                    TargetAction = report.TargetAction
                 };
             }).ToList();
         }
@@ -503,6 +529,18 @@ namespace platform_core_service.Business.Services
                 return "Report is already closed.";
             }
 
+            // Self-moderation guard: cannot act on reports about your own content
+            if (report.TargetOwnerId == _userContext.ProfileId)
+            {
+                return "You cannot moderate a report about your own content.";
+            }
+
+            // Self-moderation guard: cannot act on reports you submitted
+            if (report.ReporterId == _userContext.ProfileId)
+            {
+                return "You cannot moderate a report you submitted.";
+            }
+
             if (report.Status == ReportStatus.Escalated && !_userContext.IsAdmin && !allowEscalateStaffSensitive)
             {
                 return "Only admins can modify escalated reports.";
@@ -577,7 +615,8 @@ namespace platform_core_service.Business.Services
                 resolution = report.Resolution?.ToString(),
                 report.ResolutionNote,
                 report.ResolvedById,
-                report.ResolvedAt
+                report.ResolvedAt,
+                targetAction = report.TargetAction?.ToString()
             };
         }
 

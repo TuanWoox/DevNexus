@@ -20,6 +20,7 @@ import { ReportStatus } from "@/types/report/report-status";
 import { ReportStatusBadge } from "./report-status-badge";
 import { ReportActionType } from "./report-action-dialog";
 import { reportResolutionLabels } from "@/types/report/report-resolution";
+import { ReportTargetAction, reportTargetActionLabels } from "@/types/report/report-target-action";
 import { AdminReportProfileHoverCard } from "./admin-report-profile-hover-card";
 
 interface ReportDetailSheetProps {
@@ -414,6 +415,22 @@ export function ReportDetailSheet({ open, onClose, report, onAction }: ReportDet
                     <div className="space-y-1">
                       <div className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">Resolution public note</div>
                       <div className="rounded-lg bg-muted/30 p-3 text-sm text-body leading-relaxed">{data.resolutionNote}</div>
+                    </div>
+                  )}
+                  {data?.targetAction != null && data.targetAction !== ReportTargetAction.None && (
+                    <div className="space-y-1">
+                      <div className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">Enforcement action</div>
+                      <div className="rounded-lg border border-red-200 bg-red-50/40 p-3 text-sm font-semibold text-red-800 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+                        {reportTargetActionLabels[data.targetAction as ReportTargetAction] ?? String(data.targetAction)}
+                      </div>
+                    </div>
+                  )}
+                  {data?.targetAction === ReportTargetAction.None && data?.resolution != null && (
+                    <div className="space-y-1">
+                      <div className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">Enforcement action</div>
+                      <div className="rounded-lg border border-default bg-muted/30 p-3 text-sm text-muted-foreground">
+                        No enforcement action taken
+                      </div>
                     </div>
                   )}
                 </div>

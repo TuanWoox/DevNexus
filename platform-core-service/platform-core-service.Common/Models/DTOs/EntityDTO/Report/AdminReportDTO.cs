@@ -23,5 +23,6 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Report
         public DateTimeOffset? ResolvedAt { get; set; }
         public DateTimeOffset? DateCreated { get; set; }
         public bool IsStaffSensitive { get; set; }
+        public ReportTargetAction? TargetAction { get; set; }
     }
 }

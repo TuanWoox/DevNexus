@@ -74,6 +74,7 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IAiContentService, AiContentService>();
             services.AddScoped<IReportService, ReportService>();
             services.AddScoped<IAdminReportService, AdminReportService>();
+            services.AddScoped<IReportTargetActionExecutor, ReportTargetActionExecutor>();
 
             // AiWorkerClient uses IHttpClientFactory — must register with AddHttpClient
             services.AddHttpClient<IAiWorkerClient, AiWorkerClient>();

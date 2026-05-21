@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -20,6 +21,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ReportResolution, reportResolutionLabels } from "@/types/report/report-resolution";
+import { ReportTargetType } from "@/types/report/report-target-type";
+import { ReportTargetAction, reportTargetActionLabels } from "@/types/report/report-target-action";
 
 export type ReportActionType = "assign" | "resolve" | "dismiss" | "escalate";
 
@@ -28,12 +31,16 @@ export interface ReportActionPayload {
   resolution?: ReportResolution;
   resolutionNote?: string;
   escalationReason?: string;
+  targetAction?: ReportTargetAction;
+  suspendDays?: number;
+  targetActionReason?: string;
 }
 
 interface ReportActionDialogProps {
   open: boolean;
   action: ReportActionType;
   isPending: boolean;
+  targetType?: ReportTargetType;
   onClose: () => void;
   onConfirm: (payload: ReportActionPayload) => void;
 }
@@ -46,6 +53,28 @@ const closeResolutions = [
   ReportResolution.HandledElsewhere,
 ];
 
+function getAvailableTargetActions(targetType?: ReportTargetType): ReportTargetAction[] {
+  const actions: ReportTargetAction[] = [ReportTargetAction.None];
+
+  switch (targetType) {
+    case ReportTargetType.Post:
+    case ReportTargetType.Question:
+      actions.push(ReportTargetAction.HideContent);
+      break;
+    case ReportTargetType.Comment:
+      actions.push(ReportTargetAction.DeleteComment);
+      break;
+    case ReportTargetType.Answer:
+      actions.push(ReportTargetAction.DeleteAnswer);
+      break;
+    case ReportTargetType.Profile:
+      actions.push(ReportTargetAction.SuspendUser);
+      break;
+  }
+
+  return actions;
+}
+
 function getCopy(action: ReportActionType) {
   switch (action) {
     case "assign":
@@ -57,7 +86,7 @@ function getCopy(action: ReportActionType) {
     case "resolve":
       return {
         title: "Resolve report",
-        description: "Close this report as handled. Review and verify the final resolution before submitting.",
+        description: "Close this report as handled. Choose a resolution and optionally enforce an action against the reported target.",
         button: "Resolve",
       };
     case "dismiss":
@@ -79,6 +108,7 @@ export function ReportActionDialog({
   open,
   action,
   isPending,
+  targetType,
   onClose,
   onConfirm,
 }: ReportActionDialogProps) {
@@ -87,9 +117,18 @@ export function ReportActionDialog({
   const [resolution, setResolution] = useState<ReportResolution>(
     action === "resolve" ? ReportResolution.ViolationConfirmed : ReportResolution.NoViolation,
   );
+  const [targetAction, setTargetAction] = useState<ReportTargetAction>(ReportTargetAction.None);
+  const [suspendDays, setSuspendDays] = useState<number>(7);
+  const [targetActionReason, setTargetActionReason] = useState("");
 
   const copy = getCopy(action);
   const needsResolution = action === "resolve" || action === "dismiss";
+  const showTargetAction = action === "resolve" && resolution === ReportResolution.ViolationConfirmed;
+  const availableActions = useMemo(() => getAvailableTargetActions(targetType), [targetType]);
+
+  const showSuspendDays = showTargetAction && targetAction === ReportTargetAction.SuspendUser;
+  const showActionReason = showTargetAction && targetAction === ReportTargetAction.HideContent;
+  const showNoActionWarning = showTargetAction && targetAction === ReportTargetAction.None;
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && !isPending && onClose()}>
@@ -100,19 +139,18 @@ export function ReportActionDialog({
         </DialogHeader>
 
         <div className="space-y-4 my-2">
-          {action === "resolve" && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300 font-medium">
-              <span className="font-bold uppercase tracking-wider block mb-1">Ticket State Separation Warning</span>
-              Resolving a report only updates the moderation ticket state. Hiding, rejecting, or deleting the underlying profile/content must be performed through separate content actions.
-            </div>
-          )}
-
           {needsResolution && (
             <div className="space-y-2">
               <Label htmlFor="report-action-resolution" className="text-heading font-semibold text-xs uppercase tracking-wider">Resolution</Label>
               <Select
                 value={String(resolution)}
-                onValueChange={(value) => setResolution(Number(value) as ReportResolution)}
+                onValueChange={(value) => {
+                  const newResolution = Number(value) as ReportResolution;
+                  setResolution(newResolution);
+                  if (newResolution !== ReportResolution.ViolationConfirmed) {
+                    setTargetAction(ReportTargetAction.None);
+                  }
+                }}
                 disabled={isPending}
               >
                 <SelectTrigger id="report-action-resolution" className="h-10 border-default bg-background">
@@ -126,6 +164,67 @@ export function ReportActionDialog({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {showTargetAction && (
+            <div className="space-y-2">
+              <Label htmlFor="report-target-action" className="text-heading font-semibold text-xs uppercase tracking-wider">Enforcement Action</Label>
+              <Select
+                value={String(targetAction)}
+                onValueChange={(value) => setTargetAction(Number(value) as ReportTargetAction)}
+                disabled={isPending}
+              >
+                <SelectTrigger id="report-target-action" className="h-10 border-default bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="border-default bg-card">
+                  {availableActions.map((item) => (
+                    <SelectItem key={item} value={String(item)} className="cursor-pointer">
+                      {reportTargetActionLabels[item]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {showNoActionWarning && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300 font-medium">
+              <span className="font-bold uppercase tracking-wider block mb-1">No Enforcement</span>
+              Violation confirmed but no enforcement action will be taken. The target content remains unchanged.
+            </div>
+          )}
+
+          {showSuspendDays && (
+            <div className="space-y-2">
+              <Label htmlFor="report-suspend-days" className="text-heading font-semibold text-xs uppercase tracking-wider">Suspension duration (days)</Label>
+              <Input
+                id="report-suspend-days"
+                type="number"
+                min={1}
+                max={365}
+                value={suspendDays}
+                onChange={(event) => setSuspendDays(Math.max(1, Math.min(365, Number(event.target.value) || 1)))}
+                disabled={isPending}
+                className="h-10 border-default bg-background text-body"
+              />
+              <p className="text-2xs text-muted-foreground">User will be suspended for {suspendDays} day{suspendDays !== 1 ? "s" : ""} from now.</p>
+            </div>
+          )}
+
+          {showActionReason && (
+            <div className="space-y-2">
+              <Label htmlFor="report-action-reason" className="text-heading font-semibold text-xs uppercase tracking-wider">Reason for hiding</Label>
+              <Textarea
+                id="report-action-reason"
+                value={targetActionReason}
+                onChange={(event) => setTargetActionReason(event.target.value)}
+                disabled={isPending}
+                maxLength={1000}
+                className="min-h-20 border-default bg-background text-body text-sm"
+                placeholder="This reason will be shown as the moderation reason on the post..."
+              />
             </div>
           )}
 
@@ -164,12 +263,20 @@ export function ReportActionDialog({
           <Button type="button" variant="outline" onClick={onClose} disabled={isPending} className="border-default text-body">
             Cancel
           </Button>
-          <Button type="button" onClick={() => onConfirm({
-            note: note.trim() || undefined,
-            resolution: needsResolution ? resolution : undefined,
-            resolutionNote: resolutionNote.trim() || undefined,
-            escalationReason: action === "escalate" ? note.trim() || undefined : undefined,
-          })} disabled={isPending} className="font-bold">
+          <Button
+            type="button"
+            onClick={() => onConfirm({
+              note: note.trim() || undefined,
+              resolution: needsResolution ? resolution : undefined,
+              resolutionNote: resolutionNote.trim() || undefined,
+              escalationReason: action === "escalate" ? note.trim() || undefined : undefined,
+              targetAction: showTargetAction ? targetAction : undefined,
+              suspendDays: showSuspendDays ? suspendDays : undefined,
+              targetActionReason: showActionReason ? targetActionReason.trim() || undefined : undefined,
+            })}
+            disabled={isPending || (showActionReason && !targetActionReason.trim())}
+            className="font-bold"
+          >
             {isPending ? "Processing..." : copy.button}
           </Button>
         </DialogFooter>

@@ -17,5 +17,6 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Report
         public string? ResolvedById { get; set; }
         public ProfileSummaryDTO? ResolvedBy { get; set; }
         public DateTimeOffset? ResolvedAt { get; set; }
+        public ReportTargetAction? TargetAction { get; set; }
     }
 }
