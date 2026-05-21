@@ -2,7 +2,6 @@
 
 import React from "react";
 import { ContentType } from "@/types/content-media/content-type";
-import { ReportStatus } from "@/types/community-content-report/report-status";
 import { SortOrderType } from "@/constants/sortOrderType";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,6 +17,7 @@ import {
     CheckCircle2,
     XCircle,
 } from "lucide-react";
+import { ReportStatus } from "@/types/report/report-status";
 
 interface ReportFilterPanelProps {
     contentType: ContentType;
@@ -140,11 +140,10 @@ export function ReportFilterPanel({
                     <button
                         key={status.key}
                         onClick={() => onStatusFilterChange(status.key)}
-                        className={`flex items-center gap-3 w-full text-left px-3.5 py-2.5 rounded-lg border transition-all duration-150 cursor-pointer text-sm font-medium ${
-                            statusFilter === status.key
+                        className={`flex items-center gap-3 w-full text-left px-3.5 py-2.5 rounded-lg border transition-all duration-150 cursor-pointer text-sm font-medium ${statusFilter === status.key
                                 ? "bg-primary/10 border-primary/30 text-primary font-semibold shadow-sm"
                                 : "border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground hover:border-border/40"
-                        }`}
+                            }`}
                     >
                         {status.icon}
                         {status.label}
@@ -188,11 +187,10 @@ export function ReportFilterPanel({
                             <button
                                 key={dir.value}
                                 onClick={() => onSortDirChange(dir.value)}
-                                className={`py-2.5 rounded-lg border text-center transition-all duration-150 cursor-pointer text-xs font-bold uppercase tracking-wider ${
-                                    sortDir === dir.value
+                                className={`py-2.5 rounded-lg border text-center transition-all duration-150 cursor-pointer text-xs font-bold uppercase tracking-wider ${sortDir === dir.value
                                         ? "bg-primary/10 text-primary border-primary/30 shadow-sm"
                                         : "border-border bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground hover:border-border/80"
-                                }`}
+                                    }`}
                             >
                                 {dir.label}
                             </button>

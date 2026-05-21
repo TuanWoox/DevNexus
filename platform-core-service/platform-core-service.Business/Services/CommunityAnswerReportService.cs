@@ -1,3 +1,4 @@
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Abstracts;
 using platform_core_service.Business.Repository;
@@ -8,15 +9,21 @@ using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityAnswersReport;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityContentReport;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Data;
 
 namespace platform_core_service.Business.Services
 {
     public class CommunityAnswerReportService : BaseCommunityContentReportService<Answer, CommunityAnswersReport, SelectCommunityAnswersReportDTO>, ICommunityContentReportService
     {
-        public CommunityAnswerReportService(ApplicationDbContext context, IUserContext userContext, IRepository<CommunityAnswersReport, string> repository, ISocialGuardService socialGuardService, ICommunityBanService banService, Hangfire.IBackgroundJobClient backgroundJobClient) : base(context, userContext, repository, socialGuardService, banService, backgroundJobClient)
+        public CommunityAnswerReportService(ApplicationDbContext context, IUserContext userContext, IRepository<CommunityAnswersReport, string> repository, ISocialGuardService socialGuardService, ICommunityBanService banService, Hangfire.IBackgroundJobClient backgroundJobClient, IMapper mapper) : base(context, userContext, repository, socialGuardService, banService, backgroundJobClient, mapper)
         {
         }
+
+        protected override ContentType ContentType => ContentType.Answer;
+
+        protected override IQueryable<CommunityAnswersReport> BuildQueryForDetail(string communityId, string reportId)
+            => base.BuildQueryForDetail(communityId, reportId).Include(r => r.Answer).ThenInclude(a => a.QAPost);
 
         protected override CommunityAnswersReport CreateReportContent(string communityId, ReportContentDTO reportContentDTO, Answer entity)
         {

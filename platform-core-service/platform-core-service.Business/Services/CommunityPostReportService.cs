@@ -1,23 +1,29 @@
-﻿using Microsoft.EntityFrameworkCore;
+using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Abstracts;
+using platform_core_service.Business.Repository;
+using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.Contexts;
-using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityContentReport;
-using platform_core_service.Data;
-using platform_core_service.Business.Utils.Extensions;
-using platform_core_service.Common.Interfaces.Services;
-using platform_core_service.Business.Repository;
 using platform_core_service.Common.Interfaces.Helper;
+using platform_core_service.Common.Interfaces.Services;
+using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityContentReport;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityPostsReport;
-
+using platform_core_service.Common.Utils.Enums;
+using platform_core_service.Data;
 
 namespace platform_core_service.Business.Services
 {
     public class CommunityPostReportService : BaseCommunityContentReportService<Post, CommunityPostsReport, SelectCommunityPostsReportDTO>, ICommunityContentReportService
     {
-        public CommunityPostReportService(ApplicationDbContext context, IUserContext userContext, IRepository<CommunityPostsReport, string> repository, ISocialGuardService socialGuardService, ICommunityBanService banService, Hangfire.IBackgroundJobClient backgroundJobClient) : base(context, userContext, repository, socialGuardService, banService, backgroundJobClient)
+        public CommunityPostReportService(ApplicationDbContext context, IUserContext userContext, IRepository<CommunityPostsReport, string> repository, ISocialGuardService socialGuardService, ICommunityBanService banService, Hangfire.IBackgroundJobClient backgroundJobClient, IMapper mapper) : base(context, userContext, repository, socialGuardService, banService, backgroundJobClient, mapper)
         {
         }
+
+        protected override ContentType ContentType => ContentType.Post;
+
+        protected override IQueryable<CommunityPostsReport> BuildQueryForDetail(string communityId, string reportId)
+            => base.BuildQueryForDetail(communityId, reportId).Include(r => r.Post);
 
         protected override CommunityPostsReport CreateReportContent(string communityId, ReportContentDTO reportContentDTO, Post entity)
         {
@@ -66,8 +72,8 @@ namespace platform_core_service.Business.Services
             => await _context.CommunityPostsReports
                 .Where(r => r.PostId == contentId
                     && r.CommunityId == communityId
-                    && r.Status == Common.Utils.Enums.ReportStatus.Pending
-                    && r.ResolutionAction == Common.Utils.Enums.ReportResolutionAction.None)
+                    && r.Status == ReportStatus.Pending
+                    && r.ResolutionAction == ReportResolutionAction.None)
                 .ToListAsync();
 
         protected override Task SoftDeleteContent(Post content)

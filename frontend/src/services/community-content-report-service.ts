@@ -47,5 +47,16 @@ export const communityContentReportService = {
         );
         return data;
     },
+
+    getReportById: async <T>(
+        communityId: string,
+        contentType: ContentType,
+        reportId: string
+    ): Promise<ReturnResult<T>> => {
+        const { data } = await api.get<ReturnResult<T>>(
+            `/CommunityContentReport/${communityId}/${contentType}/${reportId}`
+        );
+        return data;
+    },
 };
 

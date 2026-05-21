@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using platform_core_service.Common.Interfaces.Factories;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityAnswersReport;
@@ -100,6 +100,28 @@ namespace platform_core_service.Controllers
                 returnResult.Message = $"An error occurred: {ex.Message}";
             }
             return Ok(returnResult);
+        }
+
+        [HttpGet("{communityId}/{contentType}/{reportId}")]
+        public async Task<IActionResult> GetReportById(string communityId, ContentType contentType, string reportId)
+        {
+            try
+            {
+                var service = _communityContentReportServiceFactory.GetCommunityContentReportService(contentType);
+                return contentType switch
+                {
+                    ContentType.Post => Ok(await service.GetReportByIdAsync<SelectCommunityPostsReportDTO>(communityId, reportId)),
+                    ContentType.QA => Ok(await service.GetReportByIdAsync<SelectCommunityQAPostReportsDTO>(communityId, reportId)),
+                    ContentType.Answer => Ok(await service.GetReportByIdAsync<SelectCommunityAnswersReportDTO>(communityId, reportId)),
+                    ContentType.Comment => Ok(await service.GetReportByIdAsync<SelectCommunityCommentsReportDTO>(communityId, reportId)),
+                    _ => Ok(new ReturnResult<bool> { Message = "Unsupported content type." })
+                };
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error(ex.Message);
+                return Ok(new ReturnResult<bool> { Message = $"An error occurred: {ex.Message}" });
+            }
         }
     }
 }

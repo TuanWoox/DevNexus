@@ -1,3 +1,4 @@
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Abstracts;
 using platform_core_service.Business.Repository;
@@ -8,16 +9,21 @@ using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityContentReport;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityQAPostReports;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Data;
 
 namespace platform_core_service.Business.Services
 {
     public class CommunityQAPostReportService : BaseCommunityContentReportService<QAPost, CommunityQAPostReports, SelectCommunityQAPostReportsDTO>, ICommunityContentReportService
     {
-        public CommunityQAPostReportService(ApplicationDbContext context, IUserContext userContext, IRepository<CommunityQAPostReports, string> repository, ISocialGuardService socialGuardService, ICommunityBanService banService, Hangfire.IBackgroundJobClient backgroundJobClient) : base(context, userContext, repository, socialGuardService, banService, backgroundJobClient)
+        public CommunityQAPostReportService(ApplicationDbContext context, IUserContext userContext, IRepository<CommunityQAPostReports, string> repository, ISocialGuardService socialGuardService, ICommunityBanService banService, Hangfire.IBackgroundJobClient backgroundJobClient, IMapper mapper) : base(context, userContext, repository, socialGuardService, banService, backgroundJobClient, mapper)
         {
         }
 
+        protected override ContentType ContentType => ContentType.QA;
+
+        protected override IQueryable<CommunityQAPostReports> BuildQueryForDetail(string communityId, string reportId)
+            => base.BuildQueryForDetail(communityId, reportId).Include(r => r.QAPost);
 
         protected override CommunityQAPostReports CreateReportContent(string communityId, ReportContentDTO reportContentDTO, QAPost entity)
         {

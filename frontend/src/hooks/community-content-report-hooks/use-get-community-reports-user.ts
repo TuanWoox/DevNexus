@@ -7,11 +7,12 @@ import { ContentType } from "@/types/content-media/content-type";
 export const useGetCommunityReportsUser = <T>(
     communityId: string,
     contentType: ContentType,
-    payload: Page<string>
+    payload: Page<string>,
+    enabled: boolean = true,
 ) => {
     return useQuery({
         queryKey: communityReportQueryKeys.list(communityId, false, contentType, payload),
         queryFn: () => communityContentReportService.getPagingDataForCurrentUser<T>(communityId, contentType, payload),
-        enabled: !!communityId,
+        enabled: !!communityId && enabled,
     });
 };

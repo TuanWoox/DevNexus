@@ -1,4 +1,5 @@
-﻿using CloudinaryDotNet.Actions;
+using AutoMapper;
+using CloudinaryDotNet.Actions;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
@@ -8,7 +9,6 @@ using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
-using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityMember;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityContentReport;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
@@ -37,8 +37,9 @@ namespace platform_core_service.Business.Abstracts
         protected readonly ISocialGuardService _socialGuardService;
         protected readonly ICommunityBanService _banService;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        protected readonly IMapper _mapper;
 
-        protected BaseCommunityContentReportService(ApplicationDbContext context, IUserContext userContext, IRepository<TReportEntity, string> repository, ISocialGuardService socialGuardService, ICommunityBanService banService, IBackgroundJobClient backgroundJobClient)
+        protected BaseCommunityContentReportService(ApplicationDbContext context, IUserContext userContext, IRepository<TReportEntity, string> repository, ISocialGuardService socialGuardService, ICommunityBanService banService, IBackgroundJobClient backgroundJobClient, IMapper mapper)
         {
             _context = context;
             _userContext = userContext;
@@ -46,8 +47,10 @@ namespace platform_core_service.Business.Abstracts
             _socialGuardService = socialGuardService;
             _banService = banService;
             _backgroundJobClient = backgroundJobClient;
+            _mapper = mapper;
         }
 
+        protected abstract ContentType ContentType { get; }
         protected abstract DbSet<TReportEntity> GetReportDbSet();
         protected abstract Task<TEntity?> GetEntity(string contentId, string communityId);
         protected abstract TReportEntity CreateReportContent(string communityId, ReportContentDTO reportContentDTO, TEntity entity);
@@ -55,6 +58,16 @@ namespace platform_core_service.Business.Abstracts
         protected abstract string GetContentIdFromReport(TReportEntity report);
         protected abstract Task<List<TReportEntity>> GetAllPendingReportsForContent(string contentId, string communityId);
         protected abstract Task SoftDeleteContent(TEntity content);
+
+        protected virtual IQueryable<TReportEntity> BuildQueryForDetail(string communityId, string reportId)
+        {
+            return GetReportDbSet()
+                .Include(r => r.Reporter)
+                .Include(r => r.ReportedProfile)
+                .Include(r => r.ResolvedBy)
+                .Include(r => r.Community);
+        }
+
         public async Task<ReturnResult<bool>> ReportContent(string communityId, ReportContentDTO reportContentDTO)
         {
             ReturnResult<bool> returnResult = new ReturnResult<bool>();
@@ -148,7 +161,7 @@ namespace platform_core_service.Business.Abstracts
                     case ReportResolutionAction.RemoveContentAndBan:
                         var allReportsForBan = await GetAllPendingReportsForContent(contentId, communityId);
                         await SoftDeleteContent(contentEntity);
-                        var banResult = await _banService.BanMemberAsync(new CreateCommunityBanDTO
+                        var banResult = await _banService.BanMemberAsync(new Common.Models.DTOs.EntityDTO.CommunityMember.CreateCommunityBanDTO
                         {
                             CommunityId = communityId,
                             BannedProfileId = report.ReportedProfileId,
@@ -346,6 +359,50 @@ namespace platform_core_service.Business.Abstracts
             }
         }
 
+        public async Task<ReturnResult<TReportDTO>> GetReportByIdAsync<TReportDTO>(string communityId, string reportId)
+            where TReportDTO : IBaseKey<string>
+        {
+            var returnResult = new ReturnResult<TReportDTO>();
+            try
+            {
+                var currentUserId = _userContext.ProfileId;
+                var report = await BuildQueryForDetail(communityId, reportId)
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(r => r.Id == reportId && (r.CommunityId == communityId || r.Community.Slug == communityId));
+
+                if (report == null)
+                {
+                    returnResult.Message = "Report not found.";
+                    return returnResult;
+                }
+
+                var isAuthorized = false;
+                if (report.ReporterId == currentUserId || report.ReportedProfileId == currentUserId)
+                {
+                    isAuthorized = true;
+                }
+                else
+                {
+                    var authCheck = await _socialGuardService.CheckIsCommunityAdminOrModeratorAsync(currentUserId, report.CommunityId);
+                    isAuthorized = authCheck.Result;
+                }
+
+                if (!isAuthorized)
+                {
+                    returnResult.Message = "Unauthorized access.";
+                    return returnResult;
+                }
+
+                returnResult.Result = _mapper.Map<TReportDTO>(report);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error(ex.Message);
+                returnResult.Message = $"An error occurred while retrieving the report: {ex.Message}";
+            }
+            return returnResult;
+        }
+
         private async Task PublishReportResolvedNotificationsAsync(
             TReportEntity report,
             string communityId,
@@ -372,7 +429,7 @@ namespace platform_core_service.Business.Abstracts
                     EntityId = communityId,
                     EntityTitle = community.Name,
                     Message = $"Your report in \"{community.Name}\" has been reviewed. Thank you for keeping the community safe.",
-                    ActionUrl = $"/communities/{communityId}"
+                    ActionUrl = $"/communities/{communityId}/content-report/{report.Id}?type={(int)ContentType}"
                 }, "notifications.community"));
 
             var offenderMessage = resolveDTO.Action switch
@@ -416,7 +473,7 @@ namespace platform_core_service.Business.Abstracts
                     EntityId = communityId,
                     EntityTitle = community.Name,
                     Message = offenderMessage,
-                    ActionUrl = $"/communities/{communityId}"
+                    ActionUrl = $"/communities/{communityId}/content-report/{report.Id}?type={(int)ContentType}"
                 }, "notifications.community"));
         }
     }

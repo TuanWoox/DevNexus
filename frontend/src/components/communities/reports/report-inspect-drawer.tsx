@@ -16,10 +16,12 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ProfileHoverCard } from "@/components/profile/profile-hover-card";
 import { AnyCommunityReportDTO } from "./reports-list-container";
-import { ReportStatus } from "@/types/community-content-report/report-status";
 import { getReportContentDetails, getStatusBadge, getResolutionActionLabel } from "./report-helpers";
 import { ReportActionDialog } from "./report-action-dialog";
 import { SelectCommunityReportProfileDTO } from "@/types/community-content-report/base-select-community-report-dto";
+import { ReportStatus } from "@/types/report/report-status";
+import { UserAvatar } from "@/components/shared/user-avatar";
+import { ReportResolutionAction } from "@/types/community-content-report/report-resolution-action";
 
 const DEFAULT_AVATAR_URL = "/images/default-avatar.webp";
 
@@ -47,15 +49,11 @@ function AvatarBlock({ profileId, avatarUrl, fullName, profile, label }: AvatarB
                     {label}
                 </span>
                 <div className="flex items-center gap-2.5 mt-0.5">
-                    <div className="relative w-8 h-8 rounded-full border border-border bg-muted shrink-0 overflow-hidden shadow-sm">
-                        <Image
-                            src={avatarUrl || DEFAULT_AVATAR_URL}
-                            alt={fullName || label}
-                            fill
-                            unoptimized
-                            className="object-cover"
-                        />
-                    </div>
+                    <UserAvatar
+                        avatarUrl={avatarUrl}
+                        fullName={fullName || label}
+                        className="w-8 h-8 border border-border"
+                    />
                     <span className="text-sm font-semibold text-foreground truncate max-w-[120px] hover:text-primary">
                         {fullName || "Anonymous"}
                     </span>
@@ -74,15 +72,11 @@ function InlineProfileBlock({
     return (
         <ProfileHoverCard profileId={profileId} author={profile ?? undefined}>
             <div className="flex max-w-[220px] cursor-pointer items-center gap-2">
-                <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full border border-border bg-muted">
-                    <Image
-                        src={avatarUrl || DEFAULT_AVATAR_URL}
-                        alt={fullName || "Resolved by"}
-                        fill
-                        unoptimized
-                        className="object-cover"
-                    />
-                </div>
+                <UserAvatar
+                    avatarUrl={avatarUrl}
+                    fullName={fullName || "Resolved by"}
+                    className="h-7 w-7 border border-border"
+                />
                 <span className="truncate font-semibold text-foreground hover:text-primary">
                     {fullName || "System/Moderator"}
                 </span>
@@ -97,6 +91,19 @@ export function ReportInspectDrawer({ report, contentType, isModeratorOrOwner, c
     if (!report) return null;
 
     const details = getReportContentDetails(report, contentType);
+
+    const isContentRemoved =
+        report.status === ReportStatus.Resolved &&
+        report.resolutionAction !== ReportResolutionAction.None &&
+        report.resolutionAction !== ReportResolutionAction.Reject;
+
+    const linkHref = isContentRemoved
+        ? `/communities/${communityId}/content-report/${report.id}?type=${contentType}`
+        : details.link;
+
+    const linkText = isContentRemoved
+        ? "View Resolution Details"
+        : "View Original";
 
     return (
         <Sheet open={!!report} onOpenChange={(open) => !open && onClose()}>
@@ -173,11 +180,11 @@ export function ReportInspectDrawer({ report, contentType, isModeratorOrOwner, c
                                 </span>
                             </div>
                             <Link
-                                href={details.link}
-                                target="_blank"
+                                href={linkHref}
+                                target={isContentRemoved ? undefined : "_blank"}
                                 className="text-[10px] font-semibold uppercase tracking-wider text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors"
                             >
-                                View Original
+                                {linkText}
                                 <ArrowUpRight className="h-3 w-3" />
                             </Link>
                         </div>

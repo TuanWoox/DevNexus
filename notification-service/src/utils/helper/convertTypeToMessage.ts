@@ -7,6 +7,7 @@ export function convertTypeToMessage(event: NotificationMessageSource, actor: st
     if (event.Message && event.Message.trim() !== '') {
         return event.Message;
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     const a = actor ?? (event.ActorType === ActorType.SYSTEM ? 'DevNexus' : 'Someone');
     const title = event.EntityTitle ? `"${event.EntityTitle}"` : 'your content';
     const count = event.AggregatedCount ?? 1;

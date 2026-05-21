@@ -14,9 +14,9 @@ import { Loader2, AlertTriangle, Eye, MoreHorizontal, ShieldAlert } from "lucide
 import Image from "next/image";
 import { AnyCommunityReportDTO } from "./reports-list-container";
 import { getReportContentDetails, getResolutionActionLabel, getStatusBadge } from "./report-helpers";
-import { ReportStatus } from "@/types/community-content-report/report-status";
 import { ReportResolutionAction } from "@/types/community-content-report/report-resolution-action";
 import { ProfileHoverCard } from "@/components/profile/profile-hover-card";
+import { ReportStatus } from "@/types/report/report-status";
 
 const DEFAULT_AVATAR_URL = "/images/default-avatar.webp";
 

@@ -1,4 +1,4 @@
-import { ReportStatus } from "./report-status";
+import { ReportStatus } from "../report/report-status";
 import { ReportResolutionAction } from "./report-resolution-action";
 
 export interface SelectCommunityReportProfileDTO {

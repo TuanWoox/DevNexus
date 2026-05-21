@@ -1,6 +1,5 @@
 import React from "react";
 import { ContentType } from "@/types/content-media/content-type";
-import { ReportStatus } from "@/types/community-content-report/report-status";
 import { ReportResolutionAction } from "@/types/community-content-report/report-resolution-action";
 import { SelectCommunityPostsReportDTO } from "@/types/community-posts-report/select-community-posts-report-dto";
 import { SelectCommunityQAPostReportsDTO } from "@/types/community-qa-post-reports/select-community-qa-post-reports-dto";
@@ -17,6 +16,7 @@ import {
     CheckCircle2,
     XCircle,
 } from "lucide-react";
+import { ReportStatus } from "@/types/report/report-status";
 
 export interface ReportDetails {
     typeLabel: string;
@@ -32,6 +32,7 @@ export function getReportContentDetails(
     report: AnyCommunityReportDTO,
     type: ContentType
 ): ReportDetails {
+    console.log(report);
     switch (type) {
         case ContentType.Post: {
             const r = report as SelectCommunityPostsReportDTO;
@@ -40,7 +41,7 @@ export function getReportContentDetails(
                 contentId: r.postId,
                 title: r.post?.title || "Untitled Post",
                 preview: r.post?.contentPreview || "No preview available",
-                link: `/communities/${r.communityId}/posts/${r.post?.slug || r.postId}`,
+                link: `/post/${r.postId}`,
                 authorId: r.post?.authorId,
                 dateCreated: r.post?.dateCreated,
             };
@@ -52,7 +53,7 @@ export function getReportContentDetails(
                 contentId: r.qaPostId,
                 title: r.qaPost?.title || "Untitled Q&A",
                 preview: r.qaPost?.contentPreview || "No preview available",
-                link: `/communities/${r.communityId}/qa/${r.qaPost?.slug || r.qaPostId}`,
+                link: `/questions/${r.qaPostId}`,
                 authorId: r.qaPost?.authorId,
                 dateCreated: r.qaPost?.dateCreated,
             };
@@ -64,7 +65,7 @@ export function getReportContentDetails(
                 contentId: r.answerId,
                 title: r.answer?.qaPostTitle ? `Answer to: ${r.answer.qaPostTitle}` : "Answer to Q&A",
                 preview: r.answer?.contentPreview || "No preview available",
-                link: `/communities/${r.communityId}/qa/${r.answer?.qaPostId || ""}`,
+                link: `/questions/${r.answer?.qaPostId || ""}`,
                 authorId: r.answer?.authorId,
                 dateCreated: r.answer?.dateCreated,
             };
@@ -75,10 +76,10 @@ export function getReportContentDetails(
             let link = `/communities/${r.communityId}`;
             if (r.comment?.postId) {
                 title = `Comment on Post: ${r.comment.postTitle || "Untitled"}`;
-                link = `/communities/${r.communityId}/posts/${r.comment.postId}`;
+                link = `/post/${r.comment.postId}`;
             } else if (r.comment?.qaPostId) {
                 title = `Comment on Q&A: ${r.comment.qaPostTitle || "Untitled"}`;
-                link = `/communities/${r.communityId}/qa/${r.comment.qaPostId}`;
+                link = `/questions/${r.comment.qaPostId}`;
             }
             return {
                 typeLabel: "Comment",

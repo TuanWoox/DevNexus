@@ -15,6 +15,9 @@ namespace platform_core_service.Common.Interfaces.Services
         Task<ReturnResult<PagedData<TReportDTO, string>>> GetPagingDataForCurrentUser<TReportDTO>(Page<string> page, string communityId)
             where TReportDTO : IBaseKey<string>;
 
+        Task<ReturnResult<TReportDTO>> GetReportByIdAsync<TReportDTO>(string communityId, string reportId)
+            where TReportDTO : IBaseKey<string>;
+
         Task<ReturnResult<bool>> ResolveReport(string communityId, ResolveReportDTO resolveDTO);
     }
 }

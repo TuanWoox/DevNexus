@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { SelectCommunityDTO } from "@/types/community/select-community-dto";
 import { ContentType } from "@/types/content-media/content-type";
-import { ReportStatus } from "@/types/community-content-report/report-status";
 import { useGetCommunityReportsAdmin } from "@/hooks/community-content-report-hooks/use-get-community-reports-admin";
 import { useGetCommunityReportsUser } from "@/hooks/community-content-report-hooks/use-get-community-reports-user";
 import { SelectCommunityPostsReportDTO } from "@/types/community-posts-report/select-community-posts-report-dto";
@@ -24,6 +23,7 @@ import { ReportTable } from "./report-table";
 import { ReportInspectDrawer } from "./report-inspect-drawer";
 import { ReportPagination } from "./report-pagination";
 import { ReportActionDialog } from "./report-action-dialog";
+import { ReportStatus } from "@/types/report/report-status";
 
 interface ReportsListContainerProps {
     community: SelectCommunityDTO;
@@ -94,8 +94,8 @@ export function ReportsListContainer({ community }: ReportsListContainerProps) {
         selected: [],
     };
 
-    const adminQuery = useGetCommunityReportsAdmin<AnyCommunityReportDTO>(community.id, contentType, pagePayload);
-    const userQuery = useGetCommunityReportsUser<AnyCommunityReportDTO>(community.id, contentType, pagePayload);
+    const adminQuery = useGetCommunityReportsAdmin<AnyCommunityReportDTO>(community.id, contentType, pagePayload, isModeratorOrOwner && viewMode === "moderation");
+    const userQuery = useGetCommunityReportsUser<AnyCommunityReportDTO>(community.id, contentType, pagePayload, !(isModeratorOrOwner && viewMode === "moderation"));
 
     const query = viewMode === "moderation" ? adminQuery : userQuery;
     const { data: pagedData, isLoading } = query;
@@ -144,11 +144,10 @@ export function ReportsListContainer({ community }: ReportsListContainerProps) {
                         <Button
                             variant="ghost"
                             size="sm"
-                            className={`rounded-lg px-4 h-8 cursor-pointer font-semibold text-xs transition-all duration-200 gap-2 ${
-                                viewMode === "moderation"
-                                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-sm"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60 border border-transparent"
-                            }`}
+                            className={`rounded-lg px-4 h-8 cursor-pointer font-semibold text-xs transition-all duration-200 gap-2 ${viewMode === "moderation"
+                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-sm"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/60 border border-transparent"
+                                }`}
                             onClick={() => { setViewMode("moderation"); setPageNumber(0); }}
                         >
                             <ShieldAlert className="h-3.5 w-3.5" />
@@ -157,11 +156,10 @@ export function ReportsListContainer({ community }: ReportsListContainerProps) {
                         <Button
                             variant="ghost"
                             size="sm"
-                            className={`rounded-lg px-4 h-8 cursor-pointer font-semibold text-xs transition-all duration-200 gap-2 ${
-                                viewMode === "mine"
-                                    ? "bg-primary/10 text-primary border border-primary/30 shadow-sm"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60 border border-transparent"
-                            }`}
+                            className={`rounded-lg px-4 h-8 cursor-pointer font-semibold text-xs transition-all duration-200 gap-2 ${viewMode === "mine"
+                                ? "bg-primary/10 text-primary border border-primary/30 shadow-sm"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/60 border border-transparent"
+                                }`}
                             onClick={() => { setViewMode("mine"); setPageNumber(0); }}
                         >
                             <User className="h-3.5 w-3.5" />
@@ -276,7 +274,7 @@ export function ReportsListContainer({ community }: ReportsListContainerProps) {
                     {/* Active Filter Badges Row (Visible on all viewports below xl, highly helpful on mobile/tablet) */}
                     <div className="shrink-0 flex flex-wrap items-center gap-1.5 px-5 pb-3 bg-muted/25 border-b border-border xl:hidden">
                         <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider mr-1">Active:</span>
-                        
+
                         {/* Content Type Badge */}
                         <Badge variant="secondary" className="text-[10px] font-semibold gap-1 rounded-md px-2 py-0.5 bg-primary/5 text-primary border border-primary/20">
                             Type: {contentType === ContentType.Post ? "Posts" : contentType === ContentType.QA ? "Q&As" : contentType === ContentType.Answer ? "Answers" : "Comments"}
@@ -295,10 +293,10 @@ export function ReportsListContainer({ community }: ReportsListContainerProps) {
                             Sort: {sortField === "DateCreated" ? "Date" : sortField} ({sortDir === SortOrderType.ASC ? "ASC" : "DESC"})
                             <button onClick={() => { setSortField("DateCreated"); setSortDir(SortOrderType.DESC); }} className="hover:text-foreground cursor-pointer transition-colors font-bold ml-1 font-mono">×</button>
                         </Badge>
-                        
+
                         {/* Reset Filters button */}
                         {(statusFilter !== "ALL" || sortField !== "DateCreated" || sortDir !== SortOrderType.DESC) && (
-                            <button 
+                            <button
                                 onClick={() => {
                                     setStatusFilter("ALL");
                                     setSortField("DateCreated");

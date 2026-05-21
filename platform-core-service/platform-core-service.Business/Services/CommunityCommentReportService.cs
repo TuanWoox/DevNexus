@@ -1,3 +1,4 @@
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Abstracts;
 using platform_core_service.Business.Repository;
@@ -8,15 +9,23 @@ using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityCommentsReport;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityContentReport;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Data;
 
 namespace platform_core_service.Business.Services
 {
     public class CommunityCommentReportService : BaseCommunityContentReportService<Comment, CommunityCommentsReport, SelectCommunityCommentsReportDTO>, ICommunityContentReportService
     {
-        public CommunityCommentReportService(ApplicationDbContext context, IUserContext userContext, IRepository<CommunityCommentsReport, string> repository, ISocialGuardService socialGuardService, ICommunityBanService banService, Hangfire.IBackgroundJobClient backgroundJobClient) : base(context, userContext, repository, socialGuardService, banService, backgroundJobClient)
+        public CommunityCommentReportService(ApplicationDbContext context, IUserContext userContext, IRepository<CommunityCommentsReport, string> repository, ISocialGuardService socialGuardService, ICommunityBanService banService, Hangfire.IBackgroundJobClient backgroundJobClient, IMapper mapper) : base(context, userContext, repository, socialGuardService, banService, backgroundJobClient, mapper)
         {
         }
+
+        protected override ContentType ContentType => ContentType.Comment;
+
+        protected override IQueryable<CommunityCommentsReport> BuildQueryForDetail(string communityId, string reportId)
+            => base.BuildQueryForDetail(communityId, reportId)
+                .Include(r => r.Comment).ThenInclude(c => c.Post)
+                .Include(r => r.Comment).ThenInclude(c => c.Answer).ThenInclude(a => a.QAPost);
 
         protected override CommunityCommentsReport CreateReportContent(string communityId, ReportContentDTO reportContentDTO, Comment entity)
         {
