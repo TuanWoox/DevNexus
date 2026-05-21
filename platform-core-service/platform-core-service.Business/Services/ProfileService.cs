@@ -16,6 +16,8 @@ using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Attributes;
 using Microsoft.Extensions.Configuration;
+using platform_core_service.Common.Helper;
+using platform_core_service.Common.Interfaces.Helper;
 
 namespace platform_core_service.Business.Services
 {
@@ -26,6 +28,7 @@ namespace platform_core_service.Business.Services
         private readonly IUserContext _userContext;
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IConfiguration _configuration;
+        private readonly ISocialGuardService _socialGuardService;
 
         public ProfileService
         (
@@ -33,7 +36,8 @@ namespace platform_core_service.Business.Services
             IMapper mapper,
             IUserContext userContext,
             IBackgroundJobClient backgroundJobClient,
-            IConfiguration configuration
+            IConfiguration configuration,
+            ISocialGuardService socialGuardService
          )
         {
             _context = context;
@@ -41,6 +45,7 @@ namespace platform_core_service.Business.Services
             _userContext = userContext;
             _backgroundJobClient = backgroundJobClient;
             _configuration = configuration;
+            _socialGuardService = socialGuardService;
         }
 
         public async Task<ReturnResult<bool>> CreateAsync(CreateProfileDTO createDTO, ApplicationUser? user = null)
@@ -146,6 +151,13 @@ namespace platform_core_service.Business.Services
                 if (string.IsNullOrEmpty(profileId))
                 {
                     returnResult.Message = "Invalid profile ID";
+                    return returnResult;
+                }
+
+                var accessCheck = await _socialGuardService.CanAccessProfileBasicInfo(profileId);
+                if (!accessCheck.Result)
+                {
+                    returnResult.Message = accessCheck.Message ?? ResponseMessage.PROFILE_NOT_AVAILABLE;
                     return returnResult;
                 }
 
@@ -255,7 +267,8 @@ namespace platform_core_service.Business.Services
             }
 
             // 3. Permission — can the current user view the followers/following lists?
-            dto.CanViewProfile = isOwner || !dto.IsPrivate || existingFollowId != null;
+            var personalContentAccess = await _socialGuardService.CanViewProfilePersonalContent(profileId);
+            dto.CanViewProfile = personalContentAccess.Result;
 
             // 4. Follow status
             dto.FollowStatus = isOwner ? null

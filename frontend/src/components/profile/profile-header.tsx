@@ -6,6 +6,7 @@ import { Camera, Image as ImageIcon } from "lucide-react";
 import { SelectProfileDTO } from "@/types/profile/select-profile-dto";
 import { ProfileMediaType } from "@/types/profile-media/profile-media-type";
 import { ProfileMediaUploadModal } from "@/components/profile/avatar-upload-modal";
+import { UserAvatar } from "@/components/shared/user-avatar";
 
 interface ProfileHeaderProps {
     profile: SelectProfileDTO;
@@ -54,19 +55,11 @@ export function ProfileHeader({ profile, isOwnProfile }: ProfileHeaderProps) {
                         className={`relative w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-background overflow-hidden bg-muted flex items-center justify-center shadow-xl ring-2 ring-white/10 dark:ring-black/30 ${isOwnProfile ? 'cursor-pointer group hover:scale-[1.02] transition-transform' : ''}`}
                         onClick={() => { if (isOwnProfile) setIsAvatarModalOpen(true) }}
                     >
-                        {profile.avatarUrl ? (
-                            <Image
-                                src={profile.avatarUrl}
-                                alt="Avatar"
-                                fill
-                                unoptimized
-                                className={`object-cover ${isOwnProfile ? 'transition-opacity group-hover:opacity-80' : ''}`}
-                            />
-                        ) : (
-                            <span className={`text-5xl text-primary font-bold ${isOwnProfile ? 'transition-opacity group-hover:opacity-80' : ''}`}>
-                                {profile.fullName ? profile.fullName.charAt(0) : "U"}
-                            </span>
-                        )}
+                        <UserAvatar
+                            avatarUrl={profile.avatarUrl}
+                            fullName={profile.fullName}
+                            className={`h-full w-full ${isOwnProfile ? 'transition-opacity group-hover:opacity-80' : ''}`}
+                        />
                         {isOwnProfile && (
                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
                                 <Camera className="w-8 h-8 text-white" />

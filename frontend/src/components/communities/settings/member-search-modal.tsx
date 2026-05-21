@@ -4,14 +4,14 @@ import { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Search, User, Check } from "lucide-react";
+import { Loader2, Search, Check } from "lucide-react";
 import { useGetCommunityMembers } from "@/hooks/community-members-hooks/use-get-community-members";
 import { SortOrderType } from "@/constants/sortOrderType";
 import { FilterType } from "@/constants/filterType";
 import { FilterOperator } from "@/constants/filterOperator";
 import { SelectCommunityMemberDTO } from "@/types/community-member/select-community-member-dto";
-import Image from "next/image";
 import Link from "next/link";
+import { UserAvatar } from "@/components/shared/user-avatar";
 
 interface MemberSearchModalProps {
     isOpen: boolean;
@@ -128,21 +128,11 @@ export function MemberSearchModal({
                                         `}
                                     >
                                         {/* Avatar */}
-                                        <div className="relative w-9 h-9 rounded-full overflow-hidden bg-muted shrink-0">
-                                            {member.profile?.avatarUrl ? (
-                                                <Image
-                                                    src={member.profile.avatarUrl}
-                                                    alt={member.profile.fullName ?? "Member"}
-                                                    fill
-                                                    unoptimized
-                                                    className="object-cover"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center">
-                                                    <User className="h-4 w-4 text-muted-foreground" />
-                                                </div>
-                                            )}
-                                        </div>
+                                        <UserAvatar
+                                            avatarUrl={member.profile?.avatarUrl}
+                                            fullName={member.profile?.fullName ?? "Member"}
+                                            className="w-9 h-9 shrink-0"
+                                        />
 
                                         {/* Name + owner badge */}
                                         <div className="flex-1 min-w-0">

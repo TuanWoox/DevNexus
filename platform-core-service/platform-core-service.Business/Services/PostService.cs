@@ -1,6 +1,7 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
+using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces.Contexts;
@@ -148,9 +149,6 @@ namespace platform_core_service.Business.Services
                     returnResult.Message = "Post ID is required";
                     return returnResult;
                 }
-                var currentProfileId = _userContext.ProfileId;
-                bool hasPrivilegedAccess = _userContext.IsAdmin || _userContext.IsModerator;
-
                 // Step 2: Load post with tags and author (public read)
                 var query = _context.Posts
                     .Include(p => p.PostTags)
@@ -167,25 +165,11 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                var canViewModerationState = post.ModerationStatus == ModerationStatus.Approved
-                    || post.AuthorId == currentProfileId
-                    || hasPrivilegedAccess;
-
-                if (!canViewModerationState)
+                var accessCheck = await _socialGuardService.CanViewPost(post.Id);
+                if (!accessCheck.Result)
                 {
-                    returnResult.Message = $"Post {postId} not found";
+                    returnResult.Message = accessCheck.Message ?? ResponseMessage.CONTENT_NOT_AVAILABLE;
                     return returnResult;
-                }
-
-                if (!hasPrivilegedAccess)
-                {
-                    var accessCheck = await _socialGuardService.CheckVisibleContent(post.AuthorId, post.CommunityId);
-
-                    if (!accessCheck.Result)
-                    {
-                        returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
-                        return returnResult;
-                    }
                 }
 
                 returnResult.Result = _mapper.Map<SelectPostDTO>(post);
@@ -206,8 +190,6 @@ namespace platform_core_service.Business.Services
             ReturnResult<SelectPostDTO> returnResult = new ReturnResult<SelectPostDTO>();
             try
             {
-                var currentProfileId = _userContext.ProfileId;
-                bool hasPrivilegedAccess = _userContext.IsAdmin || _userContext.IsModerator;
                 var post = await _context.Posts
                                             .Include(p => p.PostTags)
                                             .ThenInclude(pt => pt.Tag)
@@ -220,21 +202,10 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                var canViewModerationState = post.ModerationStatus == ModerationStatus.Approved
-                    || post.AuthorId == currentProfileId
-                    || hasPrivilegedAccess;
-
-                if (!canViewModerationState)
-                {
-                    returnResult.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_FOUND, "post", postId);
-                    return returnResult;
-                }
-
-                var accessCheck = await _socialGuardService.CheckVisibleContent(post.AuthorId, post.CommunityId);
-
+                var accessCheck = await _socialGuardService.CanViewPost(post.Id);
                 if (!accessCheck.Result)
                 {
-                    returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
+                    returnResult.Message = accessCheck.Message ?? ResponseMessage.CONTENT_NOT_AVAILABLE;
                     return returnResult;
                 }
 
@@ -261,15 +232,7 @@ namespace platform_core_service.Business.Services
                 // Step 2: Build query — news feed shows only approved posts for all users
                 var query = _context.Posts
                     .Where(p => p.GetType() == typeof(PostEntity))
-                    .Where(p =>
-                        p.CommunityId == null || // Post not belonging to any community
-                        !p.Community.IsPrivate && !p.Community.Bans.Any(b => b.BannedProfileId == currentProfileId) || // Public community, not banned
-                        p.Community.OwnerId == currentProfileId || // User is the community's owner
-                        p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) || // User is Moderator
-                        p.Community.Members.Any(m => m.ProfileId == currentProfileId) && !p.Community.Bans.Any(b => b.BannedProfileId == currentProfileId) // User is Member, not banned
-                    )
-                    .Where(p => p.ModerationStatus == ModerationStatus.Approved
-                        || (p.AuthorId == currentProfileId && p.ModerationStatus != ModerationStatus.Approved))
+                    .ApplyPostVisibilityRules(_context, currentProfileId)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
@@ -310,16 +273,9 @@ namespace platform_core_service.Business.Services
                 // Step 2: Build query — only concrete Post rows (exclude QAPost subtype)
                 var query = _context.Posts
                     .Where(p => p.GetType() == typeof(PostEntity))
-                    .Where(p =>
-                        p.CommunityId == null ||
-                        !p.Community.IsPrivate && !p.Community.Bans.Any(b => b.BannedProfileId == currentProfileId) ||
-                        p.Community.OwnerId == currentProfileId ||
-                        p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) ||
-                        p.Community.Members.Any(m => m.ProfileId == currentProfileId) && !p.Community.Bans.Any(b => b.BannedProfileId == currentProfileId)
-                    )
-                    .Where(p => p.ModerationStatus == ModerationStatus.Approved
-                        || (profileId == currentProfileId && p.AuthorId == currentProfileId && p.ModerationStatus != ModerationStatus.Approved))
                     .Where(p => p.AuthorId == profileId)
+                    .Where(p => p.CommunityId == null)
+                    .ApplyPostVisibilityRules(_context, currentProfileId)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
@@ -367,8 +323,7 @@ namespace platform_core_service.Business.Services
                 var query = _context.Posts
                     .Where(p => p.GetType() == typeof(PostEntity))
                     .Where(p => p.CommunityId == communityId)
-                    .Where(p => p.ModerationStatus == ModerationStatus.Approved
-                        || (p.AuthorId == _userContext.ProfileId && p.ModerationStatus != ModerationStatus.Approved))
+                    .ApplyPostVisibilityRules(_context, _userContext.ProfileId)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
@@ -406,22 +361,16 @@ namespace platform_core_service.Business.Services
 
                 string currentProfileId = _userContext.ProfileId;
 
-                // Step 2: Build query — only concrete Post rows (exclude QAPost subtype)
+                // Step 2: Build query - include Post and QA
                 var query = _context.Posts
-                    .Where(p =>
-                        p.CommunityId == null ||
-                        !p.Community.IsPrivate && !p.Community.Bans.Any(b => b.BannedProfileId == currentProfileId) ||
-                        p.Community.OwnerId == currentProfileId ||
-                        p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) ||
-                        p.Community.Members.Any(m => m.ProfileId == currentProfileId) && !p.Community.Bans.Any(b => b.BannedProfileId == currentProfileId)
-                    )
-                    .Where(p => p.ModerationStatus == ModerationStatus.Approved
-                        || (profileId == currentProfileId && p.AuthorId == currentProfileId && p.ModerationStatus != ModerationStatus.Approved))
                     .Where(p => p.AuthorId == profileId)
+                    .Where(p => p.CommunityId == null)
+                    .ApplyPostVisibilityRules(_context, currentProfileId)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
                     .Include(p => p.Community)
+                    .Include(p => ((QAPost)p).Answers)
                     .AsNoTracking()
                     .AsQueryable();
 

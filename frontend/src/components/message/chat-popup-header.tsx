@@ -1,8 +1,7 @@
 "use client";
 
 import { X, Minus, Maximize2, Info } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getInitials } from "@/features/messages/utils/message-service.helper";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import type { Chat } from "@/features/messages/types/contracts";
 
 interface Props {
@@ -23,12 +22,7 @@ export function ChatPopupHeader({ title, avatarUrl, chat, onMinimize, onExpand, 
         <div className="flex items-center gap-1.5 px-3 py-2.5 bg-muted/60 backdrop-blur-sm border-b border-border shrink-0">
             {/* Avatar + Name */}
             <div className="flex items-center gap-2 min-w-0 flex-1">
-                <Avatar className="h-8 w-8 shrink-0 ring-2 ring-background shadow-sm">
-                    <AvatarImage src={avatarUrl} />
-                    <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
-                        {getInitials(title)}
-                    </AvatarFallback>
-                </Avatar>
+                <UserAvatar avatarUrl={avatarUrl} fullName={title} className="h-8 w-8 shrink-0 ring-2 ring-background shadow-sm" />
                 <div className="min-w-0">
                     <p className="text-sm font-semibold truncate leading-tight">{title}</p>
                     <p className="text-[10px] text-muted-foreground leading-tight">

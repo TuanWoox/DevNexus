@@ -1,14 +1,13 @@
 "use client";
 
 import { Crown, Shield, MoreHorizontal, UserX, ShieldCheck, ShieldOff } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getInitials } from "@/features/messages/utils/message-service.helper";
 import { useRemoveMember } from "@/features/messages/hooks/groups/use-remove-member";
 import { useUpdateRole } from "@/features/messages/hooks/groups/use-update-role";
 import { useTransferOwnership } from "@/features/messages/hooks/groups/use-transfer-ownership";
@@ -73,12 +72,7 @@ export function GroupMemberItem({
     return (
         <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-accent/40 transition-colors group">
             <div className="relative shrink-0">
-                <Avatar className="h-9 w-9">
-                    <AvatarImage src={avatarUrl} alt={member.FullName} />
-                    <AvatarFallback className="bg-linear-to-br from-brand-400 to-brand-600 text-white text-xs font-semibold">
-                        {getInitials(member.FullName)}
-                    </AvatarFallback>
-                </Avatar>
+                <UserAvatar avatarUrl={avatarUrl} fullName={member.FullName} className="h-9 w-9" />
             </div>
 
             <div className="flex-1 min-w-0">

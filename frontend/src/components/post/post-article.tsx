@@ -44,6 +44,9 @@ import { cn } from '@/lib/utils';
 import { AiPostSummary } from './ai-post-summary';
 import { ContentHistoryOverlay } from '@/components/history/content-history-overlay';
 import { SelectQAPostDTO } from '@/types/qa-post/select-qa-post-dto';
+import { UserAvatar } from '@/components/shared/user-avatar';
+import PostNotFound from './post-not-found';
+import PostHeader from './post-header';
 
 interface Props {
     postId: string;
@@ -60,11 +63,25 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     const { mutate: unsaveItem, isPending: isUnsavePending } = useDeleteBookmarkedItemById();
 
     const { user } = useSelector((state: RootState) => state.auth);
-    const { data: qaPost, isLoading: isQALoading } = useGetQAPostById(postId, isQAPost);
-    const { data: normalPost, isLoading: isNormalLoading } = useGetPostById(postId, !isQAPost);
+    const { data: qaPost, isLoading: isQALoading, isError: isQAError, error: qaError } = useGetQAPostById(postId, isQAPost);
+    const { data: normalPost, isLoading: isNormalLoading, isError: isNormalError, error: normalError } = useGetPostById(postId, !isQAPost);
     const post = isQAPost ? qaPost : normalPost;
     const PostTypeIcon = isQAPost ? HelpCircle : Code2;
     const isPostLoading = isQAPost ? isQALoading : isNormalLoading;
+
+    const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(postId);
+
+    const isError = isQAPost ? isQAError : isNormalError;
+    const error: any = isQAPost ? qaError : normalError;
+
+    if (isError) {
+        const isForbidden = error?.response?.status === 403 || error?.response?.status === 401;
+        return <PostNotFound isForbidden={isForbidden} />;
+    }
+
+    if (!isPostLoading && !post) {
+        return <PostNotFound />;
+    }
     const isAuthor = user?.profileId === post?.authorId;
     const isAdmin = user?.roles?.includes('Admin') || user?.roles?.includes('Moderator');
 
@@ -73,8 +90,6 @@ export default function PostArticle({ postId, isQAPost }: Props) {
 
     const author = post?.author;
     const community = (post as SelectPostDTO)?.community;
-
-    const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(postId);
 
     const handleSaveClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -167,263 +182,261 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     });
 
     return (
-        <article className={cn(
-            "bg-card sm:rounded-xl sm:border border-default sm:shadow-sm sm:mx-6 overflow-hidden",
-            !isApproved && "border-dashed"
-        )}>
-            <div className="p-3 sm:px-5 flex flex-col gap-3">
-                {/* Header: Community/Author & Options */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        {community ? (
-                            <>
-                                <div className="relative">
-                                    <Link href={`/communities/${community.id}`} className="block w-10 h-10 rounded-lg overflow-hidden border border-default bg-primary/10 relative">
-                                        {community.communityCoverPhotoUrl ? (
-                                            <Image src={community.communityCoverPhotoUrl} alt={community.name} fill unoptimized className="object-cover" />
-                                        ) : (
-                                            <div className="flex items-center justify-center h-full">
-                                                <Globe className="w-5 h-5 text-primary" />
-                                            </div>
-                                        )}
-                                    </Link>
-                                    <ProfileHoverCard profileId={post.authorId} author={author}>
-                                        <Link href={`/profile/${post.authorId}`} className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-card bg-page overflow-hidden">
-                                            {author?.avatarUrl ? (
-                                                <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
+        <>
+            <PostHeader />
+            <article className={cn(
+                "bg-card sm:rounded-xl sm:border border-default sm:shadow-sm sm:mx-6 overflow-hidden",
+                !isApproved && "border-dashed"
+            )}>
+                <div className="p-3 sm:px-5 flex flex-col gap-3">
+                    {/* Header: Community/Author & Options */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            {community ? (
+                                <>
+                                    <div className="relative">
+                                        <Link href={`/communities/${community.id}`} className="block w-10 h-10 rounded-lg overflow-hidden border border-default bg-primary/10 relative">
+                                            {community.communityCoverPhotoUrl ? (
+                                                <Image src={community.communityCoverPhotoUrl} alt={community.name} fill unoptimized className="object-cover" />
                                             ) : (
-                                                <div className="w-full h-full bg-primary/20 flex items-center justify-center">
-                                                    <span className="text-[10px] font-bold text-primary">{author?.fullName?.charAt(0) || 'U'}</span>
+                                                <div className="flex items-center justify-center h-full">
+                                                    <Globe className="w-5 h-5 text-primary" />
                                                 </div>
                                             )}
                                         </Link>
-                                    </ProfileHoverCard>
-                                </div>
-                                <div className="flex flex-col">
-                                    <Link href={`/communities/${community.id}`} className="text-sm font-bold text-heading hover:underline transition-colors truncate max-w-37.5 sm:max-w-75">
-                                        {community.name}
-                                    </Link>
-                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                                         <ProfileHoverCard profileId={post.authorId} author={author}>
-                                            <Link href={`/profile/${post.authorId}`} className="font-semibold hover:underline text-muted-foreground transition-colors truncate max-w-30">
+                                            <Link href={`/profile/${post.authorId}`} className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-card bg-page overflow-hidden">
+                                                <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
+                                            </Link>
+                                        </ProfileHoverCard>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <Link href={`/communities/${community.id}`} className="text-sm font-bold text-heading hover:underline transition-colors truncate max-w-37.5 sm:max-w-75">
+                                            {community.name}
+                                        </Link>
+                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                                            <ProfileHoverCard profileId={post.authorId} author={author}>
+                                                <Link href={`/profile/${post.authorId}`} className="font-semibold hover:underline text-muted-foreground transition-colors truncate max-w-30">
+                                                    {author?.fullName || 'Unknown'}
+                                                </Link>
+                                            </ProfileHoverCard>
+                                            <span>•</span>
+                                            <span suppressHydrationWarning>{formattedDate}</span>
+                                            {author?.techStacks && author.techStacks.length > 0 && (
+                                                <>
+                                                    <span className="w-1 h-1 rounded-full bg-muted-foreground/50 hidden sm:block"></span>
+                                                    <span className="truncate max-w-30 sm:max-w-50 hidden sm:block">
+                                                        {author.techStacks.join(', ')}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <ProfileHoverCard profileId={post.authorId} author={author}>
+                                        <Link href={`/profile/${post.authorId}`} className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
+                                            <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
+                                        </Link>
+                                    </ProfileHoverCard>
+                                    <div className="flex flex-col">
+                                        <ProfileHoverCard profileId={post.authorId} author={author}>
+                                            <Link href={`/profile/${post.authorId}`} className="text-sm font-semibold text-heading hover:text-primary transition-colors">
                                                 {author?.fullName || 'Unknown'}
                                             </Link>
                                         </ProfileHoverCard>
-                                        <span>•</span>
-                                        <span suppressHydrationWarning>{formattedDate}</span>
-                                        {author?.techStacks && author.techStacks.length > 0 && (
-                                            <>
-                                                <span className="w-1 h-1 rounded-full bg-muted-foreground/50 hidden sm:block"></span>
-                                                <span className="truncate max-w-30 sm:max-w-50 hidden sm:block">
-                                                    {author.techStacks.join(', ')}
-                                                </span>
-                                            </>
-                                        )}
+                                        <span className="text-xs font-semibold text-muted-foreground flex items-center gap-2 mt-0.5">
+                                            {formattedDate}
+                                            {author?.techStacks && author.techStacks.length > 0 && (
+                                                <>
+                                                    <span className="w-1 h-1 rounded-full bg-muted-foreground/50 hidden sm:block"></span>
+                                                    <span className="truncate max-w-30 sm:max-w-50 hidden sm:block">
+                                                        {author.techStacks.join(', ')}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </span>
                                     </div>
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <ProfileHoverCard profileId={post.authorId} author={author}>
-                                    <Link href={`/profile/${post.authorId}`} className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
-                                        {author?.avatarUrl ? (
-                                            <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
-                                        ) : (
-                                            <span className="text-primary font-bold">{author?.fullName?.charAt(0) || 'U'}</span>
-                                        )}
-                                    </Link>
-                                </ProfileHoverCard>
-                                <div className="flex flex-col">
-                                    <ProfileHoverCard profileId={post.authorId} author={author}>
-                                        <Link href={`/profile/${post.authorId}`} className="text-sm font-semibold text-heading hover:text-primary transition-colors">
-                                            {author?.fullName || 'Unknown'}
-                                        </Link>
-                                    </ProfileHoverCard>
-                                    <span className="text-xs font-semibold text-muted-foreground flex items-center gap-2 mt-0.5">
-                                        {formattedDate}
-                                        {author?.techStacks && author.techStacks.length > 0 && (
-                                            <>
-                                                <span className="w-1 h-1 rounded-full bg-muted-foreground/50 hidden sm:block"></span>
-                                                <span className="truncate max-w-30 sm:max-w-50 hidden sm:block">
-                                                    {author.techStacks.join(', ')}
-                                                </span>
-                                            </>
-                                        )}
-                                    </span>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                    {/* Post Actions Dropdown (Edit / Delete / Follow / Report) */}
-                    {/* <PostActionsDropdown
+                                </>
+                            )}
+                        </div>
+                        {/* Post Actions Dropdown (Edit / Delete / Follow / Report) */}
+                        {/* <PostActionsDropdown
                         postId={postId}
                         isQAPost={isQAPost}
                         isAuthor={isAuthor}
                         onDeleted={() => router.push('/feed')}
                     /> */}
-                    <div className="relative z-10 flex items-center gap-2">
-                        <div className="hidden items-center gap-1.5 rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary sm:flex">
-                            <PostTypeIcon className="h-3.5 w-3.5" />
-                            <span className="text-sm">{isQAPost ? 'Q&A' : 'Discussion'}</span>
+                        <div className="relative z-10 flex items-center gap-2">
+                            <div className="hidden items-center gap-1.5 rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary sm:flex">
+                                <PostTypeIcon className="h-3.5 w-3.5" />
+                                <span className="text-sm">{isQAPost ? 'Q&A' : 'Discussion'}</span>
+                            </div>
+                            <PostActionsDropdown
+                                postId={postId}
+                                isQAPost={isQAPost}
+                                isAuthor={isAuthor}
+                                onDeleted={() => router.push('/feed')}
+                            />
                         </div>
-                        <PostActionsDropdown
+                    </div>
+
+                    {/* Moderation Banner — only visible to author or admin */}
+                    {(isAuthor || isAdmin) && post.moderationStatus !== undefined && (
+                        <ModerationBanner
+                            status={normalizeModerationStatus(post.moderationStatus)}
+                            reason={post.moderationReason}
+                            className="mb-1"
+                        />
+                    )}
+
+                    {/* Title */}
+                    <h1 className="text-2xl sm:text-3xl font-bold text-heading leading-tight">
+                        {post.title}
+                    </h1>
+
+                    {/* AI TL;DR Summary — lazy, only on post detail, never in feed */}
+                    {!isQAPost && isApproved && (
+                        <AiPostSummary
                             postId={postId}
-                            isQAPost={isQAPost}
-                            isAuthor={isAuthor}
-                            onDeleted={() => router.push('/feed')}
+                            contentLength={post.content?.length ?? 0}
+                        />
+                    )}
+
+                    {/* Content */}
+                    <div className={cn(
+                        "text-body text-sm sm:text-base leading-relaxed whitespace-pre-wrap transition-all",
+                        !isApproved && "opacity-70 grayscale-20"
+                    )}>
+                        <MarkdownViewer
+                            source={post.content}
+                            enableCodeTools
+                            context="post-detail"
+                            postId={post.id}
                         />
                     </div>
-                </div>
 
-                {/* Moderation Banner — only visible to author or admin */}
-                {(isAuthor || isAdmin) && post.moderationStatus !== undefined && (
-                    <ModerationBanner
-                        status={normalizeModerationStatus(post.moderationStatus)}
-                        reason={post.moderationReason}
-                        className="mb-1"
-                    />
-                )}
-
-                {/* Title */}
-                <h1 className="text-2xl sm:text-3xl font-bold text-heading leading-tight">
-                    {post.title}
-                </h1>
-
-                {/* AI TL;DR Summary — lazy, only on post detail, never in feed */}
-                {!isQAPost && isApproved && (
-                    <AiPostSummary
-                        postId={postId}
-                        contentLength={post.content?.length ?? 0}
-                    />
-                )}
-
-                {/* Content */}
-                <div className={cn(
-                    "text-body text-sm sm:text-base leading-relaxed whitespace-pre-wrap transition-all",
-                    !isApproved && "opacity-70 grayscale-20"
-                )}>
-                    <MarkdownViewer source={post.content} />
-                </div>
-
-                {/* Tags */}
-                {post.tagNames.length !== 0 && (
-                    <div className="flex flex-wrap gap-2">
-                        {post.tagNames?.map((tag) => (
-                            <span key={tag} className="badge-emerald px-2.5 py-1 text-xs rounded-md">
-                                {tag}
-                            </span>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Action Bar */}
-            <div className="px-4 sm:px-6 py-3 border-t border-default flex items-center justify-between bg-subtle/30">
-                <div className="flex items-center gap-1 sm:gap-2">
-                    <div className="flex items-center bg-subtle rounded-full border border-default p-0.5">
-                        <button
-                            onClick={(e) => handleVote(e, true)}
-                            disabled={isVotePending || !isApproved}
-                            className={`p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group cursor-pointer disabled:cursor-not-allowed
-                                ${post.currentUserVote === true
-                                    ? 'text-emerald-500'
-                                    : 'text-muted-foreground hover:text-emerald-500'
-                                }`}
-                        >
-                            <ArrowBigUp className={`w-5 h-5 transition-all ${post.currentUserVote === true ? 'fill-emerald-500' : 'group-hover:fill-emerald-500/20'}`} />
-                            <span className="text-sm font-medium pr-1">{post.upvoteCount}</span>
-                        </button>
-                        <div className="w-px h-5 bg-default mx-0.5"></div>
-                        <button
-                            onClick={(e) => handleVote(e, false)}
-                            disabled={isVotePending || !isApproved}
-                            className={`p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group cursor-pointer disabled:cursor-not-allowed
-                                ${post.currentUserVote === false
-                                    ? 'text-rose-500'
-                                    : 'text-muted-foreground hover:text-rose-500'
-                                }`}
-                        >
-                            <span className="text-sm font-medium pr-1">{post.downvoteCount}</span>
-                            <ArrowBigDown className={`w-5 h-5 transition-all ${post.currentUserVote === false ? 'fill-rose-500' : 'group-hover:fill-rose-500/20'}`} />
-                        </button>
-                    </div>
-
-                    {isApproved ? (
-                        <button className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg transition-colors">
-                            <MessageSquare className="w-5 h-5" />
-                            <span className="text-sm font-medium hidden sm:block">{commentCount} {isQAPost ? 'Answers' : 'Comments'}</span>
-                        </button>
-                    ) : (
-                        <div className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 cursor-not-allowed text-muted-foreground opacity-50 rounded-full sm:rounded-lg relative z-10" aria-disabled>
-                            <MessageSquare className="w-5 h-5" />
-                            <span className="text-sm font-medium hidden sm:block">{commentCount} {isQAPost ? 'Answers' : 'Comments'}</span>
+                    {/* Tags */}
+                    {post.tagNames.length !== 0 && (
+                        <div className="flex flex-wrap gap-2">
+                            {post.tagNames?.map((tag) => (
+                                <span key={tag} className="badge-emerald px-2.5 py-1 text-xs rounded-md">
+                                    {tag}
+                                </span>
+                            ))}
                         </div>
                     )}
                 </div>
 
-                <div className="flex items-center gap-1 sm:gap-2">
-                    <button
-                        onClick={handleSaveClick}
-                        disabled={!isApproved}
-                        className={`p-2 sm:px-3 sm:py-2 hover:bg-subtle rounded-full sm:rounded-lg cursor-pointer disabled:cursor-not-allowed transition-colors flex items-center gap-2 relative z-10 disabled:opacity-50 ${post.isSaved ? 'text-heading hover:text-heading/80' : 'text-muted-foreground hover:text-heading'}`}
-                    >
-                        <Bookmark className={`w-5 h-5 ${post.isSaved ? 'fill-foreground text-heading' : ''}`} />
-                        <span className="text-sm font-medium hidden sm:block">{post?.isSaved ? 'Saved' : 'Save'}</span>
-                    </button>
-                    <button
-                        disabled={!isApproved}
-                        className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg cursor-pointer disabled:cursor-not-allowed transition-colors flex items-center gap-2 disabled:opacity-50"
-                    >
-                        <Share2 className="w-5 h-5" />
-                        <span className="text-sm font-medium hidden sm:block">Share</span>
-                    </button>
-                    <button
-                        onClick={() => setIsHistoryOpen(true)}
-                        disabled={!isApproved}
-                        className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg cursor-pointer disabled:cursor-not-allowed transition-colors flex items-center gap-2 disabled:opacity-50"
-                    >
-                        <History className="w-5 h-5" />
-                        <span className="text-sm font-medium hidden sm:block">History</span>
-                    </button>
-                </div>
-            </div>
+                {/* Action Bar */}
+                <div className="px-4 sm:px-6 py-3 border-t border-default flex items-center justify-between bg-subtle/30">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                        <div className="flex items-center bg-subtle rounded-full border border-default p-0.5">
+                            <button
+                                onClick={(e) => handleVote(e, true)}
+                                disabled={isVotePending || !isApproved}
+                                className={`p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group cursor-pointer disabled:cursor-not-allowed
+                                ${post.currentUserVote === true
+                                        ? 'text-emerald-500'
+                                        : 'text-muted-foreground hover:text-emerald-500'
+                                    }`}
+                            >
+                                <ArrowBigUp className={`w-5 h-5 transition-all ${post.currentUserVote === true ? 'fill-emerald-500' : 'group-hover:fill-emerald-500/20'}`} />
+                                <span className="text-sm font-medium pr-1">{post.upvoteCount}</span>
+                            </button>
+                            <div className="w-px h-5 bg-default mx-0.5"></div>
+                            <button
+                                onClick={(e) => handleVote(e, false)}
+                                disabled={isVotePending || !isApproved}
+                                className={`p-1.5 sm:p-2 disabled:opacity-50 rounded-full hover:bg-page transition-colors flex items-center gap-1.5 group cursor-pointer disabled:cursor-not-allowed
+                                ${post.currentUserVote === false
+                                        ? 'text-rose-500'
+                                        : 'text-muted-foreground hover:text-rose-500'
+                                    }`}
+                            >
+                                <span className="text-sm font-medium pr-1">{post.downvoteCount}</span>
+                                <ArrowBigDown className={`w-5 h-5 transition-all ${post.currentUserVote === false ? 'fill-rose-500' : 'group-hover:fill-rose-500/20'}`} />
+                            </button>
+                        </div>
 
-            <SaveBookmarkModal
-                isOpen={isBookmarkModalOpen}
-                onClose={() => setIsBookmarkModalOpen(false)}
-                postId={postId}
-                isQAPost={isQAPost}
-            />
+                        {isApproved ? (
+                            <button className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg transition-colors">
+                                <MessageSquare className="w-5 h-5" />
+                                <span className="text-sm font-medium hidden sm:block">{commentCount} {isQAPost ? 'Answers' : 'Comments'}</span>
+                            </button>
+                        ) : (
+                            <div className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 cursor-not-allowed text-muted-foreground opacity-50 rounded-full sm:rounded-lg relative z-10" aria-disabled>
+                                <MessageSquare className="w-5 h-5" />
+                                <span className="text-sm font-medium hidden sm:block">{commentCount} {isQAPost ? 'Answers' : 'Comments'}</span>
+                            </div>
+                        )}
+                    </div>
 
-            <ContentHistoryOverlay
-                contentId={postId}
-                type={isQAPost ? "qapost" : "post"}
-                open={isHistoryOpen}
-                onClose={() => setIsHistoryOpen(false)}
-            />
-
-            <AlertDialog open={isUnsaveModalOpen} onOpenChange={setIsUnsaveModalOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Remove Bookmark?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Are you sure you want to remove this post from your saved bookmarks?
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isUnsavePending} variant="custom" size="lg" className="btn-secondary">Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={confirmUnsave}
-                            disabled={isUnsavePending}
-                            variant="destructive"
-                            size="lg"
-                            className="cursor-pointer"
+                    <div className="flex items-center gap-1 sm:gap-2">
+                        <button
+                            onClick={handleSaveClick}
+                            disabled={!isApproved}
+                            className={`p-2 sm:px-3 sm:py-2 hover:bg-subtle rounded-full sm:rounded-lg cursor-pointer disabled:cursor-not-allowed transition-colors flex items-center gap-2 relative z-10 disabled:opacity-50 ${post.isSaved ? 'text-heading hover:text-heading/80' : 'text-muted-foreground hover:text-heading'}`}
                         >
-                            {isUnsavePending ? "Removing..." : "Remove"}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </article>
+                            <Bookmark className={`w-5 h-5 ${post.isSaved ? 'fill-foreground text-heading' : ''}`} />
+                            <span className="text-sm font-medium hidden sm:block">{post?.isSaved ? 'Saved' : 'Save'}</span>
+                        </button>
+                        <button
+                            disabled={!isApproved}
+                            className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg cursor-pointer disabled:cursor-not-allowed transition-colors flex items-center gap-2 disabled:opacity-50"
+                        >
+                            <Share2 className="w-5 h-5" />
+                            <span className="text-sm font-medium hidden sm:block">Share</span>
+                        </button>
+                        <button
+                            onClick={() => setIsHistoryOpen(true)}
+                            disabled={!isApproved}
+                            className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg cursor-pointer disabled:cursor-not-allowed transition-colors flex items-center gap-2 disabled:opacity-50"
+                        >
+                            <History className="w-5 h-5" />
+                            <span className="text-sm font-medium hidden sm:block">History</span>
+                        </button>
+                    </div>
+                </div>
+
+                <SaveBookmarkModal
+                    isOpen={isBookmarkModalOpen}
+                    onClose={() => setIsBookmarkModalOpen(false)}
+                    postId={postId}
+                    isQAPost={isQAPost}
+                />
+
+                <ContentHistoryOverlay
+                    contentId={postId}
+                    type={isQAPost ? "qapost" : "post"}
+                    open={isHistoryOpen}
+                    onClose={() => setIsHistoryOpen(false)}
+                />
+
+                <AlertDialog open={isUnsaveModalOpen} onOpenChange={setIsUnsaveModalOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Remove Bookmark?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Are you sure you want to remove this post from your saved bookmarks?
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isUnsavePending} variant="custom" size="lg" className="btn-secondary">Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={confirmUnsave}
+                                disabled={isUnsavePending}
+                                variant="destructive"
+                                size="lg"
+                                className="cursor-pointer"
+                            >
+                                {isUnsavePending ? "Removing..." : "Remove"}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </article>
+        </>
     );
 }

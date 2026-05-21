@@ -1,9 +1,13 @@
+import { ActorType } from "./enums";
+
 export interface Notification {
     Id: string;
     RecipientId: string;
     Type: number;
+    ActorType: ActorType;
     ActorId?: string;
-    Actor: Actor
+    ActorName?: string;
+    ActorAvatarUrl?: string;
     EntityType?: number;
     EntityId?: string;
     EntityTitle?: string;
@@ -17,10 +21,4 @@ export interface Notification {
     IsMuted?: boolean;
     DateCreated: string;
     DateModified: string;
-}
-
-
-export interface Actor {
-    FullName: string,
-    AvatarUrl?: string,
 }

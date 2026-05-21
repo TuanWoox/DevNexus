@@ -6,7 +6,6 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { SettingsModule } from './modules/settings/settings.module';
 import { RabbitMQModule } from './modules/rabbitmq/rabbitmq.module';
 import { NotificationGatewayModule } from './modules/websocket/notification-gateway.module';
-import { InitialSyncModule } from './modules/initial-sync/initial-sync.module';
 
 @Module({
   imports: [
@@ -15,7 +14,6 @@ import { InitialSyncModule } from './modules/initial-sync/initial-sync.module';
       isGlobal: true,
     }),
     PrismaDatabaseModule,
-    InitialSyncModule,
     NotificationGatewayModule,
     AuthModule,
     NotificationsModule,

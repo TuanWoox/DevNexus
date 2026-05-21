@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Search, Loader2, X, Check } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,7 +14,6 @@ import {
 import { profileService } from "@/features/messages/services/profile-service";
 import { useAddMembers } from "@/features/messages/hooks/groups/use-add-members";
 import { useGroupMembers } from "@/features/messages/hooks/groups/use-group-members";
-import { getInitials } from "@/features/messages/utils/message-service.helper";
 import { cn } from "@/lib/utils";
 import type { ProfileSummary } from "@/features/messages/types/contracts";
 
@@ -162,15 +161,11 @@ export function GroupAddMembersDialog({ open, onClose, chatId }: GroupAddMembers
                                             isSelected && "bg-brand-500/5",
                                         )}
                                     >
-                                        <Avatar className="h-9 w-9 shrink-0">
-                                            <AvatarImage
-                                                src={profile.AvatarUrl || undefined}
-                                                alt={profile.FullName}
-                                            />
-                                            <AvatarFallback className="bg-linear-to-br from-brand-400 to-brand-600 text-white text-xs font-semibold">
-                                                {getInitials(profile.FullName)}
-                                            </AvatarFallback>
-                                        </Avatar>
+                                        <UserAvatar
+                                            avatarUrl={profile.AvatarUrl}
+                                            fullName={profile.FullName}
+                                            className="h-9 w-9 shrink-0"
+                                        />
                                         <span className="flex-1 text-sm font-medium text-foreground">
                                             {profile.FullName}
                                         </span>

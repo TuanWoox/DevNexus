@@ -1,6 +1,7 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
+using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces.Contexts;
@@ -156,9 +157,6 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                var currentProfileId = _userContext.ProfileId;
-                bool hasPrivilegedAccess = _userContext.IsAdmin || _userContext.IsModerator;
-
                 // Step 2: Load with relations (match by Id or Slug)
                 var qaPost = await _dbContext.Posts
                     .OfType<QAPost>()
@@ -175,24 +173,11 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                var canViewModerationState = qaPost.ModerationStatus == ModerationStatus.Approved
-                    || qaPost.AuthorId == currentProfileId
-                    || hasPrivilegedAccess;
-
-                if (!canViewModerationState)
+                var accessCheck = await _socialGuardService.CanViewQAPost(qaPost.Id);
+                if (!accessCheck.Result)
                 {
-                    result.Message = $"QAPost {postId} not found";
+                    result.Message = accessCheck.Message ?? ResponseMessage.QUESTION_NOT_AVAILABLE;
                     return result;
-                }
-
-                if (!hasPrivilegedAccess)
-                {
-                    var accessCheck = await _socialGuardService.CheckVisibleContent(qaPost.AuthorId, qaPost.CommunityId);
-                    if (!accessCheck.Result)
-                    {
-                        result.Message = ResponseMessage.MESSAGE_FORBIDDEN;
-                        return result;
-                    }
                 }
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(qaPost);
@@ -216,15 +201,7 @@ namespace platform_core_service.Business.Services
 
                 var query = _dbContext.Posts
                     .OfType<QAPost>()
-                    .Where(q => q.ModerationStatus == ModerationStatus.Approved
-                        || (q.AuthorId == currentProfileId && q.ModerationStatus != ModerationStatus.Approved))
-                    .Where(q =>
-                        q.CommunityId == null ||
-                        !q.Community.IsPrivate && !q.Community.Bans.Any(b => b.BannedProfileId == currentProfileId) ||
-                        q.Community.OwnerId == currentProfileId ||
-                        q.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) ||
-                        q.Community.Members.Any(m => m.ProfileId == currentProfileId) && !q.Community.Bans.Any(b => b.BannedProfileId == currentProfileId)
-                    )
+                    .ApplyQAPostVisibilityRules(_dbContext, currentProfileId)
                     .Include(q => q.Answers)
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
@@ -265,15 +242,9 @@ namespace platform_core_service.Business.Services
                 var query = _dbContext.Posts
                     .OfType<QAPost>()
                     .Where(q => q.AuthorId == profileId)
-                    .Where(q => q.ModerationStatus == ModerationStatus.Approved
-                        || (profileId == currentProfileId && q.AuthorId == currentProfileId && q.ModerationStatus != ModerationStatus.Approved))
-                    .Where(q =>
-                        q.CommunityId == null ||
-                        !q.Community.IsPrivate && !q.Community.Bans.Any(b => b.BannedProfileId == currentProfileId) ||
-                        q.Community.OwnerId == currentProfileId ||
-                        q.Community.Moderators.Any(m => m.ModeratorId == currentProfileId) ||
-                        q.Community.Members.Any(m => m.ProfileId == currentProfileId) && !q.Community.Bans.Any(b => b.BannedProfileId == currentProfileId)
-                    )
+                    .Where(q => q.CommunityId == null)
+                    .ApplyQAPostVisibilityRules(_dbContext, currentProfileId)
+                    .Include(q => q.Answers)
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(q => q.Author)
@@ -319,8 +290,8 @@ namespace platform_core_service.Business.Services
                 var query = _dbContext.Posts
                     .OfType<QAPost>()
                     .Where(q => q.CommunityId == communityId)
-                    .Where(q => q.ModerationStatus == ModerationStatus.Approved
-                        || (q.AuthorId == _userContext.ProfileId && q.ModerationStatus != ModerationStatus.Approved))
+                    .ApplyQAPostVisibilityRules(_dbContext, _userContext.ProfileId)
+                    .Include(q => q.Answers)
                     .Include(q => q.PostTags)
                     .ThenInclude(pt => pt.Tag)
                     .Include(q => q.Author)

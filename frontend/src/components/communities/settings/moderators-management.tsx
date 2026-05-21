@@ -16,7 +16,7 @@ import { SortOrderType } from "@/constants/sortOrderType";
 import { CreateCommunityModeratorDTO } from "@/types/community-moderator/create-community-moderator-dto";
 import { MemberSearchModal } from "./member-search-modal";
 import Link from "next/link";
-import Image from "next/image";
+import { UserAvatar } from "@/components/shared/user-avatar";
 
 interface ModeratorsManagementProps {
     community: SelectCommunityDTO;
@@ -135,21 +135,11 @@ export function ModeratorsManagement({ community }: ModeratorsManagementProps) {
                                             href={`/profile/${mod.moderatorProfile?.id ?? mod.id}`}
                                             className="flex items-center gap-3 group w-fit"
                                         >
-                                            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-muted shrink-0">
-                                                {mod.moderatorProfile?.avatarUrl ? (
-                                                    <Image
-                                                        src={mod.moderatorProfile.avatarUrl}
-                                                        alt={mod.moderatorProfile.fullName ?? "Moderator"}
-                                                        fill
-                                                        unoptimized
-                                                        className="object-cover"
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground font-medium">
-                                                        {(mod.moderatorProfile?.fullName ?? "?")[0].toUpperCase()}
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <UserAvatar
+                                                avatarUrl={mod.moderatorProfile?.avatarUrl}
+                                                fullName={mod.moderatorProfile?.fullName ?? "Moderator"}
+                                                className="w-8 h-8 shrink-0"
+                                            />
                                             <div className="flex flex-col">
                                                 <span className="font-medium text-sm group-hover:text-primary transition-colors">
                                                     {mod.moderatorProfile?.fullName || "Unknown User"}

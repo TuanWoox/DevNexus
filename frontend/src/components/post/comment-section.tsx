@@ -36,37 +36,34 @@ export default function CommentSection({ postId, isQAPost }: Props) {
         selected: [],
     }), []);
 
-    const { user } = useSelector((state: RootState) => state.auth)
+    const { user } = useSelector((state: RootState) => state.auth);
     const { data: userProfile } = useGetProfileById(user?.profileId as string);
 
     const {
         data: answerData,
         isPending: isAnswerLoading,
-        hasNextPage: hasNextAnswerPage,
-        fetchNextPage: fetchNextAnswerPage,
-        isFetchingNextPage: isFetchingNextAnswerPage
-    } = useGetAnswersByPostIdInfinite(postId, isQAPost, itemsPayload)
+        hasNextPage: hasNextPageAnswer,
+        fetchNextPage: fetchNextPageAnswer,
+        isFetchingNextPage: isFetchingNextPageAnswer
+    } = useGetAnswersByPostIdInfinite(postId, isQAPost, itemsPayload);
 
     const {
         data: commentData,
         isPending: isCommentLoading,
-        hasNextPage: hasNextCommentPage,
-        fetchNextPage: fetchNextCommentPage,
-        isFetchingNextPage: isFetchingNextCommentPage
+        hasNextPage: hasNextPageComment,
+        fetchNextPage: fetchNextPageComment,
+        isFetchingNextPage: isFetchingNextPageComment
     } = useGetCommentsByPostIdInfinite(postId, !isQAPost, itemsPayload);
 
-    const { data: qaPost } = useGetQAPostById(postId, isQAPost);
-    const { data: normalPost } = useGetPostById(postId, !isQAPost);
+    const { data: qaPost, isError: isQAError } = useGetQAPostById(postId, isQAPost);
+    const { data: normalPost, isError: isNormalError } = useGetPostById(postId, !isQAPost);
     const post = isQAPost ? qaPost : normalPost;
+    const isError = isQAPost ? isQAError : isNormalError;
 
-    const moderationStatus = normalizeModerationStatus(post?.moderationStatus);
-    const isApproved = moderationStatus === "Approved";
-
-    // const commentsData = isQAPost ? answerData : commentData;
     const isLoading = isQAPost ? isAnswerLoading : isCommentLoading;
-    const hasNextPage = isQAPost ? hasNextAnswerPage : hasNextCommentPage;
-    const isFetchingNextPage = isQAPost ? isFetchingNextAnswerPage : isFetchingNextCommentPage;
-    const fetchNextPage = isQAPost ? fetchNextAnswerPage : fetchNextCommentPage;
+    const hasNextPage = isQAPost ? hasNextPageAnswer : hasNextPageComment;
+    const isFetchingNextPage = isQAPost ? isFetchingNextPageAnswer : isFetchingNextPageComment;
+    const fetchNextPage = isQAPost ? fetchNextPageAnswer : fetchNextPageComment;
 
     const loadMoreRef = useIntersectionObserver(() => {
         if (hasNextPage && !isFetchingNextPage) {
@@ -74,9 +71,16 @@ export default function CommentSection({ postId, isQAPost }: Props) {
         }
     });
 
+    if (isError || (!post && !isAnswerLoading && !isCommentLoading)) {
+        return null;
+    }
+
+    const moderationStatus = normalizeModerationStatus(post?.moderationStatus);
+    const isApproved = moderationStatus === "Approved";
+
     const items = isQAPost
-        ? answerData?.pages?.flatMap(p => p.data) || []
-        : commentData?.pages?.flatMap(p => p.data) || [];
+        ? answerData?.pages?.flatMap(p => p?.data ?? []) || []
+        : commentData?.pages?.flatMap(p => p?.data ?? []) || [];
 
     const totalElements = isQAPost
         ? (post as SelectQAPostDTO)?.answerCount ?? 0
@@ -161,6 +165,3 @@ export default function CommentSection({ postId, isQAPost }: Props) {
         </div>
     );
 }
-
-
-

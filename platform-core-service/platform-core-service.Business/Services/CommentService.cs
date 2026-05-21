@@ -3,8 +3,10 @@ using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
+using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
+using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Answer;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Comment;
@@ -12,6 +14,7 @@ using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
+using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Data;
 using CommentEntity = platform_core_service.Common.Entities.DbEntities.Comment;
 
@@ -26,6 +29,7 @@ namespace platform_core_service.Business.Services
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IContentMediaLinkService _contentMediaLinkService;
         private readonly ICommentHistoryService _commentHistoryService;
+        private readonly ISocialGuardService _socialGuardService;
 
         public CommentService(
             ApplicationDbContext context,
@@ -34,7 +38,8 @@ namespace platform_core_service.Business.Services
             IRepository<CommentEntity, string> commentRepository,
             IBackgroundJobClient backgroundJobClient,
             IContentMediaLinkService contentMediaLinkService,
-            ICommentHistoryService commentHistoryService)
+            ICommentHistoryService commentHistoryService,
+            ISocialGuardService socialGuardService)
         {
             _context = context;
             _mapper = mapper;
@@ -43,6 +48,7 @@ namespace platform_core_service.Business.Services
             _backgroundJobClient = backgroundJobClient;
             _contentMediaLinkService = contentMediaLinkService;
             _commentHistoryService = commentHistoryService;
+            _socialGuardService = socialGuardService;
         }
 
         public async Task<ReturnResult<SelectCommentDTO>> CreateAsync(CreateCommentDTO createDTO)
@@ -112,6 +118,31 @@ namespace platform_core_service.Business.Services
                     // Inherit PostId/AnswerId from parent comment
                     createDTO.PostId = parentComment.PostId;
                     createDTO.AnswerId = parentComment.AnswerId;
+
+                    var replyAccess = await _socialGuardService.CanReplyComment(parentComment.Id);
+                    if (!replyAccess.Result)
+                    {
+                        result.Message = replyAccess.Message ?? ResponseMessage.NO_PERMISSION_TO_COMMENT;
+                        return result;
+                    }
+                }
+                else if (!string.IsNullOrEmpty(createDTO.PostId))
+                {
+                    var commentAccess = await _socialGuardService.CanCommentOnPost(createDTO.PostId);
+                    if (!commentAccess.Result)
+                    {
+                        result.Message = commentAccess.Message ?? ResponseMessage.NO_PERMISSION_TO_COMMENT;
+                        return result;
+                    }
+                }
+                else if (!string.IsNullOrEmpty(createDTO.AnswerId))
+                {
+                    var commentAccess = await _socialGuardService.CanCommentOnAnswer(createDTO.AnswerId);
+                    if (!commentAccess.Result)
+                    {
+                        result.Message = commentAccess.Message ?? ResponseMessage.NO_PERMISSION_TO_COMMENT;
+                        return result;
+                    }
                 }
 
                 // Step 5: Map DTO to entity
@@ -175,7 +206,15 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var accessCheck = await _socialGuardService.CanViewComment(comment.Id);
+                if (!accessCheck.Result)
+                {
+                    result.Message = accessCheck.Message ?? ResponseMessage.COMMENT_NOT_AVAILABLE;
+                    return result;
+                }
+
                 result.Result = _mapper.Map<SelectCommentDTO>(comment);
+                await FilterRepliesForListAsync(new List<SelectCommentDTO> { result.Result });
                 await SetCurrentUserVoteAsync(result.Result);
             }
             catch (Exception ex)
@@ -261,9 +300,17 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var parentAccess = await _socialGuardService.CanViewComment(parentComment.Id);
+                if (!parentAccess.Result)
+                {
+                    result.Message = parentAccess.Message ?? ResponseMessage.COMMENT_NOT_AVAILABLE;
+                    return result;
+                }
+
                 // Step 3: Build query for direct replies to this comment (public read)
                 var query = _context.Comments
                     .Where(c => c.ReplyToCommentId == commentId)
+                    .ApplyCommentVisibilityRules(_context, _userContext.ProfileId)
                     .Include(c => c.Author)
                     .AsQueryable();
 
@@ -407,10 +454,18 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var postAccess = await _socialGuardService.CanViewPost(postId);
+                if (!postAccess.Result)
+                {
+                    result.Message = postAccess.Message ?? ResponseMessage.CONTENT_NOT_AVAILABLE;
+                    return result;
+                }
+
                 // Step 2: Build query for top-level comments on this post (public read)
                 // Only get comments that are NOT replies (ReplyToCommentId IS NULL)
                 var query = _context.Comments
                     .Where(c => c.PostId == postId && string.IsNullOrEmpty(c.ReplyToCommentId))
+                    .ApplyCommentVisibilityRules(_context, _userContext.ProfileId)
                     .Include(c => c.Author)
                     .Include(c => c.Replies)
                         .ThenInclude(r => r.Author)
@@ -420,6 +475,7 @@ namespace platform_core_service.Business.Services
                 result.Result = await _commentRepository.GetPagingAsync<Page<string>, SelectCommentDTO>(query, page);
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
+                    await FilterRepliesForListAsync(result.Result.Data.ToList());
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
                 }
             }
@@ -443,10 +499,18 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var answerAccess = await _socialGuardService.CanViewAnswer(answerId);
+                if (!answerAccess.Result)
+                {
+                    result.Message = answerAccess.Message ?? ResponseMessage.ANSWER_NOT_AVAILABLE;
+                    return result;
+                }
+
                 // Step 2: Build query for top-level comments on this answer (public read)
                 // Only get comments that are NOT replies (ReplyToCommentId IS NULL)
                 var query = _context.Comments
                     .Where(c => c.AnswerId == answerId && string.IsNullOrEmpty(c.ReplyToCommentId))
+                    .ApplyCommentVisibilityRules(_context, _userContext.ProfileId)
                     .Include(c => c.Author)
                     .Include(c => c.Replies)
                         .ThenInclude(r => r.Author)
@@ -456,6 +520,7 @@ namespace platform_core_service.Business.Services
                 result.Result = await _commentRepository.GetPagingAsync<Page<string>, SelectCommentDTO>(query, page);
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
+                    await FilterRepliesForListAsync(result.Result.Data.ToList());
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
                 }
             }
@@ -485,6 +550,36 @@ namespace platform_core_service.Business.Services
                 dto.CurrentUserVote = voteMap.TryGetValue(dto.Id, out var vote) ? vote : null;
             }
         }
+
+        private async Task FilterRepliesForListAsync(List<SelectCommentDTO> dtos)
+        {
+            if (dtos == null || !dtos.Any()) return;
+
+            var visibleReplyIds = new HashSet<string>();
+            var replyIds = dtos
+                .SelectMany(dto => dto.Replies ?? new List<SelectCommentDTO>())
+                .Select(reply => reply.Id)
+                .Where(id => !string.IsNullOrEmpty(id))
+                .Distinct()
+                .ToList();
+
+            if (replyIds.Any())
+            {
+                visibleReplyIds = (await _context.Comments
+                    .Where(c => replyIds.Contains(c.Id))
+                    .ApplyCommentVisibilityRules(_context, _userContext.ProfileId)
+                    .Select(c => c.Id)
+                    .ToListAsync())
+                    .ToHashSet();
+            }
+
+            foreach (var dto in dtos)
+            {
+                dto.Replies = (dto.Replies ?? new List<SelectCommentDTO>())
+                    .Where(reply => visibleReplyIds.Contains(reply.Id))
+                    .ToList();
+            }
+        }
         private async Task SetCurrentUserVoteAsync(SelectCommentDTO dto)
         {
             if (dto == null) return;
@@ -510,13 +605,20 @@ namespace platform_core_service.Business.Services
             return content.Substring(0, Math.Min(200, content.Length));
         }
 
-        private void EnqueueNotification(NotiicationCreatedEntityDTO notificationEvent, string routingKey)
+        private async Task EnqueueNotification(NotiicationCreatedEntityDTO notificationEvent, string routingKey)
         {
+            if (notificationEvent.ActorId == null ||
+                notificationEvent.RecipientId is not string recipientId ||
+                await _socialGuardService.IsBlockedRelation(notificationEvent.ActorId, recipientId))
+            {
+                return;
+            }
+
             _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
                 x => x.PublicNotification(notificationEvent, routingKey));
         }
 
-        private void PublishCommentNotification(
+        private async Task PublishCommentNotificationAsync(
             NotificationEventType eventType,
             string recipientId,
             string actorId,
@@ -527,10 +629,14 @@ namespace platform_core_service.Business.Services
             NotificationEntityType entityType = NotificationEntityType.COMMENT
         )
         {
+            var actor = await GetProfileSnapshot(actorId);
             var notificationEvent = new NotiicationCreatedEntityDTO
             {
                 EventType = eventType,
+                ActorType = ActorType.Profile,
                 ActorId = actorId,
+                ActorName = actor.Name,
+                ActorAvatarUrl = actor.AvatarUrl,
                 RecipientId = recipientId,
                 EntityType = entityType,
                 EntityId = entityId,
@@ -539,10 +645,10 @@ namespace platform_core_service.Business.Services
                 ActionUrl = actionUrl
             };
 
-            EnqueueNotification(notificationEvent, "notifications.comment");
+            await EnqueueNotification(notificationEvent, "notifications.comment");
         }
 
-        private Task PublishCommentNotificationsAsync(string commentId, string actorId, CommentEntity savedComment)
+        private async Task PublishCommentNotificationsAsync(string commentId, string actorId, CommentEntity savedComment)
         {
             // CASE 1: Reply to comment on Post/Question (one-level threading)
             if (!string.IsNullOrEmpty(savedComment.ReplyToCommentId))
@@ -557,7 +663,7 @@ namespace platform_core_service.Business.Services
                 var parentCommentAuthorId = savedComment.ReplyToComment?.AuthorId;
                 if (!string.IsNullOrEmpty(parentCommentAuthorId) && parentCommentAuthorId != actorId)
                 {
-                    PublishCommentNotification(
+                    await PublishCommentNotificationAsync(
                         eventType: NotificationEventType.REPLY_COMMENT,
                         recipientId: parentCommentAuthorId,
                         actorId: actorId,
@@ -573,7 +679,7 @@ namespace platform_core_service.Business.Services
                     && postAuthorId != actorId
                     && postAuthorId != parentCommentAuthorId)
                 {
-                    PublishCommentNotification(
+                    await PublishCommentNotificationAsync(
                         eventType: isQuestion ? NotificationEventType.COMMENT_QUESTION : NotificationEventType.COMMENT_POST,
                         recipientId: postAuthorId,
                         actorId: actorId,
@@ -583,7 +689,7 @@ namespace platform_core_service.Business.Services
                         actionUrl: actionUrl);
                 }
 
-                return Task.CompletedTask;
+                return;
             }
 
             // CASE 2: Comment on an answer
@@ -594,7 +700,7 @@ namespace platform_core_service.Business.Services
 
                 if (!string.IsNullOrEmpty(recipientId) && recipientId != actorId && rootPost != null)
                 {
-                    PublishCommentNotification(
+                    await PublishCommentNotificationAsync(
                         eventType: NotificationEventType.COMMENT_ANSWER,
                         recipientId: recipientId,
                         actorId: actorId,
@@ -604,7 +710,7 @@ namespace platform_core_service.Business.Services
                         actionUrl: $"/questions/{rootPost.Id}#comment-{commentId}");
                 }
 
-                return Task.CompletedTask;
+                return;
             }
 
             // CASE 3: Comment on a post (or question)
@@ -618,7 +724,7 @@ namespace platform_core_service.Business.Services
 
                 if (!string.IsNullOrEmpty(recipientId) && recipientId != actorId && rootPost != null)
                 {
-                    PublishCommentNotification(
+                    await PublishCommentNotificationAsync(
                         eventType: isQuestion ? NotificationEventType.COMMENT_QUESTION : NotificationEventType.COMMENT_POST,
                         recipientId: recipientId,
                         actorId: actorId,
@@ -630,8 +736,18 @@ namespace platform_core_service.Business.Services
                     );
                 }
 
-                return Task.CompletedTask;
+                return;
             }
+        }
+
+        private async Task<(string? Name, string? AvatarUrl)> GetProfileSnapshot(string profileId)
+        {
+            var profile = await _context.Profiles
+                .Where(p => p.Id == profileId)
+                .Select(p => new { p.FullName, p.AvatarUrl })
+                .FirstOrDefaultAsync();
+
+            return (profile?.FullName, profile?.AvatarUrl);
         }
     }
 }

@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { Loader2, MessageSquare, Star, User, X } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/shared/user-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RootState } from '@/store/store';
@@ -38,18 +38,6 @@ interface ProfileHoverCardContentProps {
     variant?: 'default' | 'admin';
 }
 
-function getInitials(fullName?: string): string {
-    if (!fullName?.trim()) return 'U';
-
-    return fullName
-        .trim()
-        .split(/\s+/)
-        .map((word) => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
-}
-
 function ProfileHoverCardMessageButton({
     profileId,
     fullName,
@@ -69,7 +57,7 @@ function ProfileHoverCardMessageButton({
     };
 
     return (
-        <Button size="sm" onClick={handleMessage} disabled={isCheckingChat} className="w-full">
+        <Button size="sm" onClick={handleMessage} disabled={isCheckingChat} className="w-full cursor-pointer">
             {isCheckingChat ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -130,12 +118,7 @@ export function ProfileHoverCardContent({
 
             <div className="px-4 pb-3">
                 <div className="-mt-7 flex items-end gap-3">
-                    <Avatar className="h-14 w-14 border-2 border-popover ring-2 ring-border">
-                        <AvatarImage src={avatarUrl} alt={fullName} />
-                        <AvatarFallback className="bg-primary/10 text-base font-semibold text-primary">
-                            {getInitials(fullName)}
-                        </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar avatarUrl={avatarUrl} fullName={fullName} className="h-14 w-14 border-2 border-popover ring-2 ring-border" />
                     <div className="min-w-0 flex-1 pb-1">
                         <h3 className="truncate text-base font-semibold text-foreground">{fullName}</h3>
                         {reputationPoints > 0 ? (
@@ -172,7 +155,7 @@ export function ProfileHoverCardContent({
             {actionCount > 0 ? (
                 <div className={actionCount === 1 ? 'border-t border-border px-4 py-3' : 'grid grid-cols-2 gap-2 border-t border-border px-4 py-3'}>
                     {canShowProfile ? (
-                        <Button variant="outline" size="sm" onClick={handleViewProfile} className="w-full">
+                        <Button variant="outline" size="sm" onClick={handleViewProfile} className="w-full cursor-pointer">
                             <User className="mr-2 h-4 w-4" />
                             {isOwnProfile ? 'View My Profile' : 'Profile'}
                         </Button>

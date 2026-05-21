@@ -42,7 +42,7 @@ export function RequestsTab({ searchTerm }: RequestsTabProps) {
                 <button
                     onClick={() => switchSubTab("received")}
                     className={cn(
-                        "flex-1 px-2 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors",
+                        "flex-1 px-2 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors cursor-pointer",
                         subTab === "received"
                             ? "bg-background text-foreground shadow-sm"
                             : "text-muted-foreground hover:text-foreground"
@@ -53,7 +53,7 @@ export function RequestsTab({ searchTerm }: RequestsTabProps) {
                 <button
                     onClick={() => switchSubTab("sent")}
                     className={cn(
-                        "flex-1 px-2 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors",
+                        "flex-1 px-2 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors cursor-pointer",
                         subTab === "sent"
                             ? "bg-background text-foreground shadow-sm"
                             : "text-muted-foreground hover:text-foreground"
@@ -258,6 +258,7 @@ function SentRequests({ searchTerm, selectedIds, setSelectedIds }: RequestListPr
                             variant="destructive"
                             onClick={() => { bulkCancel.mutate(selectedIds); setSelectedIds([]); }}
                             disabled={bulkCancel.isPending}
+                            className="cursor-pointer"
                         >
                             <X className="h-4 w-4 mr-1" /> Cancel All
                         </Button>

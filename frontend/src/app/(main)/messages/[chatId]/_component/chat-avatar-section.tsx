@@ -2,10 +2,10 @@
 
 import { useRef, useState } from "react";
 import { Users, Camera, Pencil, Check, X } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Input } from "@/components/ui/input";
 import { Chat } from "@/features/messages/types/contracts";
-import { getAvatarUrl, getTitle, getInitials } from "@/features/messages/utils/message-service.helper";
+import { getAvatarUrl, getTitle } from "@/features/messages/utils/message-service.helper";
 import { useUploadGroupPicture } from "@/features/messages/hooks/groups/use-upload-group-picture";
 import { useUpdateGroup } from "@/features/messages/hooks/groups/use-update-group";
 import { cn } from "@/lib/utils";
@@ -73,12 +73,7 @@ export function ChatAvatarSection({ chat, currentProfileId }: ChatAvatarSectionP
                     disabled={!isAdmin}
                     aria-label={isAdmin ? "Change group picture" : undefined}
                 >
-                    <Avatar className="h-24 w-24 ring-4 ring-border/30 shadow-card">
-                        <AvatarImage src={fullAvatarUrl} alt={title} />
-                        <AvatarFallback className="bg-linear-to-br from-brand-400 to-brand-600 text-white text-2xl font-bold">
-                            {getInitials(title)}
-                        </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar avatarUrl={fullAvatarUrl} fullName={title} className="h-24 w-24 ring-4 ring-border/30 shadow-card" />
                     {isAdmin && (
                         <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Camera className="h-6 w-6 text-white" />

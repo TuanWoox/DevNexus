@@ -4,11 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { Notification } from "@/features/notifications/types/contracts";
-import { NotificationEventEnum } from "@/features/notifications/types/enums";
+import { ActorType, NotificationEventEnum } from "@/features/notifications/types/enums";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { FollowRequestOverlay } from "./follow-request-overlay";
+import { ShieldCheck } from "lucide-react";
 
 export function NotificationToastHost() {
     const pathname = usePathname();
@@ -55,19 +56,19 @@ export function NotificationToastHost() {
             // --- Generic notification toast for all other event types ---
             toast.custom(
                 (t) => {
-                    const actorName = notification.Actor?.FullName ?? "User";
-                    const fallback = actorName.trim().charAt(0).toUpperCase() || "U";
+                    const actorName = notification.ActorName ??
+                        (notification.ActorType === ActorType.SYSTEM ? "DevNexus" : "User");
 
                     return (
                         <Card className="w-85 border-border/60 bg-card/80 shadow-lg shadow-black/5 ring-1 ring-foreground/5 backdrop-blur supports-backdrop-filter:bg-card/60">
                             <CardContent className="flex items-center gap-3.5 p-3.5">
-                                <Avatar size="sm">
-                                    <AvatarImage
-                                        src={notification.Actor?.AvatarUrl || "/images/default-avatar.webp"}
-                                        alt={actorName}
-                                    />
-                                    <AvatarFallback>{fallback}</AvatarFallback>
-                                </Avatar>
+                                {notification.ActorType === ActorType.SYSTEM ? (
+                                    <span className="h-8 w-8 shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <ShieldCheck className="h-4 w-4 text-primary" />
+                                    </span>
+                                ) : (
+                                    <UserAvatar avatarUrl={notification.ActorAvatarUrl} fullName={actorName} size="sm" />
+                                )}
                                 <div className="flex-1 text-sm text-foreground/90 leading-snug line-clamp-2">
                                     {notification.Message}
                                 </div>

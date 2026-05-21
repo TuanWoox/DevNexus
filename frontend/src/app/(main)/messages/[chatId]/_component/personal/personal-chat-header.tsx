@@ -2,9 +2,9 @@
 
 import { ChevronLeft, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Chat } from "@/features/messages/types/contracts";
-import { getProfileId, getTitle, getAvatarUrl, getInitials } from "@/features/messages/utils/message-service.helper";
+import { getProfileId, getTitle, getAvatarUrl } from "@/features/messages/utils/message-service.helper";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { cn } from "@/lib/utils";
@@ -39,12 +39,7 @@ export function PersonalChatHeader({ detail, onBack, onTogglePanel }: PersonalCh
 
             <div className="flex flex-1 min-w-0 items-center gap-3">
                 <div className="relative shrink-0">
-                    <Avatar className="h-11 w-11 ring-2 ring-border/50">
-                        <AvatarImage src={avatarUrl} alt={title} />
-                        <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
-                            {getInitials(title)}
-                        </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar avatarUrl={avatarUrl} fullName={title} className="h-11 w-11 ring-2 ring-border/50" />
                     <span className={cn(
                         "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card",
                         isRequest ? "bg-amber-400" : "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]",

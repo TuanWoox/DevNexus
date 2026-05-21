@@ -59,7 +59,7 @@ export function UnavailablePostCard({ bookmarkedItemId }: UnavailablePostCardPro
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button
-                            className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                            className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
                             aria-label="More Options"
                         >
                             <MoreHorizontal className="w-5 h-5" />

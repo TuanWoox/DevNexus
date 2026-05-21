@@ -8,6 +8,7 @@ using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
+using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.FollowRequest;
 using platform_core_service.Common.Models.DTOs.EntityDTO.UserFollow;
@@ -26,7 +27,8 @@ namespace platform_core_service.Business.Services
         IMapper mapper,
         IRepository<UserFollow, string> repository,
         IUserContext userContext,
-        IBackgroundJobClient backgroundJobClient
+        IBackgroundJobClient backgroundJobClient,
+        ISocialGuardService socialGuardService
     ) : IUserFollowService
     {
         private readonly ApplicationDbContext _dbContext = dbContext;
@@ -34,6 +36,7 @@ namespace platform_core_service.Business.Services
         private readonly IRepository<UserFollow, string> _repository = repository;
         private readonly IUserContext _userContext = userContext;
         private readonly IBackgroundJobClient _backgroundJobClient = backgroundJobClient;
+        private readonly ISocialGuardService _socialGuardService = socialGuardService;
 
         public async Task<ReturnResult<object>> CreateAsync(CreateUserFollow createUserFollow)
         {
@@ -47,19 +50,19 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
+                var followAccess = await _socialGuardService.CanFollowProfile(createUserFollow.FollowingProfileId);
+                if (!followAccess.Result)
+                {
+                    returnResult.Message = followAccess.Message ?? ResponseMessage.NO_PERMISSION_TO_FOLLOW;
+                    return returnResult;
+                }
+
                 var existingFollowingProfile = await _dbContext.Profiles.Where(x => x.Id == createUserFollow.FollowingProfileId)
                                                                         .AsNoTracking()
                                                                         .FirstOrDefaultAsync();
-                var existingBlock = await _dbContext.ProfileBlocks.Where(x =>
-                                                                (x.BlockedProfileId == _userContext.ProfileId && x.OwnerId == createUserFollow.FollowingProfileId) ||
-                                                                (x.OwnerId == _userContext.ProfileId && x.BlockedProfileId == createUserFollow.FollowingProfileId)
-                                                            )
-                                                            .AsNoTracking()
-                                                            .FirstOrDefaultAsync();
-                // If there is no profile or there is a block that may come from one side => just notify that can't find profile
-                if (existingFollowingProfile == null || existingBlock != null)
+                if (existingFollowingProfile == null)
                 {
-                    returnResult.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_FOUND, "profile", createUserFollow.FollowingProfileId);
+                    returnResult.Message = ResponseMessage.PROFILE_NOT_AVAILABLE;
                     return returnResult;
                 }
 
@@ -100,10 +103,14 @@ namespace platform_core_service.Business.Services
                         returnResult.Result = selectFollowRequest;
 
                         // Publish FOLLOW_REQUEST notification
+                        var actor = await GetProfileSnapshot(_userContext.ProfileId);
                         var notificationEvent = new NotiicationCreatedEntityDTO
                         {
                             EventType = NotificationEventType.FOLLOW_REQUEST,
+                            ActorType = ActorType.Profile,
                             ActorId = _userContext.ProfileId,
+                            ActorName = actor.Name,
+                            ActorAvatarUrl = actor.AvatarUrl,
                             RecipientId = createUserFollow.FollowingProfileId,
                             EntityType = NotificationEntityType.PROFILE,
                             EntityId = "profile_requests",
@@ -113,8 +120,11 @@ namespace platform_core_service.Business.Services
                             Timestamp = DateTime.UtcNow
                         };
 
-                        _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
-                            x => x.PublicNotification(notificationEvent, "notifications.follow"));
+                        if (!await _socialGuardService.IsBlockedRelation(_userContext.ProfileId, createUserFollow.FollowingProfileId))
+                        {
+                            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                                x => x.PublicNotification(notificationEvent, "notifications.follow"));
+                        }
                     }
                     else returnResult.Message = ResponseMessage.MESSAGE_OPERATION_CANT_BE_DONE;
                 }
@@ -129,10 +139,14 @@ namespace platform_core_service.Business.Services
                         returnResult.Result = selectUserFollow;
 
                         // Publish FOLLOW_USER notification
+                        var actor = await GetProfileSnapshot(_userContext.ProfileId);
                         var notificationEvent = new NotiicationCreatedEntityDTO
                         {
                             EventType = NotificationEventType.FOLLOW_USER,
+                            ActorType = ActorType.Profile,
                             ActorId = _userContext.ProfileId,
+                            ActorName = actor.Name,
+                            ActorAvatarUrl = actor.AvatarUrl,
                             RecipientId = createUserFollow.FollowingProfileId,
                             EntityType = NotificationEntityType.PROFILE,
                             EntityId = "profile_followers",
@@ -142,8 +156,11 @@ namespace platform_core_service.Business.Services
                             Timestamp = DateTime.UtcNow
                         };
 
-                        _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
-                            x => x.PublicNotification(notificationEvent, "notifications.follow"));
+                        if (!await _socialGuardService.IsBlockedRelation(_userContext.ProfileId, createUserFollow.FollowingProfileId))
+                        {
+                            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                                x => x.PublicNotification(notificationEvent, "notifications.follow"));
+                        }
 
                         //Send this over to rabbitmq 
                         _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
@@ -166,6 +183,9 @@ namespace platform_core_service.Business.Services
             try
             {
                 var query = _dbContext.UserFollows.Where(x => x.FollowingProfileId == _userContext.ProfileId)
+                                                .Where(x => !_dbContext.ProfileBlocks.Any(b =>
+                                                    (b.OwnerId == _userContext.ProfileId && b.BlockedProfileId == x.OwnerId) ||
+                                                    (b.OwnerId == x.OwnerId && b.BlockedProfileId == _userContext.ProfileId)))
                                                 .AsNoTracking()
                                                 .Include(x => x.Owner)
                                                 .AsQueryable();
@@ -185,6 +205,9 @@ namespace platform_core_service.Business.Services
             try
             {
                 var query = _dbContext.UserFollows.Where(x => x.OwnerId == _userContext.ProfileId)
+                                                .Where(x => !_dbContext.ProfileBlocks.Any(b =>
+                                                    (b.OwnerId == _userContext.ProfileId && b.BlockedProfileId == x.FollowingProfileId) ||
+                                                    (b.OwnerId == x.FollowingProfileId && b.BlockedProfileId == _userContext.ProfileId)))
                                                 .AsNoTracking()
                                                 .Include(x => x.FollowingProfile)
                                                 .AsQueryable();
@@ -272,6 +295,13 @@ namespace platform_core_service.Business.Services
             ReturnResult<PagedData<SelectUserFollow, string>> returnResult = new();
             try
             {
+                var basicAccess = await _socialGuardService.CanAccessProfileBasicInfo(profileId);
+                if (!basicAccess.Result)
+                {
+                    returnResult.Message = basicAccess.Message ?? ResponseMessage.PROFILE_NOT_AVAILABLE;
+                    return returnResult;
+                }
+
                 var profile = await _dbContext.Profiles
                     .Where(x => x.Id == profileId)
                     .AsNoTracking()
@@ -296,6 +326,9 @@ namespace platform_core_service.Business.Services
                 }
 
                 var query = _dbContext.UserFollows.Where(x => x.FollowingProfileId == profileId)
+                                                .Where(x => !_dbContext.ProfileBlocks.Any(b =>
+                                                    (b.OwnerId == _userContext.ProfileId && b.BlockedProfileId == x.OwnerId) ||
+                                                    (b.OwnerId == x.OwnerId && b.BlockedProfileId == _userContext.ProfileId)))
                                                 .AsNoTracking()
                                                 .Include(x => x.Owner)
                                                 .AsQueryable();
@@ -314,6 +347,13 @@ namespace platform_core_service.Business.Services
             ReturnResult<PagedData<SelectUserFollow, string>> returnResult = new();
             try
             {
+                var basicAccess = await _socialGuardService.CanAccessProfileBasicInfo(profileId);
+                if (!basicAccess.Result)
+                {
+                    returnResult.Message = basicAccess.Message ?? ResponseMessage.PROFILE_NOT_AVAILABLE;
+                    return returnResult;
+                }
+
                 var profile = await _dbContext.Profiles
                     .Where(x => x.Id == profileId)
                     .AsNoTracking()
@@ -338,6 +378,9 @@ namespace platform_core_service.Business.Services
                 }
 
                 var query = _dbContext.UserFollows.Where(x => x.OwnerId == profileId)
+                                                .Where(x => !_dbContext.ProfileBlocks.Any(b =>
+                                                    (b.OwnerId == _userContext.ProfileId && b.BlockedProfileId == x.FollowingProfileId) ||
+                                                    (b.OwnerId == x.FollowingProfileId && b.BlockedProfileId == _userContext.ProfileId)))
                                                 .AsNoTracking()
                                                 .Include(x => x.FollowingProfile)
                                                 .AsQueryable();
@@ -349,6 +392,16 @@ namespace platform_core_service.Business.Services
                 returnResult.Message = ex.Message;
             }
             return returnResult;
+        }
+
+        private async Task<(string? Name, string? AvatarUrl)> GetProfileSnapshot(string profileId)
+        {
+            var profile = await _dbContext.Profiles
+                .Where(p => p.Id == profileId)
+                .Select(p => new { p.FullName, p.AvatarUrl })
+                .FirstOrDefaultAsync();
+
+            return (profile?.FullName, profile?.AvatarUrl);
         }
 
     }

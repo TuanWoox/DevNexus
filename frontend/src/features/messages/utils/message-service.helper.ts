@@ -21,15 +21,6 @@ export function getTitle(chat: Chat, currentProfileId: string): string {
     return otherMember?.Member?.FullName || chat.Name || "Direct Message";
 }
 
-export function getInitials(name: string): string {
-    return name
-        .split(" ")
-        .slice(0, 2)
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase();
-}
-
 export function getAvatarUrl(chat: Chat, currentProfileId: string): string | undefined {
     // Group pictures are stored as filenames in message-service — need getMediaUrl() prefix
     if (chat.IsGroup && chat.ChatPictureUrl) {
