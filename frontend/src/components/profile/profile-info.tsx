@@ -5,18 +5,32 @@ import { SelectProfileDTO } from "@/types/profile/select-profile-dto";
 
 import { Button } from "@/components/ui/button";
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Lock, Star, UserPlus, UserCheck, Clock, MessageSquare, MoreHorizontal, Share2, ShieldAlert, UserX, Edit3, Loader2, Users, KeyRound } from "lucide-react";
+import { Lock, Star, UserPlus, UserCheck, Clock, MessageSquare, MoreHorizontal, Share2, ShieldAlert, UserX, Edit3, Loader2, Users, KeyRound, Ban } from "lucide-react";
 import { useOpenChatByProfile } from "@/features/messages/hooks/chats/use-open-chat-by-profile";
 import { useCreateUserFollow } from "@/hooks/user-follow-hooks/use-create-user-follow";
 import { useDeleteFollowById } from "@/hooks/user-follow-hooks/use-delete-follow-by-id";
 import { useCancelRequest } from "@/hooks/follow-request-hooks";
+import { useBlockProfile } from "@/hooks/block-hooks/use-block-profile";
+import { useBlockStatus } from "@/hooks/block-hooks/use-block-status";
+import { useUnblockProfile } from "@/hooks/block-hooks/use-unblock-profile";
 import { ConnectionsModal, type ConnectionsTabValue } from "./connections/connections-modal";
+import { BlockedProfilesModal } from "./blocked-profiles-modal";
 import { cn } from "@/lib/utils";
 
 interface ProfileInfoProps {
@@ -38,10 +52,15 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
     const createFollow = useCreateUserFollow();
     const deleteFollow = useDeleteFollowById();
     const cancelRequest = useCancelRequest();
+    const { data: blockStatus, isLoading: isBlockStatusLoading } = useBlockStatus(!isOwnProfile ? profile.id : null);
+    const blockProfile = useBlockProfile(profile.id);
+    const unblockProfile = useUnblockProfile(blockStatus?.blockId ?? null, profile.id);
 
     // Connections modal
     const [connectionsModalOpen, setConnectionsModalOpen] = useState(false);
     const [connectionsInitialTab, setConnectionsInitialTab] = useState<ConnectionsTabValue>("followers");
+    const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+    const [blockedProfilesOpen, setBlockedProfilesOpen] = useState(false);
 
     const openConnectionsModal = (tab: ConnectionsTabValue) => {
         setConnectionsInitialTab(tab);
@@ -64,6 +83,9 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
     };
 
     const isFollowActionPending = createFollow.isPending || deleteFollow.isPending || cancelRequest.isPending;
+    const isBlocked = blockStatus?.iBlockedThem ?? false;
+    const isBlockedByThem = blockStatus?.theyBlockedMe ?? false;
+    const isBlockActionPending = blockProfile.isPending || unblockProfile.isPending;
 
     const getFollowButtonConfig = () => {
         switch (profile.followStatus) {
@@ -77,6 +99,13 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
     };
 
     const followConfig = getFollowButtonConfig();
+
+    const handleBlockAction = () => {
+        const mutation = isBlocked ? unblockProfile : blockProfile;
+        mutation.mutate(undefined, {
+            onSuccess: () => setBlockDialogOpen(false),
+        });
+    };
 
     return (
         <div className="px-4 md:px-10 max-w-5xl mx-auto w-full pb-6">
@@ -110,10 +139,19 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 variant='destructive'
+                                onSelect={(event) => {
+                                    event.preventDefault();
+                                    setBlockDialogOpen(true);
+                                }}
+                                disabled={isBlockStatusLoading || isBlockActionPending || isBlockedByThem}
                                 className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
                             >
-                                <UserX className="w-4 h-4 mr-2" />
-                                Block User
+                                {isBlockActionPending ? (
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                ) : (
+                                    <UserX className="w-4 h-4 mr-2" />
+                                )}
+                                {isBlockStatusLoading ? "Checking..." : isBlocked ? "Unblock User" : "Block User"}
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -192,14 +230,14 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
             )}
 
             {/* Actions Row - Positioned "under the tags" */}
-            <div className="flex items-center gap-2 mt-6">
+            <div className="flex items-center flex-wrap gap-2 mt-6">
                 {isOwnProfile ? (
                     <>
                         <Button
                             onClick={onEdit}
                             variant="secondary"
                             size="default"
-                            className="h-10 font-semibold px-8 border shadow-sm cursor-pointer"
+                            className="h-10 w-full sm:w-fit font-semibold px-8 border shadow-sm cursor-pointer"
                         >
                             <Edit3 className="w-4 h-4 mr-2" />
                             Edit Profile
@@ -208,10 +246,19 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
                             onClick={onChangePassword}
                             variant="secondary"
                             size="default"
-                            className="h-10 font-semibold px-5 border shadow-sm cursor-pointer"
+                            className="h-10 w-full sm:w-fit font-semibold px-5 border shadow-sm cursor-pointer"
                         >
                             <KeyRound className="w-4 h-4 mr-2" />
                             Change Password
+                        </Button>
+                        <Button
+                            onClick={() => setBlockedProfilesOpen(true)}
+                            variant="secondary"
+                            size="default"
+                            className="h-10 w-full sm:w-fit font-semibold px-5 border shadow-sm cursor-pointer"
+                        >
+                            <Ban className="w-4 h-4 mr-2" />
+                            Manage blocked profiles
                         </Button>
                     </>
                 ) : (
@@ -224,7 +271,7 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
                                 profile.followStatus === "following" && "hover:bg-destructive/10 hover:text-destructive hover:border-destructive"
                             )}
                             onClick={handleFollowAction}
-                            disabled={isFollowActionPending}
+                            disabled={isFollowActionPending || isBlocked || isBlockedByThem}
                         >
                             {isFollowActionPending ? (
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -243,7 +290,7 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
                             size="default"
                             className="h-10 font-semibold px-8 border shadow-sm cursor-pointer"
                             onClick={handleMessage}
-                            disabled={isCheckingChat}
+                            disabled={isCheckingChat || isBlocked || isBlockedByThem}
                         >
                             {isCheckingChat ? (
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -266,6 +313,44 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
                 followerCount={profile.followerCount}
                 followingCount={profile.followingCount}
             />
+
+            {isOwnProfile && (
+                <BlockedProfilesModal
+                    open={blockedProfilesOpen}
+                    onOpenChange={setBlockedProfilesOpen}
+                />
+            )}
+
+            {!isOwnProfile && (
+                <AlertDialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>{isBlocked ? "Unblock profile?" : "Block profile?"}</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                {isBlocked
+                                    ? "This profile can message and interact with you again after unblocking."
+                                    : "This profile cannot message you or interact with your content after blocking."}
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isBlockActionPending} variant="custom" size="lg" className="btn-secondary">Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                disabled={isBlockStatusLoading || isBlockActionPending}
+                                variant="destructive"
+                                size="lg"
+                                className="cursor-pointer"
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    handleBlockAction();
+                                }}
+                            >
+                                {isBlockActionPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                                {isBlocked ? "Unblock" : "Block"}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
         </div>
     );
 }
