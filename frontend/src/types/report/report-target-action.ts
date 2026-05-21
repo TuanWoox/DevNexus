@@ -9,7 +9,7 @@ export enum ReportTargetAction {
 export const reportTargetActionLabels: Record<ReportTargetAction, string> = {
   [ReportTargetAction.None]: "No enforcement action",
   [ReportTargetAction.HideContent]: "Hide content from public",
-  [ReportTargetAction.DeleteComment]: "Delete comment",
-  [ReportTargetAction.DeleteAnswer]: "Delete answer",
+  [ReportTargetAction.DeleteComment]: "Hide comment",
+  [ReportTargetAction.DeleteAnswer]: "Hide answer",
   [ReportTargetAction.SuspendUser]: "Suspend user",
 };
