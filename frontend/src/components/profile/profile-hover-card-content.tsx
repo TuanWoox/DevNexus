@@ -21,10 +21,21 @@ export interface ProfileHoverCardAuthor {
     isPrivate?: boolean;
 }
 
+interface ProfileHoverCardMessageButtonProps {
+    profileId: string;
+    fullName: string;
+    avatarUrl: string;
+    onClose?: () => void;
+}
+
 interface ProfileHoverCardContentProps {
     profileId: string;
     author?: ProfileHoverCardAuthor;
     onClose?: () => void;
+    showMessageAction?: boolean;
+    showBlockAction?: boolean;
+    showProfileAction?: boolean;
+    variant?: 'default' | 'admin';
 }
 
 function getInitials(fullName?: string): string {
@@ -39,10 +50,44 @@ function getInitials(fullName?: string): string {
         .slice(0, 2);
 }
 
+function ProfileHoverCardMessageButton({
+    profileId,
+    fullName,
+    avatarUrl,
+    onClose,
+}: ProfileHoverCardMessageButtonProps) {
+    const { openMessagePopup, isCheckingChat } = useOpenChatByProfile({
+        id: profileId,
+        fullName,
+        avatarUrl,
+    });
+
+    const handleMessage = async () => {
+        if (isCheckingChat) return;
+        await openMessagePopup();
+        onClose?.();
+    };
+
+    return (
+        <Button size="sm" onClick={handleMessage} disabled={isCheckingChat} className="w-full">
+            {isCheckingChat ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+                <MessageSquare className="mr-2 h-4 w-4" />
+            )}
+            Message
+        </Button>
+    );
+}
+
 export function ProfileHoverCardContent({
     profileId,
     author,
-    onClose
+    onClose,
+    showMessageAction = true,
+    showBlockAction = true,
+    showProfileAction = true,
+    variant = 'default'
 }: ProfileHoverCardContentProps) {
     const router = useRouter();
     const { user } = useSelector((state: RootState) => state.auth);
@@ -52,25 +97,17 @@ export function ProfileHoverCardContent({
     const avatarUrl = author?.avatarUrl || '/images/default-avatar.webp';
     const backgroundUrl = author?.backgroundUrl || '/images/default-background.webp';
     const isOwnProfile = user?.profileId === profileId;
-    const { openMessagePopup, isCheckingChat } = useOpenChatByProfile({
-        id: profileId,
-        fullName,
-        avatarUrl,
-    });
-
+    const canShowProfile = showProfileAction;
+    const canShowMessage = showMessageAction && !isOwnProfile;
+    const canShowBlock = showBlockAction && !isOwnProfile;
+    const actionCount = Number(canShowProfile) + Number(canShowMessage);
     const handleViewProfile = () => {
         router.push(`/profile/${profileId}`);
         onClose?.();
     };
 
-    const handleMessage = async () => {
-        if (isCheckingChat) return;
-        await openMessagePopup();
-        onClose?.();
-    };
-
     return (
-        <div className="relative w-80 overflow-hidden bg-popover text-popover-foreground">
+        <div className="relative w-80 overflow-hidden bg-popover text-popover-foreground" data-variant={variant}>
             <div className="relative h-20 w-full bg-muted">
                 <Image
                     src={backgroundUrl}
@@ -132,24 +169,26 @@ export function ProfileHoverCardContent({
                 ) : null}
             </div>
 
-            <div className={isOwnProfile ? 'border-t border-border px-4 py-3' : 'grid grid-cols-2 gap-2 border-t border-border px-4 py-3'}>
-                <Button variant="outline" size="sm" onClick={handleViewProfile} className="w-full cursor-pointer">
-                    <User className="mr-2 h-4 w-4" />
-                    {isOwnProfile ? 'View My Profile' : 'Profile'}
-                </Button>
-                {!isOwnProfile ? (
-                    <Button size="sm" onClick={handleMessage} disabled={isCheckingChat} className="w-full cursor-pointer">
-                        {isCheckingChat ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <MessageSquare className="mr-2 h-4 w-4" />
-                        )}
-                        Message
-                    </Button>
-                ) : null}
-            </div>
+            {actionCount > 0 ? (
+                <div className={actionCount === 1 ? 'border-t border-border px-4 py-3' : 'grid grid-cols-2 gap-2 border-t border-border px-4 py-3'}>
+                    {canShowProfile ? (
+                        <Button variant="outline" size="sm" onClick={handleViewProfile} className="w-full">
+                            <User className="mr-2 h-4 w-4" />
+                            {isOwnProfile ? 'View My Profile' : 'Profile'}
+                        </Button>
+                    ) : null}
+                    {canShowMessage ? (
+                        <ProfileHoverCardMessageButton
+                            profileId={profileId}
+                            fullName={fullName}
+                            avatarUrl={avatarUrl}
+                            onClose={onClose}
+                        />
+                    ) : null}
+                </div>
+            ) : null}
 
-            {!isOwnProfile ? <ProfileHoverCardActions profileId={profileId} onClose={onClose} /> : null}
+            {canShowBlock ? <ProfileHoverCardActions profileId={profileId} onClose={onClose} /> : null}
         </div>
     );
 }

@@ -32,6 +32,8 @@ import { useUnblockProfile } from "@/hooks/block-hooks/use-unblock-profile";
 import { ConnectionsModal, type ConnectionsTabValue } from "./connections/connections-modal";
 import { BlockedProfilesModal } from "./blocked-profiles-modal";
 import { cn } from "@/lib/utils";
+import { ReportDialog } from "@/components/report/report-dialog";
+import { ReportTargetType } from "@/types/report/report-target-type";
 
 interface ProfileInfoProps {
     profile: SelectProfileDTO;
@@ -59,6 +61,7 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
     // Connections modal
     const [connectionsModalOpen, setConnectionsModalOpen] = useState(false);
     const [connectionsInitialTab, setConnectionsInitialTab] = useState<ConnectionsTabValue>("followers");
+    const [reportDialogOpen, setReportDialogOpen] = useState(false);
     const [blockDialogOpen, setBlockDialogOpen] = useState(false);
     const [blockedProfilesOpen, setBlockedProfilesOpen] = useState(false);
 
@@ -131,6 +134,7 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
+                                onSelect={() => setReportDialogOpen(true)}
                                 variant='destructive'
                                 className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
                             >
@@ -313,6 +317,15 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
                 followerCount={profile.followerCount}
                 followingCount={profile.followingCount}
             />
+            {!isOwnProfile && (
+                <ReportDialog
+                    open={reportDialogOpen}
+                    onOpenChange={setReportDialogOpen}
+                    targetType={ReportTargetType.Profile}
+                    targetId={profile.id}
+                    targetLabel={profile.fullName || "Profile"}
+                />
+            )}
 
             {isOwnProfile && (
                 <BlockedProfilesModal

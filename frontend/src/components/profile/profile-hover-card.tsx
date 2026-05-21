@@ -9,13 +9,21 @@ interface ProfileHoverCardProps {
     author?: ProfileHoverCardAuthor;
     children: React.ReactNode;
     side?: 'top' | 'right' | 'bottom' | 'left';
+    showMessageAction?: boolean;
+    showBlockAction?: boolean;
+    showProfileAction?: boolean;
+    variant?: 'default' | 'admin';
 }
 
 export function ProfileHoverCard({
     profileId,
     author,
     children,
-    side = 'top'
+    side = 'top',
+    showMessageAction = true,
+    showBlockAction = true,
+    showProfileAction = true,
+    variant = 'default'
 }: ProfileHoverCardProps) {
     const [open, setOpen] = useState(false);
 
@@ -37,6 +45,10 @@ export function ProfileHoverCard({
                     profileId={profileId}
                     author={author}
                     onClose={() => setOpen(false)}
+                    showMessageAction={showMessageAction}
+                    showBlockAction={showBlockAction}
+                    showProfileAction={showProfileAction}
+                    variant={variant}
                 />
             </HoverCardContent>
         </HoverCard>

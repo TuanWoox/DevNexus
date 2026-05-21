@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { MoreHorizontal, Edit, Trash, UserPlus, Flag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -20,6 +21,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { usePostDelete } from '@/hooks/post-hooks/use-post-delete';
 import { useHasMounted } from '@/hooks/use-has-mounted';
+import { ReportDialog } from '@/components/report/report-dialog';
+import { ReportTargetType } from '@/types/report/report-target-type';
 
 interface PostActionsDropdownProps {
     postId: string;
@@ -38,6 +41,7 @@ export function PostActionsDropdown({
 }: PostActionsDropdownProps) {
     const hasMounted = useHasMounted();
     const router = useRouter();
+    const [reportDialogOpen, setReportDialogOpen] = useState(false);
     const basePath = isQAPost ? '/questions' : '/post';
     const { showDeleteAlert, setShowDeleteAlert, isPending, handleDeleteConfirm } = usePostDelete({
         isQAPost,
@@ -95,6 +99,7 @@ export function PostActionsDropdown({
                                 <span>Follow User</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
+                                onSelect={() => setReportDialogOpen(true)}
                                 variant='destructive'
                                 className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
                             >
@@ -135,6 +140,15 @@ export function PostActionsDropdown({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+            {!isAuthor && (
+                <ReportDialog
+                    open={reportDialogOpen}
+                    onOpenChange={setReportDialogOpen}
+                    targetType={isQAPost ? ReportTargetType.Question : ReportTargetType.Post}
+                    targetId={postId}
+                    targetLabel={isQAPost ? "Question" : "Post"}
+                />
+            )}
         </>
     );
 }
