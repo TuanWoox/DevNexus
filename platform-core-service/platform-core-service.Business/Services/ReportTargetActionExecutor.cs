@@ -255,6 +255,16 @@ namespace platform_core_service.Business.Services
                 return new ReturnResult<bool> { Message = "Target owner ID is missing from the report." };
             }
 
+            if (dto.SuspendDays == null)
+            {
+                return new ReturnResult<bool> { Message = "SuspendDays is required when suspending a user from report enforcement." };
+            }
+
+            if (dto.SuspendDays < 1 || dto.SuspendDays > 365)
+            {
+                return new ReturnResult<bool> { Message = "SuspendDays must be between 1 and 365 when suspending a user from report enforcement." };
+            }
+
             return await _adminUserService.SuspendUserAsync(
                 report.TargetOwnerId,
                 new AdminSuspendUserDTO { DaySuspend = dto.SuspendDays });

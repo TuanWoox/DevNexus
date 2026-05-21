@@ -207,12 +207,15 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Execute TargetAction BEFORE closing the report so failure causes rollback
+                await using var transaction = await _context.Database.BeginTransactionAsync();
+
+                // Execute TargetAction BEFORE closing the report so failure keeps report unresolved.
                 if (effectiveAction != ReportTargetAction.None)
                 {
                     var actionResult = await _targetActionExecutor.ExecuteAsync(report, effectiveAction, dto);
                     if (!actionResult.Result)
                     {
+                        await transaction.RollbackAsync();
                         result.Message = actionResult.Message ?? "Target action execution failed.";
                         return result;
                     }
@@ -230,6 +233,7 @@ namespace platform_core_service.Business.Services
 
                 await AddReportAuditAsync(AuditActionType.ReportResolved, report, oldState, BuildAuditState(report), dto?.ResolutionNote);
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 result = await GetByIdAsync(id);
                 result.Message = "Report resolved successfully.";
