@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Search, X } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -47,7 +47,7 @@ export function ConnectionsModal({
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-2xl h-[90vh] p-0 flex flex-col gap-0" showCloseButton={false}>
                 {/* Header */}
-                <DialogHeader className="p-3 sm:px-6 sm:pt-6 sm:pb-4 border-b border-border shrink-0">
+                <DialogHeader className="p-4 border-b border-border shrink-0">
                     <div className="flex items-center justify-between">
                         <DialogTitle className="text-xl font-semibold text-foreground">
                             Connections
@@ -63,11 +63,11 @@ export function ConnectionsModal({
                     </div>
 
                     {/* Tab navigation */}
-                    <div className="flex gap-1 mt-4 overflow-x-auto no-scrollbar">
+                    <div className="flex gap-1 mt-2 overflow-x-auto no-scrollbar">
                         <button
                             onClick={() => switchTab("followers")}
                             className={cn(
-                                "flex-1 min-w-[80px] px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap",
+                                "flex-1 min-w-[80px] px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap cursor-pointer",
                                 activeTab === "followers"
                                     ? "bg-primary/10 text-primary"
                                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -81,7 +81,7 @@ export function ConnectionsModal({
                         <button
                             onClick={() => switchTab("following")}
                             className={cn(
-                                "flex-1 min-w-[80px] px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap",
+                                "flex-1 min-w-[80px] px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap cursor-pointer",
                                 activeTab === "following"
                                     ? "bg-primary/10 text-primary"
                                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -96,7 +96,7 @@ export function ConnectionsModal({
                             <button
                                 onClick={() => switchTab("requests")}
                                 className={cn(
-                                    "flex-1 min-w-[80px] px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap",
+                                    "flex-1 min-w-[80px] px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap cursor-pointer",
                                     activeTab === "requests"
                                         ? "bg-primary/10 text-primary"
                                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -108,7 +108,7 @@ export function ConnectionsModal({
                     </div>
 
                     {/* Search */}
-                    <div className="relative mt-3">
+                    <div className="relative mt-2">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                             placeholder="Search by name..."
@@ -120,7 +120,7 @@ export function ConnectionsModal({
                 </DialogHeader>
 
                 {/* Content */}
-                <ScrollArea className="flex-1 p-3 sm:px-6 sm:pt-6 sm:pb-4">
+                <ScrollArea className="flex-1 p-4">
                     {activeTab === "followers" && (
                         <FollowersTab
                             profileId={profileId}

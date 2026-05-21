@@ -203,5 +203,44 @@ namespace platform_core_service.Business.Services
         //     }
         //     return returnResult;
         // }
+
+        public async Task<ReturnResult<SelectBlockStatus>> GetBlockStatusAsync(string otherProfileId)
+        {
+            ReturnResult<SelectBlockStatus> returnResult = new();
+            try
+            {
+                var myProfileId = _userContext.ProfileId;
+                if (string.IsNullOrEmpty(myProfileId))
+                {
+                    returnResult.Message = "Unauthorized";
+                    return returnResult;
+                }
+
+                // Check if current user has blocked the other user
+                var myBlock = await _dbContext.ProfileBlocks
+                    .Where(x => x.OwnerId == myProfileId && x.BlockedProfileId == otherProfileId)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync();
+
+                // Check if the other user has blocked the current user
+                var theirBlock = await _dbContext.ProfileBlocks
+                    .Where(x => x.OwnerId == otherProfileId && x.BlockedProfileId == myProfileId)
+                    .AsNoTracking()
+                    .AnyAsync();
+
+                returnResult.Result = new SelectBlockStatus
+                {
+                    IBlockedThem = myBlock != null,
+                    BlockId = myBlock?.Id,
+                    TheyBlockedMe = theirBlock
+                };
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug($"Error getting block status $${ex.Message}");
+                returnResult.Message = ex.Message;
+            }
+            return returnResult;
+        }
     }
 }

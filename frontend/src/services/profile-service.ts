@@ -4,7 +4,7 @@ import { SelectProfileDTO } from "@/types/profile/select-profile-dto";
 import { UpdateProfileDTO } from "@/types/profile/update-profile-dto";
 
 export const profileService = {
-    getProfileById: async (profileId: string): Promise<SelectProfileDTO> => {
+    getProfileById: async (profileId: string): Promise<SelectProfileDTO | null> => {
         const { data } = await api.get<ReturnResult<SelectProfileDTO>>(`/Profiles/${profileId}`);
         return data.result;
     },

@@ -69,7 +69,7 @@ function ProfileHoverCardMessageButton({
     };
 
     return (
-        <Button size="sm" onClick={handleMessage} disabled={isCheckingChat} className="w-full">
+        <Button size="sm" onClick={handleMessage} disabled={isCheckingChat} className="w-full cursor-pointer">
             {isCheckingChat ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -172,7 +172,7 @@ export function ProfileHoverCardContent({
             {actionCount > 0 ? (
                 <div className={actionCount === 1 ? 'border-t border-border px-4 py-3' : 'grid grid-cols-2 gap-2 border-t border-border px-4 py-3'}>
                     {canShowProfile ? (
-                        <Button variant="outline" size="sm" onClick={handleViewProfile} className="w-full">
+                        <Button variant="outline" size="sm" onClick={handleViewProfile} className="w-full cursor-pointer">
                             <User className="mr-2 h-4 w-4" />
                             {isOwnProfile ? 'View My Profile' : 'Profile'}
                         </Button>
