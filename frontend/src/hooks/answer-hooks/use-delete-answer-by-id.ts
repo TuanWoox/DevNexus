@@ -1,7 +1,7 @@
 import { answerService } from "@/services/answer-service";
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { answerQueryKeys } from "./use-answer-query-keys";
-import { qaPostQueryKeys } from "../qa-post-hooks/use-qa-post-query-key";
+import { qaPostQueryKeys } from "@/hooks/qa-post-hooks/use-qa-post-query-key";
 
 export const useDeleteAnswerById = () => {
     const queryClient = useQueryClient();

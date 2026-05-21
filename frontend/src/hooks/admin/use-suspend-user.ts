@@ -14,8 +14,5 @@ export const useSuspendUser = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.dashboard() });
       toast.success('User suspended');
     },
-    onError: () => {
-      toast.error('Failed to suspend user');
-    },
   });
 };

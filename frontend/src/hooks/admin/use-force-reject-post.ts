@@ -19,8 +19,5 @@ export const useForceRejectPost = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.dashboard() });
       toast.success('Post flagged');
     },
-    onError: () => {
-      toast.error('Failed to flag post');
-    },
   });
 };

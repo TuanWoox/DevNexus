@@ -14,8 +14,5 @@ export const useUpdateUserRole = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.dashboard() });
       toast.success('Role updated');
     },
-    onError: () => {
-      toast.error('Failed to update role');
-    },
   });
 };

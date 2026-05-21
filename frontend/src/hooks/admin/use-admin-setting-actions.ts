@@ -13,7 +13,6 @@ export const useCreateAdminSetting = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.settings.all })
       toast.success('Setting created')
     },
-    onError: () => toast.error('Failed to create setting'),
   })
 }
 
@@ -26,7 +25,6 @@ export const useUpdateAdminSetting = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.settings.bannedKeywords })
       toast.success('Setting updated')
     },
-    onError: () => toast.error('Failed to update setting'),
   })
 }
 
@@ -39,6 +37,5 @@ export const useDeleteAdminSetting = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.settings.bannedKeywords })
       toast.success('Setting deleted')
     },
-    onError: () => toast.error('Failed to delete setting'),
   })
 }

@@ -12,8 +12,5 @@ export const useUpdateBannedKeywords = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.settings.bannedKeywords });
       toast.success('Keywords saved');
     },
-    onError: () => {
-      toast.error('Failed to save keywords');
-    },
   });
 };

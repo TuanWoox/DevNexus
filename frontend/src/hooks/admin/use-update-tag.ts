@@ -12,8 +12,5 @@ export const useUpdateTag = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.tags.all });
       toast.success('Tag updated');
     },
-    onError: () => {
-      toast.error('Failed to update tag');
-    },
   });
 };

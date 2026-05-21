@@ -12,8 +12,5 @@ export const useUnsuspendUser = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.dashboard() });
       toast.success('User unsuspended');
     },
-    onError: () => {
-      toast.error('Failed to unsuspend user');
-    },
   });
 };

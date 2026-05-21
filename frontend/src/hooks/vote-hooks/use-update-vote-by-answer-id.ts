@@ -3,7 +3,7 @@ import { VoteRequestDTO } from "@/types/vote/vote-request-dto";
 import { SelectAnswerDTO } from "@/types/answer/select-answer-dto";
 import { PagedData } from "@/types/common/paged-data";
 import { useMutation, useQueryClient, InfiniteData } from "@tanstack/react-query";
-import { answerQueryKeys } from "../answer-hooks/use-answer-query-keys";
+import { answerQueryKeys } from "@/hooks/answer-hooks/use-answer-query-keys";
 
 const applyVoteToAnswer = (answer: SelectAnswerDTO, voteRequestDTO: VoteRequestDTO): SelectAnswerDTO => {
     const isToggleOff = answer.currentUserVote === voteRequestDTO.isUpvote;
