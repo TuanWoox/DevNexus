@@ -53,7 +53,7 @@ export function ProfileHoverCardActions({ profileId, onClose }: ProfileHoverCard
                 <Button
                     variant="ghost"
                     size="sm"
-                    className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer"
                     onClick={handleBlockClick}
                     disabled={isPending}
                 >
@@ -74,9 +74,11 @@ export function ProfileHoverCardActions({ profileId, onClose }: ProfileHoverCard
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel disabled={isPending} variant="custom" size="lg" className="btn-secondary">Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                            className={isBlocked ? undefined : 'bg-destructive text-destructive-foreground hover:bg-destructive/90'}
+                            variant="destructive"
+                            size="lg"
+                            className="cursor-pointer"
                             disabled={isStatusLoading || isPending}
                             onClick={(event) => {
                                 event.preventDefault();
