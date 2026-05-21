@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { ArrowBigUp, ArrowBigDown, MoreHorizontal, Flag, UserPlus, Edit, Trash, CheckCircle, Check, History } from 'lucide-react';
-import Image from 'next/image';
+import { UserAvatar } from '@/components/shared/user-avatar';
 import { MarkdownViewer } from '../editor/markdown-viewer';
 import { MarkdownEditor, MarkdownEditorHandle } from '../editor/markdown-editor';
 import {
@@ -130,13 +130,7 @@ export function BaseReplyItem({
         <div className="flex gap-3 sm:gap-4 group">
             <ProfileHoverCard profileId={authorId} author={author}>
                 <Link href={`/profile/${authorId}`} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-secondary shrink-0 overflow-hidden border border-default relative">
-                    {author?.avatarUrl ? (
-                        <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xs font-bold text-heading">
-                            {author?.fullName?.charAt(0) || 'U'}
-                        </div>
-                    )}
+                    <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
                 </Link>
             </ProfileHoverCard>
 

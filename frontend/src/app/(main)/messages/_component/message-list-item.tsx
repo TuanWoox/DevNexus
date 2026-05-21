@@ -4,10 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Chat } from "@/features/messages/types/contracts";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
-import { getAvatarUrl, getTitle, getInitials, toRelativeTime, getProfileId } from "@/features/messages/utils/message-service.helper";
+import { getAvatarUrl, getTitle, toRelativeTime, getProfileId } from "@/features/messages/utils/message-service.helper";
 import { Archive, Bell, BellOff, Check, Loader2, MoreHorizontal, Pin, Trash2, UserPlus } from "lucide-react";
 import {
     DropdownMenu,
@@ -160,12 +160,7 @@ export function MessageListItem({ item, isActive = false, onSelect }: MessageLis
         >
             {/* Avatar */}
             <div className="relative shrink-0">
-                <Avatar className="h-12 w-12">
-                    <AvatarImage src={avatarUrl} alt={title} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
-                        {getInitials(title)}
-                    </AvatarFallback>
-                </Avatar>
+                <UserAvatar avatarUrl={avatarUrl} fullName={title} className="h-12 w-12" />
                 <span className={cn(
                     "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-card",
                     isUnread ? "bg-primary" : "bg-emerald-500",
@@ -281,12 +276,12 @@ export function MessageListItem({ item, isActive = false, onSelect }: MessageLis
                             return (
                                 <div className="flex -space-x-1 shrink-0">
                                     {visible.map((r) => (
-                                        <Avatar key={r.ReaderId} className="h-4 w-4 ring-1 ring-card">
-                                            <AvatarImage src={r.Reader?.AvatarUrl ?? undefined} alt={r.Reader?.FullName ?? "Unknown"} />
-                                            <AvatarFallback className="text-[6px] bg-primary/10 text-primary">
-                                                {getInitials(r.Reader?.FullName as string ?? "?")}
-                                            </AvatarFallback>
-                                        </Avatar>
+                                        <UserAvatar
+                                            key={r.ReaderId}
+                                            avatarUrl={r.Reader?.AvatarUrl}
+                                            fullName={r.Reader?.FullName ?? "Unknown"}
+                                            className="h-4 w-4 ring-1 ring-card"
+                                        />
                                     ))}
                                     {overflow > 0 && (
                                         <span className="h-4 w-4 rounded-full bg-muted ring-1 ring-card flex items-center justify-center text-[7px] font-semibold text-muted-foreground">

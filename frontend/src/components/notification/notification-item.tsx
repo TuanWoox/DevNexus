@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Trash2, BellOff, Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Notification } from "@/features/notifications/types/contracts";
@@ -83,15 +83,11 @@ export function NotificationItem({ notification, onClose }: Props) {
                 <span className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
             )}
 
-            <Avatar className="h-10 w-10 shrink-0 border border-default">
-                <AvatarImage
-                    src={notification.Actor?.AvatarUrl || "/images/default-avatar.webp"}
-                    alt={notification.Actor?.FullName ?? "User"}
-                />
-                <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
-                    {notification.Actor?.FullName?.charAt(0)?.toUpperCase() ?? "U"}
-                </AvatarFallback>
-            </Avatar>
+            <UserAvatar
+                avatarUrl={notification.Actor?.AvatarUrl}
+                fullName={notification.Actor?.FullName ?? "User"}
+                className="h-10 w-10 shrink-0 border border-default"
+            />
 
             <div className="flex-1 min-w-0 pr-20">
                 <p className="text-sm text-body leading-relaxed">

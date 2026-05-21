@@ -3,8 +3,7 @@
 import { useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Search, X, Loader2, Send, Users, Check } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getInitials } from "@/features/messages/utils/message-service.helper";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { useCreateChat } from "@/features/messages/hooks/chats/use-create-chat";
 import { useFollowedProfilesSearch } from "@/features/messages/hooks/chats/use-followed-profiles-search";
 import { useContactProfilesSearch } from "@/features/messages/hooks/chats/use-contact-profiles-search";
@@ -137,12 +136,7 @@ export function GroupCreationPanel() {
                     isSelected ? "bg-primary/5" : "hover:bg-accent/40",
                 )}
             >
-                <Avatar className="h-9 w-9 shrink-0 ring-2 ring-border/50">
-                    <AvatarImage src={profile.AvatarUrl ?? undefined} alt={profile.FullName} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                        {getInitials(profile.FullName)}
-                    </AvatarFallback>
-                </Avatar>
+                <UserAvatar avatarUrl={profile.AvatarUrl} fullName={profile.FullName} className="h-9 w-9 shrink-0 ring-2 ring-border/50" />
                 <div className="min-w-0 flex-1">
                     <span className="truncate text-sm font-semibold text-foreground">{profile.FullName}</span>
                 </div>
@@ -211,10 +205,7 @@ export function GroupCreationPanel() {
                                 key={m.Id}
                                 className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
                             >
-                                <Avatar className="h-4 w-4">
-                                    <AvatarImage src={m.AvatarUrl ?? undefined} />
-                                    <AvatarFallback className="text-[8px] bg-primary/20">{getInitials(m.FullName)}</AvatarFallback>
-                                </Avatar>
+                                <UserAvatar avatarUrl={m.AvatarUrl} fullName={m.FullName} className="h-4 w-4" />
                                 {m.FullName.split(" ").slice(-1)[0]}
                                 <button
                                     type="button"
@@ -351,12 +342,12 @@ export function GroupCreationPanel() {
                 {/* Stacked avatars */}
                 <div className="flex -space-x-2">
                     {selectedMembers.slice(0, 4).map((m) => (
-                        <Avatar key={m.Id} className="h-8 w-8 ring-2 ring-card">
-                            <AvatarImage src={m.AvatarUrl ?? undefined} alt={m.FullName} />
-                            <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">
-                                {getInitials(m.FullName)}
-                            </AvatarFallback>
-                        </Avatar>
+                        <UserAvatar
+                            key={m.Id}
+                            avatarUrl={m.AvatarUrl}
+                            fullName={m.FullName}
+                            className="h-8 w-8 ring-2 ring-card"
+                        />
                     ))}
                     {selectedMembers.length > 4 && (
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted ring-2 ring-card text-[10px] font-bold text-muted-foreground">
@@ -394,12 +385,12 @@ export function GroupCreationPanel() {
                 {/* Member avatars */}
                 <div className="flex -space-x-3 justify-center">
                     {selectedMembers.slice(0, 6).map((m) => (
-                        <Avatar key={m.Id} className="h-14 w-14 ring-4 ring-card shadow-sm">
-                            <AvatarImage src={m.AvatarUrl ?? undefined} alt={m.FullName} />
-                            <AvatarFallback className="bg-primary/10 text-primary text-lg font-bold">
-                                {getInitials(m.FullName)}
-                            </AvatarFallback>
-                        </Avatar>
+                        <UserAvatar
+                            key={m.Id}
+                            avatarUrl={m.AvatarUrl}
+                            fullName={m.FullName}
+                            className="h-14 w-14 ring-4 ring-card shadow-sm"
+                        />
                     ))}
                     {selectedMembers.length > 6 && (
                         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted ring-4 ring-card text-sm font-bold text-muted-foreground">

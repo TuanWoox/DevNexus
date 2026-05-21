@@ -1,9 +1,8 @@
 "use client";
 
 import { useTypingUsers } from "@/features/messages/hooks/messages/use-typing-users";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { getInitials } from "@/features/messages/utils/message-service.helper";
 import { cn } from "@/lib/utils";
 
 const MAX_VISIBLE = 3;
@@ -30,12 +29,11 @@ export function TypingIndicator({ chatId, isGroup }: Props) {
                     {visible.map(u => (
                         <Tooltip key={u.profileId}>
                             <TooltipTrigger asChild>
-                                <Avatar className="h-7 w-7 ring-2 ring-background cursor-default">
-                                    <AvatarImage src={u.AvatarUrl ?? undefined} />
-                                    <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
-                                        {getInitials(u.FullName)}
-                                    </AvatarFallback>
-                                </Avatar>
+                                <UserAvatar
+                                    avatarUrl={u.AvatarUrl}
+                                    fullName={u.FullName}
+                                    className="h-7 w-7 ring-2 ring-background cursor-default"
+                                />
                             </TooltipTrigger>
                             <TooltipContent side="top" className="text-xs">
                                 {u.FullName}

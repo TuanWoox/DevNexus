@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowBigUp, FileText, HelpCircle, Lock, MessageSquare, Star, Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { MarkdownViewer } from "@/components/editor/markdown-viewer";
@@ -13,12 +14,6 @@ import {
 } from "@/types/search/global-search-result";
 import { SelectPostAuthorDTO, SelectPostDTO } from "@/types/post/select-post-dto";
 import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
-
-const DEFAULT_AVATAR_URL = "/images/default-avatar.webp";
-
-function initials(value?: string | null) {
-  return value?.trim().charAt(0).toUpperCase() || "D";
-}
 
 function toHoverAuthor(author: SelectPostAuthorDTO) {
   return {
@@ -91,10 +86,7 @@ export function SearchPostCard({ post, question = false }: { post: SelectPostDTO
           {post.author ? (
             <ProfileHoverCard profileId={post.authorId} author={toHoverAuthor(post.author)}>
               <Link href={`/profile/${post.authorId}`} className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground hover:text-primary">
-                <Avatar size="sm">
-                  <AvatarImage src={post.author.avatarUrl || DEFAULT_AVATAR_URL} />
-                  <AvatarFallback>{initials(post.author.fullName)}</AvatarFallback>
-                </Avatar>
+                <UserAvatar avatarUrl={post.author.avatarUrl} fullName={post.author.fullName} size="sm" />
                 <span className="truncate font-medium">{post.author.fullName}</span>
               </Link>
             </ProfileHoverCard>
@@ -142,10 +134,7 @@ export function SearchProfileCard({ profile }: { profile: SearchProfileResult })
     <ProfileHoverCard profileId={profile.id} author={profileToHoverAuthor(profile)} side="top">
       <Card className="group border-default bg-card/95 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-elevated">
         <Link href={`/profile/${profile.id}`} className="flex gap-3 p-4 sm:p-5">
-          <Avatar className="size-12 ring-1 ring-border" size="lg">
-            <AvatarImage src={profile.avatarUrl || DEFAULT_AVATAR_URL} />
-            <AvatarFallback className="bg-primary/10 text-primary">{initials(profile.fullName)}</AvatarFallback>
-          </Avatar>
+          <UserAvatar avatarUrl={profile.avatarUrl} fullName={profile.fullName} className="size-12 ring-1 ring-border" size="lg" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="truncate text-base font-bold text-heading transition-colors group-hover:text-primary">{profile.fullName}</h2>

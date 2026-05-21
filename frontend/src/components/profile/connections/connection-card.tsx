@@ -1,6 +1,6 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SelectProfileDTO } from "@/types/profile/select-profile-dto";
@@ -55,15 +55,7 @@ export function ConnectionCard({
 
             <ProfileHoverCard profileId={profile.id} author={profile} side="right">
                 <Link href={`/profile/${profile.id}`} className="shrink-0">
-                    <Avatar className="sm:size-10 border border-border">
-                        <AvatarImage
-                            src={profile.avatarUrl || "/images/default-avatar.webp"}
-                            alt={profile.fullName}
-                        />
-                        <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs sm:text-sm">
-                            {profile.fullName?.charAt(0)?.toUpperCase() ?? "U"}
-                        </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar avatarUrl={profile.avatarUrl} fullName={profile.fullName} className="sm:size-10 border border-border" />
                 </Link>
             </ProfileHoverCard>
 
