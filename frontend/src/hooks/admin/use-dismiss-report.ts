@@ -14,6 +14,5 @@ export const useDismissReport = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.reports.all });
       toast.success("Report dismissed");
     },
-    onError: () => toast.error("Failed to dismiss report"),
   });
 };

@@ -14,6 +14,5 @@ export const useEscalateReport = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.reports.all });
       toast.success("Report escalated");
     },
-    onError: () => toast.error("Failed to escalate report"),
   });
 };

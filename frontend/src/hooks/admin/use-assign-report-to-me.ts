@@ -14,6 +14,5 @@ export const useAssignReportToMe = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.reports.all });
       toast.success("Report assigned");
     },
-    onError: () => toast.error("Failed to assign report"),
   });
 };
