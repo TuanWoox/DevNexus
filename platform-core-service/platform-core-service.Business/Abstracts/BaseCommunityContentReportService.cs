@@ -1,14 +1,17 @@
 ﻿using CloudinaryDotNet.Actions;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.BaseEntity;
 using platform_core_service.Common.Entities.DbEntities;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityMember;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityContentReport;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Models.DTOs.PagingDTO;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Enums;
@@ -33,14 +36,16 @@ namespace platform_core_service.Business.Abstracts
         protected readonly IRepository<TReportEntity, string> _repository;
         protected readonly ISocialGuardService _socialGuardService;
         protected readonly ICommunityBanService _banService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
-        protected BaseCommunityContentReportService(ApplicationDbContext context, IUserContext userContext, IRepository<TReportEntity, string> repository, ISocialGuardService socialGuardService, ICommunityBanService banService)
+        protected BaseCommunityContentReportService(ApplicationDbContext context, IUserContext userContext, IRepository<TReportEntity, string> repository, ISocialGuardService socialGuardService, ICommunityBanService banService, IBackgroundJobClient backgroundJobClient)
         {
             _context = context;
             _userContext = userContext;
             _repository = repository;
             _socialGuardService = socialGuardService;
             _banService = banService;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         protected abstract DbSet<TReportEntity> GetReportDbSet();
@@ -68,7 +73,11 @@ namespace platform_core_service.Business.Abstracts
 
                 await reportDbSet.AddAsync(createdResult);
 
-                if (await _context.SaveChangesAsync() > 0) returnResult.Result = true;
+                if (await _context.SaveChangesAsync() > 0)
+                {
+                    await PublishReportCreatedNotificationAsync(createdResult, communityId);
+                    returnResult.Result = true;
+                }
                 else returnResult.Message = "Failed to create report.";
 
             }
@@ -166,8 +175,12 @@ namespace platform_core_service.Business.Abstracts
                         return returnResult;
                 }
 
-                await _context.SaveChangesAsync();
-                returnResult.Result = true;
+                if (await _context.SaveChangesAsync() > 0)
+                {
+                    await PublishReportResolvedNotificationsAsync(report, communityId, resolveDTO);
+                    returnResult.Result = true;
+                }
+                else returnResult.Message = "Failed to resolve report.";
             }
             catch (Exception ex)
             {
@@ -288,6 +301,123 @@ namespace platform_core_service.Business.Abstracts
                     MutedUntil = dto.MutedUntil
                 });
             }
+        }
+
+        private async Task PublishReportCreatedNotificationAsync(TReportEntity report, string communityId)
+        {
+            var community = await _context.Communities
+                .AsNoTracking()
+                .Where(c => c.Id == communityId)
+                .Select(c => new { c.Id, c.Name, c.OwnerId, c.CommunityCoverPhotoUrl })
+                .FirstOrDefaultAsync();
+
+            if (community == null) return;
+
+            var moderatorIds = await _context.CommunityModerators
+                .AsNoTracking()
+                .Where(m => m.CommunityId == communityId)
+                .Select(m => m.ModeratorId)
+                .ToListAsync();
+
+            var recipientIds = moderatorIds
+                .Append(community.OwnerId)
+                .Distinct()
+                .Where(id => id != report.ReporterId)
+                .ToList();
+
+            foreach (var recipientId in recipientIds)
+            {
+                _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                    x => x.PublicNotification(new NotiicationCreatedEntityDTO
+                    {
+                        EventType = NotificationEventType.COMMUNITY_REPORT_CREATED,
+                        ActorType = ActorType.Community,
+                        ActorId = communityId,
+                        ActorName = community.Name,
+                        ActorAvatarUrl = community.CommunityCoverPhotoUrl,
+                        RecipientId = recipientId,
+                        EntityType = NotificationEntityType.COMMUNITY,
+                        EntityId = communityId,
+                        EntityTitle = community.Name,
+                        EntityPreview = report.Reason,
+                        Message = $"A new report has been filed in \"{community.Name}\".",
+                        ActionUrl = $"/communities/{communityId}/reports"
+                    }, "notifications.community"));
+            }
+        }
+
+        private async Task PublishReportResolvedNotificationsAsync(
+            TReportEntity report,
+            string communityId,
+            ResolveReportDTO resolveDTO)
+        {
+            var community = await _context.Communities
+                .AsNoTracking()
+                .Where(c => c.Id == communityId)
+                .Select(c => new { c.Id, c.Name, c.CommunityCoverPhotoUrl })
+                .FirstOrDefaultAsync();
+
+            if (community == null) return;
+
+            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                x => x.PublicNotification(new NotiicationCreatedEntityDTO
+                {
+                    EventType = NotificationEventType.COMMUNITY_REPORT_RESOLVED,
+                    ActorType = ActorType.Community,
+                    ActorId = communityId,
+                    ActorName = community.Name,
+                    ActorAvatarUrl = community.CommunityCoverPhotoUrl,
+                    RecipientId = report.ReporterId,
+                    EntityType = NotificationEntityType.COMMUNITY,
+                    EntityId = communityId,
+                    EntityTitle = community.Name,
+                    Message = $"Your report in \"{community.Name}\" has been reviewed. Thank you for keeping the community safe.",
+                    ActionUrl = $"/communities/{communityId}"
+                }, "notifications.community"));
+
+            var offenderMessage = resolveDTO.Action switch
+            {
+                ReportResolutionAction.RemoveContent =>
+                    $"Your content in \"{community.Name}\" was removed for violating community guidelines.",
+
+                ReportResolutionAction.RemoveContentAndMute =>
+                    $"Your content in \"{community.Name}\" was removed and you have been muted until {resolveDTO.MutedUntil?.ToString("g") ?? "further notice"}.",
+
+                ReportResolutionAction.RemoveContentAndBan =>
+                    $"Your content in \"{community.Name}\" was removed and you have been permanently banned.",
+
+                ReportResolutionAction.PenalizeReporter =>
+                    $"You have been muted in \"{community.Name}\" for 3 days for filing a false report.",
+
+                _ => null
+            };
+
+            if (offenderMessage == null) return;
+
+            var offenderRecipient = resolveDTO.Action == ReportResolutionAction.PenalizeReporter
+                ? report.ReporterId
+                : report.ReportedProfileId;
+
+            if (offenderRecipient == report.ReporterId && resolveDTO.Action != ReportResolutionAction.PenalizeReporter)
+            {
+                return;
+            }
+
+            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                x => x.PublicNotification(new NotiicationCreatedEntityDTO
+                {
+                    EventType = NotificationEventType.COMMUNITY_REPORT_RESOLVED,
+                    ActorType = ActorType.Community,
+                    ActorId = communityId,
+                    ActorName = community.Name,
+                    ActorAvatarUrl = community.CommunityCoverPhotoUrl,
+                    RecipientId = offenderRecipient,
+                    EntityType = NotificationEntityType.COMMUNITY,
+                    EntityId = communityId,
+                    EntityTitle = community.Name,
+                    Message = offenderMessage,
+                    ActionUrl = $"/communities/{communityId}"
+                }, "notifications.community"));
         }
     }
 }

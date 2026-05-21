@@ -15,7 +15,7 @@ namespace platform_core_service.Business.Services
 {
     public class CommunityPostReportService : BaseCommunityContentReportService<Post, CommunityPostsReport, SelectCommunityPostsReportDTO>, ICommunityContentReportService
     {
-        public CommunityPostReportService(ApplicationDbContext context, IUserContext userContext, IRepository<CommunityPostsReport, string> repository, ISocialGuardService socialGuardService, ICommunityBanService banService) : base(context, userContext, repository, socialGuardService, banService)
+        public CommunityPostReportService(ApplicationDbContext context, IUserContext userContext, IRepository<CommunityPostsReport, string> repository, ISocialGuardService socialGuardService, ICommunityBanService banService, Hangfire.IBackgroundJobClient backgroundJobClient) : base(context, userContext, repository, socialGuardService, banService, backgroundJobClient)
         {
         }
 
