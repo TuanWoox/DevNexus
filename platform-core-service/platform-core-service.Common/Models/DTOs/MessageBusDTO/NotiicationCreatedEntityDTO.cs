@@ -6,12 +6,22 @@ using System.Threading.Tasks;
 
 namespace platform_core_service.Common.Models.DTOs.MessageBusDTO
 {
+    public enum ActorType
+    {
+        Profile = 0,
+        Community = 1,
+        System = 2
+    }
+
     public class NotiicationCreatedEntityDTO
     {
         public NotificationEventType EventType { get; set; }
 
         // Actor (who triggered the action)
+        public ActorType ActorType { get; set; } = ActorType.Profile;
         public string? ActorId { get; set; }
+        public string? ActorName { get; set; }
+        public string? ActorAvatarUrl { get; set; }
 
         // Recipient (who receives the notification)
         // Can be single or multiple recipients
@@ -74,7 +84,13 @@ namespace platform_core_service.Common.Models.DTOs.MessageBusDTO
         SYSTEM_ANNOUNCEMENT = 25,
 
         // Q&A (additional)
-        COMMENT_QUESTION = 26
+        COMMENT_QUESTION = 26,
+
+        // Community Reports
+        COMMUNITY_REPORT_CREATED = 27,
+        COMMUNITY_REPORT_RESOLVED = 28,
+        COMMUNITY_CONTENT_REMOVED = 29,
+        COMMUNITY_MEMBER_MUTED = 30
     }
 
     public enum NotificationEntityType

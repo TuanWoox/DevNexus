@@ -488,10 +488,14 @@ namespace platform_core_service.Business.Services
                 return;
             }
 
+            var actor = await GetProfileSnapshot(actorId);
             var notificationEvent = new NotiicationCreatedEntityDTO
             {
                 EventType = NotificationEventType.NEW_ANSWER,
+                ActorType = ActorType.Profile,
                 ActorId = actorId,
+                ActorName = actor.Name,
+                ActorAvatarUrl = actor.AvatarUrl,
                 RecipientId = recipientId,
                 EntityType = NotificationEntityType.POST,
                 EntityId = answer.QAPost.Id,
@@ -526,10 +530,14 @@ namespace platform_core_service.Business.Services
                 return;
             }
 
+            var actor = await GetProfileSnapshot(actorId);
             var notificationEvent = new NotiicationCreatedEntityDTO
             {
                 EventType = NotificationEventType.ANSWER_ACCEPTED,
+                ActorType = ActorType.Profile,
                 ActorId = actorId,
+                ActorName = actor.Name,
+                ActorAvatarUrl = actor.AvatarUrl,
                 RecipientId = recipientId,
                 EntityType = NotificationEntityType.POST,
                 EntityId = answer.QAPost.Id,
@@ -540,6 +548,16 @@ namespace platform_core_service.Business.Services
 
             _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
                 x => x.PublicNotification(notificationEvent, "notifications.answer"));
+        }
+
+        private async Task<(string? Name, string? AvatarUrl)> GetProfileSnapshot(string profileId)
+        {
+            var profile = await _dbContext.Profiles
+                .Where(p => p.Id == profileId)
+                .Select(p => new { p.FullName, p.AvatarUrl })
+                .FirstOrDefaultAsync();
+
+            return (profile?.FullName, profile?.AvatarUrl);
         }
     }
 }

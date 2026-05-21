@@ -90,11 +90,15 @@ namespace platform_core_service.Business.Services
                         if (await _socialGuardService.IsBlockedRelation(profileId, post.AuthorId))
                             return result;
 
+                        var actor = await GetProfileSnapshot(profileId);
                         var isQuestion = post is QAPost;
                         var notificationEvent = new NotiicationCreatedEntityDTO
                         {
                             EventType = isQuestion ? NotificationEventType.UPVOTE_QUESTION : NotificationEventType.UPVOTE_POST,
+                            ActorType = ActorType.Profile,
                             ActorId = profileId,
+                            ActorName = actor.Name,
+                            ActorAvatarUrl = actor.AvatarUrl,
                             RecipientId = post.AuthorId,
                             EntityType = isQuestion ? NotificationEntityType.QUESTION : NotificationEntityType.POST,
                             EntityId = postId,
@@ -175,10 +179,14 @@ namespace platform_core_service.Business.Services
                         if (await _socialGuardService.IsBlockedRelation(profileId, answer.AuthorId))
                             return result;
 
+                        var actor = await GetProfileSnapshot(profileId);
                         var notificationEvent = new NotiicationCreatedEntityDTO
                         {
                             EventType = NotificationEventType.UPVOTE_ANSWER,
+                            ActorType = ActorType.Profile,
                             ActorId = profileId,
+                            ActorName = actor.Name,
+                            ActorAvatarUrl = actor.AvatarUrl,
                             RecipientId = answer.AuthorId,
                             EntityType = NotificationEntityType.ANSWER,
                             EntityId = answerId,
@@ -273,10 +281,14 @@ namespace platform_core_service.Business.Services
                             ? $"/questions/{rootPost?.Id}#comment-{commentId}"
                             : $"/post/{rootPost?.Id}#comment-{commentId}";
 
+                        var actor = await GetProfileSnapshot(profileId);
                         var notificationEvent = new NotiicationCreatedEntityDTO
                         {
                             EventType = NotificationEventType.UPVOTE_COMMENT,
+                            ActorType = ActorType.Profile,
                             ActorId = profileId,
+                            ActorName = actor.Name,
+                            ActorAvatarUrl = actor.AvatarUrl,
                             RecipientId = comment.AuthorId,
                             EntityType = NotificationEntityType.COMMENT,
                             EntityId = commentId,
@@ -362,6 +374,17 @@ namespace platform_core_service.Business.Services
 
             return (upvoteChange, downvoteChange, isNewUpvote);
         }
+
+        private async Task<(string? Name, string? AvatarUrl)> GetProfileSnapshot(string profileId)
+        {
+            var profile = await _dbContext.Profiles
+                .Where(p => p.Id == profileId)
+                .Select(p => new { p.FullName, p.AvatarUrl })
+                .FirstOrDefaultAsync();
+
+            return (profile?.FullName, profile?.AvatarUrl);
+        }
+
         private ReturnResult<bool> ReturnError(ReturnResult<bool> result, string message)
         {
             result.Message = message;

@@ -80,10 +80,14 @@ namespace platform_core_service.Business.Services
                             returnResult.Result = selectUserFollow;
 
                             // Publish FOLLOW_ACCEPTED notification
+                            var actor = await GetProfileSnapshot(_userContext.ProfileId);
                             var notificationEvent = new NotiicationCreatedEntityDTO
                             {
                                 EventType = NotificationEventType.FOLLOW_ACCEPTED,
+                                ActorType = ActorType.Profile,
                                 ActorId = _userContext.ProfileId,
+                                ActorName = actor.Name,
+                                ActorAvatarUrl = actor.AvatarUrl,
                                 RecipientId = existingFollowRequest.RequesterProfileId,
                                 EntityType = NotificationEntityType.PROFILE,
                                 EntityId = "profile_requests_accepted",
@@ -326,6 +330,16 @@ namespace platform_core_service.Business.Services
                 returnResult.Message = ex.Message;
             }
             return returnResult;
+        }
+
+        private async Task<(string? Name, string? AvatarUrl)> GetProfileSnapshot(string profileId)
+        {
+            var profile = await _dbContext.Profiles
+                .Where(p => p.Id == profileId)
+                .Select(p => new { p.FullName, p.AvatarUrl })
+                .FirstOrDefaultAsync();
+
+            return (profile?.FullName, profile?.AvatarUrl);
         }
     }
 }

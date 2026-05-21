@@ -12,31 +12,6 @@ datasource db {
 // Core Profile
 // ─────────────────────────────────────────────────────────────────────────────
 
-model Profile {
-  Id                String    @id
-  FullName          String    @db.VarChar(200)
-  AvatarUrl         String?   @db.VarChar(500)
-  BackgroundUrl     String?   @db.VarChar(500)
-  Bio               String?   @db.VarChar(500)
-  ReputationPoints  Int       @default(0)
-  TechStacks        String[]  @db.Text
-  IsPrivate         Boolean   @default(false)
-  ApplicationUserId String    @db.VarChar(200)
-  DateCreated       DateTime  @default(now())
-  DateModified      DateTime  @updatedAt
-  Deleted           Boolean   @default(false)
-  DateDeleted       DateTime?
-
-  // Relations
-  NotificationsReceived Notification[] @relation("NotificationRecipient")
-  NotificationsSent     Notification[] @relation("NotificationActor")
-
-  NotificationGlobalSetting NotificationGlobalSetting?
-  NotificationMuteSettings  NotificationMuteSetting[]
-
-  @@index([Id])
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Core Notification
 // ─────────────────────────────────────────────────────────────────────────────
@@ -45,12 +20,13 @@ model Notification {
   Id              String           @id @default(uuid())
 
   RecipientId     String           @db.VarChar(200)
-  Recipient       Profile          @relation("NotificationRecipient", fields: [RecipientId], references: [Id])
 
   Type            Int
 
+  ActorType       Int              @default(0)
   ActorId         String?          @db.VarChar(200)
-  Actor           Profile?         @relation("NotificationActor", fields: [ActorId], references: [Id])
+  ActorName       String?          @db.VarChar(200)
+  ActorAvatarUrl  String?          @db.VarChar(500)
 
   EntityType      Int?
   EntityId        String?          @db.VarChar(200)
@@ -83,7 +59,6 @@ model NotificationGlobalSetting {
   Id               String   @id @default(uuid())
 
   ProfileId        String   @unique @db.VarChar(200)
-  Profile          Profile  @relation(fields: [ProfileId], references: [Id])
 
   AllNotifications Boolean  @default(true)
 
@@ -99,7 +74,6 @@ model NotificationMuteSetting {
   Id          String           @id @default(uuid())
 
   ProfileId   String           @db.VarChar(200)
-  Profile     Profile          @relation(fields: [ProfileId], references: [Id])
 
   EntityType  Int
   EntityId    String           @db.VarChar(200)

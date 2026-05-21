@@ -629,10 +629,14 @@ namespace platform_core_service.Business.Services
             NotificationEntityType entityType = NotificationEntityType.COMMENT
         )
         {
+            var actor = await GetProfileSnapshot(actorId);
             var notificationEvent = new NotiicationCreatedEntityDTO
             {
                 EventType = eventType,
+                ActorType = ActorType.Profile,
                 ActorId = actorId,
+                ActorName = actor.Name,
+                ActorAvatarUrl = actor.AvatarUrl,
                 RecipientId = recipientId,
                 EntityType = entityType,
                 EntityId = entityId,
@@ -734,6 +738,16 @@ namespace platform_core_service.Business.Services
 
                 return;
             }
+        }
+
+        private async Task<(string? Name, string? AvatarUrl)> GetProfileSnapshot(string profileId)
+        {
+            var profile = await _context.Profiles
+                .Where(p => p.Id == profileId)
+                .Select(p => new { p.FullName, p.AvatarUrl })
+                .FirstOrDefaultAsync();
+
+            return (profile?.FullName, profile?.AvatarUrl);
         }
     }
 }

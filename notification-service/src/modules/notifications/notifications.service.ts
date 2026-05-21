@@ -36,11 +36,6 @@ export class NotificationsService {
         skip,
         take: page.size,
         orderBy: { DateCreated: 'desc' },
-        include: {
-          Actor: {
-            select: { Id: true, FullName: true, AvatarUrl: true },
-          },
-        },
       }),
       this.prisma.notification.count({ where }),
     ]);
@@ -72,7 +67,7 @@ export class NotificationsService {
     const enriched = notifications.map((n) => ({
       ...n,
       Message: n.ActorId
-        ? convertTypeToMessage(n, n.Actor?.FullName ?? 'Someone')
+        ? convertTypeToMessage(n, n.ActorName ?? 'Someone')
         : n.Message,
       IsMuted: n.EntityType != null && n.EntityId != null
         ? muteSet.has(`${n.EntityType}:${n.EntityId}:${n.Type}`)
