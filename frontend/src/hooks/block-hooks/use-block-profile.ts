@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { blockService } from "@/services/block-service";
 import { toast } from "sonner";
+import { invalidateAfterBlockChange } from "./block-cache-invalidation";
 
 export function useBlockProfile(otherProfileId: string) {
     const queryClient = useQueryClient();
@@ -10,10 +11,9 @@ export function useBlockProfile(otherProfileId: string) {
     return useMutation({
         mutationFn: () => blockService.blockProfile(otherProfileId),
         onSuccess: (data) => {
-            if (data.message) {
-                toast.error(data.message);
-            } else {
-                queryClient.invalidateQueries({ queryKey: ["blockStatus", otherProfileId] });
+            if (data) {
+                invalidateAfterBlockChange(queryClient, otherProfileId);
+                toast.success("Profile blocked");
             }
         },
     });

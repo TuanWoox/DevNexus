@@ -14,6 +14,7 @@ using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using Hangfire;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
+using platform_core_service.Common.Interfaces.Helper;
 
 namespace platform_core_service.Business.Services
 {
@@ -23,7 +24,8 @@ namespace platform_core_service.Business.Services
         IMapper mapper,
         IRepository<FollowRequest, string> repository,
         IUserContext userContext,
-        IBackgroundJobClient backgroundJobClient
+        IBackgroundJobClient backgroundJobClient,
+        ISocialGuardService socialGuardService
     ) : IFollowRequestService
     {
         private readonly ApplicationDbContext _dbContext = dbContext;
@@ -31,6 +33,7 @@ namespace platform_core_service.Business.Services
         private readonly IRepository<FollowRequest, string> _repository = repository;
         private readonly IUserContext _userContext = userContext;
         private readonly IBackgroundJobClient _backgroundJobClient = backgroundJobClient;
+        private readonly ISocialGuardService _socialGuardService = socialGuardService;
 
         public async Task<ReturnResult<SelectUserFollow>> ApproveFollowRequest(string requestId)
         {
@@ -46,6 +49,12 @@ namespace platform_core_service.Business.Services
                 }
                 else
                 {
+                    if (await _socialGuardService.IsBlockedRelation(existingFollowRequest.RequesterProfileId, existingFollowRequest.TargetProfileId))
+                    {
+                        returnResult.Message = ResponseMessage.NO_PERMISSION_TO_FOLLOW;
+                        return returnResult;
+                    }
+
                     var alreadyFollowing = await _dbContext.UserFollows
                         .AnyAsync(x => x.OwnerId == existingFollowRequest.RequesterProfileId
                                     && x.FollowingProfileId == existingFollowRequest.TargetProfileId);
@@ -84,8 +93,11 @@ namespace platform_core_service.Business.Services
                                 Timestamp = DateTime.UtcNow,
                             };
 
-                            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
-                                x => x.PublicNotification(notificationEvent, "notifications.follow"));
+                            if (!await _socialGuardService.IsBlockedRelation(_userContext.ProfileId, existingFollowRequest.RequesterProfileId))
+                            {
+                                _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                                    x => x.PublicNotification(notificationEvent, "notifications.follow"));
+                            }
                         }
                         else returnResult.Message = ResponseMessage.MESSAGE_OPERATION_CANT_BE_DONE;
                     }
@@ -165,6 +177,9 @@ namespace platform_core_service.Business.Services
             try
             {
                 var query = _dbContext.FollowRequests.Where(x => x.TargetProfileId == _userContext.ProfileId)
+                                                    .Where(x => !_dbContext.ProfileBlocks.Any(b =>
+                                                        (b.OwnerId == _userContext.ProfileId && b.BlockedProfileId == x.RequesterProfileId) ||
+                                                        (b.OwnerId == x.RequesterProfileId && b.BlockedProfileId == _userContext.ProfileId)))
                                                     .AsNoTracking()
                                                     .Include(x => x.RequesterProfile)
                                                     .AsQueryable();
@@ -185,6 +200,9 @@ namespace platform_core_service.Business.Services
             try
             {
                 var query = _dbContext.FollowRequests.Where(x => x.RequesterProfileId == _userContext.ProfileId)
+                                                    .Where(x => !_dbContext.ProfileBlocks.Any(b =>
+                                                        (b.OwnerId == _userContext.ProfileId && b.BlockedProfileId == x.TargetProfileId) ||
+                                                        (b.OwnerId == x.TargetProfileId && b.BlockedProfileId == _userContext.ProfileId)))
                                                     .AsNoTracking()
                                                     .Include(x => x.TargetProfile)
                                                     .AsQueryable();
@@ -206,6 +224,9 @@ namespace platform_core_service.Business.Services
             {
                 var requests = await _dbContext.FollowRequests
                     .Where(x => requestIds.Contains(x.Id) && x.TargetProfileId == _userContext.ProfileId)
+                    .Where(x => !_dbContext.ProfileBlocks.Any(b =>
+                        (b.OwnerId == _userContext.ProfileId && b.BlockedProfileId == x.RequesterProfileId) ||
+                        (b.OwnerId == x.RequesterProfileId && b.BlockedProfileId == _userContext.ProfileId)))
                     .ToListAsync();
 
                 if (requests.Count == 0)

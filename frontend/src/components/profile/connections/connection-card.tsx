@@ -77,7 +77,7 @@ export function ConnectionCard({
                         variant={actionVariant}
                         onClick={onAction}
                         disabled={actionPending}
-                        className="cursor-pointer text-xs h-8"
+                        className="cursor-pointer"
                     >
                         {actionPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : actionLabel}
                     </Button>
@@ -88,7 +88,7 @@ export function ConnectionCard({
                         variant={secondaryActionVariant}
                         onClick={onSecondaryAction}
                         disabled={secondaryActionPending}
-                        className="cursor-pointer text-xs h-8"
+                        className="cursor-pointer"
                     >
                         {secondaryActionPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : secondaryActionLabel}
                     </Button>

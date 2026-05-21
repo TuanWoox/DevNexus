@@ -87,7 +87,7 @@ export function EditProfileModal({ isOpen, onClose, currentProfile }: EditProfil
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-2xl">
+                    <DialogTitle className="flex items-center gap-2 text-xl">
                         <Settings2 className="w-6 h-6 text-primary" />
                         Edit Profile
                     </DialogTitle>

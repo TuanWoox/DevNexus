@@ -1,16 +1,15 @@
 import coreApi from "@/lib/axiosConfig";
+import { PagedData } from "@/types/common/paged-data";
 import type { ReturnResult } from "@/types/common/return-result";
 import { Page } from "@/types/common/page";
+import { SelectProfileBlockDTO } from "@/types/profile-block/select-profile-block-dto";
+import { SelectBlockStatusDTO } from "@/types/profile-block/select-block-status-dto";
 
-export interface SelectProfileBlock {
-    Id: string;
-    OwnerId: string;
-    BlockedProfileId: string;
-}
+
 
 export const blockService = {
-    blockProfile: async (blockedProfileId: string): Promise<ReturnResult<SelectProfileBlock>> => {
-        const { data } = await coreApi.post<ReturnResult<SelectProfileBlock>>("/ProfileBlocks", { BlockedProfileId: blockedProfileId });
+    blockProfile: async (blockedProfileId: string): Promise<ReturnResult<SelectProfileBlockDTO>> => {
+        const { data } = await coreApi.post<ReturnResult<SelectProfileBlockDTO>>("/ProfileBlocks", { BlockedProfileId: blockedProfileId });
         return data;
     },
 
@@ -19,18 +18,20 @@ export const blockService = {
         return data;
     },
 
-    getMyBlocks: async (): Promise<SelectProfileBlock[]> => {
-        const page: Page<string> = {
-            pageNumber: 0,
-            size: 200,
-            totalElements: 0,
-            filter: [],
-            orders: [],
-            selected: []
-        }
-        const { data } = await coreApi.post<ReturnResult<{ data: SelectProfileBlock[] }>>(
-            "/ProfileBlocks/paging", page
+    getMyBlocksPaged: async (payload: Page<string>): Promise<PagedData<SelectProfileBlockDTO, string>> => {
+        const { data } = await coreApi.post<ReturnResult<PagedData<SelectProfileBlockDTO, string>>>(
+            "/ProfileBlocks/paging",
+            payload
         );
-        return (data.result as any)?.data ?? [];
+        return data.result ?? { data: [], page: payload };
+    },
+
+    getBlockStatus: async (otherProfileId: string): Promise<SelectBlockStatusDTO> => {
+        const { data } = await coreApi.get<ReturnResult<SelectBlockStatusDTO>>(`/ProfileBlocks/status/${otherProfileId}`);
+        return data.result ?? {
+            iBlockedThem: false,
+            blockId: null,
+            theyBlockedMe: false,
+        };
     },
 };

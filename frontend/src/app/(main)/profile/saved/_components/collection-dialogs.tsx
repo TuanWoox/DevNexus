@@ -31,7 +31,7 @@ export const CreateCollectionDialog = ({
         <DialogContent className="sm:max-w-[400px] rounded-2xl shadow-2xl border-border" showCloseButton={false}>
             <DialogHeader>
                 <div className="flex items-center justify-between">
-                    <DialogTitle className="text-xl font-bold tracking-tight">New Collection</DialogTitle>
+                    <DialogTitle className="text-xl font-semibold tracking-tight">New Collection</DialogTitle>
                     <Button
                         variant="ghost"
                         size="icon"

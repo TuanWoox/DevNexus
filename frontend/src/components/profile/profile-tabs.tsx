@@ -4,19 +4,16 @@ interface ProfileTabsProps {
     activeTab: "overview" | "post" | "qa-post" | "saved";
     setActiveTab: (tab: "overview" | "post" | "qa-post" | "saved") => void;
     isOwnProfile: boolean;
-    isPrivate: boolean;
     canViewContent: boolean;
 }
 
-export function ProfileTabs({ activeTab, setActiveTab, isOwnProfile, isPrivate, canViewContent }: ProfileTabsProps) {
+export function ProfileTabs({ activeTab, setActiveTab, isOwnProfile, canViewContent }: ProfileTabsProps) {
     const allTabs = [
         { id: "overview", label: "Overview" },
         { id: "post", label: "Posts" },
         { id: "qa-post", label: "Q&A" },
         { id: "saved", label: "Saved" },
     ];
-
-    const isPrivateAndNotOwner = !isOwnProfile && isPrivate;
 
     const tabs = allTabs.filter(tab => {
         if (tab.id === 'saved' && !isOwnProfile) return false;

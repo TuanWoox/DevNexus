@@ -19,7 +19,7 @@ export const answerService = {
 
     getAnswersByPostId: async (postId: string, payload: Page<string>): Promise<PagedData<SelectAnswerDTO, string>> => {
         const { data } = await api.post<ReturnResult<PagedData<SelectAnswerDTO, string>>>(`/Answers/${postId}/paging`, payload);
-        return data.result;
+        return data.result ?? { data: [], page: payload };
     },
 
     updateAnswer: async (updateAnswerDTO: UpdateAnswerDTO): Promise<SelectAnswerDTO> => {
