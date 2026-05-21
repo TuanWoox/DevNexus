@@ -111,11 +111,27 @@ namespace platform_core_service.Business.Services
                 return new ReturnResult<bool> { Message = "TargetActionReason is required when hiding content." };
             }
 
-            return await _adminPostService.ForceRejectAsync(report.TargetId, new AdminForceRejectPostDTO
+            var result = await _adminPostService.ForceRejectAsync(report.TargetId, new AdminForceRejectPostDTO
             {
                 ReasonText = reasonText,
                 ModeratorNote = $"[Report #{report.Id}] {dto.ModeratorNote ?? "Enforcement via report resolve"}"
             });
+
+            if (result.Result)
+            {
+                await AddReportTargetActionAuditAsync(
+                    report,
+                    ReportTargetAction.HideContent,
+                    $"Content {report.TargetId}",
+                    oldState: null,
+                    newState: new
+                    {
+                        hiddenFromPublic = true,
+                        reason = reasonText
+                    });
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -164,19 +180,18 @@ namespace platform_core_service.Business.Services
                 cascadeDeletedReplies = comment.Replies?.Count ?? 0
             };
 
-            await _adminAuditLogService.AddAsync(AdminAuditLogFactory.ForReportAction(
-                AuditActionType.ReportTargetActionExecuted,
-                report.Id,
+            await AddReportTargetActionAuditAsync(
+                report,
+                ReportTargetAction.DeleteComment,
                 $"Comment on {(string.IsNullOrEmpty(comment.PostId) ? "Answer" : "Post")}",
                 oldState,
                 newState,
-                metadata: new
+                new
                 {
-                    reportId = report.Id,
                     commentId = comment.Id,
-                    targetType = report.TargetType.ToString(),
-                    action = ReportTargetAction.DeleteComment.ToString()
-                }));
+                    postId = comment.PostId,
+                    answerId = comment.AnswerId
+                });
 
             result.Result = true;
             return result;
@@ -223,21 +238,18 @@ namespace platform_core_service.Business.Services
                 wasAccepted = oldState.isAccepted
             };
 
-            await _adminAuditLogService.AddAsync(AdminAuditLogFactory.ForReportAction(
-                AuditActionType.ReportTargetActionExecuted,
-                report.Id,
+            await AddReportTargetActionAuditAsync(
+                report,
+                ReportTargetAction.DeleteAnswer,
                 $"Answer on QAPost {answer.QAPostId}",
                 oldState,
                 newState,
-                metadata: new
+                new
                 {
-                    reportId = report.Id,
                     answerId = answer.Id,
                     qaPostId = answer.QAPostId,
-                    targetType = report.TargetType.ToString(),
-                    action = ReportTargetAction.DeleteAnswer.ToString(),
                     wasAccepted = oldState.isAccepted
-                }));
+                });
 
             result.Result = true;
             return result;
@@ -265,9 +277,56 @@ namespace platform_core_service.Business.Services
                 return new ReturnResult<bool> { Message = "SuspendDays must be between 1 and 365 when suspending a user from report enforcement." };
             }
 
-            return await _adminUserService.SuspendUserAsync(
+            var result = await _adminUserService.SuspendUserAsync(
                 report.TargetOwnerId,
                 new AdminSuspendUserDTO { DaySuspend = dto.SuspendDays });
+
+            if (result.Result)
+            {
+                await AddReportTargetActionAuditAsync(
+                    report,
+                    ReportTargetAction.SuspendUser,
+                    $"Profile {report.TargetOwnerId}",
+                    oldState: null,
+                    newState: new
+                    {
+                        suspended = true,
+                        durationDays = dto.SuspendDays
+                    },
+                    actionMetadata: new
+                    {
+                        durationDays = dto.SuspendDays
+                    });
+            }
+
+            return result;
+        }
+
+        private async Task AddReportTargetActionAuditAsync(
+            ModerationReport report,
+            ReportTargetAction action,
+            string targetDisplayName,
+            object? oldState,
+            object? newState,
+            object? actionMetadata = null)
+        {
+            await _adminAuditLogService.AddAsync(AdminAuditLogFactory.ForReportAction(
+                AuditActionType.ReportTargetActionExecuted,
+                report.Id,
+                targetDisplayName,
+                oldState,
+                newState,
+                metadata: new
+                {
+                    reportId = report.Id,
+                    targetAction = action.ToString(),
+                    targetType = report.TargetType.ToString(),
+                    targetId = report.TargetId,
+                    targetOwnerId = report.TargetOwnerId,
+                    affectedEntityType = report.TargetType.ToString(),
+                    affectedEntityId = report.TargetId,
+                    actionMetadata
+                }));
         }
     }
 }
