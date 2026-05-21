@@ -177,66 +177,78 @@ namespace platform_core_service.Business.Services
             var result = new ReturnResult<AdminReportDetailDTO>();
             try
             {
-                var report = await GetMutableReportAsync(id);
-                if (report == null)
+                var strategy = _context.Database.CreateExecutionStrategy();
+                await strategy.ExecuteAsync(async () =>
                 {
-                    result.Message = $"Report {id} not found";
-                    return result;
-                }
+                    var report = await GetMutableReportAsync(id);
+                    if (report == null)
+                    {
+                        result.Message = $"Report {id} not found";
+                        return;
+                    }
 
-                var authorizationMessage = await ValidateCanMutateAsync(report, allowEscalateStaffSensitive: false);
-                if (authorizationMessage != null)
-                {
-                    result.Message = authorizationMessage;
-                    return result;
-                }
+                    var authorizationMessage = await ValidateCanMutateAsync(report, allowEscalateStaffSensitive: false);
+                    if (authorizationMessage != null)
+                    {
+                        result.Message = authorizationMessage;
+                        return;
+                    }
 
-                var transitionMessage = ValidateCloseTransition(report, "resolve");
-                if (transitionMessage != null)
-                {
-                    result.Message = transitionMessage;
-                    return result;
-                }
+                    var transitionMessage = ValidateCloseTransition(report, "resolve");
+                    if (transitionMessage != null)
+                    {
+                        result.Message = transitionMessage;
+                        return;
+                    }
 
-                // TargetAction validation: only allowed with ViolationConfirmed
-                var effectiveAction = dto.TargetAction ?? ReportTargetAction.None;
-                if (effectiveAction != ReportTargetAction.None &&
-                    dto.Resolution != ReportResolution.ViolationConfirmed)
-                {
-                    result.Message = "TargetAction can only be used with ViolationConfirmed resolution.";
-                    return result;
-                }
+                    // TargetAction validation: only allowed with ViolationConfirmed
+                    var effectiveAction = dto.TargetAction ?? ReportTargetAction.None;
+                    if (effectiveAction != ReportTargetAction.None &&
+                        dto.Resolution != ReportResolution.ViolationConfirmed)
+                    {
+                        result.Message = "TargetAction can only be used with ViolationConfirmed resolution.";
+                        return;
+                    }
 
-                await using var transaction = await _context.Database.BeginTransactionAsync();
+                    await using var transaction = await _context.Database.BeginTransactionAsync();
 
-                // Execute TargetAction BEFORE closing the report so failure keeps report unresolved.
-                if (effectiveAction != ReportTargetAction.None)
-                {
-                    var actionResult = await _targetActionExecutor.ExecuteAsync(report, effectiveAction, dto);
-                    if (!actionResult.Result)
+                    try
+                    {
+                        // Execute TargetAction BEFORE closing the report so failure keeps report unresolved.
+                        if (effectiveAction != ReportTargetAction.None)
+                        {
+                            var actionResult = await _targetActionExecutor.ExecuteAsync(report, effectiveAction, dto);
+                            if (!actionResult.Result)
+                            {
+                                await transaction.RollbackAsync();
+                                result.Message = actionResult.Message ?? "Target action execution failed.";
+                                return;
+                            }
+                        }
+
+                        var oldState = BuildAuditState(report);
+                        report.Status = ReportStatus.Resolved;
+                        report.AssignedModeratorId ??= _userContext.ProfileId;
+                        report.ModeratorNote = NormalizeNote(dto?.ModeratorNote) ?? report.ModeratorNote;
+                        report.Resolution = dto.Resolution;
+                        report.ResolutionNote = NormalizeNote(dto?.ResolutionNote);
+                        report.ResolvedById = _userContext.ProfileId;
+                        report.ResolvedAt = DateTimeOffset.UtcNow;
+                        report.TargetAction = effectiveAction;
+
+                        await AddReportAuditAsync(AuditActionType.ReportResolved, report, oldState, BuildAuditState(report), dto?.ResolutionNote);
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+
+                        result = await GetByIdAsync(id);
+                        result.Message = "Report resolved successfully.";
+                    }
+                    catch
                     {
                         await transaction.RollbackAsync();
-                        result.Message = actionResult.Message ?? "Target action execution failed.";
-                        return result;
+                        throw;
                     }
-                }
-
-                var oldState = BuildAuditState(report);
-                report.Status = ReportStatus.Resolved;
-                report.AssignedModeratorId ??= _userContext.ProfileId;
-                report.ModeratorNote = NormalizeNote(dto?.ModeratorNote) ?? report.ModeratorNote;
-                report.Resolution = dto.Resolution;
-                report.ResolutionNote = NormalizeNote(dto?.ResolutionNote);
-                report.ResolvedById = _userContext.ProfileId;
-                report.ResolvedAt = DateTimeOffset.UtcNow;
-                report.TargetAction = effectiveAction;
-
-                await AddReportAuditAsync(AuditActionType.ReportResolved, report, oldState, BuildAuditState(report), dto?.ResolutionNote);
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                result = await GetByIdAsync(id);
-                result.Message = "Report resolved successfully.";
+                });
             }
             catch (Exception ex)
             {
