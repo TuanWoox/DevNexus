@@ -12,10 +12,10 @@ import { ProfileHoverCardActions } from './profile-hover-card-actions';
 import { useOpenChatByProfile } from '@/features/messages/hooks/chats/use-open-chat-by-profile';
 
 export interface ProfileHoverCardAuthor {
-    fullName?: string;
-    avatarUrl?: string;
-    backgroundUrl?: string;
-    bio?: string;
+    fullName?: string | null;
+    avatarUrl?: string | null;
+    backgroundUrl?: string | null;
+    bio?: string | null;
     reputationPoints?: number;
     techStacks?: string[];
     isPrivate?: boolean;
@@ -25,18 +25,6 @@ interface ProfileHoverCardContentProps {
     profileId: string;
     author?: ProfileHoverCardAuthor;
     onClose?: () => void;
-}
-
-function getInitials(fullName?: string): string {
-    if (!fullName?.trim()) return 'U';
-
-    return fullName
-        .trim()
-        .split(/\s+/)
-        .map((word) => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
 }
 
 export function ProfileHoverCardContent({
@@ -95,8 +83,15 @@ export function ProfileHoverCardContent({
                 <div className="-mt-7 flex items-end gap-3">
                     <Avatar className="h-14 w-14 border-2 border-popover ring-2 ring-border">
                         <AvatarImage src={avatarUrl} alt={fullName} />
-                        <AvatarFallback className="bg-primary/10 text-base font-semibold text-primary">
-                            {getInitials(fullName)}
+                        <AvatarFallback className="bg-muted p-0">
+                            <Image
+                                src="/images/default-avatar.webp"
+                                alt={fullName}
+                                width={56}
+                                height={56}
+                                unoptimized
+                                className="h-full w-full rounded-full object-cover"
+                            />
                         </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1 pb-1">

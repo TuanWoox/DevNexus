@@ -15,7 +15,7 @@ namespace platform_core_service.Business.Services
 {
     public class CommunityPostReportService : BaseCommunityContentReportService<Post, CommunityPostsReport, SelectCommunityPostsReportDTO>, ICommunityContentReportService
     {
-        public CommunityPostReportService(ApplicationDbContext context, IUserContext userContext, IRepository<CommunityPostsReport, string> repository, ISocialGuardService socialGuardService) : base(context, userContext, repository, socialGuardService)
+        public CommunityPostReportService(ApplicationDbContext context, IUserContext userContext, IRepository<CommunityPostsReport, string> repository, ISocialGuardService socialGuardService, ICommunityBanService banService) : base(context, userContext, repository, socialGuardService, banService)
         {
         }
 
@@ -49,19 +49,33 @@ namespace platform_core_service.Business.Services
         protected override IQueryable<CommunityPostsReport> BuildQueryForPaging(string communityId, string? userId)
         {
             var query = _context.CommunityPostsReports
+                .ApplyCommunityReportDashboardQuery(communityId, userId)
                 .Include(r => r.Post)
                 .Include(r => r.Community)
                 .Include(r => r.Reporter)
                 .Include(r => r.ReportedProfile)
-                .Include(r => r.ResolvedBy)
-                .Where(r => r.CommunityId == communityId);
-
-            if (!string.IsNullOrEmpty(userId))
-            {
-                query = query.Where(r => r.ReporterId == userId);
-            }
+                .Include(r => r.ResolvedBy);
 
             return query;
+        }
+
+        protected override string GetContentIdFromReport(CommunityPostsReport report)
+            => report.PostId;
+
+        protected override async Task<List<CommunityPostsReport>> GetAllPendingReportsForContent(string contentId, string communityId)
+            => await _context.CommunityPostsReports
+                .Where(r => r.PostId == contentId
+                    && r.CommunityId == communityId
+                    && r.Status == Common.Utils.Enums.ReportStatus.Pending
+                    && r.ResolutionAction == Common.Utils.Enums.ReportResolutionAction.None)
+                .ToListAsync();
+
+        protected override Task SoftDeleteContent(Post content)
+        {
+            content.Deleted = true;
+            content.DateDeleted = DateTimeOffset.UtcNow;
+            _context.Posts.Update(content);
+            return Task.CompletedTask;
         }
     }
 }

@@ -16,6 +16,18 @@ import { ProfileHoverCard } from '@/components/profile/profile-hover-card';
 import { ContentType } from '@/types/content-media/content-type';
 import { useUploadContentMedia } from '@/hooks/media/useUploadContentMedia';
 import { ContentHistoryOverlay, ContentHistoryKind } from '@/components/history/content-history-overlay';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { useCreateCommunityContentReport } from '@/hooks/community-content-report-hooks/use-create-community-content-report';
+import { toast } from 'sonner';
 
 export interface ReplyAuthor {
     fullName: string;
@@ -45,6 +57,7 @@ export interface BaseReplyItemProps {
     onUpdate: (newContent: string, mediaIds: string[], onSuccess: () => void) => void;
     isUpdating: boolean;
     isDisabled?: boolean;
+    communityId?: string | null;
     isAccepted?: boolean;
     onAccept?: () => void;
     canAccept?: boolean;
@@ -73,6 +86,7 @@ export function BaseReplyItem({
     onUpdate,
     isUpdating,
     isDisabled,
+    communityId,
     isAccepted,
     onAccept,
     canAccept,
@@ -85,9 +99,14 @@ export function BaseReplyItem({
     const isAuthor = authorId === currentUserId;
     const [isEditing, setIsEditing] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [isReportOpen, setIsReportOpen] = useState(false);
+    const [reportReason, setReportReason] = useState('');
     const [editContent, setEditContent] = useState(content);
     const editorRef = useRef<MarkdownEditorHandle>(null);
     const { uploadPendingMedia, isUploading: isUploadingMedia, progress: uploadProgress } = useUploadContentMedia();
+    const reportMutation = useCreateCommunityContentReport();
+    const canReportToCommunity = Boolean(communityId) && !isAuthor && !isDisabled;
+    const isReportReasonValid = reportReason.trim().length >= 5 && reportReason.trim().length <= 500;
 
     const handleSubmit = async () => {
         if (!editContent.trim() || editContent === '\n') return; // '\n' is newline char, not literal backslash-n
@@ -120,8 +139,33 @@ export function BaseReplyItem({
     };
 
     const historyType: ContentHistoryKind = contentType === ContentType.Answer ? "answer" : "comment";
+    const contentLabel = contentType === ContentType.Answer ? "answer" : "comment";
+
+    const handleSubmitReport = () => {
+        if (!communityId || !isReportReasonValid) return;
+
+        reportMutation.mutate(
+            {
+                communityId,
+                payload: {
+                    contentId: id,
+                    contentType,
+                    reason: reportReason.trim(),
+                },
+            },
+            {
+                onSuccess: (created) => {
+                    if (created) {
+                        setReportReason('');
+                        setIsReportOpen(false);
+                    }
+                },
+            }
+        );
+    };
 
     return (
+        <>
         <div className="flex gap-3 sm:gap-4 group">
             <ProfileHoverCard profileId={authorId} author={author}>
                 <Link href={`/profile/${authorId}`} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-secondary shrink-0 overflow-hidden border border-default relative">
@@ -253,10 +297,24 @@ export function BaseReplyItem({
                                         <UserPlus className="w-4 h-4" />
                                         <span>Follow User</span>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem variant='destructive' className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium">
+                                    <DropdownMenuItem
+                                        onClick={() => toast.info("Site report flow coming soon.")}
+                                        variant='destructive'
+                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
+                                    >
                                         <Flag className="w-4 h-4" />
-                                        <span>Report</span>
+                                        <span>Report to Site</span>
                                     </DropdownMenuItem>
+                                    {canReportToCommunity && (
+                                        <DropdownMenuItem
+                                            onClick={() => setIsReportOpen(true)}
+                                            variant='destructive'
+                                            className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
+                                        >
+                                            <Flag className="w-4 h-4" />
+                                            <span>Report to Community</span>
+                                        </DropdownMenuItem>
+                                    )}
                                 </>
                             )}
                             {!isDisabled && (
@@ -309,5 +367,53 @@ export function BaseReplyItem({
                 onClose={() => setIsHistoryOpen(false)}
             />
         </div>
+        <Dialog
+            open={isReportOpen}
+            onOpenChange={(open) => {
+                if (!reportMutation.isPending) setIsReportOpen(open);
+            }}
+        >
+            <DialogContent onClick={(e) => e.stopPropagation()}>
+                <DialogHeader>
+                    <DialogTitle>Report to community</DialogTitle>
+                    <DialogDescription>
+                        Send this {contentLabel} to community moderators for review.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-2">
+                    <Textarea
+                        value={reportReason}
+                        onChange={(event) => setReportReason(event.target.value)}
+                        maxLength={500}
+                        placeholder="Describe the issue..."
+                        className="min-h-28 resize-none"
+                        disabled={reportMutation.isPending}
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Minimum 5 characters.</span>
+                        <span>{reportReason.trim().length}/500</span>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        disabled={reportMutation.isPending}
+                        onClick={() => setIsReportOpen(false)}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        disabled={!isReportReasonValid || reportMutation.isPending}
+                        onClick={handleSubmitReport}
+                    >
+                        {reportMutation.isPending ? "Submitting..." : "Submit Report"}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        </>
     );
 }

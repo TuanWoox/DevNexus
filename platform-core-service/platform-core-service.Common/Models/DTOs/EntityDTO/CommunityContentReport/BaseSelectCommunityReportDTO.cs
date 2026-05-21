@@ -27,6 +27,11 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.CommunityContentRep
         public string Id { get; set; } = null!;
         public string FullName { get; set; } = null!;
         public string? AvatarUrl { get; set; }
+        public string? BackgroundUrl { get; set; }
+        public string? Bio { get; set; }
+        public int ReputationPoints { get; set; }
+        public List<string> TechStacks { get; set; } = [];
+        public bool IsPrivate { get; set; }
     }
 
     public class SelectCommunityReportCommunityDTO

@@ -13,7 +13,7 @@ import { CommentInput } from './comment-input';
 import { CommentItem } from './comment-item';
 import { SelectCommentDTO } from '@/types/comment/select-comment-dto';
 
-export function AnswerItem({ answer, currentUserId, currentUserAvatar, isDisabled, isQuestionAuthor }: { answer: SelectAnswerDTO, currentUserId: string, currentUserAvatar?: string, isDisabled?: boolean, isQuestionAuthor?: boolean }) {
+export function AnswerItem({ answer, currentUserId, currentUserAvatar, isDisabled, isQuestionAuthor, communityId }: { answer: SelectAnswerDTO, currentUserId: string, currentUserAvatar?: string, isDisabled?: boolean, isQuestionAuthor?: boolean, communityId?: string | null }) {
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByAnswerId(answer.id);
     const { mutate: deleteAnswer, isPending: isDeletingAnswer } = useDeleteAnswerById();
     const { mutate: updateAnswer, isPending: isUpdatingAnswer } = useUpdateAnswer();
@@ -43,6 +43,7 @@ export function AnswerItem({ answer, currentUserId, currentUserAvatar, isDisable
                 }}
                 isUpdating={isUpdatingAnswer}
                 isDisabled={isDisabled}
+                communityId={communityId}
                 isAccepted={answer.isAccepted}
                 onAccept={() => acceptAnswer(answer.id)}
                 canAccept={isQuestionAuthor && !answer.isAccepted}
@@ -68,6 +69,7 @@ export function AnswerItem({ answer, currentUserId, currentUserAvatar, isDisable
                             currentUserId={currentUserId}
                             currentUserAvatar={currentUserAvatar}
                             isDisabled={isDisabled}
+                            communityId={communityId}
                         />
                     ))}
                 </div>

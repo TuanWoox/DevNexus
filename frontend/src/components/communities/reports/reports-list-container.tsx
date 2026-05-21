@@ -17,11 +17,13 @@ import { FilterOperator } from "@/constants/filterOperator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ShieldAlert, User, Search } from "lucide-react";
+import { ShieldAlert, User, Search, Filter } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ReportFilterPanel } from "./report-filter-panel";
 import { ReportTable } from "./report-table";
 import { ReportInspectDrawer } from "./report-inspect-drawer";
 import { ReportPagination } from "./report-pagination";
+import { ReportActionDialog } from "./report-action-dialog";
 
 interface ReportsListContainerProps {
     community: SelectCommunityDTO;
@@ -47,6 +49,7 @@ export function ReportsListContainer({ community }: ReportsListContainerProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [appliedSearch, setAppliedSearch] = useState("");
     const [selectedReport, setSelectedReport] = useState<AnyCommunityReportDTO | null>(null);
+    const [actionReport, setActionReport] = useState<AnyCommunityReportDTO | null>(null);
     const [sortField, setSortField] = useState<string>("DateCreated");
     const [sortDir, setSortDir] = useState<SortOrderType>(SortOrderType.DESC);
 
@@ -110,12 +113,14 @@ export function ReportsListContainer({ community }: ReportsListContainerProps) {
         setContentType(Number(typeVal) as ContentType);
         setPageNumber(0);
         setSelectedReport(null);
+        setActionReport(null);
     };
 
     const handleStatusFilterChange = (statusVal: ReportStatus | "ALL") => {
         setStatusFilter(statusVal);
         setPageNumber(0);
         setSelectedReport(null);
+        setActionReport(null);
     };
 
     const handleSortFieldChange = (field: string) => {
@@ -196,8 +201,8 @@ export function ReportsListContainer({ community }: ReportsListContainerProps) {
                 {/* Right: Search + Table + Pagination — scrolls independently */}
                 <div className="flex flex-col overflow-hidden">
                     {/* Search bar — pinned at top of right pane */}
-                    <div className="shrink-0 flex items-center gap-3 px-5 py-3.5 border-b border-border bg-muted/25">
-                        <form onSubmit={handleSearchSubmit} className="flex gap-2 flex-1 max-w-xl">
+                    <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-3.5 border-b border-border bg-muted/25">
+                        <form onSubmit={handleSearchSubmit} className="flex gap-2 flex-1 w-full sm:max-w-xl">
                             <div className="relative flex-1">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
@@ -213,21 +218,97 @@ export function ReportsListContainer({ community }: ReportsListContainerProps) {
                                 type="submit"
                                 variant="outline"
                                 size="sm"
-                                className="h-9 rounded-lg px-4 border-border bg-card hover:bg-primary/5 hover:border-primary/50 hover:text-primary text-xs font-semibold cursor-pointer transition-all gap-1.5 shadow-sm"
+                                className="h-9 rounded-lg px-3 sm:px-4 border-border bg-card hover:bg-primary/5 hover:border-primary/50 hover:text-primary text-xs font-semibold cursor-pointer transition-all gap-1.5 shadow-sm shrink-0"
                             >
                                 <Search className="h-3.5 w-3.5" />
-                                Search
+                                <span className="hidden sm:inline">Search</span>
                             </Button>
                         </form>
 
-                        {/* Mobile: filter summary pills */}
+                        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto shrink-0">
+                            {/* Mobile/Tablet Filter Button: opens Sheet */}
+                            <div className="xl:hidden flex items-center shrink-0">
+                                <Sheet>
+                                    <SheetTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-9 rounded-lg border-border bg-card hover:bg-muted/60 text-xs font-semibold cursor-pointer transition-all gap-1.5 shadow-sm"
+                                        >
+                                            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                                            Filters
+                                        </Button>
+                                    </SheetTrigger>
+                                    <SheetContent side="right" className="w-[300px] p-0 overflow-y-auto">
+                                        <div className="p-4 border-b border-border bg-muted/20">
+                                            <h3 className="text-sm font-bold text-foreground">Filters & Sorting</h3>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">Filter reports in this community</p>
+                                        </div>
+                                        <ReportFilterPanel
+                                            contentType={contentType}
+                                            onContentTypeChange={handleContentTypeChange}
+                                            statusFilter={statusFilter}
+                                            onStatusFilterChange={handleStatusFilterChange}
+                                            searchQuery={searchQuery}
+                                            setSearchQuery={setSearchQuery}
+                                            onSearchSubmit={handleSearchSubmit}
+                                            sortField={sortField}
+                                            onSortFieldChange={handleSortFieldChange}
+                                            sortDir={sortDir}
+                                            onSortDirChange={handleSortDirChange}
+                                        />
+                                    </SheetContent>
+                                </Sheet>
+                            </div>
+
+                            {/* Mobile: filter summary pills */}
+                            {statusFilter !== "ALL" && (
+                                <Badge
+                                    variant="outline"
+                                    className="text-[11px] border-primary/30 bg-primary/5 text-primary"
+                                >
+                                    {statusFilter}
+                                </Badge>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Active Filter Badges Row (Visible on all viewports below xl, highly helpful on mobile/tablet) */}
+                    <div className="shrink-0 flex flex-wrap items-center gap-1.5 px-5 pb-3 bg-muted/25 border-b border-border xl:hidden">
+                        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider mr-1">Active:</span>
+                        
+                        {/* Content Type Badge */}
+                        <Badge variant="secondary" className="text-[10px] font-semibold gap-1 rounded-md px-2 py-0.5 bg-primary/5 text-primary border border-primary/20">
+                            Type: {contentType === ContentType.Post ? "Posts" : contentType === ContentType.QA ? "Q&As" : contentType === ContentType.Answer ? "Answers" : "Comments"}
+                        </Badge>
+
+                        {/* Status Badge */}
                         {statusFilter !== "ALL" && (
-                            <Badge
-                                variant="outline"
-                                className="hidden sm:inline-flex text-[11px] border-primary/30 bg-primary/5 text-primary"
-                            >
-                                {statusFilter}
+                            <Badge variant="secondary" className="text-[10px] font-semibold gap-1 rounded-md px-2 py-0.5 bg-amber-500/5 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                Status: {statusFilter === ReportStatus.Pending ? "Pending" : statusFilter === ReportStatus.Resolved ? "Resolved" : "Rejected"}
+                                <button onClick={() => handleStatusFilterChange("ALL")} className="hover:text-foreground cursor-pointer transition-colors font-bold ml-1 font-mono">×</button>
                             </Badge>
+                        )}
+
+                        {/* Sort Badge */}
+                        <Badge variant="secondary" className="text-[10px] font-semibold gap-1 rounded-md px-2 py-0.5 bg-slate-500/5 text-slate-600 dark:text-slate-400 border border-slate-500/20">
+                            Sort: {sortField === "DateCreated" ? "Date" : sortField} ({sortDir === SortOrderType.ASC ? "ASC" : "DESC"})
+                            <button onClick={() => { setSortField("DateCreated"); setSortDir(SortOrderType.DESC); }} className="hover:text-foreground cursor-pointer transition-colors font-bold ml-1 font-mono">×</button>
+                        </Badge>
+                        
+                        {/* Reset Filters button */}
+                        {(statusFilter !== "ALL" || sortField !== "DateCreated" || sortDir !== SortOrderType.DESC) && (
+                            <button 
+                                onClick={() => {
+                                    setStatusFilter("ALL");
+                                    setSortField("DateCreated");
+                                    setSortDir(SortOrderType.DESC);
+                                    setPageNumber(0);
+                                }}
+                                className="text-[10px] text-primary hover:underline cursor-pointer font-bold ml-1"
+                            >
+                                Reset Filters
+                            </button>
                         )}
                     </div>
 
@@ -237,7 +318,9 @@ export function ReportsListContainer({ community }: ReportsListContainerProps) {
                             reports={reports}
                             contentType={contentType}
                             isLoading={isLoading}
+                            isModeratorOrOwner={isModeratorOrOwner}
                             onInspect={setSelectedReport}
+                            onAction={setActionReport}
                         />
                     </div>
 
@@ -258,7 +341,16 @@ export function ReportsListContainer({ community }: ReportsListContainerProps) {
             <ReportInspectDrawer
                 report={selectedReport}
                 contentType={contentType}
+                isModeratorOrOwner={isModeratorOrOwner}
+                communityId={community.id}
                 onClose={() => setSelectedReport(null)}
+            />
+            <ReportActionDialog
+                open={!!actionReport}
+                report={actionReport}
+                contentType={contentType}
+                communityId={community.id}
+                onClose={() => setActionReport(null)}
             />
         </div>
     );

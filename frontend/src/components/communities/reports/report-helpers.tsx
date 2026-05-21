@@ -165,14 +165,14 @@ export function getResolutionActionLabel(action: ReportResolutionAction): string
     switch (action) {
         case ReportResolutionAction.None:
             return "None";
-        case ReportResolutionAction.Rejected:
+        case ReportResolutionAction.Reject:
             return "Report Rejected";
-        case ReportResolutionAction.RemovedContent:
+        case ReportResolutionAction.RemoveContent:
             return "Content Removed";
-        case ReportResolutionAction.MutedUser:
-            return "User Muted";
-        case ReportResolutionAction.BannedUser:
-            return "User Banned";
+        case ReportResolutionAction.RemoveContentAndMute:
+            return "Content Removed and User Muted";
+        case ReportResolutionAction.RemoveContentAndBan:
+            return "Content Removed and User Banned";
         case ReportResolutionAction.PenalizeReporter:
             return "Reporter Penalized";
         default:

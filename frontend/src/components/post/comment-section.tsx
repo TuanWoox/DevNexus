@@ -58,6 +58,7 @@ export default function CommentSection({ postId, isQAPost }: Props) {
     const { data: qaPost } = useGetQAPostById(postId, isQAPost);
     const { data: normalPost } = useGetPostById(postId, !isQAPost);
     const post = isQAPost ? qaPost : normalPost;
+    const communityId = post?.communityId;
 
     const moderationStatus = normalizeModerationStatus(post?.moderationStatus);
     const isApproved = moderationStatus === "Approved";
@@ -140,6 +141,7 @@ export default function CommentSection({ postId, isQAPost }: Props) {
                                 currentUserAvatar={userProfile?.avatarUrl}
                                 isDisabled={!isApproved}
                                 isQuestionAuthor={post?.authorId === user?.profileId}
+                                communityId={communityId}
                             />
                         ) : (
                             <CommentItem
@@ -148,6 +150,7 @@ export default function CommentSection({ postId, isQAPost }: Props) {
                                 currentUserId={user?.profileId as string}
                                 currentUserAvatar={userProfile?.avatarUrl}
                                 isDisabled={!isApproved}
+                                communityId={communityId}
                             />
                         )
                     ))}

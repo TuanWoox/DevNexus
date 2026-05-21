@@ -14,7 +14,7 @@ namespace platform_core_service.Business.Services
 {
     public class CommunityCommentReportService : BaseCommunityContentReportService<Comment, CommunityCommentsReport, SelectCommunityCommentsReportDTO>, ICommunityContentReportService
     {
-        public CommunityCommentReportService(ApplicationDbContext context, IUserContext userContext, IRepository<CommunityCommentsReport, string> repository, ISocialGuardService socialGuardService) : base(context, userContext, repository, socialGuardService)
+        public CommunityCommentReportService(ApplicationDbContext context, IUserContext userContext, IRepository<CommunityCommentsReport, string> repository, ISocialGuardService socialGuardService, ICommunityBanService banService) : base(context, userContext, repository, socialGuardService, banService)
         {
         }
 
@@ -32,22 +32,27 @@ namespace platform_core_service.Business.Services
 
         protected override async Task<Comment?> GetEntity(string contentId, string communityId)
         {
+            var visiblePostIds = _context.Posts
+                .Where(p => p.CommunityId == communityId)
+                .ApplyPostVisibilityRules(_context, _userContext.ProfileId)
+                .Select(p => p.Id);
+
+            var visibleQAPostIds = _context.Posts
+                .OfType<QAPost>()
+                .Where(q => q.CommunityId == communityId)
+                .ApplyQAPostVisibilityRules(_context, _userContext.ProfileId)
+                .Select(q => q.Id);
+
             var commentQuery = _context.Comments
-                .Where(x => x.Id == contentId)
+                .Where(x => x.Id == contentId && !x.Deleted)
                 .Where(x =>
                     (!string.IsNullOrEmpty(x.PostId)
-                        && x.Post!.CommunityId == communityId
-                        && _context.Posts
-                            .Where(p => p.Id == x.PostId)
-                            .ApplyPostVisibilityRules(_context, _userContext.ProfileId)
-                            .Any())
+                        && visiblePostIds.Contains(x.PostId))
                     || (!string.IsNullOrEmpty(x.AnswerId)
-                        && x.Answer!.QAPost.CommunityId == communityId
-                        && _context.Posts
-                            .OfType<QAPost>()
-                            .Where(q => q.Id == x.Answer.QAPostId)
-                            .ApplyQAPostVisibilityRules(_context, _userContext.ProfileId)
-                            .Any()));
+                        && _context.Answers.Any(a =>
+                            a.Id == x.AnswerId
+                            && !a.Deleted
+                            && visibleQAPostIds.Contains(a.QAPostId))));
 
             return await commentQuery.FirstOrDefaultAsync();
         }
@@ -60,6 +65,7 @@ namespace platform_core_service.Business.Services
         protected override IQueryable<CommunityCommentsReport> BuildQueryForPaging(string communityId, string? userId)
         {
             var query = _context.CommunityCommentsReports
+                .ApplyCommunityReportDashboardQuery(communityId, userId)
                 .Include(r => r.Comment)
                     .ThenInclude(c => c.Post)
                 .Include(r => r.Comment)
@@ -68,15 +74,28 @@ namespace platform_core_service.Business.Services
                 .Include(r => r.Community)
                 .Include(r => r.Reporter)
                 .Include(r => r.ReportedProfile)
-                .Include(r => r.ResolvedBy)
-                .Where(r => r.CommunityId == communityId);
-
-            if (!string.IsNullOrEmpty(userId))
-            {
-                query = query.Where(r => r.ReporterId == userId);
-            }
+                .Include(r => r.ResolvedBy);
 
             return query;
+        }
+
+        protected override string GetContentIdFromReport(CommunityCommentsReport report)
+            => report.CommentId;
+
+        protected override async Task<List<CommunityCommentsReport>> GetAllPendingReportsForContent(string contentId, string communityId)
+            => await _context.CommunityCommentsReports
+                .Where(r => r.CommentId == contentId
+                    && r.CommunityId == communityId
+                    && r.Status == Common.Utils.Enums.ReportStatus.Pending
+                    && r.ResolutionAction == Common.Utils.Enums.ReportResolutionAction.None)
+                .ToListAsync();
+
+        protected override Task SoftDeleteContent(Comment content)
+        {
+            content.Deleted = true;
+            content.DateDeleted = DateTimeOffset.UtcNow;
+            _context.Comments.Update(content);
+            return Task.CompletedTask;
         }
     }
 }

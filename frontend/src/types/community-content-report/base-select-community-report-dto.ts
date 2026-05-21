@@ -5,6 +5,11 @@ export interface SelectCommunityReportProfileDTO {
     id: string;
     fullName: string;
     avatarUrl?: string | null;
+    backgroundUrl?: string | null;
+    bio?: string | null;
+    reputationPoints?: number;
+    techStacks?: string[];
+    isPrivate?: boolean;
 }
 
 export interface SelectCommunityReportCommunityDTO {

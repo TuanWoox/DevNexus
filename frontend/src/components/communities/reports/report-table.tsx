@@ -4,21 +4,34 @@ import React from "react";
 import { ContentType } from "@/types/content-media/content-type";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertTriangle, Eye } from "lucide-react";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Loader2, AlertTriangle, Eye, MoreHorizontal, ShieldAlert } from "lucide-react";
 import Image from "next/image";
 import { AnyCommunityReportDTO } from "./reports-list-container";
-import { getReportContentDetails, getStatusBadge } from "./report-helpers";
+import { getReportContentDetails, getResolutionActionLabel, getStatusBadge } from "./report-helpers";
+import { ReportStatus } from "@/types/community-content-report/report-status";
+import { ReportResolutionAction } from "@/types/community-content-report/report-resolution-action";
+import { ProfileHoverCard } from "@/components/profile/profile-hover-card";
+
+const DEFAULT_AVATAR_URL = "/images/default-avatar.webp";
 
 interface ReportTableProps {
     reports: AnyCommunityReportDTO[];
     contentType: ContentType;
     isLoading: boolean;
+    isModeratorOrOwner: boolean;
     onInspect: (report: AnyCommunityReportDTO) => void;
+    onAction: (report: AnyCommunityReportDTO) => void;
 }
 
-export function ReportTable({ reports, contentType, isLoading, onInspect }: ReportTableProps) {
+export function ReportTable({ reports, contentType, isLoading, isModeratorOrOwner, onInspect, onAction }: ReportTableProps) {
     return (
-        <div className="rounded-lg border border-border overflow-hidden bg-card shadow-sm">
+        <div className="rounded-lg border border-border overflow-x-auto bg-card shadow-sm">
             {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-4">
                     <div className="relative">
@@ -81,29 +94,27 @@ export function ReportTable({ reports, contentType, isLoading, onInspect }: Repo
                                     >
                                         {/* Reporter */}
                                         <TableCell className="py-4 pl-5">
-                                            <div className="flex items-center gap-3">
-                                                <div className="relative w-8 h-8 rounded-full border border-border/50 bg-muted shrink-0 overflow-hidden flex items-center justify-center text-xs font-semibold text-muted-foreground">
-                                                    {report.reporter?.avatarUrl ? (
+                                            <ProfileHoverCard profileId={report.reporterId} author={report.reporter ?? undefined}>
+                                                <div className="flex items-center gap-3 cursor-pointer">
+                                                    <div className="relative w-8 h-8 rounded-full border border-border/50 bg-muted shrink-0 overflow-hidden">
                                                         <Image
-                                                            src={report.reporter.avatarUrl}
-                                                            alt={report.reporter.fullName || "Reporter"}
+                                                            src={report.reporter?.avatarUrl || DEFAULT_AVATAR_URL}
+                                                            alt={report.reporter?.fullName || "Reporter"}
                                                             fill
                                                             unoptimized
                                                             className="object-cover"
                                                         />
-                                                    ) : (
-                                                        (report.reporter?.fullName ?? "?")[0].toUpperCase()
-                                                    )}
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium text-xs text-foreground max-w-[120px] truncate hover:text-primary">
+                                                            {report.reporter?.fullName || "Anonymous"}
+                                                        </span>
+                                                        <span className="text-[10px] text-muted-foreground">
+                                                            Reporter
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium text-xs text-foreground max-w-[120px] truncate">
-                                                        {report.reporter?.fullName || "Anonymous"}
-                                                    </span>
-                                                    <span className="text-[10px] text-muted-foreground">
-                                                        Reporter
-                                                    </span>
-                                                </div>
-                                            </div>
+                                            </ProfileHoverCard>
                                         </TableCell>
 
                                         {/* Reported Content */}
@@ -127,7 +138,14 @@ export function ReportTable({ reports, contentType, isLoading, onInspect }: Repo
 
                                         {/* Status */}
                                         <TableCell className="py-4">
-                                            {getStatusBadge(report.status)}
+                                            <div className="flex flex-col items-start gap-1.5">
+                                                {getStatusBadge(report.status)}
+                                                {report.resolutionAction !== ReportResolutionAction.None && (
+                                                    <span className="max-w-[180px] truncate text-[10px] font-semibold text-muted-foreground">
+                                                        {getResolutionActionLabel(report.resolutionAction)}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </TableCell>
 
                                         {/* Date */}
@@ -141,15 +159,30 @@ export function ReportTable({ reports, contentType, isLoading, onInspect }: Repo
 
                                         {/* Action */}
                                         <TableCell className="py-4 text-right pr-5">
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="h-8 rounded-md border border-border/60 hover:bg-primary/5 hover:border-primary/40 hover:text-primary text-xs font-medium px-3 cursor-pointer transition-all duration-200 gap-1.5 group-hover:border-border"
-                                                onClick={() => onInspect(report)}
-                                            >
-                                                <Eye className="h-3.5 w-3.5" />
-                                                Inspect
-                                            </Button>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        size="icon-sm"
+                                                        variant="outline"
+                                                        className="h-8 w-8"
+                                                    >
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                        <span className="sr-only">Open actions</span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-40">
+                                                    <DropdownMenuItem onClick={() => onInspect(report)}>
+                                                        <Eye className="h-4 w-4" />
+                                                        Open Inspect
+                                                    </DropdownMenuItem>
+                                                    {report.status === ReportStatus.Pending && isModeratorOrOwner && (
+                                                        <DropdownMenuItem onClick={() => onAction(report)}>
+                                                            <ShieldAlert className="h-4 w-4" />
+                                                            Take Action
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
                                 );

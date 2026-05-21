@@ -4,11 +4,12 @@ import { ReportContentDTO } from "@/types/community-content-report/report-conten
 import { Page } from "@/types/common/page";
 import { PagedData } from "@/types/common/paged-data";
 import { ContentType } from "@/types/content-media/content-type";
+import { ResolveReportDTO } from "@/types/community-content-report/resolve-report-dto";
 
 export const communityContentReportService = {
     reportContent: async (communityId: string, payload: ReportContentDTO): Promise<boolean> => {
         const { data } = await api.post<ReturnResult<boolean>>(`/CommunityContentReport/${communityId}`, payload);
-        return data.result;
+        return data.result ?? false;
     },
 
     getPagingDataForAdminAndModerator: async <T>(
@@ -20,7 +21,7 @@ export const communityContentReportService = {
             `/CommunityContentReport/${communityId}/${contentType}/admin-moderator/paging`,
             payload
         );
-        return data.result;
+        return data.result ?? { data: [], page: payload };
     },
 
     getPagingDataForCurrentUser: async <T>(
@@ -32,7 +33,19 @@ export const communityContentReportService = {
             `/CommunityContentReport/${communityId}/${contentType}/mine/paging`,
             payload
         );
-        return data.result;
+        return data.result ?? { data: [], page: payload };
+    },
+
+    resolveReport: async (
+        communityId: string,
+        contentType: ContentType,
+        payload: ResolveReportDTO
+    ): Promise<boolean> => {
+        const { data } = await api.post<ReturnResult<boolean>>(
+            `/CommunityContentReport/${communityId}/${contentType}/resolve`,
+            payload
+        );
+        return data.result ?? false;
     },
 };
 

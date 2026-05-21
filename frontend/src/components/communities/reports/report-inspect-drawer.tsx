@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { ContentType } from "@/types/content-media/content-type";
 import {
     Sheet,
@@ -13,59 +13,94 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ShieldAlert, ArrowUpRight, User, Flag } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { ProfileHoverCard } from "@/components/profile/profile-hover-card";
 import { AnyCommunityReportDTO } from "./reports-list-container";
 import { ReportStatus } from "@/types/community-content-report/report-status";
 import { getReportContentDetails, getStatusBadge, getResolutionActionLabel } from "./report-helpers";
+import { ReportActionDialog } from "./report-action-dialog";
+import { SelectCommunityReportProfileDTO } from "@/types/community-content-report/base-select-community-report-dto";
+
+const DEFAULT_AVATAR_URL = "/images/default-avatar.webp";
 
 interface ReportInspectDrawerProps {
     report: AnyCommunityReportDTO | null;
     contentType: ContentType;
+    isModeratorOrOwner: boolean;
+    communityId: string;
     onClose: () => void;
 }
 
 interface AvatarBlockProps {
+    profileId: string;
     avatarUrl?: string | null;
     fullName?: string | null;
+    profile?: SelectCommunityReportProfileDTO | null;
     label: string;
 }
 
-function AvatarBlock({ avatarUrl, fullName, label }: AvatarBlockProps) {
-    const initials = (fullName ?? "?")[0].toUpperCase();
+function AvatarBlock({ profileId, avatarUrl, fullName, profile, label }: AvatarBlockProps) {
     return (
-        <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                {label}
-            </span>
-            <div className="flex items-center gap-2.5 mt-0.5">
-                <div className="relative w-8 h-8 rounded-full border border-border bg-muted shrink-0 overflow-hidden flex items-center justify-center text-xs font-semibold text-muted-foreground shadow-sm">
-                    {avatarUrl ? (
+        <ProfileHoverCard profileId={profileId} author={profile ?? undefined}>
+            <div className="flex flex-col gap-1.5 cursor-pointer">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    {label}
+                </span>
+                <div className="flex items-center gap-2.5 mt-0.5">
+                    <div className="relative w-8 h-8 rounded-full border border-border bg-muted shrink-0 overflow-hidden shadow-sm">
                         <Image
-                            src={avatarUrl}
+                            src={avatarUrl || DEFAULT_AVATAR_URL}
                             alt={fullName || label}
                             fill
                             unoptimized
                             className="object-cover"
                         />
-                    ) : (
-                        initials
-                    )}
+                    </div>
+                    <span className="text-sm font-semibold text-foreground truncate max-w-[120px] hover:text-primary">
+                        {fullName || "Anonymous"}
+                    </span>
                 </div>
-                <span className="text-sm font-semibold text-foreground truncate max-w-[120px]">
-                    {fullName || "Anonymous"}
-                </span>
             </div>
-        </div>
+        </ProfileHoverCard>
     );
 }
 
-export function ReportInspectDrawer({ report, contentType, onClose }: ReportInspectDrawerProps) {
+function InlineProfileBlock({
+    profileId,
+    avatarUrl,
+    fullName,
+    profile,
+}: Omit<AvatarBlockProps, "label">) {
+    return (
+        <ProfileHoverCard profileId={profileId} author={profile ?? undefined}>
+            <div className="flex max-w-[220px] cursor-pointer items-center gap-2">
+                <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full border border-border bg-muted">
+                    <Image
+                        src={avatarUrl || DEFAULT_AVATAR_URL}
+                        alt={fullName || "Resolved by"}
+                        fill
+                        unoptimized
+                        className="object-cover"
+                    />
+                </div>
+                <span className="truncate font-semibold text-foreground hover:text-primary">
+                    {fullName || "System/Moderator"}
+                </span>
+            </div>
+        </ProfileHoverCard>
+    );
+}
+
+export function ReportInspectDrawer({ report, contentType, isModeratorOrOwner, communityId, onClose }: ReportInspectDrawerProps) {
+    const [actionDialogOpen, setActionDialogOpen] = useState(false);
+
     if (!report) return null;
 
     const details = getReportContentDetails(report, contentType);
 
     return (
         <Sheet open={!!report} onOpenChange={(open) => !open && onClose()}>
-            <SheetContent className="sm:max-w-lg bg-background border-l border-border p-0 overflow-y-auto">
+            <SheetContent className="!w-[min(92vw,760px)] sm:!max-w-none bg-background border-l border-border p-0 overflow-y-auto">
                 {/* Header */}
                 <SheetHeader className="px-6 pt-6 pb-5 border-b border-border bg-card/80 backdrop-blur-sm space-y-3">
                     <div className="flex items-center justify-between">
@@ -92,14 +127,18 @@ export function ReportInspectDrawer({ report, contentType, onClose }: ReportInsp
                         <CardContent className="pt-4 pb-4 px-4">
                             <div className="grid grid-cols-2 gap-4 divide-x divide-border/40">
                                 <AvatarBlock
+                                    profileId={report.reporterId}
                                     avatarUrl={report.reporter?.avatarUrl}
                                     fullName={report.reporter?.fullName}
+                                    profile={report.reporter ?? undefined}
                                     label="Reporter"
                                 />
                                 <div className="pl-4">
                                     <AvatarBlock
+                                        profileId={report.reportedProfileId}
                                         avatarUrl={report.reportedProfile?.avatarUrl}
                                         fullName={report.reportedProfile?.fullName}
+                                        profile={report.reportedProfile ?? undefined}
                                         label="Reported User"
                                     />
                                 </div>
@@ -165,9 +204,16 @@ export function ReportInspectDrawer({ report, contentType, onClose }: ReportInsp
                                 <CardContent className="pt-3 pb-3 px-4 space-y-3 text-xs">
                                     <div className="flex justify-between items-center">
                                         <span className="text-muted-foreground">Resolved by</span>
-                                        <span className="font-semibold text-foreground">
-                                            {report.resolvedBy?.fullName || "System/Moderator"}
-                                        </span>
+                                        {report.resolvedById ? (
+                                            <InlineProfileBlock
+                                                profileId={report.resolvedById}
+                                                avatarUrl={report.resolvedBy?.avatarUrl}
+                                                fullName={report.resolvedBy?.fullName}
+                                                profile={report.resolvedBy}
+                                            />
+                                        ) : (
+                                            <span className="font-semibold text-foreground">System/Moderator</span>
+                                        )}
                                     </div>
                                     <div className="flex justify-between items-center border-t border-border pt-3">
                                         <span className="text-muted-foreground">Action taken</span>
@@ -188,7 +234,29 @@ export function ReportInspectDrawer({ report, contentType, onClose }: ReportInsp
                         </div>
                     )}
                 </div>
+
+                {report.status === ReportStatus.Pending && isModeratorOrOwner && (
+                    <div className="px-6 py-4 border-t border-border bg-muted/25">
+                        <Button
+                            className="w-full gap-2"
+                            onClick={() => setActionDialogOpen(true)}
+                        >
+                            <ShieldAlert className="h-4 w-4" />
+                            Take Action
+                        </Button>
+                    </div>
+                )}
             </SheetContent>
+            <ReportActionDialog
+                open={actionDialogOpen}
+                report={report}
+                contentType={contentType}
+                communityId={communityId}
+                onClose={() => {
+                    setActionDialogOpen(false);
+                    onClose();
+                }}
+            />
         </Sheet>
     );
 }

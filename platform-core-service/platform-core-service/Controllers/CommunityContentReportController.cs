@@ -84,5 +84,22 @@ namespace platform_core_service.Controllers
                 return Ok(new ReturnResult<bool> { Message = $"An error occurred: {ex.Message}" });
             }
         }
+
+        [HttpPost("{communityId}/{contentType}/resolve")]
+        public async Task<IActionResult> ResolveReport(string communityId, ContentType contentType, [FromBody] ResolveReportDTO resolveDTO)
+        {
+            ReturnResult<bool> returnResult = new();
+            try
+            {
+                var service = _communityContentReportServiceFactory.GetCommunityContentReportService(contentType);
+                returnResult = await service.ResolveReport(communityId, resolveDTO);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
     }
 }
