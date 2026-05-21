@@ -80,7 +80,7 @@ export const MarkdownViewer = ({
                             />
                         );
                     },
-                    code({ className, children, ...props }) {
+                    code({ className, children, node, ...props }) {
                         return (
                             <code className={className} {...props}>
                                 {children}

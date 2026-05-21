@@ -8,6 +8,8 @@ interface MermaidPreviewProps {
     className?: string;
 }
 
+let isMermaidInitialized = false;
+
 export function MermaidPreview({ code, className }: MermaidPreviewProps) {
     const reactId = useId();
     const [svg, setSvg] = useState<string>('');
@@ -25,11 +27,14 @@ export function MermaidPreview({ code, className }: MermaidPreviewProps) {
 
             try {
                 const mermaid = (await import('mermaid')).default;
-                mermaid.initialize({
-                    startOnLoad: false,
-                    securityLevel: 'strict',
-                    theme: 'neutral',
-                });
+                if (!isMermaidInitialized) {
+                    mermaid.initialize({
+                        startOnLoad: false,
+                        securityLevel: 'strict',
+                        theme: 'neutral',
+                    });
+                    isMermaidInitialized = true;
+                }
 
                 const diagramId = `mermaid-${reactId.replace(/[^a-zA-Z0-9_-]/g, '')}`;
                 const rendered = await mermaid.render(diagramId, code);

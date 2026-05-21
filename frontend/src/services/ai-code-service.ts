@@ -148,6 +148,23 @@ export const aiCodeService = {
             { suppressToast: true }
         );
 
+        if (!data.result) {
+            return {
+                summary: "",
+                keyFlow: [],
+                watchOut: [],
+                details: {
+                    importantDetails: [],
+                    suggestedImprovements: [],
+                    concepts: [],
+                },
+                status: "Failed",
+                message: data.message || "Could not explain this code.",
+                cached: false,
+                generatedAt: null,
+            };
+        }
+
         return normalizeExplainResponse(data.result);
     },
 
@@ -159,6 +176,17 @@ export const aiCodeService = {
             toDiagramApiPayload(payload),
             { suppressToast: true }
         );
+
+        if (!data.result) {
+            return {
+                mermaidCode: "",
+                diagramType: payload.diagramType === "sequence" ? "sequence" : "flowchart",
+                status: "Failed",
+                message: data.message || "Could not generate a diagram for this code.",
+                cached: false,
+                generatedAt: null,
+            };
+        }
 
         return normalizeDiagramResponse(data.result);
     },

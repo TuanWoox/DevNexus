@@ -22,7 +22,7 @@ class CodeExplainDetails(BaseModel):
 
 class CodeExplainResponse(BaseModel):
     summary: str = Field(..., description="1-2 short sentences explaining what the code does.")
-    key_flow: list[str] = Field(..., min_length=1, max_length=5)
+    key_flow: list[str] = Field(default_factory=list, max_length=5)
     watch_out: list[str] = Field(default_factory=list, max_length=3)
     details: CodeExplainDetails = Field(default_factory=CodeExplainDetails)
 
