@@ -9,7 +9,7 @@ import { useSuspendUser } from '@/hooks/admin/use-suspend-user'
 import { useUnsuspendUser } from '@/hooks/admin/use-unsuspend-user'
 import { useUpdateUserRole } from '@/hooks/admin/use-update-user-role'
 import { useBanUser, useTimeout7Days, useTimeout30Days } from '@/hooks/admin/use-user-penalty-presets'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/shared/user-avatar'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -35,10 +35,6 @@ function formatDate(iso?: string | null): string {
   })
 }
 
-function getInitial(displayName: string): string {
-  return displayName.trim().charAt(0).toUpperCase() || 'U'
-}
-
 function RoleBadge({ role }: { role?: string | null }) {
   if (role === 'Admin') return <span className="badge-red">Admin</span>
   if (role === 'Moderator') return <span className="badge-purple">Moderator</span>
@@ -53,10 +49,7 @@ function StatusBadge({ isSuspended }: { isSuspended: boolean }) {
 function UserCell({ user }: { user: AdminProfileDTO }) {
   return (
     <div className="flex items-center gap-3 min-w-[260px]">
-      <Avatar className="size-9 border border-default">
-        <AvatarImage src={user.avatarUrl ?? undefined} alt={user.displayName} />
-        <AvatarFallback>{getInitial(user.displayName)}</AvatarFallback>
-      </Avatar>
+      <UserAvatar avatarUrl={user.avatarUrl} fullName={user.displayName} className="size-9 border border-default" />
       <div className="flex min-w-0 flex-col">
         <span className="truncate font-medium text-heading">{user.displayName}</span>
         <span className="truncate text-xs font-mono text-muted-foreground">{user.email ?? '—'}</span>

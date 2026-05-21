@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useGetCommunityMembers } from "@/hooks/community-members-hooks/use-get-community-members";
 import { Button } from "@/components/ui/button";
-import { Crown, Shield, User, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Crown, Shield, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { SortOrderType } from "@/constants/sortOrderType";
+import { UserAvatar } from "@/components/shared/user-avatar";
 
 interface CommunityMemberListProps {
     communityId: string;
@@ -68,21 +68,11 @@ export function CommunityMemberList({ communityId, role }: CommunityMemberListPr
                                 className="shrink-0"
                                 title={`View ${profile?.fullName ?? "profile"}`}
                             >
-                                <div className="relative w-10 h-10 rounded-full overflow-hidden bg-muted ring-2 ring-transparent group-hover:ring-primary/30 transition-all">
-                                    {profile?.avatarUrl ? (
-                                        <Image
-                                            src={profile.avatarUrl}
-                                            alt={profile.fullName ?? "Member"}
-                                            fill
-                                            unoptimized
-                                            className="object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <User className="h-5 w-5 text-muted-foreground" />
-                                        </div>
-                                    )}
-                                </div>
+                                <UserAvatar
+                                    avatarUrl={profile?.avatarUrl}
+                                    fullName={profile?.fullName ?? "Member"}
+                                    className="w-10 h-10 ring-2 ring-transparent group-hover:ring-primary/30 transition-all"
+                                />
                             </Link>
 
                             {/* Name + Role badge */}

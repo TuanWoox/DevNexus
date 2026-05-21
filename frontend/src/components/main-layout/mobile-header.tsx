@@ -1,12 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { Hexagon, Sparkles, Search } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import { useGetProfileById } from '@/hooks/profile-hooks/use-get-profile-by-id'
 import { GlobalSearch } from '@/components/search/global-search'
+import { UserAvatar } from '@/components/shared/user-avatar'
 
 export function MobileHeader() {
     const { user } = useSelector((state: RootState) => state.auth)
@@ -35,13 +35,7 @@ export function MobileHeader() {
                 {/* <button className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
                     {user?.userName?.charAt(0).toUpperCase() || 'U'}
                 </button> */}
-                <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default">
-                    {userProfile?.avatarUrl ? (
-                        <Image src={userProfile.avatarUrl} alt={userProfile.fullName} fill className="object-cover" unoptimized />
-                    ) : (
-                        <span className="text-primary font-bold">{userProfile?.fullName?.charAt(0) || 'U'}</span>
-                    )}
-                </div>
+                <UserAvatar avatarUrl={userProfile?.avatarUrl} fullName={userProfile?.fullName ?? 'User'} className="w-10 h-10 sm:w-12 sm:h-12 border border-default" />
             </div>
         </header>
     )

@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { UserPlus, Archive, Loader2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getInitials, getTitle, getAvatarUrl } from "@/features/messages/utils/message-service.helper";
+import { UserAvatar } from "@/components/shared/user-avatar";
+import { getTitle, getAvatarUrl } from "@/features/messages/utils/message-service.helper";
 import { useUpdateChatSetting } from "@/features/messages/hooks/chatsettings/use-update-chat-setting";
 import type { Chat } from "@/features/messages/types/contracts";
 
@@ -52,12 +52,7 @@ export function RequestBanner({ chat, currentProfileId }: Props) {
     return (
         <div className="flex flex-col items-center gap-4 px-6 py-5 border-b border-border bg-muted/30">
             <div className="flex flex-col items-center gap-2 text-center">
-                <Avatar className="h-14 w-14 ring-2 ring-border/50">
-                    <AvatarImage src={avatarUrl} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-lg font-bold">
-                        {getInitials(title)}
-                    </AvatarFallback>
-                </Avatar>
+                <UserAvatar avatarUrl={avatarUrl} fullName={title} className="h-14 w-14 ring-2 ring-border/50" />
                 <div>
                     <p className="text-sm font-semibold">{title}</p>
                     <p className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center gap-1">

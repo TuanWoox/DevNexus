@@ -4,6 +4,7 @@ namespace platform_core_service.Common.Utils.Enums
     {
         User = 0,
         Post = 1,
-        ModerationQueueEntry = 2
+        ModerationQueueEntry = 2,
+        ModerationReport = 3
     }
 }

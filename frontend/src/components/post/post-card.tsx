@@ -14,6 +14,7 @@ import { RootState } from "@/store/store";
 import { PostActionsDropdown } from "./post-actions-dropdown";
 import { ProfileHoverCard } from "@/components/profile/profile-hover-card";
 import { SaveBookmarkModal } from "../bookmark/save-bookmark-modal";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -109,13 +110,7 @@ export function PostCard({ post }: PostCardProps) {
                                 </Link>
                                 <ProfileHoverCard profileId={post.authorId} author={author}>
                                     <Link href={`/profile/${post.authorId}`} className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-card bg-page overflow-hidden">
-                                        {author?.avatarUrl ? (
-                                            <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full bg-primary/20 flex items-center justify-center">
-                                                <span className="text-[10px] font-bold text-primary">{author?.fullName?.charAt(0) || 'U'}</span>
-                                            </div>
-                                        )}
+                                        <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
                                     </Link>
                                 </ProfileHoverCard>
                             </div>
@@ -141,11 +136,7 @@ export function PostCard({ post }: PostCardProps) {
                         <>
                             <ProfileHoverCard profileId={post.authorId} author={author}>
                                 <Link href={`/profile/${post.authorId}`} className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
-                                    {author?.avatarUrl ? (
-                                        <Image src={author.avatarUrl} alt={author.fullName} fill unoptimized className="object-cover" />
-                                    ) : (
-                                        <span className="text-primary font-bold">{author?.fullName?.charAt(0) || 'U'}</span>
-                                    )}
+                                    <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
                                 </Link>
                             </ProfileHoverCard>
                             <div className="flex min-w-0 flex-col">

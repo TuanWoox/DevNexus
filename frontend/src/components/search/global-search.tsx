@@ -2,10 +2,11 @@
 
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, HelpCircle, Loader2, Search, Users, UserRound } from "lucide-react";
+import { FileText, HelpCircle, Loader2, Search, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useGlobalSearch } from "@/hooks/search-hooks/use-global-search";
 import { cn } from "@/lib/utils";
@@ -16,16 +17,10 @@ import {
 import { SelectPostDTO } from "@/types/post/select-post-dto";
 import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
 
-const DEFAULT_AVATAR_URL = "/images/default-avatar.webp";
-
 type GlobalSearchProps = {
   trigger?: ReactNode;
   compact?: boolean;
 };
-
-function initials(value?: string | null) {
-  return value?.trim().charAt(0).toUpperCase() || "D";
-}
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -119,10 +114,7 @@ export function GlobalSearch({ trigger, compact = false }: GlobalSearchProps) {
   function ProfileRow({ profile }: { profile: SearchProfileResult }) {
     return (
       <ResultButton href={`/profile/${profile.id}`}>
-        <Avatar size="lg">
-          <AvatarImage src={profile.avatarUrl || DEFAULT_AVATAR_URL} />
-          <AvatarFallback>{initials(profile.fullName)}</AvatarFallback>
-        </Avatar>
+        <UserAvatar avatarUrl={profile.avatarUrl} fullName={profile.fullName} size="lg" />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium text-heading">{profile.fullName}</div>
           <div className="truncate text-xs text-muted-foreground">{profile.reputationPoints} reputation</div>

@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import { Loader2, Minus, Send, X } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useChatWindows, type NewChatProfileData } from "@/features/messages/context/chat-windows-context";
 import { useCreateNewChatPopup } from "@/features/messages/hooks/chats/use-create-new-chat-popup";
-import { getInitials } from "@/features/messages/utils/message-service.helper";
 
 const WINDOW_W = 340;
 const WINDOW_H = 460;
@@ -56,12 +55,7 @@ export function NewChatPopupWindow({ targetProfile }: NewChatPopupWindowProps) {
             style={{ width: WINDOW_W, height: WINDOW_H }}
         >
             <div className="flex items-center gap-3 border-b border-border/60 bg-card/80 backdrop-blur-md px-4 py-3 shrink-0">
-                <Avatar className="h-9 w-9 ring-2 ring-border/50">
-                    <AvatarImage src={targetProfile.avatarUrl ?? "/images/default-avatar.webp"} alt={targetProfile.fullName} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
-                        {getInitials(targetProfile.fullName)}
-                    </AvatarFallback>
-                </Avatar>
+                <UserAvatar avatarUrl={targetProfile.avatarUrl} fullName={targetProfile.fullName} className="h-9 w-9 ring-2 ring-border/50" />
 
                 <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">
@@ -89,12 +83,7 @@ export function NewChatPopupWindow({ targetProfile }: NewChatPopupWindowProps) {
             </div>
 
             <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground px-8 text-center">
-                <Avatar className="h-20 w-20 ring-4 ring-border/30 shadow-card">
-                    <AvatarImage src={targetProfile.avatarUrl ?? "/images/default-avatar.webp"} alt={targetProfile.fullName} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-2xl font-semibold">
-                        {getInitials(targetProfile.fullName)}
-                    </AvatarFallback>
-                </Avatar>
+                <UserAvatar avatarUrl={targetProfile.avatarUrl} fullName={targetProfile.fullName} className="h-20 w-20 ring-4 ring-border/30 shadow-card" />
 
                 <div>
                     <p className="text-base font-semibold text-foreground">

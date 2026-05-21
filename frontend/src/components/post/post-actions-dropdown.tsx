@@ -33,7 +33,8 @@ import { usePostDelete } from '@/hooks/post-hooks/use-post-delete';
 import { useHasMounted } from '@/hooks/use-has-mounted';
 import { useCreateCommunityContentReport } from '@/hooks/community-content-report-hooks/use-create-community-content-report';
 import { ContentType } from '@/types/content-media/content-type';
-import { toast } from 'sonner';
+import { ReportDialog } from '@/components/report/report-dialog';
+import { ReportTargetType } from '@/types/report/report-target-type';
 
 interface PostActionsDropdownProps {
     postId: string;
@@ -56,6 +57,7 @@ export function PostActionsDropdown({
     const router = useRouter();
     const [isReportOpen, setIsReportOpen] = useState(false);
     const [reportReason, setReportReason] = useState('');
+    const [reportDialogOpen, setReportDialogOpen] = useState(false);
     const basePath = isQAPost ? '/questions' : '/post';
     const { showDeleteAlert, setShowDeleteAlert, isPending, handleDeleteConfirm } = usePostDelete({
         isQAPost,
@@ -139,7 +141,7 @@ export function PostActionsDropdown({
                                 <span>Follow User</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                                onClick={() => toast.info("Site report flow coming soon.")}
+                                onSelect={() => setReportDialogOpen(true)}
                                 variant='destructive'
                                 className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
                             >
@@ -238,6 +240,15 @@ export function PostActionsDropdown({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+            {!isAuthor && (
+                <ReportDialog
+                    open={reportDialogOpen}
+                    onOpenChange={setReportDialogOpen}
+                    targetType={isQAPost ? ReportTargetType.Question : ReportTargetType.Post}
+                    targetId={postId}
+                    targetLabel={isQAPost ? "Question" : "Post"}
+                />
+            )}
         </>
     );
 }

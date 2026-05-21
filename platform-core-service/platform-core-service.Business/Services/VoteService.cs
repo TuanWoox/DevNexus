@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Common.Entities.DbEntities;
+using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces.Contexts;
+using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Vote;
 using platform_core_service.Common.Utils.Extensions;
@@ -18,12 +20,18 @@ namespace platform_core_service.Business.Services
         private readonly ApplicationDbContext _dbContext;
         private readonly IUserContext _userContext;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly ISocialGuardService _socialGuardService;
 
-        public VoteService(ApplicationDbContext dbContext, IUserContext userContext, IBackgroundJobClient backgroundJobClient)
+        public VoteService(
+            ApplicationDbContext dbContext,
+            IUserContext userContext,
+            IBackgroundJobClient backgroundJobClient,
+            ISocialGuardService socialGuardService)
         {
             _dbContext = dbContext;
             _userContext = userContext;
             _backgroundJobClient = backgroundJobClient;
+            _socialGuardService = socialGuardService;
         }
 
         public async Task<ReturnResult<bool>> VotePostAsync(string postId, VoteRequestDTO voteRequest)
@@ -42,6 +50,10 @@ namespace platform_core_service.Business.Services
                     var profileId = _userContext.ProfileId;
                     if (string.IsNullOrEmpty(profileId))
                         return ReturnError(result, "User profile not found");
+
+                    var voteAccess = await _socialGuardService.CanVotePost(postId);
+                    if (!voteAccess.Result)
+                        return ReturnError(result, voteAccess.Message ?? ResponseMessage.NO_PERMISSION_TO_VOTE);
 
                     var post = await _dbContext.Posts
                         .Include(p => p.Author)
@@ -75,11 +87,18 @@ namespace platform_core_service.Business.Services
                     // Publish notification only for new upvotes (not downvotes, not self-votes, not toggle-offs)
                     if (isNewUpvote && post.AuthorId != profileId)
                     {
+                        if (await _socialGuardService.IsBlockedRelation(profileId, post.AuthorId))
+                            return result;
+
+                        var actor = await GetProfileSnapshot(profileId);
                         var isQuestion = post is QAPost;
                         var notificationEvent = new NotiicationCreatedEntityDTO
                         {
                             EventType = isQuestion ? NotificationEventType.UPVOTE_QUESTION : NotificationEventType.UPVOTE_POST,
+                            ActorType = ActorType.Profile,
                             ActorId = profileId,
+                            ActorName = actor.Name,
+                            ActorAvatarUrl = actor.AvatarUrl,
                             RecipientId = post.AuthorId,
                             EntityType = isQuestion ? NotificationEntityType.QUESTION : NotificationEntityType.POST,
                             EntityId = postId,
@@ -120,6 +139,10 @@ namespace platform_core_service.Business.Services
                     if (string.IsNullOrEmpty(profileId))
                         return ReturnError(result, "User profile not found");
 
+                    var voteAccess = await _socialGuardService.CanVoteAnswer(answerId);
+                    if (!voteAccess.Result)
+                        return ReturnError(result, voteAccess.Message ?? ResponseMessage.NO_PERMISSION_TO_VOTE);
+
                     var answer = await _dbContext.Answers
                         .Include(a => a.Author)
                         .Include(a => a.QAPost)
@@ -153,10 +176,17 @@ namespace platform_core_service.Business.Services
                     // Publish notification only for new upvotes
                     if (isNewUpvote && answer.AuthorId != profileId)
                     {
+                        if (await _socialGuardService.IsBlockedRelation(profileId, answer.AuthorId))
+                            return result;
+
+                        var actor = await GetProfileSnapshot(profileId);
                         var notificationEvent = new NotiicationCreatedEntityDTO
                         {
                             EventType = NotificationEventType.UPVOTE_ANSWER,
+                            ActorType = ActorType.Profile,
                             ActorId = profileId,
+                            ActorName = actor.Name,
+                            ActorAvatarUrl = actor.AvatarUrl,
                             RecipientId = answer.AuthorId,
                             EntityType = NotificationEntityType.ANSWER,
                             EntityId = answerId,
@@ -196,6 +226,10 @@ namespace platform_core_service.Business.Services
                     var profileId = _userContext.ProfileId;
                     if (string.IsNullOrEmpty(profileId))
                         return ReturnError(result, "User profile not found");
+
+                    var voteAccess = await _socialGuardService.CanVoteComment(commentId);
+                    if (!voteAccess.Result)
+                        return ReturnError(result, voteAccess.Message ?? ResponseMessage.NO_PERMISSION_TO_VOTE);
 
                     var comment = await _dbContext.Comments
                         .Include(c => c.Author)
@@ -238,16 +272,23 @@ namespace platform_core_service.Business.Services
                     // Publish notification only for new upvotes
                     if (isNewUpvote && comment.AuthorId != profileId)
                     {
+                        if (await _socialGuardService.IsBlockedRelation(profileId, comment.AuthorId))
+                            return result;
+
                         var rootPost = comment.Post ?? comment.Answer?.QAPost ?? comment.ReplyToComment?.Answer?.QAPost;
                         var isQuestion = rootPost is QAPost;
                         var actionUrl = isQuestion
                             ? $"/questions/{rootPost?.Id}#comment-{commentId}"
                             : $"/post/{rootPost?.Id}#comment-{commentId}";
 
+                        var actor = await GetProfileSnapshot(profileId);
                         var notificationEvent = new NotiicationCreatedEntityDTO
                         {
                             EventType = NotificationEventType.UPVOTE_COMMENT,
+                            ActorType = ActorType.Profile,
                             ActorId = profileId,
+                            ActorName = actor.Name,
+                            ActorAvatarUrl = actor.AvatarUrl,
                             RecipientId = comment.AuthorId,
                             EntityType = NotificationEntityType.COMMENT,
                             EntityId = commentId,
@@ -333,6 +374,17 @@ namespace platform_core_service.Business.Services
 
             return (upvoteChange, downvoteChange, isNewUpvote);
         }
+
+        private async Task<(string? Name, string? AvatarUrl)> GetProfileSnapshot(string profileId)
+        {
+            var profile = await _dbContext.Profiles
+                .Where(p => p.Id == profileId)
+                .Select(p => new { p.FullName, p.AvatarUrl })
+                .FirstOrDefaultAsync();
+
+            return (profile?.FullName, profile?.AvatarUrl);
+        }
+
         private ReturnResult<bool> ReturnError(ReturnResult<bool> result, string message)
         {
             result.Message = message;

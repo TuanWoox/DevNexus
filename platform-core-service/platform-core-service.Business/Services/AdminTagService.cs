@@ -208,42 +208,31 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                var strategy = _context.Database.CreateExecutionStrategy();
-                await strategy.ExecuteAsync(async () =>
-                {
-                    await using var transaction = await _context.Database.BeginTransactionAsync();
+                var sourcePostTags = await _context.PostTags
+                    .Where(pt => pt.TagId == dto.SourceTagId)
+                    .ToListAsync();
 
-                    // Load all PostTag rows for source tag
-                    var sourcePostTags = await _context.PostTags
-                        .Where(pt => pt.TagId == dto.SourceTagId)
-                        .ToListAsync();
+                var targetPostIds = await _context.PostTags
+                    .Where(pt => pt.TagId == dto.TargetTagId)
+                    .Select(pt => pt.PostId)
+                    .ToHashSetAsync();
 
-                    // Load existing PostIds already tagged with target (to detect duplicates)
-                    var targetPostIds = await _context.PostTags
-                        .Where(pt => pt.TagId == dto.TargetTagId)
-                        .Select(pt => pt.PostId)
-                        .ToHashSetAsync();
+                var toReassign = sourcePostTags.Where(pt => !targetPostIds.Contains(pt.PostId)).ToList();
+                var toDrop = sourcePostTags.Where(pt => targetPostIds.Contains(pt.PostId)).ToList();
 
-                    // Reassign non-duplicate rows; remove duplicate rows
-                    var toReassign = sourcePostTags.Where(pt => !targetPostIds.Contains(pt.PostId)).ToList();
-                    var toDrop = sourcePostTags.Where(pt => targetPostIds.Contains(pt.PostId)).ToList();
+                foreach (var pt in toReassign)
+                    pt.TagId = dto.TargetTagId;
 
-                    foreach (var pt in toReassign)
-                        pt.TagId = dto.TargetTagId;
+                _context.PostTags.RemoveRange(toDrop);
 
-                    _context.PostTags.RemoveRange(toDrop);
+                source.Deleted = true;
+                source.DateDeleted = DateTimeOffset.UtcNow;
 
-                    // Soft-delete source tag
-                    source.Deleted = true;
-                    source.DateDeleted = DateTimeOffset.UtcNow;
+                await _context.SaveChangesAsync();
 
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-
-                    DevNexusLogger.Instance.Debug(
-                        $"[AdminTag] Merged tag {dto.SourceTagId} into {dto.TargetTagId}: " +
-                        $"{toReassign.Count} reassigned, {toDrop.Count} duplicates dropped");
-                });
+                DevNexusLogger.Instance.Debug(
+                    $"[AdminTag] Merged tag {dto.SourceTagId} into {dto.TargetTagId}: " +
+                    $"{toReassign.Count} reassigned, {toDrop.Count} duplicates dropped");
 
                 result.Result = true;
             }

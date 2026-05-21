@@ -21,7 +21,7 @@ const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password'
 // More specific admin routes must be declared before the general /admin rule.
 const routeRules = [
     {
-        pathMatch: /^\/admin\/(moderation|posts|tags)(\/.*)?$/,
+        pathMatch: /^\/admin\/(moderation|posts|tags|reports)(\/.*)?$/,
         roles: ['Admin', 'Moderator'],
     },
     {

@@ -2,7 +2,6 @@ import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import amqp, { Channel, ConsumeMessage } from 'amqplib';
 import { NotiicationCreatedEntity } from '../../shared/dtos/NotificationEventDTO';
-import { ProfileSyncService } from '../profile-sync/profile-sync.service';
 import { PublishMessageBusDTO } from '../../shared/dtos/helper/PublishMessageBusDTO';
 import { MessageBusEntityEnum } from '../../utils/enums/MessageBusEnum';
 import { PrismaService } from '../prisma-database/prisma.service';
@@ -10,10 +9,6 @@ import { NotificationGateway } from '../websocket/notification.gateway';
 import { MessageBusEnum } from 'src/utils/enums/MessageBusEnum';
 import { convertTypeToMessage } from 'src/utils/helper/convertTypeToMessage';
 import type { Notification } from '../../generated/prisma/client';
-
-type NotificationWithActor = Notification & {
-  Actor: { Id: string; FullName: string | null; AvatarUrl: string | null } | null;
-};
 
 @Injectable()
 export class RabbitMQService implements OnModuleInit {
@@ -24,7 +19,6 @@ export class RabbitMQService implements OnModuleInit {
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
     private readonly notificationGateway: NotificationGateway,
-    private readonly profileSyncService: ProfileSyncService,
   ) {
     this.logger.log('RabbitMQService constructor called');
   }
@@ -55,7 +49,6 @@ export class RabbitMQService implements OnModuleInit {
     this.logger.log('RabbitMQ channel created');
 
     await this.subscribeToNotifications();
-    await this.subscribeToSync();
 
     this.logger.log('RabbitMQ consumers ready');
   }
@@ -77,21 +70,6 @@ export class RabbitMQService implements OnModuleInit {
     });
 
     this.logger.log(`Subscribed to ${exchange} with key ${routingKey}`);
-  }
-
-  private async subscribeToSync() {
-    const exchange = 'devnexus_sync';
-    await this.channel.assertExchange(exchange, 'fanout', { durable: true });
-
-    // Using a named, durable queue to prevent data loss on service restart
-    const { queue } = await this.channel.assertQueue('notification_service_sync_queue', { durable: true });
-    await this.channel.bindQueue(queue, exchange, '');
-
-    await this.channel.consume(queue, (msg) => {
-      void this.onConsumeSync(msg);
-    });
-
-    this.logger.log('Subscribed to devnexus_sync');
   }
 
   private async onConsumeNotification(msg: ConsumeMessage | null) {
@@ -164,7 +142,7 @@ export class RabbitMQService implements OnModuleInit {
       ),
     );
 
-    const created: Array<{ recipientId: string; notification: NotificationWithActor }> = [];
+    const created: Array<{ recipientId: string; notification: Notification }> = [];
     for (let i = 0; i < createdResults.length; i++) {
       const result = createdResults[i];
       if (result.status === 'fulfilled' && result.value) {
@@ -193,7 +171,7 @@ export class RabbitMQService implements OnModuleInit {
 
     // Emit notifications with Message enriched for real-time payloads
     for (const { recipientId, notification } of created) {
-      const actorName = notification.Actor?.FullName ?? 'Someone';
+      const actorName = notification.ActorName ?? 'Someone';
       const enrichedNotification = notification.ActorId
         ? { ...notification, Message: convertTypeToMessage(notification, actorName) }
         : notification;
@@ -227,7 +205,10 @@ export class RabbitMQService implements OnModuleInit {
         return tx.notification.update({
           where: { Id: existing.Id },
           data: {
+            ActorType: event.ActorType ?? 0,
             ActorId: event.ActorId,
+            ActorName: event.ActorName,
+            ActorAvatarUrl: event.ActorAvatarUrl,
             AggregatedCount: { increment: 1 },
             IsRead: false,
             ReadAt: null,
@@ -237,15 +218,6 @@ export class RabbitMQService implements OnModuleInit {
             ActionUrl: event.ActionUrl,
             EntityPreview: event.EntityPreview
           },
-          include: {
-            Actor: {
-              select: {
-                Id: true,
-                FullName: true,
-                AvatarUrl: true,
-              },
-            },
-          },
         });
       }
 
@@ -253,7 +225,10 @@ export class RabbitMQService implements OnModuleInit {
         data: {
           RecipientId: recipientId,
           Type: event.EventType,
+          ActorType: event.ActorType ?? 0,
           ActorId: event.ActorId,
+          ActorName: event.ActorName,
+          ActorAvatarUrl: event.ActorAvatarUrl,
           EntityType: event.EntityType,
           EntityId: event.EntityId,
           EntityTitle: event.EntityTitle,
@@ -262,37 +237,7 @@ export class RabbitMQService implements OnModuleInit {
           ActionUrl: event.ActionUrl,
           GroupKey: groupKey,
         },
-        include: {
-          Actor: {
-            select: {
-              Id: true,
-              FullName: true,
-              AvatarUrl: true,
-            },
-          },
-        },
       });
     });
-  }
-
-  private async onConsumeSync(msg: ConsumeMessage | null) {
-    if (!msg) return;
-
-    try {
-      const data = JSON.parse(msg.content.toString()) as PublishMessageBusDTO<any>;
-
-      switch (data.MessageBusEntityEnum) {
-        case MessageBusEntityEnum.Profile:
-          await this.profileSyncService.eventDrive(data);
-          break;
-        default:
-          this.logger.log(`[Sync] Unhandled entity: ${data.MessageBusEntityEnum}`);
-      }
-
-      this.channel.ack(msg);
-    } catch (error) {
-      this.logger.error('Error processing sync event:', error);
-      this.channel.nack(msg, false, false);
-    }
   }
 }

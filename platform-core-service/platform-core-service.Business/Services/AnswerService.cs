@@ -2,7 +2,9 @@ using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Hangfire;
 using platform_core_service.Business.Repository;
+using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
+using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Helper;
@@ -69,7 +71,14 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Step 3: Verify QAPost exists
+                // Step 3: Verify QAPost is visible before allowing writes
+                var questionAccess = await _socialGuardService.CanAnswerQuestion(answerDTO.QAPostId);
+                if (!questionAccess.Result)
+                {
+                    result.Message = questionAccess.Message ?? ResponseMessage.NO_PERMISSION_TO_ANSWER;
+                    return result;
+                }
+
                 var parentPost = await _dbContext.Posts
                     .OfType<QAPost>()
                     .Where(p => p.Id == answerDTO.QAPostId)
@@ -77,7 +86,7 @@ namespace platform_core_service.Business.Services
                     .FirstOrDefaultAsync();
                 if (parentPost == null)
                 {
-                    result.Message = $"QAPost {answerDTO.QAPostId} not found";
+                    result.Message = ResponseMessage.NO_PERMISSION_TO_ANSWER;
                     return result;
                 }
 
@@ -144,6 +153,13 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var accessCheck = await _socialGuardService.CanViewAnswer(answer.Id);
+                if (!accessCheck.Result)
+                {
+                    result.Message = accessCheck.Message ?? ResponseMessage.ANSWER_NOT_AVAILABLE;
+                    return result;
+                }
+
                 result.Result = _mapper.Map<SelectAnswerDTO>(answer);
                 await SetCurrentUserVoteAsync(result.Result);
             }
@@ -167,17 +183,18 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Step 2: Verify QAPost exists
-                var postExists = await _dbContext.Posts.OfType<QAPost>().AnyAsync(p => p.Id == postId);
-                if (!postExists)
+                // Step 2: Verify QAPost is visible before returning answers
+                var questionAccess = await _socialGuardService.CanViewQAPost(postId);
+                if (!questionAccess.Result)
                 {
-                    result.Message = $"QAPost {postId} not found";
+                    result.Message = questionAccess.Message ?? ResponseMessage.QUESTION_NOT_AVAILABLE;
                     return result;
                 }
 
                 // Step 3: Build query and delegate paging
                 var query = _dbContext.Answers
                     .Where(a => a.QAPostId == postId)
+                    .ApplyAnswerVisibilityRules(_dbContext, _userContext.ProfileId)
                     .Include(a => a.Author)
                     .AsQueryable();
 
@@ -341,6 +358,13 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var accessCheck = await _socialGuardService.CanViewAnswer(answer.Id);
+                if (!accessCheck.Result)
+                {
+                    result.Message = accessCheck.Message ?? ResponseMessage.ANSWER_NOT_AVAILABLE;
+                    return result;
+                }
+
                 // Step 4: Only the question author can accept answers
                 if (answer.QAPost.AuthorId != profileId)
                 {
@@ -417,6 +441,7 @@ namespace platform_core_service.Business.Services
             // Load all comments for these answers in one query
             var comments = await _dbContext.Comments
                 .Where(c => answerIds.Contains(c.AnswerId) && !c.Deleted)
+                .ApplyCommentVisibilityRules(_dbContext, _userContext.ProfileId)
                 .Include(c => c.Author)
                 .OrderBy(c => c.DateCreated)
                 .ToListAsync();
@@ -479,10 +504,19 @@ namespace platform_core_service.Business.Services
                 return;
             }
 
+            if (await _socialGuardService.IsBlockedRelation(actorId, recipientId))
+            {
+                return;
+            }
+
+            var actor = await GetProfileSnapshot(actorId);
             var notificationEvent = new NotiicationCreatedEntityDTO
             {
                 EventType = NotificationEventType.NEW_ANSWER,
+                ActorType = ActorType.Profile,
                 ActorId = actorId,
+                ActorName = actor.Name,
+                ActorAvatarUrl = actor.AvatarUrl,
                 RecipientId = recipientId,
                 EntityType = NotificationEntityType.POST,
                 EntityId = answer.QAPost.Id,
@@ -512,10 +546,19 @@ namespace platform_core_service.Business.Services
                 return;
             }
 
+            if (await _socialGuardService.IsBlockedRelation(actorId, recipientId))
+            {
+                return;
+            }
+
+            var actor = await GetProfileSnapshot(actorId);
             var notificationEvent = new NotiicationCreatedEntityDTO
             {
                 EventType = NotificationEventType.ANSWER_ACCEPTED,
+                ActorType = ActorType.Profile,
                 ActorId = actorId,
+                ActorName = actor.Name,
+                ActorAvatarUrl = actor.AvatarUrl,
                 RecipientId = recipientId,
                 EntityType = NotificationEntityType.POST,
                 EntityId = answer.QAPost.Id,
@@ -526,6 +569,16 @@ namespace platform_core_service.Business.Services
 
             _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
                 x => x.PublicNotification(notificationEvent, "notifications.answer"));
+        }
+
+        private async Task<(string? Name, string? AvatarUrl)> GetProfileSnapshot(string profileId)
+        {
+            var profile = await _dbContext.Profiles
+                .Where(p => p.Id == profileId)
+                .Select(p => new { p.FullName, p.AvatarUrl })
+                .FirstOrDefaultAsync();
+
+            return (profile?.FullName, profile?.AvatarUrl);
         }
     }
 }

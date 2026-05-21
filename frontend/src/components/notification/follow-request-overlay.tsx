@@ -5,7 +5,7 @@ import { Search, Check, XIcon, UserPlus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -168,15 +168,11 @@ export function FollowRequestOverlay({ open, onClose }: Props) {
                     onCheckedChange={() => toggleSelect(request.id)}
                   />
 
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage
-                      src={request.requesterProfile?.avatarUrl || "/images/default-avatar.webp"}
-                      alt={request.requesterProfile?.fullName ?? "User"}
-                    />
-                    <AvatarFallback>
-                      {request.requesterProfile?.fullName?.charAt(0)?.toUpperCase() ?? "U"}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar
+                    avatarUrl={request.requesterProfile?.avatarUrl}
+                    fullName={request.requesterProfile?.fullName ?? "User"}
+                    className="h-12 w-12"
+                  />
 
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">

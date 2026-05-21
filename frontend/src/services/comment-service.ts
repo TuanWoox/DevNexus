@@ -19,12 +19,12 @@ export const commentService = {
 
     getOwnComments: async (payload: Page<string>): Promise<PagedData<SelectCommentDTO, string>> => {
         const { data } = await api.post<ReturnResult<PagedData<SelectCommentDTO, string>>>('/Comments/my-comments', payload);
-        return data.result;
+        return data.result ?? { data: [], page: payload };
     },
 
     getRepliesByCommentId: async (commentId: string, payload: Page<string>): Promise<PagedData<SelectCommentDTO, string>> => {
         const { data } = await api.post<ReturnResult<PagedData<SelectCommentDTO, string>>>(`/Comments/${commentId}/replies`, payload);
-        return data.result;
+        return data.result ?? { data: [], page: payload };
     },
 
     updateComment: async (updateCommentDTO: UpdateCommentDTO): Promise<SelectCommentDTO> => {
@@ -39,11 +39,11 @@ export const commentService = {
 
     getCommentsByPostId: async (postId: string, payload: Page<string>): Promise<PagedData<SelectCommentDTO, string>> => {
         const { data } = await api.post<ReturnResult<PagedData<SelectCommentDTO, string>>>(`/Comments/by-post/${postId}`, payload);
-        return data.result;
+        return data.result ?? { data: [], page: payload };
     },
 
     getCommentsByAnswerId: async (answerId: string, payload: Page<string>): Promise<PagedData<SelectCommentDTO, string>> => {
         const { data } = await api.post<ReturnResult<PagedData<SelectCommentDTO, string>>>(`/Comments/by-answer/${answerId}`, payload);
-        return data.result;
+        return data.result ?? { data: [], page: payload };
     }
 }

@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { useTheme } from 'next-themes'
 import {
     User,
@@ -25,6 +24,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useHasMounted } from '@/hooks/use-has-mounted'
 import { cn } from '@/lib/utils'
+import { UserAvatar } from '@/components/shared/user-avatar'
 
 /**
  * SidebarUserMenu — Client Component isolated to contain all
@@ -75,13 +75,7 @@ export function SidebarUserMenu({ isCollapsed }: { isCollapsed?: boolean }) {
                     "flex items-center gap-3 p-2 w-full rounded-xl hover:bg-subtle transition-colors group cursor-pointer",
                     isCollapsed ? "justify-center" : "justify-center lg:justify-start"
                 )}>
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
-                        {userProfile?.avatarUrl ? (
-                            <Image src={userProfile.avatarUrl} alt={userProfile.fullName} fill unoptimized className="object-cover" />
-                        ) : (
-                            <span className="text-primary font-bold">{userProfile?.fullName?.charAt(0) || 'U'}</span>
-                        )}
-                    </div>
+                    <UserAvatar avatarUrl={userProfile?.avatarUrl} fullName={userProfile?.fullName ?? 'User'} className="w-10 h-10 border border-default" />
                     {!isCollapsed && (
                         <>
                             <div className="flex flex-col text-left flex-1 overflow-hidden">

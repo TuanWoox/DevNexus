@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, BellOff, Bell } from "lucide-react";
+import { Trash2, BellOff, Bell, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Link from "next/link";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Notification } from "@/features/notifications/types/contracts";
-import { NotificationEventEnum } from "@/features/notifications/types/enums";
+import { ActorType, NotificationEventEnum } from "@/features/notifications/types/enums";
 import { useMarkAsRead } from "@/features/notifications/hooks/notifications/use-mark-as-read";
 import { useDeleteNotification } from "@/features/notifications/hooks/notifications/use-delete-notification";
 import { useAddMute, useRemoveMute } from "@/features/notifications/hooks/settings/use-mute-settings";
@@ -68,6 +69,37 @@ export function NotificationItem({ notification, onClose }: Props) {
     };
 
     const canMute = notification.EntityType !== undefined && notification.EntityId !== undefined;
+    const actorName = notification.ActorName ?? (notification.ActorType === ActorType.SYSTEM ? "DevNexus" : "User");
+
+    const renderActorAvatar = () => {
+        if (notification.ActorType === ActorType.SYSTEM) {
+            return (
+                <span className="h-10 w-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center border border-default">
+                    <ShieldCheck className="h-5 w-5 text-primary" />
+                </span>
+            );
+        }
+
+        const avatar = (
+            <UserAvatar
+                avatarUrl={notification.ActorAvatarUrl}
+                fullName={actorName}
+                className="h-10 w-10 shrink-0 border border-default"
+            />
+        );
+
+        if (!notification.ActorId) return avatar;
+
+        const href = notification.ActorType === ActorType.COMMUNITY
+            ? `/communities/${notification.ActorId}`
+            : `/profile/${notification.ActorId}`;
+
+        return (
+            <Link href={href} onClick={(e) => e.stopPropagation()} aria-label={actorName}>
+                {avatar}
+            </Link>
+        );
+    };
 
     return (
         <div
@@ -83,15 +115,7 @@ export function NotificationItem({ notification, onClose }: Props) {
                 <span className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
             )}
 
-            <Avatar className="h-10 w-10 shrink-0 border border-default">
-                <AvatarImage
-                    src={notification.Actor?.AvatarUrl || "/images/default-avatar.webp"}
-                    alt={notification.Actor?.FullName ?? "User"}
-                />
-                <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
-                    {notification.Actor?.FullName?.charAt(0)?.toUpperCase() ?? "U"}
-                </AvatarFallback>
-            </Avatar>
+            {renderActorAvatar()}
 
             <div className="flex-1 min-w-0 pr-20">
                 <p className="text-sm text-body leading-relaxed">

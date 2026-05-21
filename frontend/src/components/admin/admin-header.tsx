@@ -7,6 +7,7 @@ import type { RootState } from '@/store/store'
 import { useGetProfileById } from '@/hooks/profile-hooks/use-get-profile-by-id'
 import { adminNavItems } from '@/components/admin/admin-sidebar'
 import { usePathname } from 'next/navigation'
+import { UserAvatar } from '@/components/shared/user-avatar'
 
 export function AdminHeader() {
   const pathname = usePathname()
@@ -37,13 +38,7 @@ export function AdminHeader() {
         <button className="text-muted-foreground hover:text-primary transition-colors p-2">
           <Search className="h-5 w-5" />
         </button>
-        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default">
-          {userProfile?.avatarUrl ? (
-            <img src={userProfile.avatarUrl} alt={userProfile.fullName} className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-primary font-bold">{userProfile?.fullName?.charAt(0) ?? 'A'}</span>
-          )}
-        </div>
+        <UserAvatar avatarUrl={userProfile?.avatarUrl} fullName={userProfile?.fullName ?? 'Admin'} className="w-10 h-10 border border-default" />
       </div>
     </header>
   )

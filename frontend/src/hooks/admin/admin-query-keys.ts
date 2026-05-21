@@ -13,6 +13,12 @@ export const adminQueryKeys = {
     paging: (payload: Page<string>) => ['admin', 'posts', 'paging', payload] as const,
   },
 
+  reports: {
+    all: ['admin', 'reports'] as const,
+    paging: (payload: Page<string>) => ['admin', 'reports', 'paging', payload] as const,
+    detail: (id: string) => ['admin', 'reports', 'detail', id] as const,
+  },
+
   users: {
     all: ['admin', 'users'] as const,
     paging: (payload: Page<string>) => ['admin', 'users', 'paging', payload] as const,

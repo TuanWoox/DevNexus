@@ -3,11 +3,11 @@
 import { useRef, useEffect, useMemo } from "react";
 import { Search, X, Loader2, CornerDownLeft, MessageSquare, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Chat, ProfileSummary } from "@/features/messages/types/contracts";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
-import { getAvatarUrl, getTitle, getInitials } from "@/features/messages/utils/message-service.helper";
+import { getAvatarUrl, getTitle } from "@/features/messages/utils/message-service.helper";
 import { useChatSearch } from "@/features/messages/hooks/chats/use-chat-search";
 import { useFollowedProfilesSearch } from "@/features/messages/hooks/chats/use-followed-profiles-search";
 
@@ -179,12 +179,11 @@ export function MessageSearch({
                                             onClick={() => { onSelectChat(chat); onChange(""); }}
                                             className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-accent/40 transition-colors"
                                         >
-                                            <Avatar className="h-9 w-9 shrink-0 ring-2 ring-border/50">
-                                                <AvatarImage src={avatarUrl} alt={title} />
-                                                <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                                                    {getInitials(title)}
-                                                </AvatarFallback>
-                                            </Avatar>
+                                            <UserAvatar
+                                                avatarUrl={avatarUrl}
+                                                fullName={title}
+                                                className="h-9 w-9 shrink-0 ring-2 ring-border/50"
+                                            />
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-center gap-2">
                                                     <span className="truncate text-sm font-semibold text-foreground">{title}</span>
@@ -230,12 +229,11 @@ export function MessageSearch({
                                             onClick={() => { onSelectPerson(profile); onChange(""); }}
                                             className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-accent/40 transition-colors"
                                         >
-                                            <Avatar className="h-9 w-9 shrink-0 ring-2 ring-border/50">
-                                                <AvatarImage src={profile.AvatarUrl ?? undefined} alt={profile.FullName} />
-                                                <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                                                    {getInitials(profile.FullName)}
-                                                </AvatarFallback>
-                                            </Avatar>
+                                            <UserAvatar
+                                                avatarUrl={profile.AvatarUrl}
+                                                fullName={profile.FullName}
+                                                className="h-9 w-9 shrink-0 ring-2 ring-border/50"
+                                            />
                                             <div className="min-w-0 flex-1">
                                                 <span className="truncate text-sm font-semibold text-foreground">{profile.FullName}</span>
                                                 <p className="text-xs text-muted-foreground mt-0.5">Start a new conversation</p>

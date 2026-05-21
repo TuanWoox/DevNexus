@@ -144,7 +144,7 @@ namespace platform_core_service.Business.Services
 
                 // Gán entry.Post vào biến post để xài cho gọn và hết lỗi đỏ
                 var post = entry.Post;
-                EnqueueModerationNotification(post);
+                await EnqueueModerationNotification(post);
 
                 if (post is QAPost)
                 {
@@ -254,7 +254,7 @@ namespace platform_core_service.Business.Services
                     internalNote: entry.ModeratorNote));
 
                 await _context.SaveChangesAsync();
-                EnqueueModerationNotification(entry.Post);
+                await EnqueueModerationNotification(entry.Post);
 
                 DevNexusLogger.Instance.Debug(
                     $"[AdminModeration] Entry {dto.Id} rejected by admin {adminId} for post {entry.PostId}");
@@ -269,13 +269,15 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
-        private void EnqueueModerationNotification(Post post)
+        private Task EnqueueModerationNotification(Post post)
         {
             var isQuestion = post is QAPost;
             var notificationEvent = new NotiicationCreatedEntityDTO
             {
                 EventType = NotificationEventType.MODERATION_RESULT,
-                ActorId = post.AuthorId,
+                ActorType = ActorType.System,
+                ActorId = "devnexus",
+                ActorName = "DevNexus",
                 RecipientId = post.AuthorId,
                 EntityType = isQuestion ? NotificationEntityType.QUESTION : NotificationEntityType.POST,
                 EntityId = post.Id,
@@ -288,6 +290,8 @@ namespace platform_core_service.Business.Services
 
             _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
                 x => x.PublicNotification(notificationEvent, "notifications.moderation"));
+
+            return Task.CompletedTask;
         }
 
         private static string BuildRejectionReason(string? moderatorNote, string? tier2Reasoning, string? queueReason)

@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { Message, MediaType, ProfileSummary } from "@/features/messages/types/contracts";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { toRelativeTime, getInitials, getMediaUrl } from "@/features/messages/utils/message-service.helper";
+import { UserAvatar } from "@/components/shared/user-avatar";
+import { toRelativeTime, getMediaUrl } from "@/features/messages/utils/message-service.helper";
 import { Check, Download, FileText, FileArchive, MoreVertical, Trash2, Pencil } from "lucide-react";
 import { MediaLightbox } from "@/components/message/media-lightbox";
 import { ReadReceiptOverlay } from "@/components/message/read-receipt-overlay";
@@ -114,12 +114,12 @@ function ReaderAvatars({
             <div className="flex items-center gap-1 px-1.5">
                 <div className="flex -space-x-1.5">
                     {visible.map((r) => (
-                        <Avatar key={r.ReaderId} className="h-4 w-4 ring-1 ring-background" title={r.Reader?.FullName ?? "Unknown"}>
-                            <AvatarImage src={r.Reader?.AvatarUrl ?? "/images/default-avatar.webp"} alt={r.Reader?.FullName ?? "Unknown"} />
-                            <AvatarFallback className="text-[6px] bg-primary/10 text-primary">
-                                {getInitials(r.Reader?.FullName as string ?? "?")}
-                            </AvatarFallback>
-                        </Avatar>
+                        <UserAvatar
+                            key={r.ReaderId}
+                            avatarUrl={r.Reader?.AvatarUrl}
+                            fullName={r.Reader?.FullName ?? "Unknown"}
+                            className="h-4 w-4 ring-1 ring-background"
+                        />
                     ))}
                     {overflow > 0 && (
                         <button
@@ -185,12 +185,7 @@ export function MessageBubble({
                 {!isMine && (
                     <div className="w-7 shrink-0 self-end mb-1">
                         {showAvatar && (
-                            <Avatar className="h-7 w-7 ring-1 ring-border/50">
-                                <AvatarImage src={sender.AvatarUrl ?? "/images/default-avatar.webp"} alt={sender.FullName} />
-                                <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
-                                    {getInitials(sender.FullName)}
-                                </AvatarFallback>
-                            </Avatar>
+                            <UserAvatar avatarUrl={sender.AvatarUrl} fullName={sender.FullName} className="h-7 w-7 ring-1 ring-border/50" />
                         )}
                     </div>
                 )}

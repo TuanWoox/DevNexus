@@ -37,13 +37,32 @@ class CodeToolsService:
         request: CodeExplainRequest,
         user_id: str | None = None,
     ) -> CodeExplainResponse:
-        logger.info("CodeToolsService: explain_code for language %s", request.language)
+        language = self._normalize_language(request.language)
+        logger.info("CodeToolsService: explain_code for language %s", language)
 
         safe_code = truncate_input(request.code)
+        language_instruction = (
+            "Infer the programming language from the snippet before explaining it."
+            if language == "auto"
+            else f"The snippet is written in {language}."
+        )
 
         prompt = (
-            f"You are an expert Senior Software Engineer and technical mentor. "
-            f"Explain the following {request.language} code step-by-step in simple Vietnamese for a junior developer.\n\n"
+            "You are an AI code helper inside a developer post detail page. "
+            f"{language_instruction} Explain for a developer quickly reading the post. "
+            "Use simple Vietnamese.\n\n"
+            "Rules:\n"
+            "- Keep it concise and scannable.\n"
+            "- Do not over-explain basic syntax.\n"
+            "- Do not produce long documentation.\n"
+            "- Prefer practical understanding over exhaustive explanation.\n"
+            "- Summary: 1-2 short sentences.\n"
+            "- key_flow: maximum 5 bullets, main execution flow only.\n"
+            "- watch_out: maximum 3 bullets, only relevant bugs, edge cases, missing persistence, security, or performance concerns.\n"
+            "- details.important_details: maximum 4 short bullets.\n"
+            "- details.suggested_improvements: maximum 3 short bullets.\n"
+            "- details.concepts: maximum 5 short concepts.\n"
+            "- Return JSON matching the response schema only.\n\n"
             f"Code:\n```\n{safe_code}\n```"
         )
 
@@ -79,14 +98,44 @@ class CodeToolsService:
         request: DiagramRequest,
         user_id: str | None = None,
     ) -> DiagramResponse:
-        logger.info("CodeToolsService: generate_diagram format %s", request.diagram_type)
+        diagram_type = self._normalize_diagram_type(request.diagram_type)
+        language = self._normalize_language(request.language)
+        logger.info("CodeToolsService: generate_diagram format %s", diagram_type)
 
         safe_code = truncate_input(request.code)
+        diagram_instruction = (
+            "Choose either a flowchart or sequence diagram, whichever best represents the code."
+            if diagram_type == "auto"
+            else f"Generate a {diagram_type} diagram."
+        )
+        language_instruction = (
+            "Infer the programming language from the snippet."
+            if language == "auto"
+            else f"The snippet is written in {language}."
+        )
 
         prompt = (
-            f"You are an expert software architect. Analyze the the provided code and generate a {request.diagram_type} "
-            f"representing its logic using Mermaid.js syntax.\n"
-            f"Output MUST be valid Mermaid.js syntax ONLY. Do not wrap it in markdown block. Just pure mermaid code.\n\n"
+            f"Generate a Mermaid diagram for this code. {language_instruction} {diagram_instruction}\n\n"
+            "Rules:\n"
+            "- Create a high-level developer-friendly diagram, not a line-by-line trace.\n"
+            "- Limit the diagram to 5-8 meaningful nodes.\n"
+            "- Merge repetitive assignments or simple statements into a single node.\n"
+            "- Prefer readability over completeness.\n"
+            "- For loops, use one node that summarizes the repeated operation.\n"
+            "- For conditionals, show only meaningful branches.\n"
+            "- Avoid very tall diagrams unless the code truly requires it.\n"
+            "- Use short node labels.\n"
+            "- Return valid Mermaid only in mermaid_syntax.\n\n"
+            "For flowchart:\n"
+            "- Use flowchart TD unless there is a strong reason otherwise.\n"
+            "- Keep node labels short.\n"
+            "- Avoid unnecessary intermediate nodes.\n\n"
+            "For sequence diagram:\n"
+            "- Include only key actors/components.\n"
+            "- Avoid one message per line of code.\n"
+            "- Show the main interaction flow only.\n\n"
+            "Return JSON containing mermaid_syntax and diagram_type. "
+            "diagram_type MUST be either flowchart or sequence. mermaid_syntax MUST contain valid Mermaid.js syntax only, without markdown fences.\n\n"
             f"Code:\n```\n{safe_code}\n```"
         )
 
@@ -104,13 +153,8 @@ class CodeToolsService:
             result = DiagramResponse.model_validate_json(response.text)
 
             # Sanitize: Gemini occasionally wraps the syntax in markdown fences even when asked not to.
-            result.mermaid_syntax = (
-                result.mermaid_syntax.replace("```mermaid\n", "")
-                .replace("```mermaid", "")
-                .replace("```\n", "")
-                .replace("```", "")
-                .strip()
-            )
+            result.mermaid_syntax = self._strip_mermaid_fence(result.mermaid_syntax)
+            self._validate_explicit_diagram_type(diagram_type, result)
 
             await self._usage.log_from_response(
                 response=response,
@@ -125,6 +169,61 @@ class CodeToolsService:
             raise
         except Exception as exc:
             raise handle_genai_error("CodeToolsService.generate_diagram", exc) from exc
+
+    @staticmethod
+    def _normalize_language(language: str | None) -> str:
+        normalized = (language or "auto").strip().lower()
+        return normalized or "auto"
+
+    @staticmethod
+    def _normalize_diagram_type(diagram_type: str | None) -> str:
+        normalized = (diagram_type or "auto").strip().lower()
+        return normalized if normalized in {"auto", "flowchart", "sequence"} else "auto"
+
+    @classmethod
+    def _validate_explicit_diagram_type(cls, requested_type: str, result: DiagramResponse) -> None:
+        if requested_type == "auto":
+            return
+
+        actual_type = cls._normalize_diagram_type(result.diagram_type)
+        if requested_type == "sequence":
+            is_valid = actual_type == "sequence" and cls._is_sequence_mermaid(result.mermaid_syntax)
+        else:
+            is_valid = actual_type == "flowchart" and cls._is_flowchart_mermaid(result.mermaid_syntax)
+
+        if not is_valid:
+            raise AIWorkerException(
+                "AI generated a diagram that did not match the requested diagram type. Please try again.",
+                status_code=502,
+            )
+
+    @staticmethod
+    def _first_mermaid_line(value: str) -> str:
+        return next((line.strip().lower() for line in value.splitlines() if line.strip()), "")
+
+    @classmethod
+    def _is_sequence_mermaid(cls, value: str) -> bool:
+        return cls._first_mermaid_line(value).startswith("sequencediagram")
+
+    @classmethod
+    def _is_flowchart_mermaid(cls, value: str) -> bool:
+        first_line = cls._first_mermaid_line(value)
+        return first_line.startswith("flowchart") or first_line.startswith("graph ")
+
+    @staticmethod
+    def _strip_mermaid_fence(value: str) -> str:
+        lines = value.strip().splitlines()
+        if not lines:
+            return ""
+
+        first_line = lines[0].strip().lower()
+        if first_line in {"```", "```mermaid"}:
+            lines = lines[1:]
+
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+
+        return "\n".join(lines).strip()
 
     async def generate_first_response(
         self,

@@ -76,6 +76,22 @@ namespace platform_core_service.Controllers
             }
             return Ok(returnResult);
         }
+
+        [HttpGet("status/{otherProfileId}")]
+        public async Task<IActionResult> GetBlockStatus(string otherProfileId)
+        {
+            ReturnResult<SelectBlockStatus> returnResult = new();
+            try
+            {
+                returnResult = await _profileBlockService.GetBlockStatusAsync(otherProfileId);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = ex.Message;
+            }
+            return Ok(returnResult);
+        }
         // [HttpDelete("blockprofileid/{blockProfileId}")]
         // public async Task<IActionResult> DeleteByBlockProfileId(string blockProfileId)
         // {

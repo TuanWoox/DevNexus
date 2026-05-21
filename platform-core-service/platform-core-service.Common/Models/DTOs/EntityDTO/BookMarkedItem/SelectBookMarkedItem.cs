@@ -12,5 +12,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.BookMarkedItem
         public string? QAPostId { get; set; }
         public SelectPostDTO? Post { get; set; }
         public SelectQAPostDTO? QAPost { get; set; }
+        public bool IsUnavailable { get; set; }
+        public string? UnavailableMessage { get; set; }
     }
 }

@@ -2,7 +2,6 @@
 
 import { useTheme } from 'next-themes'
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
@@ -12,6 +11,7 @@ import {
   BrainCircuit,
   Settings,
   History,
+  Flag,
   Hexagon,
   Sparkles,
   User,
@@ -33,10 +33,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { UserAvatar } from '@/components/shared/user-avatar'
 
 const adminNavItems = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, roles: ['Admin'] },
   { name: 'Posts', href: '/admin/posts', icon: FileText, roles: ['Admin', 'Moderator'] },
+  { name: 'Reports', href: '/admin/reports', icon: Flag, roles: ['Admin', 'Moderator'] },
   { name: 'User Management', href: '/admin/users', icon: Users, roles: ['Admin'] },
   { name: 'Tag Management', href: '/admin/tags', icon: Tag, roles: ['Admin', 'Moderator'] },
   { name: 'AI Usage', href: '/admin/ai-usage', icon: BrainCircuit, roles: ['Admin'] },
@@ -106,13 +108,7 @@ export function AdminSidebar() {
               suppressHydrationWarning
               className="flex justify-center lg:justify-start items-center gap-3 p-2 w-full rounded-xl hover:bg-subtle transition-colors group"
             >
-              <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden border border-default relative">
-                {userProfile?.avatarUrl ? (
-                  <Image src={userProfile.avatarUrl} alt={userProfile.fullName} fill unoptimized className="object-cover" />
-                ) : (
-                  <span className="text-primary font-bold">{userProfile?.fullName?.charAt(0) || 'A'}</span>
-                )}
-              </div>
+              <UserAvatar avatarUrl={userProfile?.avatarUrl} fullName={userProfile?.fullName ?? 'Admin'} className="w-9 h-9 border border-default" />
               <div className="hidden lg:flex flex-col text-left flex-1 overflow-hidden">
                 <span className="text-sm font-semibold text-heading truncate">{userProfile?.fullName || 'Admin'}</span>
                 <span className="text-xs text-muted-foreground font-semibold truncate">{userRoles.join(', ') || 'Admin'}</span>

@@ -231,10 +231,14 @@ namespace platform_core_service.Business.Services
 
             if (community == null) return;
 
+            var actor = await GetProfileSnapshot(actorId);
             var notificationEvent = new NotiicationCreatedEntityDTO
             {
                 EventType = NotificationEventType.COMMUNITY_ROLE_CHANGE,
+                ActorType = ActorType.Profile,
                 ActorId = actorId,
+                ActorName = actor.Name,
+                ActorAvatarUrl = actor.AvatarUrl,
                 RecipientId = targetProfileId,
                 EntityType = NotificationEntityType.COMMUNITY,
                 EntityId = community.Id,
@@ -249,6 +253,16 @@ namespace platform_core_service.Business.Services
 
             _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
                 x => x.PublicNotification(notificationEvent, "notifications.community"));
+        }
+
+        private async Task<(string? Name, string? AvatarUrl)> GetProfileSnapshot(string profileId)
+        {
+            var profile = await _context.Profiles
+                .Where(p => p.Id == profileId)
+                .Select(p => new { p.FullName, p.AvatarUrl })
+                .FirstOrDefaultAsync();
+
+            return (profile?.FullName, profile?.AvatarUrl);
         }
     }
 }

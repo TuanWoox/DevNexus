@@ -37,6 +37,7 @@ namespace platform_core_service.Data
         public DbSet<CommentMedia> CommentMedias { get; set; }
         public DbSet<PostModerationResult> PostModerationResults { get; set; }
         public DbSet<ModerationQueueEntry> ModerationQueueEntries { get; set; }
+        public DbSet<ModerationReport> ModerationReports { get; set; }
         public DbSet<AdminAuditLog> AdminAuditLogs { get; set; }
         public DbSet<PostHistory> PostHistories { get; set; }
         public DbSet<QAPostHistory> QAPostHistories { get; set; }
@@ -148,6 +149,25 @@ namespace platform_core_service.Data
                 entity.HasIndex(e => new { e.ActorId, e.CreatedAt });
                 entity.HasIndex(e => new { e.TargetType, e.TargetId, e.CreatedAt });
                 entity.HasIndex(e => new { e.ActionType, e.CreatedAt });
+            });
+
+            builder.Entity<ModerationReport>(entity =>
+            {
+                entity.Property(e => e.TargetType).HasConversion<int>();
+                entity.Property(e => e.Reason).HasConversion<int>();
+                entity.Property(e => e.Status).HasConversion<int>();
+                entity.Property(e => e.Resolution).HasConversion<int>();
+                entity.Property(e => e.TargetSnapshotJson).HasColumnType("jsonb");
+
+                entity.HasIndex(e => new { e.Status, e.DateCreated });
+                entity.HasIndex(e => new { e.TargetType, e.TargetId, e.Status });
+                entity.HasIndex(e => new { e.ReporterId, e.TargetType, e.TargetId, e.Status });
+                entity.HasIndex(e => new { e.ReporterId, e.TargetType, e.TargetId })
+                    .IsUnique()
+                    .HasDatabaseName("IX_ModerationReports_OpenDuplicateGuard")
+                    .HasFilter("\"Deleted\" = false AND \"Status\" IN (0, 1, 4)");
+                entity.HasIndex(e => new { e.AssignedModeratorId, e.Status, e.DateCreated });
+                entity.HasIndex(e => new { e.TargetOwnerId, e.Status, e.DateCreated });
             });
 
             builder.Entity<PostHistory>(entity =>

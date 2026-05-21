@@ -21,6 +21,8 @@ namespace platform_core_service.Common.Interfaces.Services
         Task SubmitForModerationAsync(string postId, string title, string textContent);
         Task<ReturnResult<AISummarizeResponseDTO>> SummarizeContentAsync(AISummarizeRequestDTO request);
         Task<ReturnResult<AIMetadataResponseDTO>> SuggestMetadataAsync(AIMetadataRequestDTO request);
+        Task<ReturnResult<AICodeExplainResponseDTO>> ExplainCodeAsync(AICodeExplainRequestDTO request);
+        Task<ReturnResult<AICodeDiagramResponseDTO>> GenerateCodeDiagramAsync(AICodeDiagramRequestDTO request);
         Task<ReturnResult<bool>> UpdateUsageInteractionAsync(int usageLogId, AIUsageInteractionUpdateRequestDTO request);
         Task<ReturnResult<AiUsageLogPageResponseDTO>> GetPageAiUsageLogsAsync(Page<string> page);
         Task<ReturnResult<AdminAiUsageSummaryDTO>> GetSummaryAsync(DateOnly from, DateOnly to);

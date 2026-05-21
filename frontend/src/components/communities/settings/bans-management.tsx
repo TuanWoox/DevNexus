@@ -17,7 +17,7 @@ import { SortOrderType } from "@/constants/sortOrderType";
 import { CreateCommunityBanDTO } from "@/types/community-bans/create-community-ban-dto";
 import { MemberSearchModal } from "./member-search-modal";
 import Link from "next/link";
-import Image from "next/image";
+import { UserAvatar } from "@/components/shared/user-avatar";
 
 interface BansManagementProps {
     community: SelectCommunityDTO;
@@ -181,21 +181,11 @@ export function BansManagement({ community }: BansManagementProps) {
                                             href={`/profile/${ban.bannedProfile?.id ?? ban.id}`}
                                             className="flex items-center gap-3 group w-fit"
                                         >
-                                            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-muted shrink-0">
-                                                {ban.bannedProfile?.avatarUrl ? (
-                                                    <Image
-                                                        src={ban.bannedProfile.avatarUrl}
-                                                        alt={ban.bannedProfile.fullName ?? "User"}
-                                                        fill
-                                                        unoptimized
-                                                        className="object-cover"
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground font-medium">
-                                                        {(ban.bannedProfile?.fullName ?? "?")[0].toUpperCase()}
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <UserAvatar
+                                                avatarUrl={ban.bannedProfile?.avatarUrl}
+                                                fullName={ban.bannedProfile?.fullName ?? "User"}
+                                                className="w-8 h-8 shrink-0"
+                                            />
                                             <div className="flex flex-col">
                                                 <span className="font-medium text-sm group-hover:text-primary transition-colors">
                                                     {ban.bannedProfile?.fullName || "Unknown User"}

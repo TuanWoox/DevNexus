@@ -33,7 +33,7 @@ namespace platform_core_service
             services.ConfigureHangfireWithPostgreSql(Configuration);
             services.ConfigureCloudinary(Configuration);
             services.RegisterStudyNestService(Configuration);
-            services.AddDistributedMemoryCache();
+            services.ConfigureRedis(Configuration);
             services.ConfigureRateLimiter();
         }
 

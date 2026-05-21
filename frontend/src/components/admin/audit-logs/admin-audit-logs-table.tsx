@@ -25,6 +25,7 @@ function targetTypeLabel(value: AuditTargetType | number): string {
     case AuditTargetType.User: return 'User'
     case AuditTargetType.Post: return 'Post'
     case AuditTargetType.ModerationQueueEntry: return 'Queue Entry'
+    case AuditTargetType.ModerationReport: return 'Moderation report'
     default: return 'Unknown'
   }
 }
@@ -39,6 +40,10 @@ function actionTypeLabel(value: AuditActionType | number): string {
     case AuditActionType.PostForceRejected: return 'Post force rejected'
     case AuditActionType.ModerationQueueApproved: return 'Queue approved'
     case AuditActionType.ModerationQueueRejected: return 'Queue rejected'
+    case AuditActionType.ReportAssigned: return 'Report assigned'
+    case AuditActionType.ReportResolved: return 'Report resolved'
+    case AuditActionType.ReportDismissed: return 'Report dismissed'
+    case AuditActionType.ReportEscalated: return 'Report escalated'
     default: return 'Unknown action'
   }
 }

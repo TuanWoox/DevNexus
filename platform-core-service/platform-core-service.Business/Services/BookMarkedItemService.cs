@@ -52,16 +52,14 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                // 3. Load the target post (Post or QAPost both inherit Post)
+                // 3. Check target visibility at save time.
                 string targetPostId = hasPost ? dto.PostId! : dto.QAPostId!;
-
-                var post = await _dbContext.Posts.Where(x => x.Id == targetPostId)
-                                                .Include(x => x.Author)
-                                                .AsNoTracking()
-                                                .FirstOrDefaultAsync();
-                if (post == null)
+                var saveAccess = hasPost
+                    ? await _socialGuardService.CanSavePost(targetPostId)
+                    : await _socialGuardService.CanSaveQuestion(targetPostId);
+                if (!saveAccess.Result)
                 {
-                    returnResult.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_FOUND, "post", targetPostId);
+                    returnResult.Message = saveAccess.Message ?? ResponseMessage.NO_PERMISSION_TO_SAVE;
                     return returnResult;
                 }
 
@@ -74,14 +72,6 @@ namespace platform_core_service.Business.Services
                 if (duplicate)
                 {
                     returnResult.Message = "This item is already in the bookmark.";
-                    return returnResult;
-                }
-
-                // 5. Check access rights
-                var accessCheck = await _socialGuardService.CheckVisibleContent(post.AuthorId, post.CommunityId);
-                if (accessCheck.Message != null)
-                {
-                    returnResult.Message = accessCheck.Message;
                     return returnResult;
                 }
 
@@ -159,20 +149,13 @@ namespace platform_core_service.Business.Services
                     // giving the user a way to remove it from their collection.
                     foreach (var item in returnResult.Result.Data)
                     {
-                        string? authorId = item.Post?.AuthorId ?? item.QAPost?.AuthorId;
-                        string? communityId = item.Post?.CommunityId ?? item.QAPost?.CommunityId;
+                        var accessCheck = await CanViewBookmarkedTarget(item);
 
-                        if (!string.IsNullOrEmpty(authorId))
+                        if (!accessCheck.Result)
                         {
-                            var accessCheck = await _socialGuardService.CheckVisibleContent(authorId, communityId);
-                            if (accessCheck.Message != null)
-                            {
+                            MarkUnavailable(item, accessCheck.Message);
                                 // Access denied — nullify content but keep the bookmark record
-                                // so the user can still remove it via UnavailablePostCard.
-                                item.Post = null;
-                                item.QAPost = null;
-                                continue;
-                            }
+                            continue;
                         }
 
                         // Access granted — mark the item as saved
@@ -240,6 +223,33 @@ namespace platform_core_service.Business.Services
             {
                 dto.CommentCount = comments.TryGetValue(dto.Id, out var count) ? count : 0;
             }
+        }
+
+        private async Task<ReturnResult<bool>> CanViewBookmarkedTarget(SelectBookMarkedItem item)
+        {
+            if (!string.IsNullOrEmpty(item.PostId))
+            {
+                return await _socialGuardService.CanViewPost(item.PostId);
+            }
+
+            if (!string.IsNullOrEmpty(item.QAPostId))
+            {
+                return await _socialGuardService.CanViewQAPost(item.QAPostId);
+            }
+
+            return new ReturnResult<bool>
+            {
+                Result = false,
+                Message = ResponseMessage.CONTENT_NOT_AVAILABLE
+            };
+        }
+
+        private static void MarkUnavailable(SelectBookMarkedItem item, string? message)
+        {
+            item.Post = null;
+            item.QAPost = null;
+            item.IsUnavailable = true;
+            item.UnavailableMessage = message ?? ResponseMessage.CONTENT_NOT_AVAILABLE;
         }
 
         public async Task<ReturnResult<bool>> DeleteById(string id)

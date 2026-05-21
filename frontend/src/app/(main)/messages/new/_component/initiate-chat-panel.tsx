@@ -3,8 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Send, Loader2 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getInitials } from "@/features/messages/utils/message-service.helper";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { useCreateChat } from "@/features/messages/hooks/chats/use-create-chat";
 import { ProfileSummary } from "@/features/messages/types/contracts";
 import { cn } from "@/lib/utils";
@@ -75,12 +74,7 @@ export function InitiateChatPanel({ targetProfile }: InitiateChatPanelProps) {
                     <ArrowLeft className="h-5 w-5" />
                 </button>
 
-                <Avatar className="h-9 w-9 ring-2 ring-border/50">
-                    <AvatarImage src={targetProfile.AvatarUrl ?? undefined} alt={targetProfile.FullName} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
-                        {getInitials(targetProfile.FullName)}
-                    </AvatarFallback>
-                </Avatar>
+                <UserAvatar avatarUrl={targetProfile.AvatarUrl} fullName={targetProfile.FullName} className="h-9 w-9 ring-2 ring-border/50" />
 
                 <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-foreground truncate">{targetProfile.FullName}</p>
@@ -90,12 +84,7 @@ export function InitiateChatPanel({ targetProfile }: InitiateChatPanelProps) {
 
             {/* Body — empty state until first message is sent */}
             <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground px-8 text-center">
-                <Avatar className="h-20 w-20 ring-4 ring-border/30 shadow-card">
-                    <AvatarImage src={targetProfile.AvatarUrl ?? undefined} alt={targetProfile.FullName} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
-                        {getInitials(targetProfile.FullName)}
-                    </AvatarFallback>
-                </Avatar>
+                <UserAvatar avatarUrl={targetProfile.AvatarUrl} fullName={targetProfile.FullName} className="h-20 w-20 ring-4 ring-border/30 shadow-card" />
                 <div>
                     <p className="text-base font-semibold text-foreground">{targetProfile.FullName}</p>
                     <p className="text-sm mt-1">
