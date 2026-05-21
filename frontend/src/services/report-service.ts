@@ -13,10 +13,6 @@ export const reportService = {
       throw new Error(data.message || "Could not submit report");
     }
 
-    if (data.message && data.message !== "Report submitted successfully.") {
-      throw new Error(data.message);
-    }
-
     return data.result;
   },
 };

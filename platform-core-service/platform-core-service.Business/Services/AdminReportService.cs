@@ -517,6 +517,14 @@ namespace platform_core_service.Business.Services
             return null;
         }
 
+        private static readonly Dictionary<string, string> ActionPastTense = new()
+        {
+            ["assign"] = "assigned",
+            ["resolve"] = "resolved",
+            ["dismiss"] = "dismissed",
+            ["escalate"] = "escalated"
+        };
+
         private static string? ValidateCloseTransition(ModerationReport report, string action)
         {
             if (report.Status == ReportStatus.Pending || report.Status == ReportStatus.InReview)
@@ -529,7 +537,8 @@ namespace platform_core_service.Business.Services
                 return null;
             }
 
-            return $"Report cannot be {action}d from status {report.Status}.";
+            var pastTense = ActionPastTense.GetValueOrDefault(action, $"{action}d");
+            return $"Report cannot be {pastTense} from status {report.Status}.";
         }
 
         private async Task AddReportAuditAsync(

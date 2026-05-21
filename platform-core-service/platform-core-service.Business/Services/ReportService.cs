@@ -232,7 +232,11 @@ namespace platform_core_service.Business.Services
                 return null;
             }
 
-            var route = comment.PostId != null ? $"/post/{comment.PostId}" : null;
+            var route = comment.PostId != null
+                ? $"/post/{comment.PostId}"
+                : comment.Answer?.QAPostId != null
+                    ? $"/questions/{comment.Answer.QAPostId}"
+                    : null;
             return new ResolvedReportTarget(
                 comment.AuthorId,
                 BuildSnapshotJson("Comment", BuildPreview(comment.Content), comment.Author?.FullName, comment.Author?.AvatarUrl, route, comment.DateCreated, comment.DateModified, comment.Deleted));

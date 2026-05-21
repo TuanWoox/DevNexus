@@ -1,4 +1,5 @@
 import { ReportReason } from "@/types/report/report-reason";
+import { ReportResolution } from "@/types/report/report-resolution";
 import { ReportStatus } from "@/types/report/report-status";
 import { ReportTargetType } from "@/types/report/report-target-type";
 
@@ -27,7 +28,7 @@ export interface AdminReportDTO {
   targetRoute?: string | null;
   assignedModeratorId?: string | null;
   assignedModerator?: ProfileSummaryDTO | null;
-  resolution?: number | null;
+  resolution?: ReportResolution | null;
   resolvedAt?: string | null;
   dateCreated?: string | null;
   isStaffSensitive: boolean;
