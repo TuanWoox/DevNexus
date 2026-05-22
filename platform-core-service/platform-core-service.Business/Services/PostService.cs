@@ -527,9 +527,24 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Step 3: Check ownership
+                // Step 3: Check ownership or community moderation permissions
                 var profileId = _userContext.ProfileId;
-                if (post.AuthorId != profileId)
+                if (string.IsNullOrEmpty(profileId))
+                {
+                    result.Message = "User profile not found";
+                    return result;
+                }
+
+                if (!string.IsNullOrEmpty(post.CommunityId))
+                {
+                    var isModerator = await _socialGuardService.CheckIsCommunityAdminOrModeratorAsync(profileId, post.CommunityId);
+                    if (post.AuthorId != profileId && !isModerator.Result)
+                    {
+                        result.Message = "You do not have permission to delete this post";
+                        return result;
+                    }
+                }
+                else if (post.AuthorId != profileId)
                 {
                     result.Message = "You do not have permission to delete this post";
                     return result;

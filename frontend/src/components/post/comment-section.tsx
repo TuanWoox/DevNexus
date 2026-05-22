@@ -20,6 +20,7 @@ import { useIntersectionObserver } from '@/hooks/use-intersection-observer';
 import { Loader2 } from 'lucide-react';
 import { SelectPostDTO } from '@/types/post/select-post-dto';
 import { SelectQAPostDTO } from '@/types/qa-post/select-qa-post-dto';
+import { useGetCommunityById } from '@/hooks/community-hooks/use-get-community-by-id';
 
 interface Props {
     postId: string;
@@ -59,6 +60,12 @@ export default function CommentSection({ postId, isQAPost }: Props) {
     const { data: normalPost, isError: isNormalError } = useGetPostById(postId, !isQAPost);
     const post = isQAPost ? qaPost : normalPost;
     const communityId = post?.communityId;
+    const { data: community } = useGetCommunityById(communityId ?? '', Boolean(communityId));
+    const canModerateCommunity =
+        community?.currentUserRole === "Owner" ||
+        community?.currentUserRole === "OWNER" ||
+        community?.currentUserRole === "Moderator" ||
+        community?.currentUserRole === "MODERATOR";
     const isError = isQAPost ? isQAError : isNormalError;
 
     const isLoading = isQAPost ? isAnswerLoading : isCommentLoading;
@@ -151,6 +158,7 @@ export default function CommentSection({ postId, isQAPost }: Props) {
                                 isDisabled={!isApproved}
                                 isQuestionAuthor={post?.authorId === user?.profileId}
                                 communityId={communityId}
+                                canModerateCommunity={canModerateCommunity}
                             />
                         ) : (
                             <CommentItem
@@ -160,6 +168,7 @@ export default function CommentSection({ postId, isQAPost }: Props) {
                                 currentUserAvatar={userProfile?.avatarUrl}
                                 isDisabled={!isApproved}
                                 communityId={communityId}
+                                canModerateCommunity={canModerateCommunity}
                             />
                         )
                     ))}

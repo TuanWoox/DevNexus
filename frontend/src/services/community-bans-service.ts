@@ -16,8 +16,23 @@ export const communityBansService = {
         return data.result;
     },
 
+    unbanProfile: async (communityId: string, profileId: string): Promise<boolean> => {
+        const { data } = await api.delete<ReturnResult<boolean>>(
+            `/community-members/${communityId}/bans/profiles/${profileId}`
+        );
+        return data.result;
+    },
+
     getBansWithPagination: async (communityId: string, payload: Page<string>): Promise<PagedData<SelectCommunityBanDTO, string>> => {
         const { data } = await api.post<ReturnResult<PagedData<SelectCommunityBanDTO, string>>>(`/community-members/${communityId}/bans/paging`, payload);
         return data.result ?? { data: [], page: payload };
+    },
+
+    getProfileBanStatus: async (communityId: string, profileId: string): Promise<SelectCommunityBanDTO | null> => {
+        const { data } = await api.get<ReturnResult<SelectCommunityBanDTO>>(
+            `/community-members/${communityId}/bans/profiles/${profileId}`,
+            { suppressToast: true }
+        );
+        return data.result ?? null;
     }
 }

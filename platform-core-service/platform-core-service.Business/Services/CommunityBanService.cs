@@ -4,6 +4,7 @@ using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces.Contexts;
+using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityMember;
 using platform_core_service.Common.Models.Paging;
@@ -18,11 +19,13 @@ namespace platform_core_service.Business.Services
         ApplicationDbContext context,
         IMapper mapper,
         IUserContext userContext,
+        ISocialGuardService socialGuardService,
         IRepository<CommunityBan, string> banRepository) : ICommunityBanService
     {
         private readonly ApplicationDbContext _context = context;
         private readonly IMapper _mapper = mapper;
         private readonly IUserContext _userContext = userContext;
+        private readonly ISocialGuardService _socialGuardService = socialGuardService;
         private readonly IRepository<CommunityBan, string> _banRepository = banRepository;
 
         private async Task<bool> IsOwnerOrModeratorAsync(string communityId, string profileId)
@@ -155,6 +158,51 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
+        public async Task<ReturnResult<SelectCommunityBanDTO>> GetProfileBanStatusAsync(string communityId, string targetProfileId)
+        {
+            var result = new ReturnResult<SelectCommunityBanDTO>();
+            try
+            {
+                if (string.IsNullOrEmpty(communityId))
+                {
+                    result.Message = "Community ID is required";
+                    return result;
+                }
+
+                if (string.IsNullOrEmpty(targetProfileId))
+                {
+                    result.Message = "Target profile ID is required";
+                    return result;
+                }
+
+                var profileId = _userContext.ProfileId;
+                if (string.IsNullOrEmpty(profileId))
+                {
+                    result.Message = "User profile not found";
+                    return result;
+                }
+
+                var communityAccess = await _socialGuardService.CheckBelongToCommunity(communityId);
+                if (!communityAccess.Result)
+                {
+                    result.Message = communityAccess.Message;
+                    return result;
+                }
+
+                var ban = await _context.CommunityBans
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(b => b.CommunityId == communityId && b.BannedProfileId == targetProfileId);
+
+                result.Result = ban == null ? null : _mapper.Map<SelectCommunityBanDTO>(ban);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = "Failed to fetch profile community block status";
+            }
+            return result;
+        }
+
         public async Task<ReturnResult<bool>> UnbanMemberAsync(string banId)
         {
             var result = new ReturnResult<bool>();
@@ -196,6 +244,58 @@ namespace platform_core_service.Business.Services
                 _context.CommunityBans.Remove(ban);
                 await _context.SaveChangesAsync();
 
+                result.Result = true;
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while unbanning member: {ex.Message}";
+                result.Result = false;
+            }
+            return result;
+        }
+
+        public async Task<ReturnResult<bool>> UnbanProfileAsync(string communityId, string targetProfileId)
+        {
+            var result = new ReturnResult<bool>();
+            try
+            {
+                if (string.IsNullOrEmpty(communityId))
+                {
+                    result.Message = "Community ID is required";
+                    return result;
+                }
+
+                if (string.IsNullOrEmpty(targetProfileId))
+                {
+                    result.Message = "Target profile ID is required";
+                    return result;
+                }
+
+                var profileId = _userContext.ProfileId;
+                if (string.IsNullOrEmpty(profileId))
+                {
+                    result.Message = "User profile not found";
+                    return result;
+                }
+
+                if (!await IsOwnerOrModeratorAsync(communityId, profileId))
+                {
+                    result.Message = "Only the community owner or a moderator can unban members";
+                    return result;
+                }
+
+                var ban = await _context.CommunityBans
+                    .FirstOrDefaultAsync(b => b.CommunityId == communityId && b.BannedProfileId == targetProfileId);
+
+                if (ban == null)
+                {
+                    result.Message = "Ban record not found";
+                    return result;
+                }
+
+                _context.CommunityBans.Remove(ban);
+                await _context.SaveChangesAsync();
                 result.Result = true;
             }
             catch (Exception ex)

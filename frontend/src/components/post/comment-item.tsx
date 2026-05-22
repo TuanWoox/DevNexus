@@ -10,7 +10,7 @@ import { ContentType } from '@/types/content-media/content-type';
 import { useState } from 'react';
 import { CommentInput } from './comment-input';
 
-export function CommentItem({ comment, currentUserId, currentUserAvatar, isDisabled, communityId }: { comment: SelectCommentDTO, currentUserId: string, currentUserAvatar?: string, isDisabled?: boolean, communityId?: string | null }) {
+export function CommentItem({ comment, currentUserId, currentUserAvatar, isDisabled, communityId, canModerateCommunity }: { comment: SelectCommentDTO, currentUserId: string, currentUserAvatar?: string, isDisabled?: boolean, communityId?: string | null, canModerateCommunity?: boolean }) {
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByCommentId(comment.id);
     const { mutate: deleteComment, isPending: isDeletingComment } = useDeleteComment();
     const { mutate: updateComment, isPending: isUpdatingComment } = useUpdateComment();
@@ -40,6 +40,7 @@ export function CommentItem({ comment, currentUserId, currentUserAvatar, isDisab
                 isUpdating={isUpdatingComment}
                 isDisabled={isDisabled}
                 communityId={communityId}
+                canModerateCommunity={canModerateCommunity}
                 isReplying={isReplying}
                 onToggleReply={() => setIsReplying(!isReplying)}
                 hideReplyButton={!!comment.answerId || !!comment.replyToCommentId}
@@ -64,6 +65,7 @@ export function CommentItem({ comment, currentUserId, currentUserAvatar, isDisab
                             currentUserAvatar={currentUserAvatar}
                             isDisabled={isDisabled}
                             communityId={communityId}
+                            canModerateCommunity={canModerateCommunity}
                         />
                     ))}
                 </div>

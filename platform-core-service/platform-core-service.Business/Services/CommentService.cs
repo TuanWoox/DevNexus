@@ -412,9 +412,17 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Step 2: Load comment with replies
+                // Step 2: Load comment with replies and parents
                 var comment = await _context.Comments
                     .Include(c => c.Replies)
+                    .Include(c => c.Post)
+                    .Include(c => c.Answer)
+                        .ThenInclude(a => a.QAPost)
+                    .Include(c => c.ReplyToComment)
+                        .ThenInclude(rc => rc.Post)
+                    .Include(c => c.ReplyToComment)
+                        .ThenInclude(rc => rc.Answer)
+                            .ThenInclude(a => a.QAPost)
                     .FirstOrDefaultAsync(c => c.Id == commentId);
 
                 if (comment == null)
@@ -423,13 +431,34 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                // Step 3: Check ownership
+                // Step 3: Check ownership or community moderation permissions
                 var profileId = _userContext.ProfileId;
-                if (comment.AuthorId != profileId)
+                if (string.IsNullOrEmpty(profileId))
+                {
+                    result.Message = "User profile not found";
+                    return result;
+                }
+
+                var communityId = comment.Post?.CommunityId
+                    ?? comment.Answer?.QAPost?.CommunityId
+                    ?? comment.ReplyToComment?.Post?.CommunityId
+                    ?? comment.ReplyToComment?.Answer?.QAPost?.CommunityId;
+
+                if (!string.IsNullOrEmpty(communityId))
+                {
+                    var isModerator = await _socialGuardService.CheckIsCommunityAdminOrModeratorAsync(profileId, communityId);
+                    if (comment.AuthorId != profileId && !isModerator.Result)
+                    {
+                        result.Message = "You do not have permission to delete this comment";
+                        return result;
+                    }
+                }
+                else if (comment.AuthorId != profileId)
                 {
                     result.Message = "You do not have permission to delete this comment";
                     return result;
                 }
+
                 comment.Deleted = true;
                 if (comment.Replies != null && comment.Replies.Any())
                 {

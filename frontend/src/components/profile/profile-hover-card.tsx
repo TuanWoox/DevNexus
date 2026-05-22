@@ -12,6 +12,9 @@ interface ProfileHoverCardProps {
     showMessageAction?: boolean;
     showBlockAction?: boolean;
     showProfileAction?: boolean;
+    communityId?: string | null;
+    showCommunityStatus?: boolean;
+    canModerateCommunity?: boolean;
     variant?: 'default' | 'admin';
 }
 
@@ -23,6 +26,9 @@ export function ProfileHoverCard({
     showMessageAction = true,
     showBlockAction = true,
     showProfileAction = true,
+    communityId,
+    showCommunityStatus = false,
+    canModerateCommunity = false,
     variant = 'default'
 }: ProfileHoverCardProps) {
     const [open, setOpen] = useState(false);
@@ -48,6 +54,9 @@ export function ProfileHoverCard({
                     showMessageAction={showMessageAction}
                     showBlockAction={showBlockAction}
                     showProfileAction={showProfileAction}
+                    communityId={communityId}
+                    showCommunityStatus={showCommunityStatus}
+                    canModerateCommunity={canModerateCommunity}
                     variant={variant}
                 />
             </HoverCardContent>

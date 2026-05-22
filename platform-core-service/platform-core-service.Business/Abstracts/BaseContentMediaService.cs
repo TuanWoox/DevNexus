@@ -60,10 +60,10 @@ namespace platform_core_service.Business.Abstracts
                 var media = await IncludeNavigation(DbSet.Where(x => x.Id == id)).FirstOrDefaultAsync();
                 if (media == null) return "";
 
-                var authorId = media.GetAuthorId();
-                if (string.IsNullOrEmpty(authorId)) return "";
+                var currentViewingProfileId = _userContext.ProfileId;
+                if (string.IsNullOrEmpty(currentViewingProfileId)) return "";
 
-                var canAccess = (await _socialGuard.CheckVisibleContent(authorId, media.GetCommunityId())).Result;
+                var canAccess = (await _socialGuard.CheckVisibleContent(currentViewingProfileId, media.GetCommunityId())).Result;
                 if (!canAccess) return "";
 
                 var cacheDestination = await _cacheService.GetCacheAsync<string>($"{CacheKeyPrefix}{media.Id}");

@@ -41,6 +41,7 @@ interface PostActionsDropdownProps {
     communityId?: string | null;
     isQAPost: boolean;
     isAuthor: boolean;
+    canModerateCommunity?: boolean;
     onDeleted?: () => void;
     dropdownClassName?: string;
 }
@@ -50,6 +51,7 @@ export function PostActionsDropdown({
     communityId,
     isQAPost,
     isAuthor,
+    canModerateCommunity = false,
     onDeleted,
     dropdownClassName = '',
 }: PostActionsDropdownProps) {
@@ -65,6 +67,7 @@ export function PostActionsDropdown({
     });
     const reportMutation = useCreateCommunityContentReport();
     const canReportToCommunity = Boolean(communityId) && !isAuthor;
+    const canDelete = isAuthor || (Boolean(communityId) && canModerateCommunity);
     const isReportReasonValid = reportReason.trim().length >= 5 && reportReason.trim().length <= 500;
 
     const handleSubmitReport = () => {
@@ -122,15 +125,6 @@ export function PostActionsDropdown({
                                 <Edit className="w-4 h-4" />
                                 <span>Edit Post</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={() => setShowDeleteAlert(true)}
-                                disabled={isPending}
-                                variant='destructive'
-                                className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
-                            >
-                                <Trash className="w-4 h-4" />
-                                <span>Delete Post</span>
-                            </DropdownMenuItem>
                         </>
                     ) : (
                         <>
@@ -159,6 +153,17 @@ export function PostActionsDropdown({
                                 </DropdownMenuItem>
                             )}
                         </>
+                    )}
+                    {canDelete && (
+                        <DropdownMenuItem
+                            onClick={() => setShowDeleteAlert(true)}
+                            disabled={isPending}
+                            variant='destructive'
+                            className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
+                        >
+                            <Trash className="w-4 h-4" />
+                            <span>Delete Post</span>
+                        </DropdownMenuItem>
                     )}
                 </DropdownMenuContent>
             </DropdownMenu>

@@ -31,12 +31,14 @@ import { useHasMounted } from "@/hooks/use-has-mounted";
 import { cn } from "@/lib/utils";
 import { normalizeModerationStatus } from "@/types/post/moderation-status";
 import { useMuteGuard } from "@/hooks/community-mute-hooks/use-mute-guard";
+import { useGetCommunityById } from "@/hooks/community-hooks/use-get-community-by-id";
 
 interface PostCardProps {
     post: SelectPostDTO | SelectQAPostDTO;
+    canModerateCommunity?: boolean;
 }
 
-export function PostCard({ post }: PostCardProps) {
+export function PostCard({ post, canModerateCommunity }: PostCardProps) {
     const hasMounted = useHasMounted();
     const { user } = useSelector((state: RootState) => state.auth);
     const isQaPost = 'answerCount' in post;
@@ -57,6 +59,15 @@ export function PostCard({ post }: PostCardProps) {
     const { mutate: unsaveItem, isPending: isUnsavePending } = useDeleteBookmarkedItemById();
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(post.id);
     const { checkMuted } = useMuteGuard(post.communityId);
+    const shouldFetchCommunityRole = Boolean(post.communityId) && canModerateCommunity === undefined;
+    const { data: loadedCommunity } = useGetCommunityById(post.communityId ?? '', shouldFetchCommunityRole);
+    const currentUserRole = loadedCommunity?.currentUserRole;
+    const canModerateFromCard =
+        currentUserRole === "OWNER" ||
+        currentUserRole === "MODERATOR" ||
+        currentUserRole === "Owner" ||
+        currentUserRole === "Moderator";
+    const canModerateContent = canModerateCommunity ?? canModerateFromCard;
 
     const handleSaveClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -111,7 +122,7 @@ export function PostCard({ post }: PostCardProps) {
                                         </div>
                                     )}
                                 </Link>
-                                <ProfileHoverCard profileId={post.authorId} author={author}>
+                                <ProfileHoverCard profileId={post.authorId} author={author} communityId={post.communityId} showCommunityStatus={Boolean(post.communityId)} canModerateCommunity={canModerateContent}>
                                     <Link href={`/profile/${post.authorId}`} className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-card bg-page overflow-hidden">
                                         <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
                                     </Link>
@@ -124,7 +135,7 @@ export function PostCard({ post }: PostCardProps) {
                                     </Link>
                                 </div>
                                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                                    <ProfileHoverCard profileId={post.authorId} author={author}>
+                                    <ProfileHoverCard profileId={post.authorId} author={author} communityId={post.communityId} showCommunityStatus={Boolean(post.communityId)} canModerateCommunity={canModerateContent}>
                                         <Link href={`/profile/${post.authorId}`} className="font-semibold hover:underline text-muted-foreground transition-colors truncate max-w-[100px]">
                                             {author?.fullName || 'Unknown'}
                                         </Link>
@@ -166,6 +177,7 @@ export function PostCard({ post }: PostCardProps) {
                         communityId={post.communityId}
                         isQAPost={isQaPost}
                         isAuthor={isAuthor}
+                        canModerateCommunity={canModerateContent}
                         dropdownClassName="relative z-10"
                     />
                 </div>

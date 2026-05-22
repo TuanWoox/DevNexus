@@ -48,6 +48,7 @@ import { UserAvatar } from '@/components/shared/user-avatar';
 import PostNotFound from './post-not-found';
 import PostHeader from './post-header';
 import { useMuteGuard } from '@/hooks/community-mute-hooks/use-mute-guard';
+import { useGetCommunityById } from '@/hooks/community-hooks/use-get-community-by-id';
 
 interface Props {
     postId: string;
@@ -70,6 +71,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     const PostTypeIcon = isQAPost ? HelpCircle : Code2;
     const isPostLoading = isQAPost ? isQALoading : isNormalLoading;
     const communityId = (post as SelectPostDTO | SelectQAPostDTO | undefined)?.communityId;
+    const { data: loadedCommunity } = useGetCommunityById(communityId ?? '', Boolean(communityId));
 
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(postId);
     const { checkMuted } = useMuteGuard(communityId);
@@ -93,6 +95,12 @@ export default function PostArticle({ postId, isQAPost }: Props) {
 
     const author = post?.author;
     const community = (post as SelectPostDTO)?.community;
+    const currentUserRole = loadedCommunity?.currentUserRole;
+    const canModerateCommunity =
+        currentUserRole === "Owner" ||
+        currentUserRole === "OWNER" ||
+        currentUserRole === "Moderator" ||
+        currentUserRole === "MODERATOR";
 
     const handleSaveClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -208,7 +216,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                                                 </div>
                                             )}
                                         </Link>
-                                        <ProfileHoverCard profileId={post.authorId} author={author}>
+                                        <ProfileHoverCard profileId={post.authorId} author={author} communityId={post.communityId} showCommunityStatus={Boolean(post.communityId)} canModerateCommunity={canModerateCommunity}>
                                             <Link href={`/profile/${post.authorId}`} className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-card bg-page overflow-hidden">
                                                 <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
                                             </Link>
@@ -219,7 +227,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                                             {community.name}
                                         </Link>
                                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                                            <ProfileHoverCard profileId={post.authorId} author={author}>
+                                            <ProfileHoverCard profileId={post.authorId} author={author} communityId={post.communityId} showCommunityStatus={Boolean(post.communityId)} canModerateCommunity={canModerateCommunity}>
                                                 <Link href={`/profile/${post.authorId}`} className="font-semibold hover:underline text-muted-foreground transition-colors truncate max-w-30">
                                                     {author?.fullName || 'Unknown'}
                                                 </Link>
@@ -282,6 +290,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                                 communityId={post.communityId}
                                 isQAPost={isQAPost}
                                 isAuthor={isAuthor}
+                                canModerateCommunity={canModerateCommunity}
                                 onDeleted={() => router.push('/feed')}
                             />
                         </div>
