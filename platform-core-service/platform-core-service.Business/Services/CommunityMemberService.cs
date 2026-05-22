@@ -14,6 +14,7 @@ using platform_core_service.Common.Models.DTOs.HelperDTO;
 using Hangfire;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
+using platform_core_service.Business.Helper;
 
 namespace platform_core_service.Business.Services
 {
@@ -240,13 +241,30 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var viewerProfileId = _userContext.ProfileId;
+
+                var isManager = !string.IsNullOrEmpty(viewerProfileId)
+                    && await IsOwnerOrModeratorAsync(communityId, viewerProfileId);
+
                 // Step 2: Build query (public endpoint)
                 var query = _context.CommunityMembers
                     .Include(m => m.Profile)
                     .Where(m => m.CommunityId == communityId)
                     .AsQueryable();
 
+                if (!isManager && !string.IsNullOrEmpty(viewerProfileId))
+                {
+                    query = query.Where(m => !_context.ProfileBlocks.Any(b =>
+                        (b.OwnerId == viewerProfileId && b.BlockedProfileId == m.ProfileId) ||
+                        (b.OwnerId == m.ProfileId && b.BlockedProfileId == viewerProfileId)));
+                }
+
                 result.Result = await _memberRepository.GetPagingAsync<Page<string>, SelectCommunityMemberDTO>(query, page);
+
+                if (isManager && result.Result?.Data != null)
+                {
+                    await ApplyManagementPrivacyAsync(viewerProfileId, result.Result.Data);
+                }
 
                 // Step 3: Prepend owner's profile on the first page
                 if (page.PageNumber == 0 && result.Result?.Data != null)
@@ -260,17 +278,33 @@ namespace platform_core_service.Business.Services
 
                     if (community?.Owner != null)
                     {
+                        var ownerBlockedIds = await CommunityManagementPrivacyHelper.GetBlockedProfileIdsAsync(
+                            _context,
+                            viewerProfileId,
+                            [community.OwnerId]);
+                        var ownerBlocked = ownerBlockedIds.Contains(community.OwnerId);
+
+                        if (ownerBlocked && !isManager)
+                            return result;
+
                         // Only prepend if no search term OR owner's name matches the search term
                         if (string.IsNullOrEmpty(searchTerm) || community.Owner.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
                         {
+                            var ownerProfile = _mapper.Map<Common.Models.DTOs.EntityDTO.Profile.SelectProfileDTO>(community.Owner);
                             var ownerAsMember = new SelectCommunityMemberDTO
                             {
                                 Id = $"owner-{community.OwnerId}",
                                 CommunityId = communityId,
                                 ProfileId = community.OwnerId,
-                                Profile = _mapper.Map<Common.Models.DTOs.EntityDTO.Profile.SelectProfileDTO>(community.Owner),
+                                Profile = CommunityManagementPrivacyHelper.ToManagementProfile(ownerProfile, ownerBlocked),
                                 DateCreated = community.DateCreated,
-                                IsOwner = true
+                                IsOwner = true,
+                                HasBlockedRelation = ownerBlocked,
+                                IsProfileRestricted = ownerBlocked,
+                                RestrictedMessage = ownerBlocked ? ResponseMessage.BLOCKED_OR_NOT_AVAILABLE : null,
+                                CanBan = false,
+                                CanRemove = false,
+                                CanPromote = false
                             };
 
                             var dataList = result.Result.Data.ToList();
@@ -288,6 +322,27 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
+        private async Task ApplyManagementPrivacyAsync(string viewerProfileId, IEnumerable<SelectCommunityMemberDTO> members)
+        {
+            var memberList = members.ToList();
+            var blockedIds = await CommunityManagementPrivacyHelper.GetBlockedProfileIdsAsync(
+                _context,
+                viewerProfileId,
+                memberList.Select(x => x.ProfileId));
+
+            foreach (var item in memberList)
+            {
+                var isBlocked = blockedIds.Contains(item.ProfileId);
+                item.HasBlockedRelation = isBlocked;
+                item.IsProfileRestricted = isBlocked;
+                item.RestrictedMessage = isBlocked ? ResponseMessage.BLOCKED_OR_NOT_AVAILABLE : null;
+                item.CanPromote = !isBlocked;
+                item.CanRemove = true;
+                item.CanBan = true;
+                item.Profile = CommunityManagementPrivacyHelper.ToManagementProfile(item.Profile, isBlocked);
+            }
+        }
+
         private async Task PublishJoinRequestNotificationAsync(string communityId, string requesterId)
         {
             var community = await _context.Communities
@@ -303,6 +358,7 @@ namespace platform_core_service.Business.Services
             var recipients = new List<string> { community.OwnerId };
             recipients.AddRange(moderators);
             recipients = recipients.Distinct().Where(id => id != requesterId).ToList();
+            recipients = await FilterBlockedRecipientsAsync(requesterId, recipients);
 
             if (!recipients.Any()) return;
 
@@ -333,6 +389,7 @@ namespace platform_core_service.Business.Services
                 .FirstOrDefaultAsync(c => c.Id == communityId);
 
             if (community == null) return;
+            if (await HasBlockedRelationAsync(community.OwnerId, newMemberId)) return;
 
             var actor = await GetProfileSnapshot(community.OwnerId);
             var notificationEvent = new NotiicationCreatedEntityDTO
@@ -371,6 +428,7 @@ namespace platform_core_service.Business.Services
             var recipients = new List<string> { community.OwnerId };
             recipients.AddRange(moderators);
             recipients = recipients.Distinct().Where(id => id != newMemberId).ToList();
+            recipients = await FilterBlockedRecipientsAsync(newMemberId, recipients);
 
             if (!recipients.Any()) return;
 
@@ -404,6 +462,27 @@ namespace platform_core_service.Business.Services
                 .FirstOrDefaultAsync();
 
             return (profile?.FullName, profile?.AvatarUrl);
+        }
+
+        private async Task<List<string>> FilterBlockedRecipientsAsync(string actorId, IEnumerable<string> recipientIds)
+        {
+            var recipients = recipientIds.Distinct().ToList();
+            var blockedIds = await CommunityManagementPrivacyHelper.GetBlockedProfileIdsAsync(
+                _context,
+                actorId,
+                recipients);
+
+            return recipients.Where(id => !blockedIds.Contains(id)).ToList();
+        }
+
+        private async Task<bool> HasBlockedRelationAsync(string profileAId, string profileBId)
+        {
+            var blockedIds = await CommunityManagementPrivacyHelper.GetBlockedProfileIdsAsync(
+                _context,
+                profileAId,
+                [profileBId]);
+
+            return blockedIds.Contains(profileBId);
         }
     }
 }
