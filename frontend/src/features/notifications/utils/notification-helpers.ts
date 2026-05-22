@@ -48,8 +48,8 @@ export const getNotificationTypeName = (type: NotificationEventEnum): string => 
     [NotificationEventEnum.COMMUNITY_BAN]: "Community Bans",
     [NotificationEventEnum.COMMUNITY_REPORT_CREATED]: "Community Reports",
     [NotificationEventEnum.COMMUNITY_REPORT_RESOLVED]: "Report Resolved",
-    [NotificationEventEnum.COMMUNITY_CONTENT_REMOVED]: "Content Removed",
-    [NotificationEventEnum.COMMUNITY_MEMBER_MUTED]: "Member Muted",
+    [NotificationEventEnum.CONTENT_CREATED]: "New Community Post",
+    [NotificationEventEnum.CONTENT_APPROVED]: "Post Approved",
     
     // Messaging
     [NotificationEventEnum.NEW_MESSAGE]: "Messages",

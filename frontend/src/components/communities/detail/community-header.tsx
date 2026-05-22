@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { SelectCommunityDTO } from "@/types/community/select-community-dto";
 import Image from "next/image";
-import { Lock, Users, CalendarDays, ImageIcon, Settings, Plus, Sparkles, ShieldAlert } from "lucide-react";
+import { ClipboardList, Clock3, Lock, Users, CalendarDays, ImageIcon, Settings, Plus, Sparkles, ShieldAlert } from "lucide-react";
 import { CommunityActionButton } from "./community-action-button";
 import { CommunityMediaUploadModal } from "./community-media-upload-modal";
 import Link from "next/link";
@@ -100,13 +100,29 @@ export function CommunityHeader({ community, activeTab }: CommunityHeaderProps) 
                         )}
 
                         <CommunityActionButton communityId={community.id} role={role} />
-                        {hasManageAccess && (
+                        {(role === "OWNER" || role === "MODERATOR" || role === "MEMBER") && (
                             <Button asChild variant="outline" className="w-full" size="lg">
-                                <Link href={`/communities/${community.id}/settings`}>
-                                    <Settings className="w-4 h-4 mr-2" />
-                                    Settings
+                                <Link href={`/communities/${community.id}/pending-posts`}>
+                                    <Clock3 className="w-4 h-4 mr-2" />
+                                    My Pending Posts
                                 </Link>
                             </Button>
+                        )}
+                        {hasManageAccess && (
+                            <>
+                                <Button asChild variant="outline" className="w-full" size="lg">
+                                    <Link href={`/communities/${community.id}/moderate-pending`}>
+                                        <ClipboardList className="w-4 h-4 mr-2" />
+                                        Pending Queue
+                                    </Link>
+                                </Button>
+                                <Button asChild variant="outline" className="w-full" size="lg">
+                                    <Link href={`/communities/${community.id}/settings`}>
+                                        <Settings className="w-4 h-4 mr-2" />
+                                        Settings
+                                    </Link>
+                                </Button>
+                            </>
                         )}
 
                         {(role === "OWNER" || role === "MODERATOR" || role === "MEMBER") && (

@@ -49,6 +49,7 @@ import PostNotFound from './post-not-found';
 import PostHeader from './post-header';
 import { useMuteGuard } from '@/hooks/community-mute-hooks/use-mute-guard';
 import { useGetCommunityById } from '@/hooks/community-hooks/use-get-community-by-id';
+import { CommunityApprovalStatus, normalizeCommunityApprovalStatus } from '@/types/enums/community-approval-status';
 
 interface Props {
     postId: string;
@@ -91,7 +92,14 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     const isAdmin = user?.roles?.includes('Admin') || user?.roles?.includes('Moderator');
 
     const moderationStatus = normalizeModerationStatus(post?.moderationStatus);
-    const isApproved = moderationStatus === "Approved";
+    const isModerationApproved = moderationStatus === "Approved";
+    const communityApprovalStatus = normalizeCommunityApprovalStatus(post?.communityApprovalStatus) ?? (post?.communityId ? CommunityApprovalStatus.Pending : null);
+    const isCommunityApproved = !post?.communityId ||
+        communityApprovalStatus == null ||
+        communityApprovalStatus === CommunityApprovalStatus.Approved;
+    const isApproved = isModerationApproved && isCommunityApproved;
+    const isCommunityPending = post?.communityId && communityApprovalStatus === CommunityApprovalStatus.Pending;
+    const isCommunityRejected = post?.communityId && communityApprovalStatus === CommunityApprovalStatus.Rejected;
 
     const author = post?.author;
     const community = (post as SelectPostDTO)?.community;
@@ -303,6 +311,18 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                             reason={post.moderationReason}
                             className="mb-1"
                         />
+                    )}
+
+                    {(isCommunityPending || isCommunityRejected) && (
+                        <div className={cn(
+                            "rounded-lg border px-3 py-2 text-sm font-medium",
+                            isCommunityRejected
+                                ? "border-destructive/30 bg-destructive/10 text-destructive"
+                                : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                        )}>
+                            {isCommunityRejected ? "Rejected by community moderators" : "Pending community approval"}
+                            {post.communityApprovalReason ? `: ${post.communityApprovalReason}` : ""}
+                        </div>
                     )}
 
                     {/* Title */}

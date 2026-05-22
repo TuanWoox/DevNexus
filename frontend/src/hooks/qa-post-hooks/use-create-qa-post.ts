@@ -8,6 +8,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
 import { prependPostToInfiniteLists, replaceOptimisticPostInLists } from "@/hooks/post-hooks/post-cache-helper";
+import { CommunityApprovalStatus } from "@/types/enums/community-approval-status";
 
 export const useCreateQAPost = () => {
     const queryClient = useQueryClient();
@@ -23,6 +24,11 @@ export const useCreateQAPost = () => {
 
             const previousPostLists = queryClient.getQueriesData({ queryKey: postQueryKeys.lists() });
             const previousQaLists = queryClient.getQueriesData({ queryKey: qaPostQueryKeys.lists() });
+
+            if (payload.communityId) {
+                return { previousPostLists, previousQaLists, optimisticId: undefined };
+            }
+
             const now = new Date().toISOString();
             const optimisticId = `optimistic-${Date.now()}`;
 
@@ -33,6 +39,8 @@ export const useCreateQAPost = () => {
                 slug: payload.slug ?? optimisticId,
                 postType: payload.postType,
                 moderationStatus: "Pending",
+                communityApprovalStatus: payload.communityId ? CommunityApprovalStatus.Pending : null,
+                communityApprovalReason: payload.communityId ? "Awaiting moderator approval" : null,
                 authorId: user?.profileId ?? "",
                 author: user
                     ? {
@@ -62,13 +70,14 @@ export const useCreateQAPost = () => {
             prependPostToInfiniteLists(queryClient, optimisticPost);
             return { previousPostLists, previousQaLists, optimisticId };
         },
-        onError: (_error, _payload, context) => {
+        onError: (error, _payload, context) => {
             context?.previousPostLists.forEach(([queryKey, data]) => {
                 queryClient.setQueryData(queryKey, data);
             });
             context?.previousQaLists.forEach(([queryKey, data]) => {
                 queryClient.setQueryData(queryKey, data);
             });
+            toast.error(error instanceof Error ? error.message : "Question could not be created.");
         },
         onSuccess: (data, _payload, context) => {
             if (data) {

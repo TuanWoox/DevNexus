@@ -21,6 +21,7 @@ import { Loader2 } from 'lucide-react';
 import { SelectPostDTO } from '@/types/post/select-post-dto';
 import { SelectQAPostDTO } from '@/types/qa-post/select-qa-post-dto';
 import { useGetCommunityById } from '@/hooks/community-hooks/use-get-community-by-id';
+import { CommunityApprovalStatus, normalizeCommunityApprovalStatus } from '@/types/enums/community-approval-status';
 
 interface Props {
     postId: string;
@@ -84,7 +85,11 @@ export default function CommentSection({ postId, isQAPost }: Props) {
     }
 
     const moderationStatus = normalizeModerationStatus(post?.moderationStatus);
-    const isApproved = moderationStatus === "Approved";
+    const communityApprovalStatus = normalizeCommunityApprovalStatus(post?.communityApprovalStatus) ?? (post?.communityId ? CommunityApprovalStatus.Pending : null);
+    const isApproved = moderationStatus === "Approved" &&
+        (!post?.communityId ||
+            communityApprovalStatus == null ||
+            communityApprovalStatus === CommunityApprovalStatus.Approved);
 
     const items = isQAPost
         ? answerData?.pages?.flatMap(p => p?.data ?? []) || []

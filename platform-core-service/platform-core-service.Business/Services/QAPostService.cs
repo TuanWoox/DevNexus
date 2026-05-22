@@ -1,15 +1,18 @@
 using AutoMapper;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
 using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.EntityDTO.QAPost;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
@@ -31,6 +34,7 @@ namespace platform_core_service.Business.Services
         private readonly IModerationService _moderationService;
         private readonly IContentMediaLinkService _contentMediaLinkService;
         private readonly IQAPostHistoryService _qaPostHistoryService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
         public QAPostService(
             ApplicationDbContext dbContext,
@@ -42,7 +46,8 @@ namespace platform_core_service.Business.Services
             ISocialGuardService socialGuardService,
             IModerationService moderationService,
             IContentMediaLinkService contentMediaLinkService,
-            IQAPostHistoryService qaPostHistoryService
+            IQAPostHistoryService qaPostHistoryService,
+            IBackgroundJobClient backgroundJobClient
             )
         {
             _dbContext = dbContext;
@@ -55,6 +60,7 @@ namespace platform_core_service.Business.Services
             _moderationService = moderationService;
             _contentMediaLinkService = contentMediaLinkService;
             _qaPostHistoryService = qaPostHistoryService;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<ReturnResult<SelectQAPostDTO>> CreateAsync(CreateQAPostDTO createDTO)
@@ -105,6 +111,8 @@ namespace platform_core_service.Business.Services
                 // Step 5: Handle tags
                 var postTags = await CreateOrGetTagsAsync(createDTO.TagNames, qaPost.Id);
                 qaPost.PostTags = postTags;
+
+                await SetCommunityApprovalStateAsync(qaPost);
 
                 // Step 6: Save
                 _dbContext.Posts.Add(qaPost);
@@ -318,6 +326,189 @@ namespace platform_core_service.Business.Services
             {
                 DevNexusLogger.Instance.Debug(ex.Message);
                 result.Message = $"An error occurred while retrieving community Q&A posts: {ex.Message}";
+            }
+            return result;
+        }
+
+        public async Task<ReturnResult<SelectQAPostDTO>> ApproveCommunityPostAsync(string postId)
+        {
+            var result = new ReturnResult<SelectQAPostDTO>();
+            try
+            {
+                var qaPost = await _dbContext.Posts
+                    .OfType<QAPost>()
+                    .Include(q => q.Answers)
+                    .Include(q => q.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
+                    .Include(q => q.Community)
+                    .FirstOrDefaultAsync(q => q.Id == postId);
+
+                if (qaPost == null)
+                {
+                    result.Message = $"QAPost {postId} not found";
+                    return result;
+                }
+
+                if (string.IsNullOrEmpty(qaPost.CommunityId))
+                {
+                    result.Message = "Only community questions can be approved";
+                    return result;
+                }
+
+                var permission = await _socialGuardService.CheckIsCommunityAdminOrModeratorAsync(_userContext.ProfileId, qaPost.CommunityId);
+                if (!permission.Result)
+                {
+                    result.Message = permission.Message ?? "You do not have permission to approve this question";
+                    return result;
+                }
+
+                var wasAlreadyApproved = qaPost.CommunityApprovalStatus == CommunityApprovalStatus.Approved;
+                qaPost.CommunityApprovalStatus = CommunityApprovalStatus.Approved;
+                qaPost.CommunityApprovalReason = null;
+                await _dbContext.SaveChangesAsync();
+                if (!wasAlreadyApproved)
+                {
+                    await EnqueueContentApprovedNotification(qaPost);
+                }
+
+                result.Result = _mapper.Map<SelectQAPostDTO>(qaPost);
+                await SetCurrentUserVoteAsync(result.Result);
+                await SetCurrentUserSavedAsync(result.Result);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while approving question: {ex.Message}";
+            }
+            return result;
+        }
+
+        public async Task<ReturnResult<SelectQAPostDTO>> RejectCommunityPostAsync(string postId, string? reason)
+        {
+            var result = new ReturnResult<SelectQAPostDTO>();
+            try
+            {
+                var qaPost = await _dbContext.Posts
+                    .OfType<QAPost>()
+                    .Include(q => q.Answers)
+                    .Include(q => q.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
+                    .Include(q => q.Community)
+                    .FirstOrDefaultAsync(q => q.Id == postId);
+
+                if (qaPost == null)
+                {
+                    result.Message = $"QAPost {postId} not found";
+                    return result;
+                }
+
+                if (string.IsNullOrEmpty(qaPost.CommunityId))
+                {
+                    result.Message = "Only community questions can be rejected";
+                    return result;
+                }
+
+                var permission = await _socialGuardService.CheckIsCommunityAdminOrModeratorAsync(_userContext.ProfileId, qaPost.CommunityId);
+                if (!permission.Result)
+                {
+                    result.Message = permission.Message ?? "You do not have permission to reject this question";
+                    return result;
+                }
+
+                qaPost.CommunityApprovalStatus = CommunityApprovalStatus.Rejected;
+                qaPost.CommunityApprovalReason = NormalizeCommunityApprovalReason(reason, "Rejected by a community moderator");
+                await _dbContext.SaveChangesAsync();
+
+                result.Result = _mapper.Map<SelectQAPostDTO>(qaPost);
+                await SetCurrentUserVoteAsync(result.Result);
+                await SetCurrentUserSavedAsync(result.Result);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while rejecting question: {ex.Message}";
+            }
+            return result;
+        }
+
+        public async Task<ReturnResult<PagedData<SelectQAPostDTO, string>>> GetPendingPostsByCommunityIdAsync(Page<string> page, string communityId)
+        {
+            var result = new ReturnResult<PagedData<SelectQAPostDTO, string>>();
+            try
+            {
+                var permission = await _socialGuardService.CheckIsCommunityAdminOrModeratorAsync(_userContext.ProfileId, communityId);
+                if (!permission.Result)
+                {
+                    result.Message = permission.Message ?? "You do not have permission to view pending questions";
+                    return result;
+                }
+
+                var query = _dbContext.Posts
+                    .OfType<QAPost>()
+                    .Where(q => q.CommunityId == communityId)
+                    .Where(q => q.ModerationStatus == ModerationStatus.Approved)
+                    .Where(q => q.CommunityApprovalStatus == CommunityApprovalStatus.Pending)
+                    .Include(q => q.Answers)
+                    .Include(q => q.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
+                    .Include(q => q.Community)
+                    .AsNoTracking()
+                    .AsQueryable();
+
+                result.Result = await _qaPostRepository.GetPagingAsync<Page<string>, SelectQAPostDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCommentCountForListAsync(result.Result.Data.ToList());
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while retrieving pending questions: {ex.Message}";
+            }
+            return result;
+        }
+
+        public async Task<ReturnResult<PagedData<SelectQAPostDTO, string>>> GetMyPendingPostsByCommunityIdAsync(Page<string> page, string communityId)
+        {
+            var result = new ReturnResult<PagedData<SelectQAPostDTO, string>>();
+            try
+            {
+                var accessCheck = await _socialGuardService.CheckBelongToCommunity(communityId);
+                if (accessCheck.Message != null)
+                {
+                    result.Message = accessCheck.Message;
+                    return result;
+                }
+
+                var query = _dbContext.Posts
+                    .OfType<QAPost>()
+                    .Where(q => q.CommunityId == communityId)
+                    .Where(q => q.AuthorId == _userContext.ProfileId)
+                    .Where(q => q.ModerationStatus == ModerationStatus.Approved)
+                    .Where(q => q.CommunityApprovalStatus == CommunityApprovalStatus.Pending ||
+                                q.CommunityApprovalStatus == CommunityApprovalStatus.Rejected)
+                    .Include(q => q.Answers)
+                    .Include(q => q.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
+                    .Include(q => q.Community)
+                    .AsNoTracking()
+                    .AsQueryable();
+
+                result.Result = await _qaPostRepository.GetPagingAsync<Page<string>, SelectQAPostDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCommentCountForListAsync(result.Result.Data.ToList());
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while retrieving your pending questions: {ex.Message}";
             }
             return result;
         }
@@ -585,6 +776,59 @@ namespace platform_core_service.Business.Services
                 ? $"Banned keywords detected: {string.Join(", ", keywordPreview)}"
                 : "Banned keywords detected.";
             return reason.Length <= 1000 ? reason : reason[..1000];
+        }
+
+        private Task EnqueueContentApprovedNotification(QAPost qaPost)
+        {
+            var notificationEvent = new NotiicationCreatedEntityDTO
+            {
+                EventType = NotificationEventType.CONTENT_APPROVED,
+                ActorType = ActorType.Community,
+                ActorId = qaPost.CommunityId,
+                ActorName = qaPost.Community?.Name,
+                ActorAvatarUrl = qaPost.Community?.CommunityCoverPhotoUrl,
+                RecipientId = qaPost.AuthorId,
+                EntityType = NotificationEntityType.QUESTION,
+                EntityId = qaPost.Id,
+                EntityTitle = qaPost.Title,
+                EntityPreview = qaPost.Content?.Length > 100 ? qaPost.Content[..100] : qaPost.Content,
+                ActionUrl = $"/questions/{qaPost.Id}",
+                Timestamp = DateTime.UtcNow,
+            };
+
+            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                x => x.PublicNotification(notificationEvent, "notifications.community"));
+
+            return Task.CompletedTask;
+        }
+
+        private async Task SetCommunityApprovalStateAsync(QAPost qaPost)
+        {
+            if (string.IsNullOrEmpty(qaPost.CommunityId))
+            {
+                qaPost.CommunityApprovalStatus = null;
+                qaPost.CommunityApprovalReason = null;
+                return;
+            }
+
+            var requireApproval = await _dbContext.Communities
+                .AsNoTracking()
+                .Where(c => c.Id == qaPost.CommunityId)
+                .Select(c => c.RequireContentApproval)
+                .FirstOrDefaultAsync();
+
+            qaPost.CommunityApprovalStatus = requireApproval
+                ? CommunityApprovalStatus.Pending
+                : CommunityApprovalStatus.Approved;
+            qaPost.CommunityApprovalReason = requireApproval
+                ? "Awaiting moderator approval"
+                : null;
+        }
+
+        private static string NormalizeCommunityApprovalReason(string? reason, string fallback)
+        {
+            var value = string.IsNullOrWhiteSpace(reason) ? fallback : reason.Trim();
+            return value.Length <= 1000 ? value : value[..1000];
         }
 
         private string GenerateSlug(string title)

@@ -14,6 +14,10 @@ namespace platform_core_service.Common.Interfaces.Services
         Task<ReturnResult<PagedData<SelectQAPostDTO, string>>> GetPageAsync(Page<string> page);
         Task<ReturnResult<PagedData<SelectQAPostDTO,string>>> GetPageAsyncByProfileId(Page<string> page, string profileId);
         Task<ReturnResult<PagedData<SelectQAPostDTO, string>>> GetPageAsyncByCommunityId(Page<string> page, string communityId);
+        Task<ReturnResult<SelectQAPostDTO>> ApproveCommunityPostAsync(string postId);
+        Task<ReturnResult<SelectQAPostDTO>> RejectCommunityPostAsync(string postId, string? reason);
+        Task<ReturnResult<PagedData<SelectQAPostDTO, string>>> GetPendingPostsByCommunityIdAsync(Page<string> page, string communityId);
+        Task<ReturnResult<PagedData<SelectQAPostDTO, string>>> GetMyPendingPostsByCommunityIdAsync(Page<string> page, string communityId);
         Task<ReturnResult<SelectQAPostDTO>> UpdateAsync(UpdateQAPostDTO updateDTO);
         Task<ReturnResult<bool>> DeleteByIdAsync(string postId);
         Task<ReturnResult<int>> DeleteManyAsync(List<string> ids);

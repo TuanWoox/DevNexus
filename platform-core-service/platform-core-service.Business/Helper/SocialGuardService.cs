@@ -362,6 +362,9 @@ namespace platform_core_service.Business.Helper
             var guard = await GuardMutation(CanViewPost(postId), ResponseMessage.NO_PERMISSION_TO_COMMENT);
             if (!guard.Result) return guard;
 
+            var approvalGuard = await GuardCommunityApprovalByPostId(postId, ResponseMessage.NO_PERMISSION_TO_COMMENT);
+            if (!approvalGuard.Result) return approvalGuard;
+
             return await GuardCommunityMuteByPostId(postId);
         }
 
@@ -386,6 +389,9 @@ namespace platform_core_service.Business.Helper
             var guard = await GuardMutation(CanViewQAPost(qaPostId), ResponseMessage.NO_PERMISSION_TO_ANSWER);
             if (!guard.Result) return guard;
 
+            var approvalGuard = await GuardCommunityApprovalByQAPostId(qaPostId, ResponseMessage.NO_PERMISSION_TO_ANSWER);
+            if (!approvalGuard.Result) return approvalGuard;
+
             return await GuardCommunityMuteByQAPostId(qaPostId);
         }
 
@@ -393,6 +399,9 @@ namespace platform_core_service.Business.Helper
         {
             var guard = await GuardMutation(CanViewPost(postId), ResponseMessage.NO_PERMISSION_TO_VOTE);
             if (!guard.Result) return guard;
+
+            var approvalGuard = await GuardCommunityApprovalByPostId(postId, ResponseMessage.NO_PERMISSION_TO_VOTE);
+            if (!approvalGuard.Result) return approvalGuard;
 
             return await GuardCommunityMuteByPostId(postId);
         }
@@ -415,12 +424,12 @@ namespace platform_core_service.Business.Helper
 
         public Task<ReturnResult<bool>> CanSavePost(string postId)
         {
-            return GuardMutation(CanViewPost(postId), ResponseMessage.NO_PERMISSION_TO_SAVE);
+            return GuardSavePost(postId);
         }
 
         public Task<ReturnResult<bool>> CanSaveQuestion(string qaPostId)
         {
-            return GuardMutation(CanViewQAPost(qaPostId), ResponseMessage.NO_PERMISSION_TO_SAVE);
+            return GuardSaveQuestion(qaPostId);
         }
 
         public async Task<ReturnResult<bool>> CanRemoveBookmark(string bookmarkItemId)
@@ -443,8 +452,22 @@ namespace platform_core_service.Business.Helper
 
             var viewerProfileId = _userContext.ProfileId;
             var isOwner = post.AuthorId == viewerProfileId;
+            var isCommunityStaff = !string.IsNullOrEmpty(post.CommunityId) &&
+                await _dbContext.Communities
+                    .AsNoTracking()
+                    .AnyAsync(c => c.Id == post.CommunityId &&
+                        (c.OwnerId == viewerProfileId ||
+                         c.Moderators.Any(m => m.ModeratorId == viewerProfileId)));
 
-            if (!isOwner && post.ModerationStatus != ModerationStatus.Approved)
+            if (post.ModerationStatus != ModerationStatus.Approved)
+            {
+                return Denied(ResponseMessage.CONTENT_PENDING_OR_HIDDEN);
+            }
+
+            if (!string.IsNullOrEmpty(post.CommunityId) &&
+                post.CommunityApprovalStatus != CommunityApprovalStatus.Approved &&
+                !((isOwner || isCommunityStaff) &&
+                  post.CommunityApprovalStatus == CommunityApprovalStatus.Pending))
             {
                 return Denied(ResponseMessage.CONTENT_PENDING_OR_HIDDEN);
             }
@@ -525,6 +548,54 @@ namespace platform_core_service.Business.Helper
                 .FirstOrDefaultAsync();
 
             return await GuardCommunityMute(communityId);
+        }
+
+        private async Task<ReturnResult<bool>> GuardSavePost(string postId)
+        {
+            var guard = await GuardMutation(CanViewPost(postId), ResponseMessage.NO_PERMISSION_TO_SAVE);
+            if (!guard.Result) return guard;
+
+            return await GuardCommunityApprovalByPostId(postId, ResponseMessage.NO_PERMISSION_TO_SAVE);
+        }
+
+        private async Task<ReturnResult<bool>> GuardSaveQuestion(string qaPostId)
+        {
+            var guard = await GuardMutation(CanViewQAPost(qaPostId), ResponseMessage.NO_PERMISSION_TO_SAVE);
+            if (!guard.Result) return guard;
+
+            return await GuardCommunityApprovalByQAPostId(qaPostId, ResponseMessage.NO_PERMISSION_TO_SAVE);
+        }
+
+        private async Task<ReturnResult<bool>> GuardCommunityApprovalByPostId(string postId, string deniedMessage)
+        {
+            var approval = await _dbContext.Posts
+                .AsNoTracking()
+                .Where(p => p.Id == postId || p.Slug == postId)
+                .Select(p => new { p.CommunityId, p.CommunityApprovalStatus })
+                .FirstOrDefaultAsync();
+
+            return IsCommunityApproved(approval?.CommunityId, approval?.CommunityApprovalStatus)
+                ? Success()
+                : Denied(deniedMessage);
+        }
+
+        private async Task<ReturnResult<bool>> GuardCommunityApprovalByQAPostId(string qaPostId, string deniedMessage)
+        {
+            var approval = await _dbContext.Posts
+                .OfType<QAPost>()
+                .AsNoTracking()
+                .Where(p => p.Id == qaPostId || p.Slug == qaPostId)
+                .Select(p => new { p.CommunityId, p.CommunityApprovalStatus })
+                .FirstOrDefaultAsync();
+
+            return IsCommunityApproved(approval?.CommunityId, approval?.CommunityApprovalStatus)
+                ? Success()
+                : Denied(deniedMessage);
+        }
+
+        private static bool IsCommunityApproved(string? communityId, CommunityApprovalStatus? status)
+        {
+            return string.IsNullOrEmpty(communityId) || status == CommunityApprovalStatus.Approved;
         }
 
         private async Task<ReturnResult<bool>> GuardCommunityMuteByQAPostId(string qaPostId)

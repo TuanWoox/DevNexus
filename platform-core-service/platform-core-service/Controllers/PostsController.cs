@@ -122,6 +122,70 @@ namespace platform_core_service.Controllers
             return Ok(returnResult);
         }
 
+        [HttpPost("community/{communityId}/pending/paging")]
+        public async Task<IActionResult> GetPendingPostsByCommunityId([FromBody] Page<string> page, [TrimmedRequired] string communityId)
+        {
+            var returnResult = new ReturnResult<PagedData<SelectPostDTO, string>>();
+            try
+            {
+                returnResult = await _postService.GetPendingPostsByCommunityIdAsync(page, communityId);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
+
+        [HttpPost("community/{communityId}/my-pending/paging")]
+        public async Task<IActionResult> GetMyPendingPostsByCommunityId([FromBody] Page<string> page, [TrimmedRequired] string communityId)
+        {
+            var returnResult = new ReturnResult<PagedData<SelectPostDTO, string>>();
+            try
+            {
+                returnResult = await _postService.GetMyPendingPostsByCommunityIdAsync(page, communityId);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
+
+        [HttpPost("{id}/community-approve")]
+        public async Task<IActionResult> ApproveCommunityPost(string id)
+        {
+            var returnResult = new ReturnResult<SelectPostDTO>();
+            try
+            {
+                returnResult = await _postService.ApproveCommunityPostAsync(id);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
+
+        [HttpPost("{id}/community-reject")]
+        public async Task<IActionResult> RejectCommunityPost(string id, [FromBody] RejectCommunityPostDTO request)
+        {
+            var returnResult = new ReturnResult<SelectPostDTO>();
+            try
+            {
+                returnResult = await _postService.RejectCommunityPostAsync(id, request?.Reason);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
+
         [HttpPost("profile/{profileId}/overview/paging")]
         public async Task<IActionResult> GetPostAndQAByProfileId([FromBody] Page<string> page, [TrimmedRequired] string profileId)
         {

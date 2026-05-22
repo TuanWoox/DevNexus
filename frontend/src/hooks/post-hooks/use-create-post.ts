@@ -7,6 +7,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { SelectPostDTO } from "@/types/post/select-post-dto";
 import { prependPostToInfiniteLists, replaceOptimisticPostInLists } from "./post-cache-helper";
+import { CommunityApprovalStatus } from "@/types/enums/community-approval-status";
 
 export const useCreatePost = () => {
     const queryClient = useQueryClient();
@@ -18,6 +19,11 @@ export const useCreatePost = () => {
             await queryClient.cancelQueries({ queryKey: postQueryKeys.lists() });
 
             const previousLists = queryClient.getQueriesData({ queryKey: postQueryKeys.lists() });
+
+            if (payload.communityId) {
+                return { previousLists, optimisticId: undefined };
+            }
+
             const now = new Date().toISOString();
             const optimisticId = `optimistic-${Date.now()}`;
 
@@ -28,6 +34,8 @@ export const useCreatePost = () => {
                 slug: payload.slug ?? optimisticId,
                 postType: payload.postType,
                 moderationStatus: "Pending",
+                communityApprovalStatus: payload.communityId ? CommunityApprovalStatus.Pending : null,
+                communityApprovalReason: payload.communityId ? "Awaiting moderator approval" : null,
                 authorId: user?.profileId ?? "",
                 author: user
                     ? {
@@ -56,10 +64,11 @@ export const useCreatePost = () => {
             prependPostToInfiniteLists(queryClient, optimisticPost);
             return { previousLists, optimisticId };
         },
-        onError: (_error, _payload, context) => {
+        onError: (error, _payload, context) => {
             context?.previousLists.forEach(([queryKey, data]) => {
                 queryClient.setQueryData(queryKey, data);
             });
+            toast.error(error instanceof Error ? error.message : "Post could not be created.");
         },
         onSuccess: (data, _payload, context) => {
             if (data) {
