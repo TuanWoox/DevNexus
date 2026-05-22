@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Check, ClipboardList, CornerDownRight, Loader2, MessageSquareText, Send, X } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState } from "react";
+import { Check, ClipboardList, CornerDownRight, Loader2, MessageSquareText, Send, X, History } from "lucide-react";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +10,7 @@ import { SelectPostDTO } from "@/types/post/select-post-dto";
 import { CommunityApprovalStatus } from "@/types/enums/community-approval-status";
 import { PendingPostContent } from "./pending-post-content";
 import { PendingPostRejection } from "./pending-post-rejection";
+import { ContentHistoryOverlay } from "@/components/history/content-history-overlay";
 import { cn } from "@/lib/utils";
 
 interface PendingDetailViewProps {
@@ -33,12 +34,7 @@ export function PendingDetailView({
 }: PendingDetailViewProps) {
     const [showRejectEditor, setShowRejectEditor] = useState(false);
     const [reason, setReason] = useState("");
-
-    // Reset local editor state when the selected post changes
-    useEffect(() => {
-        setShowRejectEditor(false);
-        setReason("");
-    }, [post?.id]);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
     // 1. Empty Selection State
     if (!post) {
@@ -62,12 +58,6 @@ export function PendingDetailView({
     });
 
     const authorName = post.author?.fullName ?? "Anonymous";
-    const initials = authorName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase();
 
     const status = post.communityApprovalStatus ?? CommunityApprovalStatus.Pending;
     const isRejected = status === CommunityApprovalStatus.Rejected;
@@ -81,21 +71,19 @@ export function PendingDetailView({
     };
 
     return (
-        <div className="flex flex-col h-full bg-muted/15 border-l border-border/40">
+        <div key={post.id} className="flex flex-col h-full bg-muted/15 border-l border-border/40">
             {/* 2. Scrollable Detail Area */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 
                 {/* Header block: Title, Author Meta, Status Badging */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between border-b border-border/40 pb-5">
                     <div className="flex items-start gap-4">
-                        <Avatar size="lg" className="border border-border/40 shadow-sm shrink-0">
-                            {post.author?.avatarUrl && (
-                                <AvatarImage src={post.author.avatarUrl} alt={authorName} />
-                            )}
-                            <AvatarFallback className="font-semibold bg-primary/10 text-primary">
-                                {initials}
-                            </AvatarFallback>
-                        </Avatar>
+                        <UserAvatar 
+                            avatarUrl={post.author?.avatarUrl} 
+                            fullName={authorName} 
+                            size="lg" 
+                            className="border border-border/40 shadow-sm shrink-0" 
+                        />
                         <div className="space-y-1.5">
                             <h2 className="text-xl font-bold tracking-tight text-heading leading-tight select-text">
                                 {post.title}
@@ -108,7 +96,16 @@ export function PendingDetailView({
                         </div>
                     </div>
  
-                    <div className="self-start sm:self-center shrink-0">
+                    <div className="self-start sm:self-center shrink-0 flex items-center gap-3">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsHistoryOpen(true)}
+                            className="flex items-center gap-1.5 h-7 text-2xs font-semibold px-2.5 rounded-lg border-border/80 text-muted-foreground hover:text-heading"
+                        >
+                            <History className="size-3.5" />
+                            History
+                        </Button>
                         <span
                             className={cn(
                                 "font-mono font-bold tracking-wide uppercase px-2.5 py-1 text-2xs rounded-md shadow-sm border select-none",
@@ -127,7 +124,7 @@ export function PendingDetailView({
                         Submission Content
                     </div>
                     {/* Reuses our expandable Content view */}
-                    <PendingPostContent content={post.content} tagNames={post.tagNames} />
+                    <PendingPostContent content={post.content} tagNames={post.tagNames} postId={post.id} />
                 </div>
 
                 {/* Display Rejection Reason if available */}
@@ -214,6 +211,13 @@ export function PendingDetailView({
                     )}
                 </div>
             )}
+
+            <ContentHistoryOverlay
+                contentId={post.id}
+                type={isQuestion ? "qapost" : "post"}
+                open={isHistoryOpen}
+                onClose={() => setIsHistoryOpen(false)}
+            />
         </div>
     );
 }

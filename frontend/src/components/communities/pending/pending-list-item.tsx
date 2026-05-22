@@ -1,7 +1,7 @@
 "use client";
 
 import { Calendar, FileText, HelpCircle } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { SelectPostDTO } from "@/types/post/select-post-dto";
 import { cn } from "@/lib/utils";
 
@@ -19,13 +19,6 @@ export function PendingListItem({ item, isActive, onClick, isQuestion = false }:
         day: "numeric",
     });
 
-    const initials = authorName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase();
-
     return (
         <button
             onClick={onClick}
@@ -39,14 +32,11 @@ export function PendingListItem({ item, isActive, onClick, isQuestion = false }:
                     : "border-l-4 border-l-transparent hover:bg-muted/40"
             )}
         >
-            <Avatar className="size-8.5 shrink-0 border border-border/40">
-                {item.author?.avatarUrl && (
-                    <AvatarImage src={item.author.avatarUrl} alt={authorName} />
-                )}
-                <AvatarFallback className="text-2xs bg-primary/10 text-primary font-bold">
-                    {initials}
-                </AvatarFallback>
-            </Avatar>
+            <UserAvatar 
+                avatarUrl={item.author?.avatarUrl} 
+                fullName={authorName} 
+                className="size-8.5 shrink-0 border border-border/40" 
+            />
             
             <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center justify-between gap-2">

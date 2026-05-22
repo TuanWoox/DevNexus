@@ -9,6 +9,14 @@ interface PendingPostRejectionProps {
 export function PendingPostRejection({ reason }: PendingPostRejectionProps) {
     if (!reason) return null;
 
+    const normalizedReason = reason.trim().toLowerCase();
+    if (
+        normalizedReason === "awaiting moderator approval" ||
+        normalizedReason === "awaiting approval"
+    ) {
+        return null;
+    }
+
     return (
         <div className="flex gap-3 rounded-lg border border-destructive/20 bg-destructive/5 dark:bg-destructive/10 p-3.5 shadow-inner-ai/5 border-l-4 border-l-destructive">
             <AlertTriangle className="h-4.5 w-4.5 text-destructive shrink-0 mt-0.5" />

@@ -5,13 +5,15 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { MarkdownViewer } from "@/components/editor/markdown-viewer";
 
 interface PendingPostContentProps {
     content: string;
     tagNames?: string[];
+    postId?: string;
 }
 
-export function PendingPostContent({ content, tagNames = [] }: PendingPostContentProps) {
+export function PendingPostContent({ content, tagNames = [], postId }: PendingPostContentProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     
     // Check if the content is long enough to warrant a collapse/expand feature
@@ -20,18 +22,23 @@ export function PendingPostContent({ content, tagNames = [] }: PendingPostConten
     return (
         <div className="space-y-4">
             <div className="relative">
-                <p
+                <div
                     className={cn(
-                        "text-sm text-body leading-relaxed whitespace-pre-wrap transition-all duration-200 select-text",
-                        !isExpanded && isLongContent && "line-clamp-5"
+                        "text-body text-sm sm:text-base leading-relaxed whitespace-pre-wrap transition-all select-text overflow-hidden",
+                        !isExpanded && isLongContent ? "max-h-[220px]" : "max-h-none"
                     )}
                 >
-                    {content}
-                </p>
+                    <MarkdownViewer 
+                        source={content} 
+                        enableCodeTools={true}
+                        context="post-detail"
+                        postId={postId}
+                    />
+                </div>
                 
                 {/* Fade effect at the bottom when collapsed */}
                 {!isExpanded && isLongContent && (
-                    <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-card via-card/80 to-transparent pointer-events-none" />
                 )}
             </div>
 

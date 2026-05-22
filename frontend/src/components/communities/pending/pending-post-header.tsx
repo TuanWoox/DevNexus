@@ -1,7 +1,7 @@
 "use client";
 
 import { Calendar, FileText, HelpCircle } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { SelectPostDTO } from "@/types/post/select-post-dto";
 import { CommunityApprovalStatus } from "@/types/enums/community-approval-status";
 import { cn } from "@/lib/utils";
@@ -22,24 +22,16 @@ export function PendingPostHeader({ post, isQuestion = false }: PendingPostHeade
 
     // Helper for avatar initials fallback
     const authorName = post.author?.fullName ?? "Anonymous Author";
-    const initials = authorName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase();
 
     return (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between border-b border-border/40 pb-4">
             <div className="flex items-start gap-3 min-w-0">
-                <Avatar size="lg" className="border border-border/40 shadow-sm">
-                    {post.author?.avatarUrl && (
-                        <AvatarImage src={post.author.avatarUrl} alt={authorName} />
-                    )}
-                    <AvatarFallback className="font-semibold bg-primary/10 text-primary">
-                        {initials}
-                    </AvatarFallback>
-                </Avatar>
+                <UserAvatar 
+                    avatarUrl={post.author?.avatarUrl} 
+                    fullName={authorName} 
+                    size="lg" 
+                    className="border border-border/40 shadow-sm" 
+                />
                 <div className="min-w-0 space-y-1.5">
                     <div className="flex flex-wrap items-center gap-2">
                         {isQuestion ? (

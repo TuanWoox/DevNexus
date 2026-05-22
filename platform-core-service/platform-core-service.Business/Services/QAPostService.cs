@@ -580,6 +580,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 var shouldModerate = !string.IsNullOrWhiteSpace(updateDTO.Content) || !string.IsNullOrWhiteSpace(updateDTO.Title);
+                await SetCommunityApprovalStateAsync(qaPost);
 
                 // Step 7: Save
                 _dbContext.Posts.Update(qaPost);

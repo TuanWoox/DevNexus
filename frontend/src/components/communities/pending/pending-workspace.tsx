@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { ListCollapse, Loader2 } from "lucide-react";
 import { PendingList, PendingWorkspaceItem } from "./pending-list";
 import { PendingDetailView } from "./pending-detail-view";
@@ -73,39 +73,36 @@ export function PendingWorkspace({
         );
     }, [posts, questions, filterTab, searchQuery]);
 
-    // Automatically select the first item on initial load
-    useEffect(() => {
-        if (!activeId && sortedAndFilteredItems.length > 0) {
-            setActiveId(sortedAndFilteredItems[0].id);
-        }
-    }, [sortedAndFilteredItems, activeId]);
-
-    // Find the currently active item detail object
+    // Find the currently active item detail object (defaults to the first item in the list if no activeId is explicitly selected)
     const activeItem = useMemo(() => {
-        if (!activeId) return null;
-        return sortedAndFilteredItems.find((item) => item.id === activeId) || null;
+        if (activeId) {
+            return sortedAndFilteredItems.find((item) => item.id === activeId) || null;
+        }
+        return sortedAndFilteredItems[0] || null;
     }, [activeId, sortedAndFilteredItems]);
+
+    const effectiveActiveId = activeItem?.id ?? null;
 
     // Action Handlers bound to active item
     const handleApprove = () => {
         if (!activeItem) return;
         const isQna = activeItem.isQuestion;
         
-        // Optimistic reset selection helper
-        const nextIndex = sortedAndFilteredItems.findIndex(x => x.id === activeId) + 1;
+        // Optimistic reset selection helper using the effective active ID
+        const nextIndex = sortedAndFilteredItems.findIndex(x => x.id === effectiveActiveId) + 1;
         const nextItem = sortedAndFilteredItems[nextIndex] || sortedAndFilteredItems[0] || null;
 
         if (isQna) {
             approveQuestion.mutate(activeItem.id, {
                 onSuccess: () => {
-                    setActiveId(nextItem && nextItem.id !== activeId ? nextItem.id : null);
+                    setActiveId(nextItem && nextItem.id !== effectiveActiveId ? nextItem.id : null);
                 }
             });
             return;
         }
         approvePost.mutate(activeItem.id, {
             onSuccess: () => {
-                setActiveId(nextItem && nextItem.id !== activeId ? nextItem.id : null);
+                setActiveId(nextItem && nextItem.id !== effectiveActiveId ? nextItem.id : null);
             }
         });
     };
@@ -115,12 +112,12 @@ export function PendingWorkspace({
         const isQna = activeItem.isQuestion;
         const payload = { postId: activeItem.id, reason: reasonText || undefined };
 
-        const nextIndex = sortedAndFilteredItems.findIndex(x => x.id === activeId) + 1;
+        const nextIndex = sortedAndFilteredItems.findIndex(x => x.id === effectiveActiveId) + 1;
         const nextItem = sortedAndFilteredItems[nextIndex] || sortedAndFilteredItems[0] || null;
 
         const onRejectSuccess = () => {
             onSuccessCallback();
-            setActiveId(nextItem && nextItem.id !== activeId ? nextItem.id : null);
+            setActiveId(nextItem && nextItem.id !== effectiveActiveId ? nextItem.id : null);
         };
 
         if (isQna) {
@@ -171,7 +168,7 @@ export function PendingWorkspace({
             <div className="w-[35%] border-r border-border/60 shrink-0 h-full">
                 <PendingList
                     items={sortedAndFilteredItems}
-                    activeId={activeId}
+                    activeId={effectiveActiveId}
                     onSelect={(item) => setActiveId(item.id)}
                     searchQuery={searchQuery}
                     onSearchChange={setSearchQuery}

@@ -63,8 +63,8 @@ namespace platform_core_service.Business.Services
                 // Map AI Worker decision string → ModerationStatus enum
                 post.ModerationStatus = dto.Decision.ToLower() switch
                 {
-                    "approve"  => ModerationStatus.Approved,
-                    "flag"     => ModerationStatus.Flagged,
+                    "approve" => ModerationStatus.Approved,
+                    "flag" => ModerationStatus.Flagged,
                     "escalate" => ModerationStatus.InReview,
                     _ => ModerationStatus.InReview  // unknown decision → escalate to be safe
                 };
@@ -206,7 +206,7 @@ namespace platform_core_service.Business.Services
                 EntityId = post.Id,
                 EntityTitle = post.Title,
                 EntityPreview = post.Content?.Length > 100 ? post.Content[..100] : post.Content,
-                ActionUrl = $"/communities/{post.CommunityId}/pending-posts",
+                ActionUrl = $"/communities/{post.CommunityId}/moderate-pending",
                 Timestamp = DateTime.UtcNow,
             };
 

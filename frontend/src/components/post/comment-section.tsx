@@ -41,13 +41,17 @@ export default function CommentSection({ postId, isQAPost }: Props) {
     const { user } = useSelector((state: RootState) => state.auth);
     const { data: userProfile } = useGetProfileById(user?.profileId as string);
 
+    const { data: qaPost, isError: isQAError } = useGetQAPostById(postId, isQAPost);
+    const { data: normalPost, isError: isNormalError } = useGetPostById(postId, !isQAPost);
+    const post = isQAPost ? qaPost : normalPost;
+
     const {
         data: answerData,
         isPending: isAnswerLoading,
         hasNextPage: hasNextPageAnswer,
         fetchNextPage: fetchNextPageAnswer,
         isFetchingNextPage: isFetchingNextPageAnswer
-    } = useGetAnswersByPostIdInfinite(postId, isQAPost, itemsPayload);
+    } = useGetAnswersByPostIdInfinite(postId, isQAPost && !!post, itemsPayload);
 
     const {
         data: commentData,
@@ -55,11 +59,7 @@ export default function CommentSection({ postId, isQAPost }: Props) {
         hasNextPage: hasNextPageComment,
         fetchNextPage: fetchNextPageComment,
         isFetchingNextPage: isFetchingNextPageComment
-    } = useGetCommentsByPostIdInfinite(postId, !isQAPost, itemsPayload);
-
-    const { data: qaPost, isError: isQAError } = useGetQAPostById(postId, isQAPost);
-    const { data: normalPost, isError: isNormalError } = useGetPostById(postId, !isQAPost);
-    const post = isQAPost ? qaPost : normalPost;
+    } = useGetCommentsByPostIdInfinite(postId, !isQAPost && !!post, itemsPayload);
     const communityId = post?.communityId;
     const { data: community } = useGetCommunityById(communityId ?? '', Boolean(communityId));
     const canModerateCommunity =
@@ -121,7 +121,6 @@ export default function CommentSection({ postId, isQAPost }: Props) {
 
             {/* Comment List */}
             {isLoading ? (
-                /* SKELETON LOADING STATE */
                 <div className="space-y-6">
                     {[1, 2, 3].map((item) => (
                         <div key={item} className="flex gap-3 sm:gap-4">
