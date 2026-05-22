@@ -12,7 +12,7 @@ namespace platform_core_service.Common.Interfaces.Services
         // Removes member record. Owner cannot leave.
         Task<ReturnResult<bool>> LeaveAsync(string communityId);
 
-        // Public: list active members of a community
+        // Lists active members only when the viewer can access the community.
         Task<ReturnResult<PagedData<SelectCommunityMemberDTO, string>>> GetMembersAsync(string communityId, Page<string> page);
     }
 }

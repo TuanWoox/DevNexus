@@ -5,6 +5,7 @@ using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces.Contexts;
+using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityMember;
 using platform_core_service.Common.Models.Paging;
@@ -22,12 +23,14 @@ namespace platform_core_service.Business.Services
         ApplicationDbContext context,
         IMapper mapper,
         IUserContext userContext,
+        ISocialGuardService socialGuardService,
         IRepository<CommunityMember, string> memberRepository,
         IBackgroundJobClient backgroundJobClient) : ICommunityMemberService
     {
         private readonly ApplicationDbContext _context = context;
         private readonly IMapper _mapper = mapper;
         private readonly IUserContext _userContext = userContext;
+        private readonly ISocialGuardService _socialGuardService = socialGuardService;
         private readonly IRepository<CommunityMember, string> _memberRepository = memberRepository;
         private readonly IBackgroundJobClient _backgroundJobClient = backgroundJobClient;
 
@@ -242,6 +245,12 @@ namespace platform_core_service.Business.Services
                 }
 
                 var viewerProfileId = _userContext.ProfileId;
+                var communityAccess = await _socialGuardService.CheckBelongToCommunity(communityId);
+                if (!communityAccess.Result)
+                {
+                    result.Message = communityAccess.Message ?? ResponseMessage.COMMUNITY_ACCESS_REQUIRED;
+                    return result;
+                }
 
                 var isManager = !string.IsNullOrEmpty(viewerProfileId)
                     && await IsOwnerOrModeratorAsync(communityId, viewerProfileId);

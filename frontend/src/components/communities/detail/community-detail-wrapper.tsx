@@ -88,7 +88,7 @@ export function CommunityDetailWrapper({ communityId, canViewContent }: Communit
             {/* Tab content */}
             <div className="max-w-6xl mx-auto w-full pb-12">
                 {/* Private community block screen — shown on posts/qa tabs for guest/pending */}
-                {!canViewContent && (activeTab === "posts" || activeTab === "qa") && (
+                {!canViewContent && (activeTab === "posts" || activeTab === "qa" || activeTab === "members") && (
                     <PrivateCommunityBlock />
                 )}
 
@@ -120,7 +120,7 @@ export function CommunityDetailWrapper({ communityId, canViewContent }: Communit
                     />
                 )}
 
-                {activeTab === "members" && (
+                {canViewContent && activeTab === "members" && (
                     <CommunityMemberList communityId={community.id} role={community.currentUserRole} />
                 )}
             </div>
@@ -136,7 +136,7 @@ function PrivateCommunityBlock() {
             </div>
             <h3 className="text-xl font-semibold text-foreground">This is a private community</h3>
             <p className="text-muted-foreground max-w-md text-sm leading-relaxed">
-                Only approved members can view posts and Q&amp;A in this community.
+                Only approved members can view posts, Q&amp;A and members in this community.
                 Join the community or wait for your request to be approved.
             </p>
         </div>
