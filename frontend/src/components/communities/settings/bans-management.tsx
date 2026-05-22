@@ -16,8 +16,8 @@ import { FilterOperator } from "@/constants/filterOperator";
 import { SortOrderType } from "@/constants/sortOrderType";
 import { CreateCommunityBanDTO } from "@/types/community-bans/create-community-ban-dto";
 import { MemberSearchModal } from "./member-search-modal";
-import Link from "next/link";
-import { UserAvatar } from "@/components/shared/user-avatar";
+import { ManagementProfileCell } from "./management-profile-cell";
+import { useDebounce } from "@/hooks/use-debounce";
 
 interface BansManagementProps {
     community: SelectCommunityDTO;
@@ -26,7 +26,7 @@ interface BansManagementProps {
 export function BansManagement({ community }: BansManagementProps) {
     const [pageNumber, setPageNumber] = useState(0);
     const [searchQuery, setSearchQuery] = useState("");
-    const [appliedSearch, setAppliedSearch] = useState("");
+    const debouncedSearch = useDebounce(searchQuery.trim(), 400);
 
     // Ban modal state
     const [isBanModalOpen, setIsBanModalOpen] = useState(false);
@@ -38,10 +38,10 @@ export function BansManagement({ community }: BansManagementProps) {
         pageNumber,
         totalElements: 0,
         orders: [{ sort: "DateCreated", sortDir: SortOrderType.DESC, dynamicProperty: "", delimiter: "", dataType: "datetime" }],
-        filter: appliedSearch ? [
+        filter: debouncedSearch ? [
             {
-                prop: "Profile.FullName",
-                value: appliedSearch,
+                prop: "BannedProfile.FullName",
+                value: debouncedSearch,
                 filterType: FilterType.Text,
                 filterOperator: FilterOperator.Contains,
                 dynamicProperty: "",
@@ -59,14 +59,8 @@ export function BansManagement({ community }: BansManagementProps) {
     const totalPages = Math.ceil((pagedData?.page?.totalElements ?? 0) / pagePayload.size);
 
     const alreadyBannedProfileIds = bans
-        .map(b => b.bannedProfile?.id)
+        .map(b => b.bannedProfileId)
         .filter(Boolean) as string[];
-
-    const handleSearchSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setAppliedSearch(searchQuery);
-        setPageNumber(0);
-    };
 
     // Step 1: user selected from modal — show ban reason form
     const handleMemberSelected = (profileId: string, fullName: string) => {
@@ -91,10 +85,6 @@ export function BansManagement({ community }: BansManagementProps) {
             }
         });
     };
-
-    if (isLoading) {
-        return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
-    }
 
     return (
         <div className="space-y-6">
@@ -143,18 +133,20 @@ export function BansManagement({ community }: BansManagementProps) {
             </div>
 
             {/* Search ban list */}
-            <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 max-w-md">
+            <div className="flex items-center gap-2 max-w-md">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="Search banned users by name..."
                         className="pl-9"
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setPageNumber(0);
+                        }}
                     />
                 </div>
-                <Button type="submit" variant="custom" className="btn-secondary">Search</Button>
-            </form>
+            </div>
 
             <div className="rounded-md border bg-card overflow-hidden">
                 <Table>
@@ -167,32 +159,34 @@ export function BansManagement({ community }: BansManagementProps) {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {bans.length === 0 ? (
+                        {isLoading ? (
                             <TableRow>
                                 <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
-                                    {appliedSearch ? "No bans match your search." : "No banned users."}
+                                    <div className="flex items-center justify-center gap-2">
+                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                        Loading bans...
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ) : bans.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                                    {debouncedSearch ? "No bans match your search." : "No banned users."}
                                 </TableCell>
                             </TableRow>
                         ) : (
                             bans.map((ban) => (
                                 <TableRow key={ban.id} className="hover:bg-muted/30 transition-colors">
                                     <TableCell>
-                                        <Link
-                                            href={`/profile/${ban.bannedProfile?.id ?? ban.id}`}
-                                            className="flex items-center gap-3 group w-fit"
-                                        >
-                                            <UserAvatar
-                                                avatarUrl={ban.bannedProfile?.avatarUrl}
-                                                fullName={ban.bannedProfile?.fullName ?? "User"}
-                                                className="w-8 h-8 shrink-0"
-                                            />
-                                            <div className="flex flex-col">
-                                                <span className="font-medium text-sm group-hover:text-primary transition-colors">
-                                                    {ban.bannedProfile?.fullName || "Unknown User"}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground font-mono">View profile →</span>
-                                            </div>
-                                        </Link>
+                                        <ManagementProfileCell
+                                            profileId={ban.bannedProfileId}
+                                            fullName={ban.bannedProfile?.fullName}
+                                            avatarUrl={ban.bannedProfile?.avatarUrl}
+                                            profilePreview={ban.bannedProfile}
+                                            isRestricted={ban.isBannedProfileRestricted || ban.hasBlockedRelation}
+                                            restrictedMessage={ban.restrictedMessage}
+                                            labelFallback="Unknown User"
+                                        />
                                     </TableCell>
                                     <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
                                         {ban?.banReason || "No reason provided"}
@@ -206,7 +200,7 @@ export function BansManagement({ community }: BansManagementProps) {
                                             variant="outline"
                                             className="h-8 border-green-200 text-green-600 hover:text-green-700 hover:bg-green-50 hover:border-green-300 cursor-pointer"
                                             onClick={() => unbanMember(ban.id)}
-                                            disabled={isUnbanning}
+                                            disabled={ban.canUnban === false || isUnbanning}
                                         >
                                             <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Unban
                                         </Button>
@@ -235,6 +229,7 @@ export function BansManagement({ community }: BansManagementProps) {
                 title="Select Member to Ban"
                 description="Search community members by name. Only current members can be banned."
                 highlightedIds={alreadyBannedProfileIds}
+                mode="ban"
             />
         </div>
     );
