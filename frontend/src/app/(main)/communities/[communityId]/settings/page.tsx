@@ -76,7 +76,7 @@ const CommunitySettingsPage = () => {
     if (isError || !community || !hasAccess) return null;
 
     return (
-        <div className="min-h-screen bg-page pb-16">
+        <div className="min-h-dvh bg-page pb-16">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in-up">
                 {/* Header Section */}
                 <div className="flex items-center gap-4 border-b border-border/30 pb-6">
@@ -103,10 +103,10 @@ const CommunitySettingsPage = () => {
                 <Tabs 
                     value={activeTab} 
                     onValueChange={handleTabChange} 
-                    className="bg-card border-2 border-border rounded-2xl shadow-2xl flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-180px)] min-h-[600px] max-h-[850px] overflow-hidden transition-all duration-300 w-full lg:min-w-[990px] xl:min-w-[1152px] xl:max-w-6xl mx-auto"
+                    className="bg-card border-2 border-border rounded-2xl shadow-2xl flex flex-col lg:flex-row min-h-[calc(100dvh-240px)] transition-all duration-300 w-full lg:min-w-[1152px] lg:max-w-6xl mx-auto"
                 >
                     {/* Left Column: Navigation Sidebar */}
-                    <div className="hidden lg:flex w-[280px] shrink-0 border-r border-border bg-muted/40 p-7 flex-col gap-2 overflow-y-auto no-scrollbar">
+                    <div className="hidden lg:flex w-[280px] shrink-0 border-r border-border bg-muted/40 p-7 flex-col gap-2">
                         <div className="pb-4 mb-2 border-b border-border/40">
                             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Settings Menu</h3>
                             <p className="text-[11px] text-muted-foreground/80 mt-0.5">Configure your community space</p>
@@ -154,7 +154,7 @@ const CommunitySettingsPage = () => {
                     </div>
 
                     {/* Right Column: Settings Content */}
-                    <div className="flex-1 min-w-0 h-full overflow-y-auto p-6 sm:p-10 lg:p-12 relative">
+                    <div className="flex-1 min-w-0 p-6 sm:p-10 lg:p-12 relative">
                         {/* Subtle gradient background effect for card */}
                         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none translate-x-1/2 -translate-y-1/2" />
 

@@ -196,7 +196,10 @@ export default function ReportDetailPage() {
     const reportedAnswer = contentType === ContentType.Answer ? answersReport.answer : null;
     const reportedComment = contentType === ContentType.Comment ? commentsReport.comment : null;
 
-    const isResolved = report.status === ReportStatus.Resolved;
+    const isResolved =
+        report.status === ReportStatus.Resolved ||
+        report.status === ReportStatus.Dismissed ||
+        report.status === ReportStatus.Rejected;
 
     return (
         <div className="container max-w-4xl mx-auto px-4 py-4 h-[calc(100dvh-2rem)] flex flex-col justify-center">
