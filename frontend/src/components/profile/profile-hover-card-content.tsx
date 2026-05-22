@@ -135,6 +135,7 @@ export function ProfileHoverCardContent({
     const [muteReason, setMuteReason] = useState("");
     const [mutePreset, setMutePreset] = useState("24h");
     const [customMutedUntil, setCustomMutedUntil] = useState("");
+    const [minCustomDate] = useState(() => new Date(Date.now() + 60 * 1000).toISOString().slice(0, 16));
     const [isBanDialogOpen, setIsBanDialogOpen] = useState(false);
     const [banReason, setBanReason] = useState("");
     const muteMutation = useMuteCommunityMember();
@@ -359,7 +360,7 @@ export function ProfileHoverCardContent({
                                     type="datetime-local"
                                     value={customMutedUntil}
                                     onChange={(event) => setCustomMutedUntil(event.target.value)}
-                                    min={new Date(Date.now() + 60 * 1000).toISOString().slice(0, 16)}
+                                    min={minCustomDate}
                                 />
                             </div>
                         ) : null}
