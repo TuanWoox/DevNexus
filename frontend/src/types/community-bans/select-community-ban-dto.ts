@@ -9,4 +9,9 @@ export interface SelectCommunityBanDTO {
     bannedBy?: SelectProfileDTO;
     banReason?: string;
     dateCreated?: string;
+    hasBlockedRelation?: boolean;
+    isBannedProfileRestricted?: boolean;
+    isBannedByRestricted?: boolean;
+    restrictedMessage?: string | null;
+    canUnban?: boolean;
 }

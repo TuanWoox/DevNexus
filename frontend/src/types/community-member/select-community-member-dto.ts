@@ -7,4 +7,10 @@ export interface SelectCommunityMemberDTO {
     profile?: SelectProfileDTO;
     dateCreated?: string;
     isOwner?: boolean;
+    hasBlockedRelation?: boolean;
+    isProfileRestricted?: boolean;
+    restrictedMessage?: string | null;
+    canRemove?: boolean;
+    canBan?: boolean;
+    canPromote?: boolean;
 }
