@@ -32,7 +32,11 @@ namespace platform_core_service.Business.Helper
 
                 if (!string.IsNullOrEmpty(createPostDTO.CommunityId))
                 {
-                    return await CheckBelongToCommunity(createPostDTO.CommunityId);
+                    var communityAccess = await CheckBelongToCommunity(createPostDTO.CommunityId);
+                    if (!communityAccess.Result) return communityAccess;
+
+                    var muteCheck = await CheckIsMutedInCommunityAsync(_userContext.ProfileId, createPostDTO.CommunityId);
+                    if (muteCheck.Message != null) return muteCheck;
                 }
 
                 return Success();
@@ -78,6 +82,80 @@ namespace platform_core_service.Business.Helper
                 DevNexusLogger.Instance.Debug(ex.Message);
                 return Denied(ResponseMessage.MESSAGE_TECHNICAL_ISSUE);
             }
+        }
+
+        public async Task<ReturnResult<bool>> CheckIsMutedInCommunityAsync(string profileId, string communityId)
+        {
+            ReturnResult<bool> returnResult = new();
+            try
+            {
+                var activeMute = await _dbContext.CommunityMutedMembers
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(m => m.CommunityId == communityId
+                                           && m.MutedProfileId == profileId
+                                           && (m.MutedUntil == null || m.MutedUntil > DateTimeOffset.UtcNow));
+
+                if (activeMute != null)
+                {
+                    returnResult.Result = true;
+                    returnResult.Message = activeMute.MutedUntil.HasValue
+                        ? $"You are muted in this community until {activeMute.MutedUntil.Value:g}."
+                        : "You are muted in this community indefinitely.";
+                    return returnResult;
+                }
+
+                returnResult.Result = false;
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+            }
+
+            return returnResult;
+        }
+
+        public async Task<ReturnResult<bool>> CheckIsCommunityAdminOrModeratorAsync(string profileId, string communityId)
+        {
+            ReturnResult<bool> returnResult = new();
+            try
+            {
+                if (string.IsNullOrWhiteSpace(profileId) || string.IsNullOrWhiteSpace(communityId))
+                {
+                    returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
+                    return returnResult;
+                }
+
+                var communityRole = await _dbContext.Communities
+                    .AsNoTracking()
+                    .Where(c => c.Id == communityId)
+                    .Select(c => new
+                    {
+                        IsAdmin = c.OwnerId == profileId,
+                        IsModerator = _dbContext.CommunityModerators
+                            .Any(m => m.CommunityId == communityId && m.ModeratorId == profileId)
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (communityRole == null)
+                {
+                    returnResult.Message = "Community not found";
+                    return returnResult;
+                }
+
+                if (!communityRole.IsAdmin && !communityRole.IsModerator)
+                {
+                    returnResult.Message = ResponseMessage.MESSAGE_FORBIDDEN;
+                    return returnResult;
+                }
+
+                returnResult.Result = true;
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+            }
+
+            return returnResult;
         }
 
         public async Task<ReturnResult<bool>> CheckProfileBlocking([TrimmedRequired] string authorId)
@@ -279,39 +357,60 @@ namespace platform_core_service.Business.Helper
             return await CanViewQAPost(answer.QAPostId);
         }
 
-        public Task<ReturnResult<bool>> CanCommentOnPost(string postId)
+        public async Task<ReturnResult<bool>> CanCommentOnPost(string postId)
         {
-            return GuardMutation(CanViewPost(postId), ResponseMessage.NO_PERMISSION_TO_COMMENT);
+            var guard = await GuardMutation(CanViewPost(postId), ResponseMessage.NO_PERMISSION_TO_COMMENT);
+            if (!guard.Result) return guard;
+
+            return await GuardCommunityMuteByPostId(postId);
         }
 
-        public Task<ReturnResult<bool>> CanCommentOnAnswer(string answerId)
+        public async Task<ReturnResult<bool>> CanCommentOnAnswer(string answerId)
         {
-            return GuardMutation(CanViewAnswer(answerId), ResponseMessage.NO_PERMISSION_TO_COMMENT);
+            var guard = await GuardMutation(CanViewAnswer(answerId), ResponseMessage.NO_PERMISSION_TO_COMMENT);
+            if (!guard.Result) return guard;
+
+            return await GuardCommunityMuteByAnswerId(answerId);
         }
 
-        public Task<ReturnResult<bool>> CanReplyComment(string commentId)
+        public async Task<ReturnResult<bool>> CanReplyComment(string commentId)
         {
-            return GuardMutation(CanViewComment(commentId), ResponseMessage.NO_PERMISSION_TO_COMMENT);
+            var guard = await GuardMutation(CanViewComment(commentId), ResponseMessage.NO_PERMISSION_TO_COMMENT);
+            if (!guard.Result) return guard;
+
+            return await GuardCommunityMuteByCommentId(commentId);
         }
 
-        public Task<ReturnResult<bool>> CanAnswerQuestion(string qaPostId)
+        public async Task<ReturnResult<bool>> CanAnswerQuestion(string qaPostId)
         {
-            return GuardMutation(CanViewQAPost(qaPostId), ResponseMessage.NO_PERMISSION_TO_ANSWER);
+            var guard = await GuardMutation(CanViewQAPost(qaPostId), ResponseMessage.NO_PERMISSION_TO_ANSWER);
+            if (!guard.Result) return guard;
+
+            return await GuardCommunityMuteByQAPostId(qaPostId);
         }
 
-        public Task<ReturnResult<bool>> CanVotePost(string postId)
+        public async Task<ReturnResult<bool>> CanVotePost(string postId)
         {
-            return GuardMutation(CanViewPost(postId), ResponseMessage.NO_PERMISSION_TO_VOTE);
+            var guard = await GuardMutation(CanViewPost(postId), ResponseMessage.NO_PERMISSION_TO_VOTE);
+            if (!guard.Result) return guard;
+
+            return await GuardCommunityMuteByPostId(postId);
         }
 
-        public Task<ReturnResult<bool>> CanVoteAnswer(string answerId)
+        public async Task<ReturnResult<bool>> CanVoteAnswer(string answerId)
         {
-            return GuardMutation(CanViewAnswer(answerId), ResponseMessage.NO_PERMISSION_TO_VOTE);
+            var guard = await GuardMutation(CanViewAnswer(answerId), ResponseMessage.NO_PERMISSION_TO_VOTE);
+            if (!guard.Result) return guard;
+
+            return await GuardCommunityMuteByAnswerId(answerId);
         }
 
-        public Task<ReturnResult<bool>> CanVoteComment(string commentId)
+        public async Task<ReturnResult<bool>> CanVoteComment(string commentId)
         {
-            return GuardMutation(CanViewComment(commentId), ResponseMessage.NO_PERMISSION_TO_VOTE);
+            var guard = await GuardMutation(CanViewComment(commentId), ResponseMessage.NO_PERMISSION_TO_VOTE);
+            if (!guard.Result) return guard;
+
+            return await GuardCommunityMuteByCommentId(commentId);
         }
 
         public Task<ReturnResult<bool>> CanSavePost(string postId)
@@ -415,6 +514,75 @@ namespace platform_core_service.Business.Helper
         private static ReturnResult<bool> Denied(string message)
         {
             return new ReturnResult<bool> { Result = false, Message = message };
+        }
+
+        private async Task<ReturnResult<bool>> GuardCommunityMuteByPostId(string postId)
+        {
+            var communityId = await _dbContext.Posts
+                .AsNoTracking()
+                .Where(p => p.Id == postId || p.Slug == postId)
+                .Select(p => p.CommunityId)
+                .FirstOrDefaultAsync();
+
+            return await GuardCommunityMute(communityId);
+        }
+
+        private async Task<ReturnResult<bool>> GuardCommunityMuteByQAPostId(string qaPostId)
+        {
+            var communityId = await _dbContext.Posts
+                .OfType<QAPost>()
+                .AsNoTracking()
+                .Where(p => p.Id == qaPostId || p.Slug == qaPostId)
+                .Select(p => p.CommunityId)
+                .FirstOrDefaultAsync();
+
+            return await GuardCommunityMute(communityId);
+        }
+
+        private async Task<ReturnResult<bool>> GuardCommunityMuteByAnswerId(string answerId)
+        {
+            var communityId = await _dbContext.Answers
+                .AsNoTracking()
+                .Where(a => a.Id == answerId)
+                .Select(a => a.QAPost.CommunityId)
+                .FirstOrDefaultAsync();
+
+            return await GuardCommunityMute(communityId);
+        }
+
+        private async Task<ReturnResult<bool>> GuardCommunityMuteByCommentId(string commentId)
+        {
+            var comment = await _dbContext.Comments
+                .AsNoTracking()
+                .Include(c => c.Post)
+                .Include(c => c.Answer)
+                    .ThenInclude(a => a.QAPost)
+                .Include(c => c.ReplyToComment)
+                    .ThenInclude(rc => rc.Post)
+                .Include(c => c.ReplyToComment)
+                    .ThenInclude(rc => rc.Answer)
+                        .ThenInclude(a => a.QAPost)
+                .FirstOrDefaultAsync(c => c.Id == commentId);
+
+            var communityId = comment?.Post?.CommunityId
+                ?? comment?.Answer?.QAPost?.CommunityId
+                ?? comment?.ReplyToComment?.Post?.CommunityId
+                ?? comment?.ReplyToComment?.Answer?.QAPost?.CommunityId;
+
+            return await GuardCommunityMute(communityId);
+        }
+
+        private async Task<ReturnResult<bool>> GuardCommunityMute(string? communityId)
+        {
+            if (string.IsNullOrEmpty(communityId))
+            {
+                return Success();
+            }
+
+            var muteCheck = await CheckIsMutedInCommunityAsync(_userContext.ProfileId, communityId);
+            return muteCheck.Result
+                ? Denied(muteCheck.Message ?? "You are muted in this community.")
+                : Success();
         }
 
         private static async Task<ReturnResult<bool>> GuardMutation(Task<ReturnResult<bool>> guardTask, string deniedMessage)

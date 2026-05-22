@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { SelectCommunityDTO } from "@/types/community/select-community-dto";
-import { Loader2, UserMinus, UserPlus, Search } from "lucide-react";
+import { Loader2, UserMinus, UserPlus, Search, Calendar, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { Page } from "@/types/common/page";
 import { FilterType } from "@/constants/filterType";
@@ -69,31 +69,34 @@ export function ModeratorsManagement({ community }: ModeratorsManagementProps) {
     return (
         <div className="space-y-6">
             {/* Add Moderator via modal */}
-            <div className="flex items-center justify-between bg-muted/30 p-4 rounded-xl border border-border/50">
-                <div>
-                    <h3 className="text-sm font-medium">Add New Moderator</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                        Search for a community member to promote to moderator.
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-primary/5 border border-primary/10 p-5 rounded-2xl gap-4">
+                <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4 text-primary" />
+                        Add New Moderator
+                    </h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed max-w-md">
+                        Promote an existing member of your community to a moderator role to help manage content, requests, and bans.
                     </p>
                 </div>
                 <Button
                     onClick={() => setIsSearchModalOpen(true)}
                     disabled={isAdding}
                     variant="custom"
-                    className="btn-primary text-white shrink-0"
+                    className="btn-primary text-white shrink-0 active:scale-95 transition-transform cursor-pointer h-10 px-4 rounded-xl text-xs font-semibold"
                 >
                     {isAdding ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />}
-                    Add Moderator
+                    Promote Member
                 </Button>
             </div>
 
             {/* Search moderator list */}
             <div className="flex items-center gap-2 max-w-md">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="Search moderators by name..."
-                        className="pl-9"
+                        className="pl-10 rounded-xl border border-border/60 bg-muted/10 text-sm focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus-visible:bg-background transition-all duration-200"
                         value={searchQuery}
                         onChange={(e) => {
                             setSearchQuery(e.target.value);
@@ -163,11 +166,26 @@ export function ModeratorsManagement({ community }: ModeratorsManagementProps) {
                 </Table>
             </div>
 
+            {/* Pagination */}
             {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-4 pt-4">
-                    <Button variant="outline" size="sm" disabled={pageNumber === 0} onClick={() => setPageNumber(p => p - 1)}>Previous</Button>
-                    <span className="text-sm text-muted-foreground font-medium">Page {pageNumber + 1} of {totalPages}</span>
-                    <Button variant="outline" size="sm" disabled={pageNumber >= totalPages - 1} onClick={() => setPageNumber(p => p + 1)}>Next</Button>
+                <div className="flex justify-center items-center gap-3 pt-6 border-t border-border/20">
+                    <Button
+                        variant="outline"
+                        className="h-9 px-3 text-xs rounded-lg hover:bg-muted active:scale-95 transition-transform cursor-pointer"
+                        disabled={pageNumber === 0}
+                        onClick={() => setPageNumber(p => p - 1)}
+                    >
+                        Previous
+                    </Button>
+                    <span className="text-xs text-muted-foreground font-medium">Page {pageNumber + 1} of {totalPages}</span>
+                    <Button
+                        variant="outline"
+                        className="h-9 px-3 text-xs rounded-lg hover:bg-muted active:scale-95 transition-transform cursor-pointer"
+                        disabled={pageNumber >= totalPages - 1}
+                        onClick={() => setPageNumber(p => p + 1)}
+                    >
+                        Next
+                    </Button>
                 </div>
             )}
 

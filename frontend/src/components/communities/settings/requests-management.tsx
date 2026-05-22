@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { SelectCommunityDTO } from "@/types/community/select-community-dto";
-import { Loader2, Check, X, Search } from "lucide-react";
+import { Loader2, Check, X, Search, Calendar, Users } from "lucide-react";
 import { useState } from "react";
 import { Page } from "@/types/common/page";
 import { FilterType } from "@/constants/filterType";
@@ -66,10 +66,10 @@ export function RequestsManagement({ community }: RequestsManagementProps) {
             {/* Search Bar */}
             <div className="flex items-center gap-2 max-w-md">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search by name..."
-                        className="pl-9"
+                        placeholder="Search by requester name..."
+                        className="pl-10 rounded-xl border border-border/60 bg-muted/10 text-sm focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus-visible:bg-background transition-all duration-200"
                         value={searchQuery}
                         onChange={(e) => {
                             setSearchQuery(e.target.value);
@@ -153,21 +153,21 @@ export function RequestsManagement({ community }: RequestsManagementProps) {
 
             {/* Pagination */}
             {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-4 pt-4">
+                <div className="flex justify-center items-center gap-3 pt-6 border-t border-border/20">
                     <Button
                         variant="outline"
-                        size="sm"
+                        className="h-9 px-3 text-xs rounded-lg hover:bg-muted active:scale-95 transition-transform cursor-pointer"
                         disabled={pageNumber === 0}
                         onClick={() => setPageNumber(prev => prev - 1)}
                     >
                         Previous
                     </Button>
-                    <span className="text-sm text-muted-foreground font-medium">
+                    <span className="text-xs text-muted-foreground font-medium">
                         Page {pageNumber + 1} of {totalPages}
                     </span>
                     <Button
                         variant="outline"
-                        size="sm"
+                        className="h-9 px-3 text-xs rounded-lg hover:bg-muted active:scale-95 transition-transform cursor-pointer"
                         disabled={pageNumber >= totalPages - 1}
                         onClick={() => setPageNumber(prev => prev + 1)}
                     >

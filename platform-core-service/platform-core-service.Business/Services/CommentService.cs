@@ -145,6 +145,17 @@ namespace platform_core_service.Business.Services
                     }
                 }
 
+                var communityId = await ResolveCommentCommunityIdAsync(createDTO);
+                if (!string.IsNullOrEmpty(communityId))
+                {
+                    var muteCheck = await _socialGuardService.CheckIsMutedInCommunityAsync(profileId, communityId);
+                    if (muteCheck.Message != null)
+                    {
+                        result.Message = muteCheck.Message;
+                        return result;
+                    }
+                }
+
                 // Step 5: Map DTO to entity
                 var comment = _mapper.Map<CommentEntity>(createDTO);
                 comment.AuthorId = profileId;
@@ -603,6 +614,27 @@ namespace platform_core_service.Business.Services
             }
 
             return content.Substring(0, Math.Min(200, content.Length));
+        }
+
+        private async Task<string?> ResolveCommentCommunityIdAsync(CreateCommentDTO createDTO)
+        {
+            if (!string.IsNullOrEmpty(createDTO.PostId))
+            {
+                return await _context.Posts
+                    .Where(p => p.Id == createDTO.PostId)
+                    .Select(p => p.CommunityId)
+                    .FirstOrDefaultAsync();
+            }
+
+            if (!string.IsNullOrEmpty(createDTO.AnswerId))
+            {
+                return await _context.Answers
+                    .Where(a => a.Id == createDTO.AnswerId)
+                    .Select(a => a.QAPost.CommunityId)
+                    .FirstOrDefaultAsync();
+            }
+
+            return null;
         }
 
         private async Task EnqueueNotification(NotiicationCreatedEntityDTO notificationEvent, string routingKey)

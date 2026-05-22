@@ -77,6 +77,13 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var businessLogicResult = await _socialGuardService.CheckAddingPost(createDTO);
+                if (businessLogicResult.Message != null)
+                {
+                    result.Message = businessLogicResult.Message;
+                    return result;
+                }
+
                 var matchedBannedKeywords = await GetMatchedBannedKeywordsAsync(createDTO.Title, createDTO.Content);
 
                 // Step 3: Map DTO to entity and set server-side fields

@@ -321,6 +321,63 @@ namespace platform_core_service.Migrations
                     b.ToTable("AnswerMedias");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.BaseCommunityReport", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommunityId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ReportedProfileId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReporterId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("ResolutionAction")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ResolutionNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ResolvedById")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.ToTable((string)null);
+
+                    b.UseTpcMappingStrategy();
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.BookMark", b =>
                 {
                     b.Property<string>("Id")
@@ -749,6 +806,56 @@ namespace platform_core_service.Migrations
                         .IsUnique();
 
                     b.ToTable("CommunityModerators");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityMuteMember", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommunityId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MuteReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("MutedById")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MutedProfileId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("MutedUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("MutedById");
+
+                    b.HasIndex("MutedProfileId");
+
+                    b.HasIndex("CommunityId", "MutedProfileId");
+
+                    b.ToTable("CommunityMutedMembers");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.FollowRequest", b =>
@@ -1705,6 +1812,94 @@ namespace platform_core_service.Migrations
                     b.ToTable("AspNetUserRoles", (string)null);
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityAnswersReport", b =>
+                {
+                    b.HasBaseType("platform_core_service.Common.Entities.DbEntities.BaseCommunityReport");
+
+                    b.Property<string>("AnswerId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasIndex("CommunityId");
+
+                    b.HasIndex("ReportedProfileId");
+
+                    b.HasIndex("ResolvedById");
+
+                    b.HasIndex("AnswerId", "ReporterId")
+                        .IsUnique();
+
+                    b.HasIndex("ReporterId", "Status");
+
+                    b.ToTable("CommunityAnswersReports", (string)null);
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityCommentsReport", b =>
+                {
+                    b.HasBaseType("platform_core_service.Common.Entities.DbEntities.BaseCommunityReport");
+
+                    b.Property<string>("CommentId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasIndex("CommunityId");
+
+                    b.HasIndex("ReportedProfileId");
+
+                    b.HasIndex("ResolvedById");
+
+                    b.HasIndex("CommentId", "ReporterId")
+                        .IsUnique();
+
+                    b.HasIndex("ReporterId", "Status");
+
+                    b.ToTable("CommunityCommentsReports", (string)null);
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityPostsReport", b =>
+                {
+                    b.HasBaseType("platform_core_service.Common.Entities.DbEntities.BaseCommunityReport");
+
+                    b.Property<string>("PostId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasIndex("CommunityId");
+
+                    b.HasIndex("ReportedProfileId");
+
+                    b.HasIndex("ResolvedById");
+
+                    b.HasIndex("PostId", "ReporterId")
+                        .IsUnique();
+
+                    b.HasIndex("ReporterId", "Status");
+
+                    b.ToTable("CommunityPostsReports", (string)null);
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityQAPostReports", b =>
+                {
+                    b.HasBaseType("platform_core_service.Common.Entities.DbEntities.BaseCommunityReport");
+
+                    b.Property<string>("QAPostId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasIndex("CommunityId");
+
+                    b.HasIndex("ReportedProfileId");
+
+                    b.HasIndex("ResolvedById");
+
+                    b.HasIndex("QAPostId", "ReporterId")
+                        .IsUnique();
+
+                    b.HasIndex("ReporterId", "Status");
+
+                    b.ToTable("CommunityQAPostReports", (string)null);
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.QAPost", b =>
                 {
                     b.HasBaseType("platform_core_service.Common.Entities.DbEntities.Post");
@@ -1977,6 +2172,33 @@ namespace platform_core_service.Migrations
                     b.Navigation("Moderator");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityMuteMember", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
+                        .WithMany()
+                        .HasForeignKey("CommunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "MutedBy")
+                        .WithMany()
+                        .HasForeignKey("MutedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "MutedProfile")
+                        .WithMany()
+                        .HasForeignKey("MutedProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Community");
+
+                    b.Navigation("MutedBy");
+
+                    b.Navigation("MutedProfile");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.FollowRequest", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "RequesterProfile")
@@ -2200,6 +2422,174 @@ namespace platform_core_service.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityAnswersReport", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Answer", "Answer")
+                        .WithMany()
+                        .HasForeignKey("AnswerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
+                        .WithMany()
+                        .HasForeignKey("CommunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "ReportedProfile")
+                        .WithMany()
+                        .HasForeignKey("ReportedProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Reporter")
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "ResolvedBy")
+                        .WithMany()
+                        .HasForeignKey("ResolvedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Answer");
+
+                    b.Navigation("Community");
+
+                    b.Navigation("ReportedProfile");
+
+                    b.Navigation("Reporter");
+
+                    b.Navigation("ResolvedBy");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityCommentsReport", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Comment", "Comment")
+                        .WithMany()
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
+                        .WithMany()
+                        .HasForeignKey("CommunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "ReportedProfile")
+                        .WithMany()
+                        .HasForeignKey("ReportedProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Reporter")
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "ResolvedBy")
+                        .WithMany()
+                        .HasForeignKey("ResolvedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Comment");
+
+                    b.Navigation("Community");
+
+                    b.Navigation("ReportedProfile");
+
+                    b.Navigation("Reporter");
+
+                    b.Navigation("ResolvedBy");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityPostsReport", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
+                        .WithMany()
+                        .HasForeignKey("CommunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Post", "Post")
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "ReportedProfile")
+                        .WithMany()
+                        .HasForeignKey("ReportedProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Reporter")
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "ResolvedBy")
+                        .WithMany()
+                        .HasForeignKey("ResolvedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Community");
+
+                    b.Navigation("Post");
+
+                    b.Navigation("ReportedProfile");
+
+                    b.Navigation("Reporter");
+
+                    b.Navigation("ResolvedBy");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.CommunityQAPostReports", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
+                        .WithMany()
+                        .HasForeignKey("CommunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.QAPost", "QAPost")
+                        .WithMany()
+                        .HasForeignKey("QAPostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "ReportedProfile")
+                        .WithMany()
+                        .HasForeignKey("ReportedProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Reporter")
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "ResolvedBy")
+                        .WithMany()
+                        .HasForeignKey("ResolvedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Community");
+
+                    b.Navigation("QAPost");
+
+                    b.Navigation("ReportedProfile");
+
+                    b.Navigation("Reporter");
+
+                    b.Navigation("ResolvedBy");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.BookMark", b =>

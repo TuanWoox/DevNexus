@@ -163,6 +163,8 @@ public static class ServiceExtensions
     {
         services.AddSwaggerGen(options =>
         {
+            options.CustomSchemaIds(type => type.FullName);
+
             options.AddSecurityDefinition("bearer", new OpenApiSecurityScheme
             {
                 Type = SecuritySchemeType.Http,

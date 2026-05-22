@@ -10,6 +10,8 @@ import { useGetQAPostsByCommunityIdInfinite } from "@/hooks/qa-post-hooks/use-ge
 import { SortOrderType } from "@/constants/sortOrderType";
 import { CommunityMemberList } from "./community-member-list";
 import { useGetCommunityById } from "@/hooks/community-hooks/use-get-community-by-id";
+import { useGetCommunityMute } from "@/hooks/community-mute-hooks/use-get-community-mute";
+import { MuteBanner } from "@/components/communities/mute-banner";
 
 type CommunityTab = "posts" | "qa" | "members";
 
@@ -42,6 +44,7 @@ export function CommunityDetailWrapper({ communityId, canViewContent }: Communit
     const [activeTab, setActiveTab] = useState<CommunityTab>("posts");
 
     const { data: community } = useGetCommunityById(communityId);
+    const { data: muteStatus } = useGetCommunityMute(communityId);
 
     // Lazy tab-based fetching:
     // Posts only fetch when on posts tab AND user has access to content
@@ -84,6 +87,14 @@ export function CommunityDetailWrapper({ communityId, canViewContent }: Communit
                 <CommunityHeader community={community} activeTab={activeTab} />
                 <CommunityTabs activeTab={activeTab} setActiveTab={setActiveTab} />
             </div>
+            {muteStatus?.isMuted && (
+                <div className="px-4">
+                    <MuteBanner
+                        mutedUntil={muteStatus.mutedUntil}
+                        muteReason={muteStatus.muteReason}
+                    />
+                </div>
+            )}
 
             {/* Tab content */}
             <div className="max-w-6xl mx-auto w-full pb-12">

@@ -79,6 +79,27 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var parentPost = await _dbContext.Posts
+                    .OfType<QAPost>()
+                    .Where(p => p.Id == answerDTO.QAPostId)
+                    .Select(p => new { p.Id, p.CommunityId })
+                    .FirstOrDefaultAsync();
+                if (parentPost == null)
+                {
+                    result.Message = ResponseMessage.NO_PERMISSION_TO_ANSWER;
+                    return result;
+                }
+
+                if (!string.IsNullOrEmpty(parentPost.CommunityId))
+                {
+                    var muteCheck = await _socialGuardService.CheckIsMutedInCommunityAsync(profileId, parentPost.CommunityId);
+                    if (muteCheck.Message != null)
+                    {
+                        result.Message = muteCheck.Message;
+                        return result;
+                    }
+                }
+
                 // Step 4: Map and set server-side fields
                 var answer = _mapper.Map<Answer>(answerDTO);
                 answer.Id = Guid.NewGuid().ToString();

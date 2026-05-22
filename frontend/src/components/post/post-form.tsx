@@ -23,6 +23,8 @@ import Image from 'next/image'
 import { AiMetadataAssist } from './ai-metadata-assist'
 import { ContentType } from '@/types/content-media/content-type'
 import { useUploadContentMedia } from '@/hooks/media/useUploadContentMedia'
+import { useMuteGuard } from '@/hooks/community-mute-hooks/use-mute-guard'
+import { AlertTriangle } from 'lucide-react'
 
 export type PostFormData = {
     title: string;
@@ -96,6 +98,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
     const communityId = useWatch({ control, name: 'communityId' });
     const title = useWatch({ control, name: 'title' });
     const content = useWatch({ control, name: 'content' });
+    const { checkMuted, isMuted, muteStatus } = useMuteGuard(isEditMode ? undefined : communityId);
 
     // Đồng bộ isQAPost vào react-hook-form nếu nó thay đổi (chỉ khi không bị lock fixedPostType)
     const handleSetIsQAPost = (value: boolean) => {
@@ -128,6 +131,8 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
     };
 
     const onSubmit = async (data: PostFormData) => {
+        if (!isEditMode && data.communityId && checkMuted(isQAPost ? 'ask questions' : 'create posts')) return;
+
         const slug = data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
         const pendingFiles = editorRef.current?.getPendingFiles(data.content) ?? new Map<string, File>();
         let finalContent = data.content;
@@ -390,6 +395,20 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                             selectedId={communityId}
                         />
 
+                        {!isEditMode && isMuted && (
+                            <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive">
+                                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                                <div className="space-y-1">
+                                    <p className="text-sm font-semibold">
+                                        You are muted and cannot {isQAPost ? 'ask questions' : 'create posts'} in this community.
+                                    </p>
+                                    <p className="text-xs text-destructive/80">
+                                        Muted until {muteStatus?.mutedUntil ? new Date(muteStatus.mutedUntil).toLocaleString() : 'further notice'}.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Markdown Editor */}
                         <div className="space-y-3 pt-2">
                             <Label className="text-base font-semibold text-heading flex items-center gap-2">
@@ -451,7 +470,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                     >
                         Cancel
                     </Button>
-                    <Button type="submit" className="btn-ai text-white text-sm px-6 py-2 h-auto flex items-center gap-2 group" disabled={isPending || isUploadingMedia}>
+                    <Button type="submit" className="btn-ai text-white text-sm px-6 py-2 h-auto flex items-center gap-2 group" disabled={isPending || isUploadingMedia || (!isEditMode && isMuted)}>
                         {isEditMode ? (
                             <Save className="w-4 h-4 group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" />
                         ) : (

@@ -6,6 +6,7 @@ const labels: Record<ReportStatus, string> = {
   [ReportStatus.Resolved]: "Resolved",
   [ReportStatus.Dismissed]: "Dismissed",
   [ReportStatus.Escalated]: "Escalated",
+  [ReportStatus.Rejected]: "Rejected",
 };
 
 const classes: Record<ReportStatus, string> = {
@@ -14,6 +15,7 @@ const classes: Record<ReportStatus, string> = {
   [ReportStatus.Resolved]: "bg-emerald-500/10 text-emerald-600 ring-emerald-500/20",
   [ReportStatus.Dismissed]: "bg-muted text-muted-foreground ring-border",
   [ReportStatus.Escalated]: "bg-red-500/10 text-red-600 ring-red-500/20",
+  [ReportStatus.Rejected]: "bg-red-500/10 text-red-600 ring-red-500/20",
 };
 
 export function ReportStatusBadge({ status }: { status: ReportStatus }) {
