@@ -56,6 +56,7 @@ namespace platform_core_service.Business.Abstracts
         protected abstract TReportEntity CreateReportContent(string communityId, ReportContentDTO reportContentDTO, TEntity entity);
         protected abstract IQueryable<TReportEntity> BuildQueryForPaging(string communityId, string? userId);
         protected abstract string GetContentIdFromReport(TReportEntity report);
+        protected abstract string GetReportedProfileId(TEntity entity);
         protected abstract Task<List<TReportEntity>> GetAllPendingReportsForContent(string contentId, string communityId);
         protected abstract Task SoftDeleteContent(TEntity content);
 
@@ -77,6 +78,12 @@ namespace platform_core_service.Business.Abstracts
                 if (entity == null)
                 {
                     returnResult.Message = "Content not found.";
+                    return returnResult;
+                }
+
+                if (GetReportedProfileId(entity) == _userContext.ProfileId)
+                {
+                    returnResult.Message = "You cannot report your own content.";
                     return returnResult;
                 }
 

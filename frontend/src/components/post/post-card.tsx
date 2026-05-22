@@ -30,6 +30,7 @@ import { useDeleteBookmarkedItemById } from "@/hooks/bookmarked-item-hooks/use-d
 import { useHasMounted } from "@/hooks/use-has-mounted";
 import { cn } from "@/lib/utils";
 import { normalizeModerationStatus } from "@/types/post/moderation-status";
+import { useMuteGuard } from "@/hooks/community-mute-hooks/use-mute-guard";
 
 interface PostCardProps {
     post: SelectPostDTO | SelectQAPostDTO;
@@ -55,6 +56,7 @@ export function PostCard({ post }: PostCardProps) {
 
     const { mutate: unsaveItem, isPending: isUnsavePending } = useDeleteBookmarkedItemById();
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(post.id);
+    const { checkMuted } = useMuteGuard(post.communityId);
 
     const handleSaveClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -75,6 +77,7 @@ export function PostCard({ post }: PostCardProps) {
     const handleVote = (e: React.MouseEvent, isUpvote: boolean) => {
         e.preventDefault();
         if (!isApproved) return;
+        if (checkMuted('vote')) return;
         updateVote({ isUpvote });
     };
 

@@ -54,6 +54,7 @@ export function AnswerItem({ answer, currentUserId, currentUserAvatar, isDisable
                     <CommentInput
                         answerId={answer.id}
                         currentUserAvatar={currentUserAvatar}
+                        communityId={communityId}
                         onSuccess={() => setIsReplying(false)}
                     />
                 }

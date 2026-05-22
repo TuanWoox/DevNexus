@@ -49,6 +49,7 @@ export function CommentItem({ comment, currentUserId, currentUserAvatar, isDisab
                         answerId={comment.answerId}
                         replyToCommentId={comment.id}
                         currentUserAvatar={currentUserAvatar}
+                        communityId={communityId}
                         onSuccess={() => setIsReplying(false)}
                     />
                 }

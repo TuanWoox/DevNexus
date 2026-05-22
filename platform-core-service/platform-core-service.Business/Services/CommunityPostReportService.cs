@@ -68,6 +68,9 @@ namespace platform_core_service.Business.Services
         protected override string GetContentIdFromReport(CommunityPostsReport report)
             => report.PostId;
 
+        protected override string GetReportedProfileId(Post entity)
+            => entity.AuthorId;
+
         protected override async Task<List<CommunityPostsReport>> GetAllPendingReportsForContent(string contentId, string communityId)
             => await _context.CommunityPostsReports
                 .Where(r => r.PostId == contentId

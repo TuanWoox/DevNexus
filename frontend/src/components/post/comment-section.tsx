@@ -95,7 +95,12 @@ export default function CommentSection({ postId, isQAPost }: Props) {
 
             {/* Create Comment Input */}
             {isApproved ? (
-                <CommentInput postId={postId} currentUserAvatar={userProfile?.avatarUrl} isQAPost={isQAPost} />
+                <CommentInput
+                    postId={postId}
+                    currentUserAvatar={userProfile?.avatarUrl}
+                    isQAPost={isQAPost}
+                    communityId={communityId}
+                />
             ) : (
                 <div className="bg-muted/30 border border-dashed border-default rounded-xl p-4 text-center text-muted-foreground mb-8">
                     {isQAPost ? 'Answers' : 'Comments'} are disabled because this post is not approved.

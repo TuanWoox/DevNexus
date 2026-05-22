@@ -47,6 +47,7 @@ import { SelectQAPostDTO } from '@/types/qa-post/select-qa-post-dto';
 import { UserAvatar } from '@/components/shared/user-avatar';
 import PostNotFound from './post-not-found';
 import PostHeader from './post-header';
+import { useMuteGuard } from '@/hooks/community-mute-hooks/use-mute-guard';
 
 interface Props {
     postId: string;
@@ -68,8 +69,10 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     const post = isQAPost ? qaPost : normalPost;
     const PostTypeIcon = isQAPost ? HelpCircle : Code2;
     const isPostLoading = isQAPost ? isQALoading : isNormalLoading;
+    const communityId = (post as SelectPostDTO | SelectQAPostDTO | undefined)?.communityId;
 
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(postId);
+    const { checkMuted } = useMuteGuard(communityId);
 
     const isError = isQAPost ? isQAError : isNormalError;
     const error: any = isQAPost ? qaError : normalError;
@@ -110,6 +113,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     const handleVote = (e: React.MouseEvent, isUpvote: boolean) => {
         e.preventDefault();
         if (!isApproved) return;
+        if (checkMuted('vote')) return;
         updateVote({ isUpvote });
     };
 

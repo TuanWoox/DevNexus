@@ -29,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCreateCommunityContentReport } from '@/hooks/community-content-report-hooks/use-create-community-content-report';
 import { ReportDialog } from '@/components/report/report-dialog';
 import { ReportTargetType } from '@/types/report/report-target-type';
+import { useMuteGuard } from '@/hooks/community-mute-hooks/use-mute-guard';
 
 export interface ReplyAuthor {
     fullName: string;
@@ -107,8 +108,9 @@ export function BaseReplyItem({
     const editorRef = useRef<MarkdownEditorHandle>(null);
     const { uploadPendingMedia, isUploading: isUploadingMedia, progress: uploadProgress } = useUploadContentMedia();
     const reportMutation = useCreateCommunityContentReport();
-    const canReportToCommunity = Boolean(communityId) && !isAuthor && !isDisabled;
+    const canReportToCommunity = Boolean(communityId) && !isAuthor;
     const isReportReasonValid = reportReason.trim().length >= 5 && reportReason.trim().length <= 500;
+    const { checkMuted } = useMuteGuard(communityId);
 
     const handleSubmit = async () => {
         if (!editContent.trim() || editContent === '\n') return; // '\n' is newline char, not literal backslash-n
@@ -237,7 +239,10 @@ export function BaseReplyItem({
 
                     <div className="flex items-center gap-4 mt-1.5 ml-2">
                         <button
-                            onClick={() => onVote(true)}
+                            onClick={() => {
+                                if (checkMuted('vote')) return;
+                                onVote(true);
+                            }}
                             disabled={isVotePending || isDisabled}
                             className={`flex items-center gap-1 text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer
                             ${currentUserVote === true
@@ -249,7 +254,10 @@ export function BaseReplyItem({
                             {upvoteCount}
                         </button>
                         <button
-                            onClick={() => onVote(false)}
+                            onClick={() => {
+                                if (checkMuted('vote')) return;
+                                onVote(false);
+                            }}
                             disabled={isVotePending || isDisabled}
                             className={`flex items-center gap-1 text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer
                             ${currentUserVote === false
@@ -262,7 +270,10 @@ export function BaseReplyItem({
                         </button>
                         {!hideReplyButton && (
                             <button
-                                onClick={onToggleReply}
+                                onClick={() => {
+                                    if (checkMuted('reply')) return;
+                                    onToggleReply?.();
+                                }}
                                 disabled={isDisabled}
                                 className={`text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer ${isReplying ? 'text-primary' : 'text-muted-foreground hover:text-heading'}`}
                             >
@@ -289,7 +300,7 @@ export function BaseReplyItem({
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-42 bg-card border rounded-xl shadow-elevated p-1 z-10">
-                                {!isAuthor && !isDisabled && (
+                                {!isAuthor && (
                                     <>
                                         <DropdownMenuItem className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium">
                                             <UserPlus className="w-4 h-4" />
@@ -364,7 +375,7 @@ export function BaseReplyItem({
                     open={isHistoryOpen}
                     onClose={() => setIsHistoryOpen(false)}
                 />
-                {!isAuthor && !isDisabled && (
+                {!isAuthor && (
                     <ReportDialog
                         open={isReportOpen}
                         onOpenChange={setIsReportOpen}
