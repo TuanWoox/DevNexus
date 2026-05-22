@@ -4,10 +4,9 @@ import { useGetCommunityModerators } from "@/hooks/community-moderators-hooks/us
 import { useRemoveCommunityModerator } from "@/hooks/community-moderators-hooks/use-remove-community-moderator";
 import { useAddCommunityModerator } from "@/hooks/community-moderators-hooks/use-add-community-moderator";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { SelectCommunityDTO } from "@/types/community/select-community-dto";
-import { Loader2, UserMinus, UserPlus, Search } from "lucide-react";
+import { Loader2, UserMinus, UserPlus, Search, Calendar, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { Page } from "@/types/common/page";
 import { FilterType } from "@/constants/filterType";
@@ -73,107 +72,127 @@ export function ModeratorsManagement({ community }: ModeratorsManagementProps) {
     };
 
     if (isLoading) {
-        return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+        return <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
     }
 
     return (
         <div className="space-y-6">
             {/* Add Moderator via modal */}
-            <div className="flex items-center justify-between bg-muted/30 p-4 rounded-xl border border-border/50">
-                <div>
-                    <h3 className="text-sm font-medium">Add New Moderator</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                        Search for a community member to promote to moderator.
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-primary/5 border border-primary/10 p-5 rounded-2xl gap-4">
+                <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4 text-primary" />
+                        Add New Moderator
+                    </h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed max-w-md">
+                        Promote an existing member of your community to a moderator role to help manage content, requests, and bans.
                     </p>
                 </div>
                 <Button
                     onClick={() => setIsSearchModalOpen(true)}
                     disabled={isAdding}
                     variant="custom"
-                    className="btn-primary text-white shrink-0"
+                    className="btn-primary text-white shrink-0 active:scale-95 transition-transform cursor-pointer h-10 px-4 rounded-xl text-xs font-semibold"
                 >
                     {isAdding ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />}
-                    Add Moderator
+                    Promote Member
                 </Button>
             </div>
 
             {/* Search moderator list */}
-            <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 max-w-md">
+            <form onSubmit={handleSearchSubmit} className="flex items-center gap-2.5 max-w-md">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="Search moderators by name..."
-                        className="pl-9"
+                        className="pl-10 rounded-xl border border-border/60 bg-muted/10 text-sm focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus-visible:bg-background transition-all duration-200"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <Button type="submit" variant="custom" className="btn-secondary">Search</Button>
+                <Button 
+                    type="submit" 
+                    variant="custom" 
+                    className="btn-secondary h-10 px-4 rounded-xl text-xs font-semibold cursor-pointer active:scale-95 transition-transform shrink-0"
+                >
+                    Search
+                </Button>
             </form>
 
-            <div className="rounded-md border bg-card overflow-hidden">
-                <Table>
-                    <TableHeader className="bg-muted/50">
-                        <TableRow>
-                            <TableHead className="font-semibold">Moderator</TableHead>
-                            <TableHead className="font-semibold">Date Added</TableHead>
-                            <TableHead className="text-right font-semibold">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {moderators.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={3} className="h-32 text-center text-muted-foreground">
-                                    {appliedSearch ? "No moderators match your search." : "No moderators found."}
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            moderators.map((mod) => (
-                                <TableRow key={mod.id} className="hover:bg-muted/30 transition-colors">
-                                    <TableCell>
-                                        <Link
-                                            href={`/profile/${mod.moderatorProfile?.id ?? mod.id}`}
-                                            className="flex items-center gap-3 group w-fit"
-                                        >
-                                            <UserAvatar
-                                                avatarUrl={mod.moderatorProfile?.avatarUrl}
-                                                fullName={mod.moderatorProfile?.fullName ?? "Moderator"}
-                                                className="w-8 h-8 shrink-0"
-                                            />
-                                            <div className="flex flex-col">
-                                                <span className="font-medium text-sm group-hover:text-primary transition-colors">
-                                                    {mod.moderatorProfile?.fullName || "Unknown User"}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground font-mono">View profile →</span>
-                                            </div>
-                                        </Link>
-                                    </TableCell>
-                                    <TableCell>
-                                        {mod.dateCreated ? new Date(mod.dateCreated).toLocaleDateString() : "N/A"}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="h-8 border-red-200 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300 cursor-pointer"
-                                            onClick={() => removeModerator(mod.id)}
-                                            disabled={isRemoving}
-                                        >
-                                            <UserMinus className="h-3.5 w-3.5 mr-1" /> Remove
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+            {/* Moderator Cards Stream */}
+            <div className="space-y-3.5">
+                {moderators.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-border/60 bg-muted/5 p-12 text-center flex flex-col items-center justify-center">
+                        <ShieldCheck className="h-8 w-8 text-muted-foreground/60 mb-3" />
+                        <h4 className="text-sm font-semibold text-foreground">No moderators found</h4>
+                        <p className="text-xs text-muted-foreground mt-1 max-w-[280px]">
+                            {appliedSearch ? "No moderators match your search criteria." : "No moderators currently exist for this community besides yourself."}
+                        </p>
+                    </div>
+                ) : (
+                    moderators.map((mod) => (
+                        <div 
+                            key={mod.id} 
+                            className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-border/40 bg-card hover:bg-muted/5 hover:border-border/60 transition-all duration-200 shadow-[0_1px_2px_rgba(0,0,0,0.02)] gap-4 hover:shadow-xs"
+                        >
+                            {/* Left: User Avatar & Info */}
+                            <Link
+                                href={`/profile/${mod.moderatorProfile?.id ?? mod.id}`}
+                                className="flex items-center gap-3.5 group cursor-pointer"
+                            >
+                                <UserAvatar
+                                    avatarUrl={mod.moderatorProfile?.avatarUrl}
+                                    fullName={mod.moderatorProfile?.fullName ?? "Moderator"}
+                                    className="w-10 h-10 shrink-0 rounded-full border border-border/40 group-hover:border-primary/20 transition-colors"
+                                />
+                                <div className="flex flex-col min-w-0">
+                                    <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate">
+                                        {mod.moderatorProfile?.fullName || "Unknown User"}
+                                    </span>
+                                    <span className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                                        <Calendar className="h-3 w-3 shrink-0" />
+                                        Added {mod.dateCreated ? new Date(mod.dateCreated).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "N/A"}
+                                    </span>
+                                </div>
+                            </Link>
+
+                            {/* Right: Actions */}
+                            <div className="flex items-center gap-2.5 sm:self-center self-end">
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-9 px-4 rounded-lg border border-red-500/20 text-red-600 bg-red-500/5 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 hover:border-red-500 active:scale-[0.97] transition-all duration-150 cursor-pointer font-semibold text-xs flex items-center gap-1.5"
+                                    onClick={() => removeModerator(mod.id)}
+                                    disabled={isRemoving}
+                                >
+                                    <UserMinus className="h-3.5 w-3.5" /> Remove Role
+                                </Button>
+                            </div>
+                        </div>
+                    ))
+                )}
             </div>
 
+            {/* Pagination */}
             {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-4 pt-4">
-                    <Button variant="outline" size="sm" disabled={pageNumber === 0} onClick={() => setPageNumber(p => p - 1)}>Previous</Button>
-                    <span className="text-sm text-muted-foreground font-medium">Page {pageNumber + 1} of {totalPages}</span>
-                    <Button variant="outline" size="sm" disabled={pageNumber >= totalPages - 1} onClick={() => setPageNumber(p => p + 1)}>Next</Button>
+                <div className="flex justify-center items-center gap-3 pt-6 border-t border-border/20">
+                    <Button 
+                        variant="outline" 
+                        className="h-9 px-3 text-xs rounded-lg hover:bg-muted active:scale-95 transition-transform cursor-pointer"
+                        disabled={pageNumber === 0} 
+                        onClick={() => setPageNumber(p => p - 1)}
+                    >
+                        Previous
+                    </Button>
+                    <span className="text-xs text-muted-foreground font-medium">Page {pageNumber + 1} of {totalPages}</span>
+                    <Button 
+                        variant="outline" 
+                        className="h-9 px-3 text-xs rounded-lg hover:bg-muted active:scale-95 transition-transform cursor-pointer"
+                        disabled={pageNumber >= totalPages - 1} 
+                        onClick={() => setPageNumber(p => p + 1)}
+                    >
+                        Next
+                    </Button>
                 </div>
             )}
 

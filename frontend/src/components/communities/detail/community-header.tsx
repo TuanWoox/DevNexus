@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { SelectCommunityDTO } from "@/types/community/select-community-dto";
 import Image from "next/image";
-import { Lock, Users, CalendarDays, ImageIcon, Settings, Plus, Sparkles } from "lucide-react";
+import { Lock, Users, CalendarDays, ImageIcon, Settings, Plus, Sparkles, ShieldAlert } from "lucide-react";
 import { CommunityActionButton } from "./community-action-button";
 import { CommunityMediaUploadModal } from "./community-media-upload-modal";
 import Link from "next/link";
@@ -105,6 +105,15 @@ export function CommunityHeader({ community, activeTab }: CommunityHeaderProps) 
                                 <Link href={`/communities/${community.id}/settings`}>
                                     <Settings className="w-4 h-4 mr-2" />
                                     Settings
+                                </Link>
+                            </Button>
+                        )}
+
+                        {(role === "OWNER" || role === "MODERATOR" || role === "MEMBER") && (
+                            <Button asChild variant="outline" className="w-full border-amber-500/20 text-amber-500 hover:text-amber-600 hover:bg-amber-500/5 cursor-pointer" size="lg">
+                                <Link href={`/communities/${community.id}/reports`}>
+                                    <ShieldAlert className="w-4 h-4 mr-2" />
+                                    Reports
                                 </Link>
                             </Button>
                         )}

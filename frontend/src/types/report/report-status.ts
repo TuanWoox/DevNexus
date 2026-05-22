@@ -4,4 +4,5 @@ export enum ReportStatus {
   Resolved = 2,
   Dismissed = 3,
   Escalated = 4,
+  Rejected = 5,
 }

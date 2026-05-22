@@ -1,0 +1,18 @@
+import { useQuery } from "@tanstack/react-query";
+import { communityContentReportService } from "@/services/community-content-report-service";
+import { communityReportQueryKeys } from "./use-community-report-query-keys";
+import { Page } from "@/types/common/page";
+import { ContentType } from "@/types/content-media/content-type";
+
+export const useGetCommunityReportsAdmin = <T>(
+    communityId: string,
+    contentType: ContentType,
+    payload: Page<string>,
+    enabled: boolean = true,
+) => {
+    return useQuery({
+        queryKey: communityReportQueryKeys.list(communityId, true, contentType, payload),
+        queryFn: () => communityContentReportService.getPagingDataForAdminAndModerator<T>(communityId, contentType, payload),
+        enabled: !!communityId && enabled,
+    });
+};

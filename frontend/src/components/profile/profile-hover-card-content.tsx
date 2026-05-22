@@ -12,10 +12,10 @@ import { ProfileHoverCardActions } from './profile-hover-card-actions';
 import { useOpenChatByProfile } from '@/features/messages/hooks/chats/use-open-chat-by-profile';
 
 export interface ProfileHoverCardAuthor {
-    fullName?: string;
-    avatarUrl?: string;
-    backgroundUrl?: string;
-    bio?: string;
+    fullName?: string | null;
+    avatarUrl?: string | null;
+    backgroundUrl?: string | null;
+    bio?: string | null;
     reputationPoints?: number;
     techStacks?: string[];
     isPrivate?: boolean;

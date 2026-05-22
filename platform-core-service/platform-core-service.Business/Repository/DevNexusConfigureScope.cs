@@ -12,6 +12,7 @@ using platform_core_service.Common.Interfaces.Factories;
 using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.MessageBus;
 using platform_core_service.Common.Interfaces.Services;
+using platform_core_service.Common.Utils.Enums;
 using StackExchange.Redis;
 
 namespace platform_core_service.Business.Repository
@@ -47,6 +48,12 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<ICommunityMemberService, CommunityMemberService>();
             services.AddScoped<ICommunityMembershipRequestService, CommunityMembershipRequestService>();
             services.AddScoped<ICommunityBanService, CommunityBanService>();
+            services.AddScoped<ICommunityMuteService, CommunityMuteService>();
+            services.AddKeyedScoped<ICommunityContentReportService, CommunityPostReportService>(ContentType.Post);
+            services.AddKeyedScoped<ICommunityContentReportService, CommunityQAPostReportService>(ContentType.QA);
+            services.AddKeyedScoped<ICommunityContentReportService, CommunityAnswerReportService>(ContentType.Answer);
+            services.AddKeyedScoped<ICommunityContentReportService, CommunityCommentReportService>(ContentType.Comment);
+            services.AddScoped<ICommunityContentReportServiceFactory, CommunityContentReportServiceFactory>();
             services.AddScoped<ICacheService, CacheService>();
             services.AddScoped<IProfileBlockService, ProfileBlockService>();
             services.AddScoped<IFollowRequestService, FollowRequestService>();
