@@ -10,5 +10,9 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.CommunityModerator
         public DateTimeOffset? DateCreated { get; set; }
         public DateTimeOffset? DateModified { get; set; }
         public ModeratorProfileDTO? ModeratorProfile { get; set; }
+        public bool HasBlockedRelation { get; set; }
+        public bool IsProfileRestricted { get; set; }
+        public string? RestrictedMessage { get; set; }
+        public bool CanDemote { get; set; } = true;
     }
 }

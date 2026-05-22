@@ -10,6 +10,7 @@ using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Business.Helper;
 
 namespace platform_core_service.Business.Services
 {
@@ -144,6 +145,7 @@ namespace platform_core_service.Business.Services
                     .FirstAsync(b => b.Id == ban.Id);
 
                 result.Result = _mapper.Map<SelectCommunityBanDTO>(saved);
+                await ApplyBanManagementPrivacyAsync(profileId, [result.Result]);
             }
             catch (Exception ex)
             {
@@ -240,6 +242,11 @@ namespace platform_core_service.Business.Services
                     .AsQueryable();
 
                 result.Result = await _banRepository.GetPagingAsync<Page<string>, SelectCommunityBanDTO>(query, page);
+
+                if (result.Result?.Data != null)
+                {
+                    await ApplyBanManagementPrivacyAsync(profileId, result.Result.Data);
+                }
             }
             catch (Exception ex)
             {
@@ -247,6 +254,33 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while retrieving ban records: {ex.Message}";
             }
             return result;
+        }
+
+        private async Task ApplyBanManagementPrivacyAsync(string viewerProfileId, IEnumerable<SelectCommunityBanDTO> bans)
+        {
+            var banList = bans.ToList();
+            var targetBlockedIds = await CommunityManagementPrivacyHelper.GetBlockedProfileIdsAsync(
+                _context,
+                viewerProfileId,
+                banList.Select(x => x.BannedProfileId));
+
+            var actorBlockedIds = await CommunityManagementPrivacyHelper.GetBlockedProfileIdsAsync(
+                _context,
+                viewerProfileId,
+                banList.Select(x => x.BannedById));
+
+            foreach (var item in banList)
+            {
+                var targetBlocked = targetBlockedIds.Contains(item.BannedProfileId);
+                var actorBlocked = actorBlockedIds.Contains(item.BannedById);
+                item.HasBlockedRelation = targetBlocked || actorBlocked;
+                item.IsBannedProfileRestricted = targetBlocked;
+                item.IsBannedByRestricted = actorBlocked;
+                item.RestrictedMessage = item.HasBlockedRelation ? ResponseMessage.BLOCKED_OR_NOT_AVAILABLE : null;
+                item.CanUnban = true;
+                item.BannedProfile = CommunityManagementPrivacyHelper.ToManagementProfile(item.BannedProfile, targetBlocked);
+                item.BannedBy = CommunityManagementPrivacyHelper.ToManagementProfile(item.BannedBy, actorBlocked);
+            }
         }
     }
 }

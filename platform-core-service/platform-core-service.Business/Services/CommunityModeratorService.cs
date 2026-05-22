@@ -12,6 +12,8 @@ using CommunityModeratorEntity = platform_core_service.Common.Entities.DbEntitie
 using Hangfire;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
+using platform_core_service.Business.Helper;
+using platform_core_service.Common.Helper;
 
 namespace platform_core_service.Business.Services
 {
@@ -27,6 +29,17 @@ namespace platform_core_service.Business.Services
         private readonly IUserContext _userContext = userContext;
         private readonly IRepository<CommunityModeratorEntity, string> _moderatorRepository = moderatorRepository;
         private readonly IBackgroundJobClient _backgroundJobClient = backgroundJobClient;
+
+        private async Task<bool> IsOwnerOrModeratorAsync(string communityId, string profileId)
+        {
+            var community = await _context.Communities
+                .FirstOrDefaultAsync(c => c.Id == communityId);
+
+            if (community?.OwnerId == profileId) return true;
+
+            return await _context.CommunityModerators
+                .AnyAsync(m => m.CommunityId == communityId && m.ModeratorId == profileId);
+        }
 
         public async Task<ReturnResult<SelectCommunityModeratorDTO>> AddAsync(CreateCommunityModeratorDTO createDTO)
         {
@@ -108,6 +121,17 @@ namespace platform_core_service.Business.Services
                 if (moderatorProfile == null)
                 {
                     result.Message = $"Profile {createDTO.ModeratorId} not found";
+                    return result;
+                }
+
+                var blockedIds = await CommunityManagementPrivacyHelper.GetBlockedProfileIdsAsync(
+                    _context,
+                    profileId,
+                    [createDTO.ModeratorId]);
+
+                if (blockedIds.Contains(createDTO.ModeratorId))
+                {
+                    result.Message = ResponseMessage.NO_PERMISSION_TO_INTERACT;
                     return result;
                 }
 
@@ -208,13 +232,42 @@ namespace platform_core_service.Business.Services
                 }
 
                 // Step 2: Build query with profile loaded
+                var viewerProfileId = _userContext.ProfileId;
+                var isManager = !string.IsNullOrEmpty(viewerProfileId)
+                    && await IsOwnerOrModeratorAsync(communityId, viewerProfileId);
+
                 var query = _context.CommunityModerators
                     .Include(m => m.Moderator)
                     .Where(m => m.CommunityId == communityId)
                     .AsQueryable();
 
+                if (!isManager && !string.IsNullOrEmpty(viewerProfileId))
+                {
+                    query = query.Where(m => !_context.ProfileBlocks.Any(b =>
+                        (b.OwnerId == viewerProfileId && b.BlockedProfileId == m.ModeratorId) ||
+                        (b.OwnerId == m.ModeratorId && b.BlockedProfileId == viewerProfileId)));
+                }
+
                 // Step 3: Get paged results
                 result.Result = await _moderatorRepository.GetPagingAsync<Page<string>, SelectCommunityModeratorDTO>(query, page);
+
+                if (isManager && result.Result?.Data != null)
+                {
+                    var blockedIds = await CommunityManagementPrivacyHelper.GetBlockedProfileIdsAsync(
+                        _context,
+                        viewerProfileId,
+                        result.Result.Data.Select(x => x.ModeratorId));
+
+                    foreach (var item in result.Result.Data)
+                    {
+                        var isBlocked = blockedIds.Contains(item.ModeratorId);
+                        item.HasBlockedRelation = isBlocked;
+                        item.IsProfileRestricted = isBlocked;
+                        item.RestrictedMessage = isBlocked ? ResponseMessage.BLOCKED_OR_NOT_AVAILABLE : null;
+                        item.CanDemote = true;
+                        item.ModeratorProfile = CommunityManagementPrivacyHelper.ToManagementModeratorProfile(item.ModeratorProfile, isBlocked);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -230,6 +283,11 @@ namespace platform_core_service.Business.Services
                 .FirstOrDefaultAsync(c => c.Id == communityId);
 
             if (community == null) return;
+            var blockedIds = await CommunityManagementPrivacyHelper.GetBlockedProfileIdsAsync(
+                _context,
+                actorId,
+                [targetProfileId]);
+            if (blockedIds.Contains(targetProfileId)) return;
 
             var actor = await GetProfileSnapshot(actorId);
             var notificationEvent = new NotiicationCreatedEntityDTO

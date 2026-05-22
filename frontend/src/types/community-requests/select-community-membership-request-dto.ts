@@ -6,4 +6,9 @@ export interface SelectCommunityMembershipRequestDTO {
     requesterId: string;
     requester?: SelectProfileDTO;
     dateCreated?: string;
+    hasBlockedRelation?: boolean;
+    isProfileRestricted?: boolean;
+    restrictedMessage?: string | null;
+    canApprove?: boolean;
+    canReject?: boolean;
 }
