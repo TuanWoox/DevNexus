@@ -7,7 +7,7 @@ export interface SelectReportedPostDTO {
     dateCreated?: string | null;
 }
 
-export interface SelectReportedQAPostDTO extends SelectReportedPostDTO {}
+export type SelectReportedQAPostDTO = SelectReportedPostDTO;
 
 export interface SelectReportedAnswerDTO {
     id: string;

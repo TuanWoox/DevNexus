@@ -102,9 +102,12 @@ export function ReportActionDialog({
 
     useEffect(() => {
         if (!open) {
-            setAction(null);
-            setResolutionNotes("");
-            setMuteHours(24);
+            const timer = setTimeout(() => {
+                setAction(null);
+                setResolutionNotes("");
+                setMuteHours(24);
+            }, 0);
+            return () => clearTimeout(timer);
         }
     }, [open]);
 
