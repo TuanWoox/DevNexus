@@ -10,4 +10,14 @@ export const communityMuteService = {
         );
         return data.result ?? { isMuted: false };
     },
+    getProfileMuteStatus: async (
+        communityId: string,
+        profileId: string
+    ): Promise<MuteStatusDTO> => {
+        const { data } = await api.get<ReturnResult<MuteStatusDTO>>(
+            `/community-mute/${communityId}/profiles/${profileId}`,
+            { suppressToast: true }
+        );
+        return data.result ?? { isMuted: false };
+    },
 };

@@ -60,6 +60,7 @@ export interface BaseReplyItemProps {
     isUpdating: boolean;
     isDisabled?: boolean;
     communityId?: string | null;
+    canModerateCommunity?: boolean;
     isAccepted?: boolean;
     onAccept?: () => void;
     canAccept?: boolean;
@@ -89,6 +90,7 @@ export function BaseReplyItem({
     isUpdating,
     isDisabled,
     communityId,
+    canModerateCommunity = false,
     isAccepted,
     onAccept,
     canAccept,
@@ -99,6 +101,7 @@ export function BaseReplyItem({
     hideReplyButton,
 }: BaseReplyItemProps) {
     const isAuthor = authorId === currentUserId;
+    const canDelete = isAuthor || (Boolean(communityId) && canModerateCommunity);
     const [isEditing, setIsEditing] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isReportOpen, setIsReportOpen] = useState(false);
@@ -173,7 +176,7 @@ export function BaseReplyItem({
     return (
         <>
             <div className="flex gap-3 sm:gap-4 group">
-                <ProfileHoverCard profileId={authorId} author={author}>
+                <ProfileHoverCard profileId={authorId} author={author} communityId={communityId} showCommunityStatus={Boolean(communityId)} canModerateCommunity={canModerateCommunity}>
                     <Link href={`/profile/${authorId}`} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-secondary shrink-0 overflow-hidden border border-default relative">
                         <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
                     </Link>
@@ -182,7 +185,7 @@ export function BaseReplyItem({
                 <div className="flex-1 min-w-0">
                     <div className={`bg-card border rounded-2xl rounded-tl-none p-3 sm:p-4 inline-block max-w-full overflow-hidden ${isAccepted ? 'border-emerald-500 bg-emerald-500/5 shadow-sm' : 'border-default'}`}>
                         <div className="flex items-center gap-2 mb-1">
-                            <ProfileHoverCard profileId={authorId} author={author}>
+                            <ProfileHoverCard profileId={authorId} author={author} communityId={communityId} showCommunityStatus={Boolean(communityId)} canModerateCommunity={canModerateCommunity}>
                                 <Link href={`/profile/${authorId}`} className="text-sm font-semibold text-heading hover:text-primary transition-colors">
                                     {author?.fullName || 'Unknown'}
                                 </Link>
@@ -344,16 +347,18 @@ export function BaseReplyItem({
                                             <Edit className="w-4 h-4" />
                                             <span>Edit</span>
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            onClick={onDelete}
-                                            disabled={isDeleting}
-                                            variant='destructive'
-                                            className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
-                                        >
-                                            <Trash className="w-4 h-4" />
-                                            <span>Delete</span>
-                                        </DropdownMenuItem>
                                     </>
+                                )}
+                                {canDelete && !isDisabled && (
+                                    <DropdownMenuItem
+                                        onClick={onDelete}
+                                        disabled={isDeleting}
+                                        variant='destructive'
+                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
+                                    >
+                                        <Trash className="w-4 h-4" />
+                                        <span>Delete</span>
+                                    </DropdownMenuItem>
                                 )}
                                 {isDisabled && (
                                     <DropdownMenuItem disabled className="text-xs text-muted-foreground p-2 text-center">

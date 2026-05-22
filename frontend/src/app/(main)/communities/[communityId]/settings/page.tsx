@@ -7,8 +7,9 @@ import { GeneralSettings } from "@/components/communities/settings/general-setti
 import { RequestsManagement } from "@/components/communities/settings/requests-management";
 import { ModeratorsManagement } from "@/components/communities/settings/moderators-management";
 import { BansManagement } from "@/components/communities/settings/bans-management";
+import { MutesManagement } from "@/components/communities/settings/mutes-management";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Settings, Users, Settings2, ShieldCheck, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Settings, Users, Settings2, ShieldCheck, ShieldAlert, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -28,7 +29,7 @@ const CommunitySettingsPage = () => {
     const isModerator = role === "MODERATOR";
     const hasAccess = isOwner || isModerator;
 
-    const validTabs = isOwner ? ["general", "requests", "moderators", "bans"] : ["requests", "bans"];
+    const validTabs = isOwner ? ["general", "requests", "moderators", "bans", "mutes"] : ["requests", "bans", "mutes"];
     const activeTab = validTabs.includes(tabParam || "") 
         ? tabParam as string 
         : (isOwner ? "general" : "requests");
@@ -150,6 +151,14 @@ const CommunitySettingsPage = () => {
                                 <ShieldAlert className="h-4 w-4 shrink-0" />
                                 Ban List
                             </TabsTrigger>
+
+                            <TabsTrigger
+                                value="mutes"
+                                className="w-full shrink-0 flex items-center gap-3 justify-start px-4 py-3 text-left rounded-xl hover:bg-amber-500/5 hover:text-amber-600 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-600 data-[state=active]:font-semibold data-[state=active]:shadow-none transition-all duration-200 ease-out border border-transparent data-[state=active]:border-amber-500/10 text-sm whitespace-nowrap cursor-pointer active:scale-[0.98]"
+                            >
+                                <VolumeX className="h-4 w-4 shrink-0" />
+                                Mutes List
+                            </TabsTrigger>
                         </TabsList>
                     </div>
 
@@ -183,6 +192,9 @@ const CommunitySettingsPage = () => {
                                     )}
                                     <SelectItem value="bans" className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-500/5">
                                         Ban List
+                                    </SelectItem>
+                                    <SelectItem value="mutes" className="cursor-pointer text-amber-600 focus:text-amber-600 focus:bg-amber-500/5">
+                                        Mutes List
                                     </SelectItem>
                                 </SelectContent>
                             </Select>
@@ -228,6 +240,16 @@ const CommunitySettingsPage = () => {
                                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage users who have been permanently banned from accessing this community.</p>
                             </div>
                             <BansManagement community={community} />
+                        </TabsContent>
+
+                        <TabsContent value="mutes" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                            <div className="mb-6 border-b border-border/30 pb-4">
+                                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-amber-600 flex items-center gap-2">
+                                    Mutes List
+                                </h2>
+                                <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage users who have been muted and restricted from posting or commenting.</p>
+                            </div>
+                            <MutesManagement community={community} />
                         </TabsContent>
                     </div>
                 </Tabs>

@@ -22,7 +22,7 @@ interface MemberSearchModalProps {
     description?: string;
     /** profileIds already promoted/banned — highlighted to warn operator */
     highlightedIds?: string[];
-    mode?: "promote" | "ban";
+    mode?: "promote" | "ban" | "mute";
 }
 
 export function MemberSearchModal({
@@ -114,6 +114,8 @@ export function MemberSearchModal({
                                 const isAlreadyManaged = highlightedIds.includes(member.profileId);
                                 const canSelect = mode === "promote"
                                     ? member.canPromote !== false
+                                    : mode === "mute"
+                                    ? member.canBan !== false
                                     : member.canBan !== false;
 
                                 return (

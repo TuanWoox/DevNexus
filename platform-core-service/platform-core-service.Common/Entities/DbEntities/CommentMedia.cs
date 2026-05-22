@@ -14,8 +14,6 @@ namespace platform_core_service.Common.Entities.DbEntities
         public Comment? Comment { get; set; }
 
         public ContentMediaType CommentMediaType { get; set; }
-
-        public string GetAuthorId() => Comment?.AuthorId ?? "";
         public string? GetCommunityId() => Comment?.Post?.CommunityId ?? Comment?.Answer?.QAPost?.CommunityId;
     }
 }

@@ -17,8 +17,6 @@ namespace platform_core_service.Common.Entities.DbEntities
         [JsonIgnore]
         public Post? Post { get; set; }
         public ContentMediaType PostMediaType { get; set; }
-
-        public string GetAuthorId() => Post?.AuthorId ?? "";
         public string? GetCommunityId() => Post?.CommunityId;
     }
 }
