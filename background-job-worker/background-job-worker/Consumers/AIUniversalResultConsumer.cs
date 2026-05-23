@@ -139,6 +139,18 @@ namespace background_job_worker.Consumers
 
                     var authorId = adminProfile?.Id ?? post.AuthorId; // Fallback nếu không có admin profile
 
+                    var hasExistingAiAnswer = await dbContext.Answers
+                        .IgnoreQueryFilters()
+                        .AnyAsync(a => a.QAPostId == post.Id && a.AuthorId == authorId && !a.Deleted);
+
+                    if (hasExistingAiAnswer)
+                    {
+                        _logger.LogInformation(
+                            "[AIFirstResponder] Skipped duplicate AI answer for post {PostId}",
+                            post.Id);
+                        return;
+                    }
+
                     var answer = new Answer
                     {
                         Id = Guid.NewGuid().ToString(),

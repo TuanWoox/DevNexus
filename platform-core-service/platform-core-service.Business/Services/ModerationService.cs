@@ -107,6 +107,13 @@ namespace platform_core_service.Business.Services
 
                 if (post.ModerationStatus == ModerationStatus.Approved && post is QAPost)
                 {
+                    if (await HasExistingAiFirstResponderAnswerAsync(post.Id))
+                    {
+                        DevNexusLogger.Instance.Debug($"[Moderation] Skipped AI First Responder for QA Post {post.Id} because an AI answer already exists");
+                        result.Result = true;
+                        return result;
+                    }
+
                     // Load Author and Tags now that we know this is a QA post
                     await _context.Entry(post).Reference(p => p.Author).LoadAsync();
                     await _context.Entry(post).Collection(p => p.PostTags).Query()
@@ -140,6 +147,21 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while processing moderation callback: {ex.Message}";
             }
             return result;
+        }
+
+        private async Task<bool> HasExistingAiFirstResponderAnswerAsync(string postId)
+        {
+            var adminProfileIds = await _context.Profiles
+                .Where(p =>
+                    p.ApplicationUser.UserName == "admin" ||
+                    p.ApplicationUser.UserRoles.Any(ur => ur.Role.Name == "Admin"))
+                .Select(p => p.Id)
+                .ToListAsync();
+
+            return adminProfileIds.Count > 0 &&
+                await _context.Answers
+                    .IgnoreQueryFilters()
+                    .AnyAsync(a => a.QAPostId == postId && adminProfileIds.Contains(a.AuthorId) && !a.Deleted);
         }
 
         private Task EnqueueModerationNotification(Post post)
