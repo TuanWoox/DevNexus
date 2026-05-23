@@ -189,7 +189,9 @@ namespace platform_core_service.Business.Services
             _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
                 x => x.PublicNotification(notificationEvent, "notifications.moderation"));
 
-            if (post.ModerationStatus != ModerationStatus.Approved || string.IsNullOrEmpty(post.CommunityId))
+            if (post.ModerationStatus != ModerationStatus.Approved ||
+                string.IsNullOrEmpty(post.CommunityId) ||
+                post.CommunityApprovalStatus != CommunityApprovalStatus.Pending)
             {
                 return;
             }

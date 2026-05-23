@@ -25,8 +25,6 @@ import { ContentType } from '@/types/content-media/content-type'
 import { useUploadContentMedia } from '@/hooks/media/useUploadContentMedia'
 import { useMuteGuard } from '@/hooks/community-mute-hooks/use-mute-guard'
 import { AlertTriangle } from 'lucide-react'
-import { CommunityApprovalStatus, CommunityApprovalStatusValue, normalizeCommunityApprovalStatus } from '@/types/enums/community-approval-status'
-import { normalizeModerationStatus } from '@/types/post/moderation-status'
 
 export type PostFormData = {
     title: string;
@@ -206,11 +204,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                     reset();
                     setTagInput('');
                     if (res?.id) {
-                        if (shouldRedirectToCommunity(res)) {
-                            router.push(`/communities/${res.communityId}`);
-                        } else {
-                            router.push(`/questions/${res.id}`);
-                        }
+                        router.push(`/questions/${res.id}`);
                     }
                 }
             });
@@ -221,23 +215,11 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                     reset();
                     setTagInput('');
                     if (res?.id) {
-                        if (shouldRedirectToCommunity(res)) {
-                            router.push(`/communities/${res.communityId}`);
-                        } else {
-                            router.push(`/post/${res.id}`);
-                        }
+                        router.push(`/post/${res.id}`);
                     }
                 }
             });
         }
-    };
-
-    const shouldRedirectToCommunity = (post: CreatePostDTO & { id?: string; moderationStatus?: any; communityApprovalStatus?: CommunityApprovalStatusValue | null }) => {
-        const communityApprovalStatus = normalizeCommunityApprovalStatus(post.communityApprovalStatus);
-        return Boolean(post.communityId) &&
-            (normalizeModerationStatus(post.moderationStatus) !== "Approved" ||
-                communityApprovalStatus === CommunityApprovalStatus.Pending ||
-                communityApprovalStatus === CommunityApprovalStatus.Rejected);
     };
 
     const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
