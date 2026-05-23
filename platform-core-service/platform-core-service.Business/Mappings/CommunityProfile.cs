@@ -22,8 +22,16 @@ namespace platform_core_service.Business.Mappings
                 .ForMember(dest => dest.Description, opt => opt.Condition(src => src.Description != null))
                 .ForMember(dest => dest.CommunityCoverPhotoUrl, opt => opt.Condition(src => src.CommunityCoverPhotoUrl != null))
                 .ForMember(dest => dest.Slug, opt => opt.Condition(src => src.Slug != null))
-                .ForMember(dest => dest.IsPrivate, opt => opt.Condition(src => src.IsPrivate.HasValue))
-                .ForMember(dest => dest.IsPrivate, opt => opt.MapFrom(src => src.IsPrivate!.Value));
+                .ForMember(dest => dest.IsPrivate, opt =>
+                {
+                    opt.PreCondition(src => src.IsPrivate.HasValue);
+                    opt.MapFrom(src => src.IsPrivate!.Value);
+                })
+                .ForMember(dest => dest.RequireContentApproval, opt =>
+                {
+                    opt.PreCondition(src => src.RequireContentApproval.HasValue);
+                    opt.MapFrom(src => src.RequireContentApproval!.Value);
+                });
 
             // Community -> SelectCommunityDTO
             CreateMap<CommunityEntity, SelectCommunityDTO>();

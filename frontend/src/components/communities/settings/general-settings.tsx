@@ -21,6 +21,7 @@ export function GeneralSettings({ community }: GeneralSettingsProps) {
     const [name, setName] = useState(community.name);
     const [description, setDescription] = useState(community.description || "");
     const [isPrivate, setIsPrivate] = useState(community.isPrivate);
+    const [requireContentApproval, setRequireContentApproval] = useState(community.requireContentApproval);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -29,6 +30,7 @@ export function GeneralSettings({ community }: GeneralSettingsProps) {
             name,
             description,
             isPrivate,
+            requireContentApproval,
             communityCoverPhotoUrl: community.communityCoverPhotoUrl
         };
         updateCommunity(payload);
@@ -75,6 +77,20 @@ export function GeneralSettings({ community }: GeneralSettingsProps) {
                     <Switch
                         checked={isPrivate}
                         onCheckedChange={setIsPrivate}
+                        className="cursor-pointer"
+                    />
+                </div>
+
+                <div className="flex items-center justify-between rounded-2xl border border-border/40 bg-muted/5 p-5 hover:bg-muted/10 transition-colors duration-200">
+                    <div className="space-y-1 pr-4">
+                        <Label className="text-sm font-semibold text-foreground">Require Content Approval</Label>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                            New posts and questions must be approved before appearing in the community feed.
+                        </p>
+                    </div>
+                    <Switch
+                        checked={requireContentApproval}
+                        onCheckedChange={setRequireContentApproval}
                         className="cursor-pointer"
                     />
                 </div>

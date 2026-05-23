@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -88,7 +88,9 @@ namespace platform_core_service.Common.Models.DTOs.MessageBusDTO
 
         // Community Reports
         COMMUNITY_REPORT_CREATED = 27,
-        COMMUNITY_REPORT_RESOLVED = 28
+        COMMUNITY_REPORT_RESOLVED = 28,
+        CONTENT_CREATED = 29,
+        CONTENT_APPROVED = 30
     }
 
     public enum NotificationEntityType

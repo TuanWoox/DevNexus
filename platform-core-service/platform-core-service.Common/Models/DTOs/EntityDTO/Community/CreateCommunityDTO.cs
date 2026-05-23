@@ -19,5 +19,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Community
         public string Slug { get; set; } = string.Empty;
 
         public bool IsPrivate { get; set; } = false;
+
+        public bool RequireContentApproval { get; set; } = false;
     }
 }

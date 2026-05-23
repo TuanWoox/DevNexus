@@ -31,6 +31,8 @@ namespace platform_core_service.Common.Entities.DbEntities
 
         public bool IsPrivate { get; set; } = false;
 
+        public bool RequireContentApproval { get; set; } = false;
+
         [JsonIgnore]
         public ICollection<CommunityModerator> Moderators { get; set; } = [];
         [JsonIgnore]

@@ -19,6 +19,10 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Post
 
         public string? ModerationReason { get; set; }
 
+        public CommunityApprovalStatus? CommunityApprovalStatus { get; set; }
+
+        public string? CommunityApprovalReason { get; set; }
+
         public string AuthorId { get; set; } = null!;
 
         public SelectPostAuthorDTO? Author { get; set; }

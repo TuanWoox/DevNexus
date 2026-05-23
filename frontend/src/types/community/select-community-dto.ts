@@ -6,6 +6,7 @@ export interface SelectCommunityDTO {
     communityCoverPhotoUrl?: string;
     slug: string;
     isPrivate: boolean;
+    requireContentApproval: boolean;
     dateCreated?: string;
     dateModified?: string;
     currentUserRole: string;

@@ -63,8 +63,8 @@ namespace platform_core_service.Business.Services
                 // Map AI Worker decision string → ModerationStatus enum
                 post.ModerationStatus = dto.Decision.ToLower() switch
                 {
-                    "approve"  => ModerationStatus.Approved,
-                    "flag"     => ModerationStatus.Flagged,
+                    "approve" => ModerationStatus.Approved,
+                    "flag" => ModerationStatus.Flagged,
                     "escalate" => ModerationStatus.InReview,
                     _ => ModerationStatus.InReview  // unknown decision → escalate to be safe
                 };
@@ -142,7 +142,7 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
-        private Task EnqueueModerationNotification(Post post)
+        private async Task EnqueueModerationNotification(Post post)
         {
             var isQuestion = post is QAPost;
             var notificationEvent = new NotiicationCreatedEntityDTO
@@ -164,7 +164,54 @@ namespace platform_core_service.Business.Services
             _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
                 x => x.PublicNotification(notificationEvent, "notifications.moderation"));
 
-            return Task.CompletedTask;
+            if (post.ModerationStatus != ModerationStatus.Approved || string.IsNullOrEmpty(post.CommunityId))
+            {
+                return;
+            }
+
+            var community = await _context.Communities
+                .Include(c => c.Moderators)
+                .FirstOrDefaultAsync(c => c.Id == post.CommunityId);
+
+            if (community == null)
+            {
+                return;
+            }
+
+            if (post.Author == null)
+            {
+                await _context.Entry(post).Reference(p => p.Author).LoadAsync();
+            }
+
+            var recipientIds = new[] { community.OwnerId }
+                .Concat(community.Moderators.Select(m => m.ModeratorId))
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct()
+                .ToList();
+
+            if (!recipientIds.Any())
+            {
+                return;
+            }
+
+            var contentCreatedEvent = new NotiicationCreatedEntityDTO
+            {
+                EventType = NotificationEventType.CONTENT_CREATED,
+                ActorType = ActorType.Profile,
+                ActorId = post.AuthorId,
+                ActorName = post.Author?.FullName,
+                ActorAvatarUrl = post.Author?.AvatarUrl,
+                RecipientId = recipientIds,
+                EntityType = isQuestion ? NotificationEntityType.QUESTION : NotificationEntityType.POST,
+                EntityId = post.Id,
+                EntityTitle = post.Title,
+                EntityPreview = post.Content?.Length > 100 ? post.Content[..100] : post.Content,
+                ActionUrl = $"/communities/{post.CommunityId}/moderate-pending",
+                Timestamp = DateTime.UtcNow,
+            };
+
+            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                x => x.PublicNotification(contentCreatedEvent, "notifications.community"));
         }
 
         public async Task<ReturnResult<ModerationQueueResponseDTO>> EnqueueForReviewAsync(ModerationQueueRequestDTO dto)

@@ -43,6 +43,8 @@ export enum NotificationEventEnum {
   // Community Reports
   COMMUNITY_REPORT_CREATED = 27,
   COMMUNITY_REPORT_RESOLVED = 28,
+  CONTENT_CREATED = 29,
+  CONTENT_APPROVED = 30,
 }
 
 export enum ActorType {
