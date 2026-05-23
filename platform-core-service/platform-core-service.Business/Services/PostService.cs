@@ -35,7 +35,6 @@ namespace platform_core_service.Business.Services
         private readonly IConfigurationService _configurationService;
         private readonly IModerationService _moderationService;
         private readonly IContentMediaLinkService _contentMediaLinkService;
-        private readonly IPostHistoryService _postHistoryService;
         private readonly IBackgroundJobClient _backgroundJobClient;
 
         public PostService(
@@ -48,7 +47,6 @@ namespace platform_core_service.Business.Services
             IConfigurationService configurationService,
             IModerationService moderationService,
             IContentMediaLinkService contentMediaLinkService,
-            IPostHistoryService postHistoryService,
             IBackgroundJobClient backgroundJobClient
         )
         {
@@ -61,7 +59,6 @@ namespace platform_core_service.Business.Services
             _configurationService = configurationService;
             _moderationService = moderationService;
             _contentMediaLinkService = contentMediaLinkService;
-            _postHistoryService = postHistoryService;
             _backgroundJobClient = backgroundJobClient;
         }
 
@@ -136,7 +133,6 @@ namespace platform_core_service.Business.Services
                     await _aiWorkerClient.SubmitForModerationAsync(post.Id, createDTO.Title, createDTO.Content);
                 }
 
-                await _postHistoryService.RecordHistoryAsync(post.Id);
             }
             catch (Exception ex)
             {
@@ -672,8 +668,6 @@ namespace platform_core_service.Business.Services
                         await _aiWorkerClient.SubmitForModerationAsync(postId, post.Title, post.Content);
                     }
                 }
-
-                await _postHistoryService.RecordHistoryAsync(postId);
 
                 // Step 10: Reload after moderation changes so response matches persisted state
                 var updatedPost = await _context.Posts
