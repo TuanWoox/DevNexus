@@ -392,6 +392,7 @@ namespace platform_core_service.Business.Services
                 var reportDto = (await BuildAdminReportDTOsAsync([report])).First();
                 var reportedVersion = await GetReportedVersionAsync(report);
                 var currentTarget = await GetCurrentTargetAsync(report.TargetType, report.TargetId);
+                var currentTargetState = await GetCurrentTargetStateAsync(report.TargetType, report.TargetId);
                 var summaries = await GetProfileSummariesAsync(
                     [report.ReporterId, report.TargetOwnerId, report.ResolvedById, report.AssignedModeratorId]);
 
@@ -404,6 +405,7 @@ namespace platform_core_service.Business.Services
                     TargetOwner = summaries.GetValueOrDefault(report.TargetOwnerId),
                     TargetSnapshotJson = report.TargetSnapshotJson,
                     TargetSnapshot = DeserializeSnapshot(report.TargetSnapshotJson),
+                    CurrentTargetState = currentTargetState,
                     ModeratorNote = report.ModeratorNote,
                     Resolution = report.Resolution,
                     ResolutionNote = report.ResolutionNote,
@@ -738,6 +740,136 @@ namespace platform_core_service.Business.Services
                 .FirstOrDefaultAsync(a => a.Id == targetId);
 
             return answer == null ? null : _mapper.Map<SelectAnswerDTO>(answer);
+        }
+
+        private async Task<AdminReportTargetStateDTO> GetCurrentTargetStateAsync(ReportTargetType targetType, string targetId)
+        {
+            return targetType switch
+            {
+                ReportTargetType.Profile => await GetCurrentProfileTargetStateAsync(targetId),
+                ReportTargetType.Post => await GetCurrentPostTargetStateAsync(targetId),
+                ReportTargetType.Question => await GetCurrentPostTargetStateAsync(targetId),
+                ReportTargetType.Comment => await GetCurrentCommentTargetStateAsync(targetId),
+                ReportTargetType.Answer => await GetCurrentAnswerTargetStateAsync(targetId),
+                _ => new AdminReportTargetStateDTO { Unavailable = true }
+            };
+        }
+
+        private async Task<AdminReportTargetStateDTO> GetCurrentProfileTargetStateAsync(string targetId)
+        {
+            var profile = await _context.Profiles
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == targetId);
+
+            return profile == null
+                ? new AdminReportTargetStateDTO { Unavailable = true }
+                : new AdminReportTargetStateDTO
+                {
+                    Deleted = profile.Deleted,
+                    DeletedAt = profile.DateDeleted,
+                    Private = profile.IsPrivate,
+                    Suspended = profile.IsSuspended,
+                    SuspendedUntil = profile.SuspendedUntil
+                };
+        }
+
+        private async Task<AdminReportTargetStateDTO> GetCurrentPostTargetStateAsync(string targetId)
+        {
+            var post = await _context.Posts
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == targetId);
+
+            return post == null
+                ? new AdminReportTargetStateDTO { Unavailable = true }
+                : BuildPostTargetState(post);
+        }
+
+        private async Task<AdminReportTargetStateDTO> GetCurrentAnswerTargetStateAsync(string targetId)
+        {
+            var answer = await _context.Answers
+                .IgnoreQueryFilters()
+                .Include(a => a.QAPost)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Id == targetId);
+
+            if (answer == null)
+            {
+                return new AdminReportTargetStateDTO { Unavailable = true };
+            }
+
+            var state = new AdminReportTargetStateDTO
+            {
+                Deleted = answer.Deleted,
+                DeletedAt = answer.DateDeleted
+            };
+
+            ApplyParentPostState(state, answer.QAPost);
+            return state;
+        }
+
+        private async Task<AdminReportTargetStateDTO> GetCurrentCommentTargetStateAsync(string targetId)
+        {
+            var comment = await _context.Comments
+                .IgnoreQueryFilters()
+                .Include(c => c.Post)
+                .Include(c => c.Answer)
+                    .ThenInclude(a => a.QAPost)
+                .Include(c => c.ReplyToComment)
+                    .ThenInclude(c => c!.Post)
+                .Include(c => c.ReplyToComment)
+                    .ThenInclude(c => c!.Answer)
+                        .ThenInclude(a => a!.QAPost)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == targetId);
+
+            if (comment == null)
+            {
+                return new AdminReportTargetStateDTO { Unavailable = true };
+            }
+
+            var state = new AdminReportTargetStateDTO
+            {
+                Deleted = comment.Deleted,
+                DeletedAt = comment.DateDeleted
+            };
+
+            var parentPost = comment.Post ?? comment.Answer?.QAPost ?? comment.ReplyToComment?.Post ?? comment.ReplyToComment?.Answer?.QAPost;
+            ApplyParentPostState(state, parentPost);
+
+            if (comment.Answer != null)
+            {
+                state.ParentDeleted = state.ParentDeleted || comment.Answer.Deleted;
+                state.ParentUnavailable = state.ParentUnavailable || comment.Answer.Deleted;
+            }
+
+            return state;
+        }
+
+        private static AdminReportTargetStateDTO BuildPostTargetState(Post post)
+        {
+            return new AdminReportTargetStateDTO
+            {
+                Deleted = post.Deleted,
+                DeletedAt = post.DateDeleted,
+                Hidden = post.ModerationStatus != ModerationStatus.Approved,
+                ModerationStatus = post.ModerationStatus.ToString()
+            };
+        }
+
+        private static void ApplyParentPostState(AdminReportTargetStateDTO state, Post? parentPost)
+        {
+            if (parentPost == null)
+            {
+                state.ParentUnavailable = true;
+                return;
+            }
+
+            state.ParentDeleted = parentPost.Deleted;
+            state.ParentHidden = parentPost.ModerationStatus != ModerationStatus.Approved;
+            state.ParentModerationStatus = parentPost.ModerationStatus.ToString();
+            state.ParentUnavailable = state.ParentDeleted || state.ParentHidden;
         }
 
         private static ReportTargetSnapshotDTO? DeserializeSnapshot(string? snapshotJson)
