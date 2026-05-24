@@ -1,5 +1,6 @@
 import { PostType } from "./create-post-dto";
 import { ModerationStatus } from "./moderation-status";
+import { CommunityApprovalStatusValue } from "../enums/community-approval-status";
 
 export interface SelectPostAuthorDTO {
     id: string;
@@ -27,6 +28,8 @@ export interface SelectPostDTO {
     postType: PostType;
     moderationStatus: ModerationStatus;
     moderationReason?: string | null;
+    communityApprovalStatus?: CommunityApprovalStatusValue | null;
+    communityApprovalReason?: string | null;
     authorId: string;
     author?: SelectPostAuthorDTO;
     upvoteCount: number;

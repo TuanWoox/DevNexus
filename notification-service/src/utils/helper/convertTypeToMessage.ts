@@ -38,6 +38,8 @@ export function convertTypeToMessage(event: NotificationMessageSource, actor: st
         [NotificationEventEnum.COMMUNITY_BAN]: `You have been banned from a community`,
         [NotificationEventEnum.COMMUNITY_REPORT_CREATED]: `New report filed in ${title}.`,
         [NotificationEventEnum.COMMUNITY_REPORT_RESOLVED]: `Your report in ${title} has been reviewed.`,
+        [NotificationEventEnum.CONTENT_CREATED]: `${a} posted ${title} in your community`,
+        [NotificationEventEnum.CONTENT_APPROVED]: `Your post ${title} was approved in the community`,
         [NotificationEventEnum.NEW_MESSAGE]: `${a}${others} sent you a message`,
         [NotificationEventEnum.MESSAGE_REQUEST]: `${a}${others} sent you a message request`,
         [NotificationEventEnum.MODERATION_RESULT]: `Your post has been reviewed`,

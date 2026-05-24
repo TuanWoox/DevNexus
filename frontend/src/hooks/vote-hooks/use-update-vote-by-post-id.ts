@@ -4,10 +4,10 @@ import { SelectPostDTO } from "@/types/post/select-post-dto";
 import { PagedData } from "@/types/common/paged-data";
 import { useMutation, useQueryClient, InfiniteData } from "@tanstack/react-query";
 import { postQueryKeys } from "@/hooks/post-hooks/use-post-query-keys";
-import { qaPostQueryKeys } from "../qa-post-hooks/use-qa-post-query-key";
-import { bookmarkedItemQueryKeys } from "../bookmarked-item-hooks/use-bookmarked-item-query-keys";
+import { qaPostQueryKeys } from "@/hooks/qa-post-hooks/use-qa-post-query-key";
+import { bookmarkedItemQueryKeys } from "@/hooks/bookmarked-item-hooks/use-bookmarked-item-query-keys";
 import { SelectBookmarkedItemDTO } from "@/types/bookmarked-item/select-bookmarked-item-dto";
-import { searchQueryKeys } from "../search-hooks/use-global-search";
+import { searchQueryKeys } from "@/hooks/search-hooks/use-global-search";
 import { GlobalSearchResult } from "@/types/search/global-search-result";
 
 const applyVoteToPost = <T extends SelectPostDTO>(post: T, voteRequestDTO: VoteRequestDTO): T => {

@@ -9,6 +9,9 @@ import { UpdatePostDTO } from "@/types/post/update-post-dto";
 export const postService = {
     createPost: async (createPostDTO: CreatePostDTO): Promise<SelectPostDTO> => {
         const { data } = await api.post<ReturnResult<SelectPostDTO>>('/Posts', createPostDTO);
+        if (!data.result) {
+            throw new Error(data.message || 'Failed to create post');
+        }
         return data.result;
     },
 
@@ -36,6 +39,26 @@ export const postService = {
     getPostsByCommunityId: async (communityId: string, payload: Page<string>): Promise<PagedData<SelectPostDTO, string>> => {
         const { data } = await api.post<ReturnResult<PagedData<SelectPostDTO, string>>>(`/Posts/community/${communityId}/paging`, payload);
         return data.result ?? { data: [], page: payload };
+    },
+
+    getPendingPostsByCommunityId: async (communityId: string, payload: Page<string>): Promise<PagedData<SelectPostDTO, string>> => {
+        const { data } = await api.post<ReturnResult<PagedData<SelectPostDTO, string>>>(`/Posts/community/${communityId}/pending/paging`, payload);
+        return data.result ?? { data: [], page: payload };
+    },
+
+    getMyPendingPostsByCommunityId: async (communityId: string, payload: Page<string>): Promise<PagedData<SelectPostDTO, string>> => {
+        const { data } = await api.post<ReturnResult<PagedData<SelectPostDTO, string>>>(`/Posts/community/${communityId}/my-pending/paging`, payload);
+        return data.result ?? { data: [], page: payload };
+    },
+
+    approveCommunityPost: async (postId: string): Promise<SelectPostDTO> => {
+        const { data } = await api.post<ReturnResult<SelectPostDTO>>(`/Posts/${postId}/community-approve`);
+        return data.result;
+    },
+
+    rejectCommunityPost: async (postId: string, reason?: string): Promise<SelectPostDTO> => {
+        const { data } = await api.post<ReturnResult<SelectPostDTO>>(`/Posts/${postId}/community-reject`, { reason });
+        return data.result;
     },
 
     updatePost: async (updatePostDTO: UpdatePostDTO): Promise<SelectPostDTO> => {

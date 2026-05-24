@@ -1,14 +1,17 @@
 using AutoMapper;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
 using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
@@ -32,7 +35,7 @@ namespace platform_core_service.Business.Services
         private readonly IConfigurationService _configurationService;
         private readonly IModerationService _moderationService;
         private readonly IContentMediaLinkService _contentMediaLinkService;
-        private readonly IPostHistoryService _postHistoryService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
         public PostService(
             ApplicationDbContext context,
@@ -44,7 +47,7 @@ namespace platform_core_service.Business.Services
             IConfigurationService configurationService,
             IModerationService moderationService,
             IContentMediaLinkService contentMediaLinkService,
-            IPostHistoryService postHistoryService
+            IBackgroundJobClient backgroundJobClient
         )
         {
             _context = context;
@@ -56,7 +59,7 @@ namespace platform_core_service.Business.Services
             _configurationService = configurationService;
             _moderationService = moderationService;
             _contentMediaLinkService = contentMediaLinkService;
-            _postHistoryService = postHistoryService;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<ReturnResult<SelectPostDTO>> CreateAsync(CreatePostDTO createDTO)
@@ -94,6 +97,8 @@ namespace platform_core_service.Business.Services
                 var postTags = await CreateOrGetTagsAsync(createDTO.TagNames, post.Id);
                 post.PostTags = postTags;
 
+                await SetCommunityApprovalStateAsync(post);
+
                 // Step 6: Save post — ModerationStatus defaults to Pending (set in entity)
                 _context.Posts.Add(post);
                 await _context.SaveChangesAsync();
@@ -128,7 +133,6 @@ namespace platform_core_service.Business.Services
                     await _aiWorkerClient.SubmitForModerationAsync(post.Id, createDTO.Title, createDTO.Content);
                 }
 
-                await _postHistoryService.RecordHistoryAsync(post.Id);
             }
             catch (Exception ex)
             {
@@ -392,6 +396,187 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
+        public async Task<ReturnResult<SelectPostDTO>> ApproveCommunityPostAsync(string postId)
+        {
+            var result = new ReturnResult<SelectPostDTO>();
+            try
+            {
+                var post = await _context.Posts
+                    .Where(p => p.GetType() == typeof(PostEntity))
+                    .Include(p => p.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
+                    .Include(p => p.Community)
+                    .FirstOrDefaultAsync(p => p.Id == postId);
+
+                if (post == null)
+                {
+                    result.Message = $"Post {postId} not found";
+                    return result;
+                }
+
+                if (string.IsNullOrEmpty(post.CommunityId))
+                {
+                    result.Message = "Only community posts can be approved";
+                    return result;
+                }
+
+                var permission = await _socialGuardService.CheckIsCommunityAdminOrModeratorAsync(_userContext.ProfileId, post.CommunityId);
+                if (!permission.Result)
+                {
+                    result.Message = permission.Message ?? "You do not have permission to approve this post";
+                    return result;
+                }
+
+                var wasAlreadyApproved = post.CommunityApprovalStatus == CommunityApprovalStatus.Approved;
+                post.CommunityApprovalStatus = CommunityApprovalStatus.Approved;
+                post.CommunityApprovalReason = null;
+                await _context.SaveChangesAsync();
+                if (!wasAlreadyApproved)
+                {
+                    await EnqueueContentApprovedNotification(post);
+                }
+
+                result.Result = _mapper.Map<SelectPostDTO>(post);
+                await SetCurrentUserVoteAsync(result.Result);
+                await SetCurrentUserSavedAsync(result.Result);
+                await SetCommentCountForListAsync(new List<SelectPostDTO> { result.Result });
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while approving post: {ex.Message}";
+            }
+            return result;
+        }
+
+        public async Task<ReturnResult<SelectPostDTO>> RejectCommunityPostAsync(string postId, string? reason)
+        {
+            var result = new ReturnResult<SelectPostDTO>();
+            try
+            {
+                var post = await _context.Posts
+                    .Where(p => p.GetType() == typeof(PostEntity))
+                    .Include(p => p.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
+                    .Include(p => p.Community)
+                    .FirstOrDefaultAsync(p => p.Id == postId);
+
+                if (post == null)
+                {
+                    result.Message = $"Post {postId} not found";
+                    return result;
+                }
+
+                if (string.IsNullOrEmpty(post.CommunityId))
+                {
+                    result.Message = "Only community posts can be rejected";
+                    return result;
+                }
+
+                var permission = await _socialGuardService.CheckIsCommunityAdminOrModeratorAsync(_userContext.ProfileId, post.CommunityId);
+                if (!permission.Result)
+                {
+                    result.Message = permission.Message ?? "You do not have permission to reject this post";
+                    return result;
+                }
+
+                post.CommunityApprovalStatus = CommunityApprovalStatus.Rejected;
+                post.CommunityApprovalReason = NormalizeCommunityApprovalReason(reason, "Rejected by a community moderator");
+                await _context.SaveChangesAsync();
+
+                result.Result = _mapper.Map<SelectPostDTO>(post);
+                await SetCurrentUserVoteAsync(result.Result);
+                await SetCurrentUserSavedAsync(result.Result);
+                await SetCommentCountForListAsync(new List<SelectPostDTO> { result.Result });
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while rejecting post: {ex.Message}";
+            }
+            return result;
+        }
+
+        public async Task<ReturnResult<PagedData<SelectPostDTO, string>>> GetPendingPostsByCommunityIdAsync(Page<string> page, string communityId)
+        {
+            var result = new ReturnResult<PagedData<SelectPostDTO, string>>();
+            try
+            {
+                var permission = await _socialGuardService.CheckIsCommunityAdminOrModeratorAsync(_userContext.ProfileId, communityId);
+                if (!permission.Result)
+                {
+                    result.Message = permission.Message ?? "You do not have permission to view pending posts";
+                    return result;
+                }
+
+                var query = _context.Posts
+                    .Where(p => p.GetType() == typeof(PostEntity))
+                    .Where(p => p.CommunityId == communityId)
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Where(p => p.CommunityApprovalStatus == CommunityApprovalStatus.Pending)
+                    .Include(p => p.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
+                    .Include(p => p.Community)
+                    .AsNoTracking()
+                    .AsQueryable();
+
+                result.Result = await _postRepository.GetPagingAsync<Page<string>, SelectPostDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCommentCountForListAsync(result.Result.Data.ToList());
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while retrieving pending posts: {ex.Message}";
+            }
+            return result;
+        }
+
+        public async Task<ReturnResult<PagedData<SelectPostDTO, string>>> GetMyPendingPostsByCommunityIdAsync(Page<string> page, string communityId)
+        {
+            var result = new ReturnResult<PagedData<SelectPostDTO, string>>();
+            try
+            {
+                var accessCheck = await _socialGuardService.CheckBelongToCommunity(communityId);
+                if (accessCheck.Message != null)
+                {
+                    result.Message = accessCheck.Message;
+                    return result;
+                }
+
+                var query = _context.Posts
+                    .Where(p => p.GetType() == typeof(PostEntity))
+                    .Where(p => p.CommunityId == communityId)
+                    .Where(p => p.AuthorId == _userContext.ProfileId)
+                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .Where(p => p.CommunityApprovalStatus == CommunityApprovalStatus.Pending ||
+                                p.CommunityApprovalStatus == CommunityApprovalStatus.Rejected)
+                    .Include(p => p.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
+                    .Include(p => p.Community)
+                    .AsNoTracking()
+                    .AsQueryable();
+
+                result.Result = await _postRepository.GetPagingAsync<Page<string>, SelectPostDTO>(query, page);
+                if (result.Result?.Data != null && result.Result.Data.Any())
+                {
+                    await SetCommentCountForListAsync(result.Result.Data.ToList());
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while retrieving your pending posts: {ex.Message}";
+            }
+            return result;
+        }
+
         public async Task<ReturnResult<SelectPostDTO>> UpdateAsync(UpdatePostDTO updateDTO)
         {
             var result = new ReturnResult<SelectPostDTO>();
@@ -456,6 +641,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 var shouldModerate = !string.IsNullOrWhiteSpace(updateDTO.Content) || !string.IsNullOrWhiteSpace(updateDTO.Title);
+                await SetCommunityApprovalStateAsync(post);
 
                 // Step 7: Save changes
                 _context.Posts.Update(post);
@@ -482,8 +668,6 @@ namespace platform_core_service.Business.Services
                         await _aiWorkerClient.SubmitForModerationAsync(postId, post.Title, post.Content);
                     }
                 }
-
-                await _postHistoryService.RecordHistoryAsync(postId);
 
                 // Step 10: Reload after moderation changes so response matches persisted state
                 var updatedPost = await _context.Posts
@@ -642,6 +826,59 @@ namespace platform_core_service.Business.Services
                 ? $"Banned keywords detected: {string.Join(", ", keywordPreview)}"
                 : "Banned keywords detected.";
             return reason.Length <= 1000 ? reason : reason[..1000];
+        }
+
+        private async Task SetCommunityApprovalStateAsync(PostEntity post)
+        {
+            if (string.IsNullOrEmpty(post.CommunityId))
+            {
+                post.CommunityApprovalStatus = null;
+                post.CommunityApprovalReason = null;
+                return;
+            }
+
+            var requireApproval = await _context.Communities
+                .AsNoTracking()
+                .Where(c => c.Id == post.CommunityId)
+                .Select(c => c.RequireContentApproval)
+                .FirstOrDefaultAsync();
+
+            post.CommunityApprovalStatus = requireApproval
+                ? CommunityApprovalStatus.Pending
+                : CommunityApprovalStatus.Approved;
+            post.CommunityApprovalReason = requireApproval
+                ? "Awaiting moderator approval"
+                : null;
+        }
+
+        private Task EnqueueContentApprovedNotification(PostEntity post)
+        {
+            var notificationEvent = new NotiicationCreatedEntityDTO
+            {
+                EventType = NotificationEventType.CONTENT_APPROVED,
+                ActorType = ActorType.Community,
+                ActorId = post.CommunityId,
+                ActorName = post.Community?.Name,
+                ActorAvatarUrl = post.Community?.CommunityCoverPhotoUrl,
+                RecipientId = post.AuthorId,
+                EntityType = NotificationEntityType.POST,
+                EntityId = post.Id,
+                EntityTitle = post.Title,
+                EntityPreview = post.Content?.Length > 100 ? post.Content[..100] : post.Content,
+                ActionUrl = $"/post/{post.Id}",
+                Timestamp = DateTime.UtcNow,
+            };
+
+            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                x => x.PublicNotification(notificationEvent, "notifications.community"));
+
+            return Task.CompletedTask;
+        }
+
+        private static string NormalizeCommunityApprovalReason(string? reason, string fallback)
+        {
+            var value = string.IsNullOrWhiteSpace(reason) ? fallback : reason.Trim();
+            return value.Length <= 1000 ? value : value[..1000];
         }
 
         // Helper method to generate slug from title

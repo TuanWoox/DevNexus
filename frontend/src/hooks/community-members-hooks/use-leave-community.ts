@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { communityMembersService } from "@/services/community-members-service";
 import { communityMembersQueryKeys } from "./use-community-members-query-keys";
-import { communityQueryKeys } from "../community-hooks/use-community-query-key";
+import { communityQueryKeys } from "@/hooks/community-hooks/use-community-query-key";
 
 export const useLeaveCommunity = () => {
     const queryClient = useQueryClient();

@@ -1,5 +1,6 @@
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Services;
@@ -16,11 +17,19 @@ namespace platform_core_service.Business.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IPostHistoryService _postHistoryService;
+        private readonly IQAPostHistoryService _qaPostHistoryService;
 
-        public ModerationService(ApplicationDbContext context, IBackgroundJobClient backgroundJobClient)
+        public ModerationService(
+            ApplicationDbContext context,
+            IBackgroundJobClient backgroundJobClient,
+            IPostHistoryService postHistoryService,
+            IQAPostHistoryService qaPostHistoryService)
         {
             _context = context;
             _backgroundJobClient = backgroundJobClient;
+            _postHistoryService = postHistoryService;
+            _qaPostHistoryService = qaPostHistoryService;
         }
 
         public async Task<ReturnResult<bool>> HandleCallbackAsync(ModerationCallbackDTO dto)
@@ -63,8 +72,8 @@ namespace platform_core_service.Business.Services
                 // Map AI Worker decision string → ModerationStatus enum
                 post.ModerationStatus = dto.Decision.ToLower() switch
                 {
-                    "approve"  => ModerationStatus.Approved,
-                    "flag"     => ModerationStatus.Flagged,
+                    "approve" => ModerationStatus.Approved,
+                    "flag" => ModerationStatus.Flagged,
                     "escalate" => ModerationStatus.InReview,
                     _ => ModerationStatus.InReview  // unknown decision → escalate to be safe
                 };
@@ -103,10 +112,18 @@ namespace platform_core_service.Business.Services
                 DevNexusLogger.Instance.Debug(
                     $"[Moderation] Post {dto.PostId} → {post.ModerationStatus} (decision={dto.Decision})");
 
+                await RecordApprovedContentHistoryAsync(post);
                 await EnqueueModerationNotification(post);
 
                 if (post.ModerationStatus == ModerationStatus.Approved && post is QAPost)
                 {
+                    if (await _context.Answers.HasExistingAiFirstResponderAnswerAsync(_context, post.Id))
+                    {
+                        DevNexusLogger.Instance.Debug($"[Moderation] Skipped AI First Responder for QA Post {post.Id} because an AI answer already exists");
+                        result.Result = true;
+                        return result;
+                    }
+
                     // Load Author and Tags now that we know this is a QA post
                     await _context.Entry(post).Reference(p => p.Author).LoadAsync();
                     await _context.Entry(post).Collection(p => p.PostTags).Query()
@@ -142,7 +159,23 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
-        private Task EnqueueModerationNotification(Post post)
+        private async Task RecordApprovedContentHistoryAsync(Post post)
+        {
+            if (post.ModerationStatus != ModerationStatus.Approved)
+            {
+                return;
+            }
+
+            if (post is QAPost)
+            {
+                await _qaPostHistoryService.RecordHistoryAsync(post.Id);
+                return;
+            }
+
+            await _postHistoryService.RecordHistoryAsync(post.Id);
+        }
+
+        private async Task EnqueueModerationNotification(Post post)
         {
             var isQuestion = post is QAPost;
             var notificationEvent = new NotiicationCreatedEntityDTO
@@ -164,7 +197,56 @@ namespace platform_core_service.Business.Services
             _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
                 x => x.PublicNotification(notificationEvent, "notifications.moderation"));
 
-            return Task.CompletedTask;
+            if (post.ModerationStatus != ModerationStatus.Approved ||
+                string.IsNullOrEmpty(post.CommunityId) ||
+                post.CommunityApprovalStatus != CommunityApprovalStatus.Pending)
+            {
+                return;
+            }
+
+            var community = await _context.Communities
+                .Include(c => c.Moderators)
+                .FirstOrDefaultAsync(c => c.Id == post.CommunityId);
+
+            if (community == null)
+            {
+                return;
+            }
+
+            if (post.Author == null)
+            {
+                await _context.Entry(post).Reference(p => p.Author).LoadAsync();
+            }
+
+            var recipientIds = new[] { community.OwnerId }
+                .Concat(community.Moderators.Select(m => m.ModeratorId))
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct()
+                .ToList();
+
+            if (!recipientIds.Any())
+            {
+                return;
+            }
+
+            var contentCreatedEvent = new NotiicationCreatedEntityDTO
+            {
+                EventType = NotificationEventType.CONTENT_CREATED,
+                ActorType = ActorType.Profile,
+                ActorId = post.AuthorId,
+                ActorName = post.Author?.FullName,
+                ActorAvatarUrl = post.Author?.AvatarUrl,
+                RecipientId = recipientIds,
+                EntityType = isQuestion ? NotificationEntityType.QUESTION : NotificationEntityType.POST,
+                EntityId = post.Id,
+                EntityTitle = post.Title,
+                EntityPreview = post.Content?.Length > 100 ? post.Content[..100] : post.Content,
+                ActionUrl = $"/communities/{post.CommunityId}/moderate-pending",
+                Timestamp = DateTime.UtcNow,
+            };
+
+            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                x => x.PublicNotification(contentCreatedEvent, "notifications.community"));
         }
 
         public async Task<ReturnResult<ModerationQueueResponseDTO>> EnqueueForReviewAsync(ModerationQueueRequestDTO dto)

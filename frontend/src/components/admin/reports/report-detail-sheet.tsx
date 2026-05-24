@@ -20,8 +20,10 @@ import { ReportStatus } from "@/types/report/report-status";
 import { ReportStatusBadge } from "./report-status-badge";
 import { ReportActionType } from "./report-action-dialog";
 import { reportResolutionLabels } from "@/types/report/report-resolution";
+import { ReportTargetAction, reportTargetActionLabels } from "@/types/report/report-target-action";
 import { AdminReportProfileHoverCard } from "./admin-report-profile-hover-card";
 import { UserAvatar } from "@/components/shared/user-avatar";
+import { MarkdownViewer } from "@/components/editor/markdown-viewer";
 
 interface ReportDetailSheetProps {
   open: boolean;
@@ -41,6 +43,10 @@ function formatDate(iso?: string | null) {
   });
 }
 
+function textValue(value: unknown, fallback?: string): string {
+  return typeof value === "string" && value.trim() ? value : fallback ?? "";
+}
+
 function InfoRow({ label, value, isMono = false }: { label: string; value?: ReactNode; isMono?: boolean }) {
   return (
     <div className="rounded-lg border border-default bg-background px-3 py-2">
@@ -56,14 +62,43 @@ function isClosed(report: AdminReportDTO) {
   return report.status === ReportStatus.Resolved || report.status === ReportStatus.Dismissed;
 }
 
+function ContentBlock({ content }: { content: string }) {
+  return (
+    <div className="max-h-72 overflow-y-auto rounded-lg bg-muted/30 p-3 text-sm text-body leading-relaxed [overflow-wrap:anywhere]">
+      <MarkdownViewer source={content} />
+    </div>
+  );
+}
+
+function StateBadges({ state }: { state?: any }) {
+  if (!state) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {state.deleted && <span className="badge-red font-mono text-2xs">Deleted</span>}
+      {state.hidden && <span className="badge-amber font-mono text-2xs">Hidden: {state.moderationStatus ?? "moderated"}</span>}
+      {state.private && <span className="badge-purple font-mono text-2xs">Private</span>}
+      {state.suspended && <span className="badge-red font-mono text-2xs">Suspended</span>}
+      {state.parentUnavailable && (
+        <span className="badge-amber font-mono text-2xs">
+          Parent unavailable{state.parentModerationStatus ? `: ${state.parentModerationStatus}` : ""}
+        </span>
+      )}
+      {state.unavailable && <span className="badge-red font-mono text-2xs">Unavailable</span>}
+    </div>
+  );
+}
+
 function ReportedContentView({
   targetType,
   data,
   snapshot,
+  state,
 }: {
   targetType: number;
   data: any;
   snapshot?: any;
+  state?: any;
 }) {
   if (!data) {
     return (
@@ -98,9 +133,8 @@ function ReportedContentView({
               </div>
             </div>
           </div>
-          <div className="rounded-lg bg-muted/30 p-3 text-sm text-body leading-relaxed">
-            {bio}
-          </div>
+          <ContentBlock content={bio} />
+          <StateBadges state={state} />
           <div className="flex flex-wrap gap-2">
             {isSuspended && <span className="badge-red font-mono">Suspended</span>}
             {isPrivate && <span className="badge-amber font-mono">Private Profile</span>}
@@ -136,25 +170,25 @@ function ReportedContentView({
     }
     case 1: // Post
     case 2: { // Question
-      const title = content.title || snapshot?.targetTitle || "Untitled";
-      const body = content.content || snapshot?.targetPreview || "No content";
-      const authorName = content.author?.fullName || content.author?.displayName || snapshot?.targetOwnerDisplayName || "Unknown Author";
-      const authorAvatar = content.author?.avatarUrl;
+      const title = textValue(content.title, textValue(snapshot?.targetTitle, "Untitled"));
+      const body = textValue(content.content, textValue(snapshot?.targetPreview, "No content"));
+      const authorName = textValue(content.author?.fullName, textValue(content.author?.displayName, textValue(snapshot?.targetOwnerDisplayName, "Unknown Author")));
+      const authorAvatar = textValue(content.author?.avatarUrl);
       const tags = content.tagNames || [];
       const isQuestion = targetType === 2;
+      const createdAt = textValue(content.dateCreated, textValue(data.dateCreated));
 
       return (
         <div className="space-y-3">
           <div className="text-lg font-bold text-heading leading-tight">{title}</div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <UserAvatar avatarUrl={authorAvatar} fullName={authorName} className="h-5 w-5" />
+            <UserAvatar avatarUrl={authorAvatar || undefined} fullName={authorName} className="h-5 w-5" />
             <span className="font-mono">@{authorName}</span>
             <span>&bull;</span>
-            <span className="font-mono">Created: {formatDate(content.dateCreated || data.dateCreated)}</span>
+            <span className="font-mono">Created: {formatDate(createdAt)}</span>
           </div>
-          <div className="rounded-lg bg-muted/30 p-3 text-sm text-body leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
-            {body}
-          </div>
+          <ContentBlock content={body} />
+          <StateBadges state={state} />
           <div className="flex flex-wrap gap-2 items-center">
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
@@ -186,20 +220,20 @@ function ReportedContentView({
     }
     case 3: // Comment
     case 4: { // Answer
-      const body = content.content || snapshot?.targetPreview || "No content";
-      const authorName = content.author?.fullName || content.author?.displayName || snapshot?.targetOwnerDisplayName || "Unknown Author";
+      const body = textValue(content.content, textValue(snapshot?.targetPreview, "No content"));
+      const authorName = textValue(content.author?.fullName, textValue(content.author?.displayName, textValue(snapshot?.targetOwnerDisplayName, "Unknown Author")));
       const isAnswer = targetType === 4;
+      const createdAt = textValue(content.dateCreated, textValue(data.dateCreated));
 
       return (
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="font-mono">@{authorName}</span>
             <span>&bull;</span>
-            <span className="font-mono">Created: {formatDate(content.dateCreated || data.dateCreated)}</span>
+            <span className="font-mono">Created: {formatDate(createdAt)}</span>
           </div>
-          <div className="rounded-lg bg-muted/30 p-3 text-sm text-body leading-relaxed whitespace-pre-wrap">
-            {body}
-          </div>
+          <ContentBlock content={body} />
+          <StateBadges state={state} />
           {snapshot?.route && (
             <a
               href={snapshot.route}
@@ -225,11 +259,29 @@ function ReportedContentView({
 function ChangeIndicator({
   currentTarget,
   targetSnapshot,
+  currentTargetState,
 }: {
   currentTarget: any;
   targetSnapshot?: any;
+  currentTargetState?: any;
 }) {
-  if (currentTarget == null && targetSnapshot?.isDeletedAtReportTime) {
+  if (currentTargetState?.deleted) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50/40 p-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+        <span className="font-bold">DELETED:</span> Target content is currently soft-deleted.
+      </div>
+    );
+  }
+
+  if (currentTargetState?.hidden) {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300">
+        <span className="font-bold">HIDDEN:</span> Target content is currently {currentTargetState.moderationStatus ?? "not publicly visible"}.
+      </div>
+    );
+  }
+
+  if (currentTargetState?.unavailable || (currentTarget == null && targetSnapshot?.isDeletedAtReportTime)) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50/40 p-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
         <span className="font-bold">DELETED:</span> Target content was already deleted at the time of reporting.
@@ -245,8 +297,8 @@ function ChangeIndicator({
     );
   }
 
-  const currentModified = currentTarget.dateModified || currentTarget.dateCreated;
-  const snapshotUpdated = targetSnapshot?.updatedAt || targetSnapshot?.createdAt;
+  const currentModified = textValue(currentTarget.dateModified, textValue(currentTarget.dateCreated));
+  const snapshotUpdated = textValue(targetSnapshot?.updatedAt, textValue(targetSnapshot?.createdAt));
 
   if (currentModified && snapshotUpdated && new Date(currentModified) > new Date(snapshotUpdated)) {
     return (
@@ -355,6 +407,7 @@ export function ReportDetailSheet({ open, onClose, report, onAction }: ReportDet
               <ChangeIndicator 
                 currentTarget={data?.currentTarget} 
                 targetSnapshot={data?.targetSnapshot} 
+                currentTargetState={data?.currentTargetState}
               />
               <div className="rounded-xl border border-default bg-card overflow-hidden">
                 <div className="border-b border-default bg-muted/20 px-4 py-3">
@@ -365,6 +418,7 @@ export function ReportDetailSheet({ open, onClose, report, onAction }: ReportDet
                     targetType={activeReport?.targetType ?? 1} 
                     data={data?.currentTarget} 
                     snapshot={data?.targetSnapshot} 
+                    state={data?.currentTargetState}
                   />
                 </div>
               </div>
@@ -396,13 +450,29 @@ export function ReportDetailSheet({ open, onClose, report, onAction }: ReportDet
                   {data?.moderatorNote && (
                     <div className="space-y-1">
                       <div className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">Moderator internal note</div>
-                      <div className="rounded-lg bg-muted/30 p-3 text-sm text-body leading-relaxed">{data.moderatorNote}</div>
+                      <div className="max-h-48 overflow-y-auto rounded-lg bg-muted/30 p-3 text-sm text-body leading-relaxed [overflow-wrap:anywhere]">{data.moderatorNote}</div>
                     </div>
                   )}
                   {data?.resolutionNote && (
                     <div className="space-y-1">
                       <div className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">Resolution public note</div>
-                      <div className="rounded-lg bg-muted/30 p-3 text-sm text-body leading-relaxed">{data.resolutionNote}</div>
+                      <div className="max-h-48 overflow-y-auto rounded-lg bg-muted/30 p-3 text-sm text-body leading-relaxed [overflow-wrap:anywhere]">{data.resolutionNote}</div>
+                    </div>
+                  )}
+                  {data?.targetAction != null && data.targetAction !== ReportTargetAction.None && (
+                    <div className="space-y-1">
+                      <div className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">Enforcement action</div>
+                      <div className="rounded-lg border border-red-200 bg-red-50/40 p-3 text-sm font-semibold text-red-800 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+                        {reportTargetActionLabels[data.targetAction as ReportTargetAction] ?? String(data.targetAction)}
+                      </div>
+                    </div>
+                  )}
+                  {data?.targetAction === ReportTargetAction.None && data?.resolution != null && (
+                    <div className="space-y-1">
+                      <div className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">Enforcement action</div>
+                      <div className="rounded-lg border border-default bg-muted/30 p-3 text-sm text-muted-foreground">
+                        No enforcement action taken
+                      </div>
                     </div>
                   )}
                 </div>

@@ -11,8 +11,5 @@ export const useDeleteTag = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.tags.all });
       toast.success('Tag deleted');
     },
-    onError: () => {
-      toast.error('Failed to delete tag');
-    },
   });
 };

@@ -2,7 +2,7 @@ import { qaPostService } from "@/services/qa-post-service";
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { qaPostQueryKeys } from "./use-qa-post-query-key";
 import { toast } from "sonner";
-import { postQueryKeys } from "../post-hooks";
+import { postQueryKeys } from "@/hooks/post-hooks";
 
 export const useDeleteQAPostById = () => {
     const queryClient = useQueryClient();

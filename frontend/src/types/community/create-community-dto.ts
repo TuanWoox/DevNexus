@@ -4,4 +4,5 @@ export interface CreateCommunityDTO {
     communityCoverPhotoUrl?: string;
     slug?: string;
     isPrivate: boolean;
+    requireContentApproval?: boolean;
 }

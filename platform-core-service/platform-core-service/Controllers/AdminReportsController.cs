@@ -51,11 +51,6 @@ namespace platform_core_service.Controllers
                 returnResult.Message = $"An error occurred: {ex.Message}";
             }
 
-            if (returnResult.Result == null)
-            {
-                return NotFound(returnResult);
-            }
-
             return Ok(returnResult);
         }
 

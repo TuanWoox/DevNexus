@@ -22,5 +22,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Community
         public string? Slug { get; set; }
 
         public bool? IsPrivate { get; set; }
+
+        public bool? RequireContentApproval { get; set; }
     }
 }

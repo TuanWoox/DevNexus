@@ -14,6 +14,5 @@ export const useResolveReport = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.reports.all });
       toast.success("Report resolved");
     },
-    onError: () => toast.error("Failed to resolve report"),
   });
 };

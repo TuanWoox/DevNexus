@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Helper;
 using platform_core_service.Business.Repository;
+using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
@@ -24,19 +25,25 @@ namespace platform_core_service.Business.Services
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IUserContext _userContext;
         private readonly IAdminAuditLogService _adminAuditLogService;
+        private readonly IPostHistoryService _postHistoryService;
+        private readonly IQAPostHistoryService _qaPostHistoryService;
 
         public AdminPostService(
             ApplicationDbContext context,
             IRepository<PostEntity, string> postRepository,
             IBackgroundJobClient backgroundJobClient,
             IUserContext userContext,
-            IAdminAuditLogService adminAuditLogService)
+            IAdminAuditLogService adminAuditLogService,
+            IPostHistoryService postHistoryService,
+            IQAPostHistoryService qaPostHistoryService)
         {
             _context = context;
             _postRepository = postRepository;
             _backgroundJobClient = backgroundJobClient;
             _userContext = userContext;
             _adminAuditLogService = adminAuditLogService;
+            _postHistoryService = postHistoryService;
+            _qaPostHistoryService = qaPostHistoryService;
         }
 
         public async Task<ReturnResult<PagedData<AdminPostDTO, string>>> GetAllPostsAsync(Page<string> page)
@@ -84,6 +91,7 @@ namespace platform_core_service.Business.Services
                     moderationStatus = post.ModerationStatus.ToString(),
                     post.ModerationReason
                 };
+                var wasAlreadyApproved = post.ModerationStatus == ModerationStatus.Approved;
 
                 post.ModerationStatus = ModerationStatus.Approved;
                 post.ModerationReason = null;
@@ -99,10 +107,21 @@ namespace platform_core_service.Business.Services
                         post.ModerationReason
                     }));
                 await _context.SaveChangesAsync();
+                if (!wasAlreadyApproved)
+                {
+                    await RecordApprovedContentHistoryAsync(post);
+                }
 
                 // Build DTO for AI First Responder
                 if (post is QAPost) // Thay QAPost bằng tên entity QA của bác (ví dụ: QaPostEntity)
                 {
+                    if (await _context.Answers.HasExistingAiFirstResponderAnswerAsync(_context, post.Id))
+                    {
+                        DevNexusLogger.Instance.Debug($"[AdminPost] Skipped AI Task for QA Post {post.Id} because an AI answer already exists");
+                        result.Result = true;
+                        return result;
+                    }
+
                     var aiRequest = new platform_core_service.Common.Models.DTOs.AIDTO.AIFirstResponderRequestDTO
                     {
                         PostId = post.Id,
@@ -135,6 +154,22 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while approving post: {ex.Message}";
             }
             return result;
+        }
+
+        private async Task RecordApprovedContentHistoryAsync(Post post)
+        {
+            if (post.ModerationStatus != ModerationStatus.Approved)
+            {
+                return;
+            }
+
+            if (post is QAPost)
+            {
+                await _qaPostHistoryService.RecordHistoryAsync(post.Id);
+                return;
+            }
+
+            await _postHistoryService.RecordHistoryAsync(post.Id);
         }
 
         public async Task<ReturnResult<bool>> ForceRejectAsync(string postId, AdminForceRejectPostDTO dto)

@@ -44,6 +44,7 @@ function actionTypeLabel(value: AuditActionType | number): string {
     case AuditActionType.ReportResolved: return 'Report resolved'
     case AuditActionType.ReportDismissed: return 'Report dismissed'
     case AuditActionType.ReportEscalated: return 'Report escalated'
+    case AuditActionType.ReportTargetActionExecuted: return 'Report target action executed'
     default: return 'Unknown action'
   }
 }

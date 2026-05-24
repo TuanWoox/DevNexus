@@ -2,6 +2,7 @@ using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Helper;
 using platform_core_service.Business.Repository;
+using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
@@ -23,19 +24,25 @@ namespace platform_core_service.Business.Services
         private readonly IRepository<ModerationQueueEntry, string> _queueRepository;
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IAdminAuditLogService _adminAuditLogService;
+        private readonly IPostHistoryService _postHistoryService;
+        private readonly IQAPostHistoryService _qaPostHistoryService;
 
         public AdminModerationService(
             ApplicationDbContext context,
             IUserContext userContext,
             IRepository<ModerationQueueEntry, string> queueRepository,
             IBackgroundJobClient backgroundJobClient,
-            IAdminAuditLogService adminAuditLogService)
+            IAdminAuditLogService adminAuditLogService,
+            IPostHistoryService postHistoryService,
+            IQAPostHistoryService qaPostHistoryService)
         {
             _context = context;
             _userContext = userContext;
             _queueRepository = queueRepository;
             _backgroundJobClient = backgroundJobClient;
             _adminAuditLogService = adminAuditLogService;
+            _postHistoryService = postHistoryService;
+            _qaPostHistoryService = qaPostHistoryService;
         }
 
         public async Task<ReturnResult<PagedData<AdminQueueEntryDTO, string>>> GetPendingQueueAsync(Page<string> page)
@@ -109,6 +116,7 @@ namespace platform_core_service.Business.Services
                     postModerationStatus = entry.Post.ModerationStatus.ToString(),
                     entry.Post.ModerationReason
                 };
+                var wasAlreadyApproved = entry.Post.ModerationStatus == ModerationStatus.Approved;
 
                 // Step 3: Resolve the queue entry
                 entry.Resolution = "Approved";
@@ -144,10 +152,21 @@ namespace platform_core_service.Business.Services
 
                 // Gán entry.Post vào biến post để xài cho gọn và hết lỗi đỏ
                 var post = entry.Post;
+                if (!wasAlreadyApproved)
+                {
+                    await RecordApprovedContentHistoryAsync(post);
+                }
                 await EnqueueModerationNotification(post);
 
                 if (post is QAPost)
                 {
+                    if (await _context.Answers.HasExistingAiFirstResponderAnswerAsync(_context, post.Id))
+                    {
+                        DevNexusLogger.Instance.Debug($"[AdminModeration] Skipped AI Task for QA Post {post.Id} because an AI answer already exists");
+                        result.Result = true;
+                        return result;
+                    }
+
                     var aiRequest = new platform_core_service.Common.Models.DTOs.AIDTO.AIFirstResponderRequestDTO
                     {
                         PostId = post.Id,
@@ -179,6 +198,22 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while approving queue entry: {ex.Message}";
             }
             return result;
+        }
+
+        private async Task RecordApprovedContentHistoryAsync(Post post)
+        {
+            if (post.ModerationStatus != ModerationStatus.Approved)
+            {
+                return;
+            }
+
+            if (post is QAPost)
+            {
+                await _qaPostHistoryService.RecordHistoryAsync(post.Id);
+                return;
+            }
+
+            await _postHistoryService.RecordHistoryAsync(post.Id);
         }
 
         public async Task<ReturnResult<bool>> RejectAsync(AdminQueueResolveDTO dto)

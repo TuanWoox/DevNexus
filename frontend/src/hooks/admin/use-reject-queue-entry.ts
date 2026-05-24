@@ -15,8 +15,5 @@ export const useRejectQueueEntry = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.dashboard() });
       toast.success('Entry rejected');
     },
-    onError: () => {
-      toast.error('Failed to reject entry');
-    },
   });
 };

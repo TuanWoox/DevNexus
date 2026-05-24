@@ -2,6 +2,7 @@ import { ReportReason } from "@/types/report/report-reason";
 import { ReportResolution } from "@/types/report/report-resolution";
 import { ReportStatus } from "@/types/report/report-status";
 import { ReportTargetType } from "@/types/report/report-target-type";
+import { ReportTargetAction } from "@/types/report/report-target-action";
 
 export interface ProfileSummaryDTO {
   id: string;
@@ -32,4 +33,5 @@ export interface AdminReportDTO {
   resolvedAt?: string | null;
   dateCreated?: string | null;
   isStaffSensitive: boolean;
+  targetAction?: ReportTargetAction | null;
 }

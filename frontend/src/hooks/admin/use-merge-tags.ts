@@ -12,8 +12,5 @@ export const useMergeTags = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.tags.all });
       toast.success('Tags merged');
     },
-    onError: () => {
-      toast.error('Failed to merge tags');
-    },
   });
 };

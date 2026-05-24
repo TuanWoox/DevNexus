@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { normalizeModerationStatus } from "@/types/post/moderation-status";
 import { useMuteGuard } from "@/hooks/community-mute-hooks/use-mute-guard";
 import { useGetCommunityById } from "@/hooks/community-hooks/use-get-community-by-id";
+import { CommunityApprovalStatus, normalizeCommunityApprovalStatus } from "@/types/enums/community-approval-status";
 import { getPostDetailHref, getQAPostDetailHref } from "@/utils/content-routes";
 
 interface PostCardProps {
@@ -45,7 +46,14 @@ export function PostCard({ post, canModerateCommunity }: PostCardProps) {
     const isQaPost = 'answerCount' in post;
     const detailHref = isQaPost ? getQAPostDetailHref(post) : getPostDetailHref(post);
     const moderationStatus = normalizeModerationStatus(post.moderationStatus);
-    const isApproved = moderationStatus === "Approved";
+    const isModerationApproved = moderationStatus === "Approved";
+    const communityApprovalStatus = normalizeCommunityApprovalStatus(post.communityApprovalStatus) ?? (post.communityId ? CommunityApprovalStatus.Pending : null);
+    const isCommunityApproved = !post.communityId ||
+        communityApprovalStatus == null ||
+        communityApprovalStatus === CommunityApprovalStatus.Approved;
+    const isApproved = isModerationApproved && isCommunityApproved;
+    const isCommunityPending = post.communityId && communityApprovalStatus === CommunityApprovalStatus.Pending;
+    const isCommunityRejected = post.communityId && communityApprovalStatus === CommunityApprovalStatus.Rejected;
 
     const author = post.author;
     const community = (post as SelectPostDTO).community;
@@ -107,6 +115,17 @@ export function PostCard({ post, canModerateCommunity }: PostCardProps) {
             !isApproved && "border-dashed"
         )}>
             <ModerationBanner status={moderationStatus} reason={post.moderationReason} className="relative z-20" />
+            {(isCommunityPending || isCommunityRejected) && (
+                <div className={cn(
+                    "relative z-20 rounded-lg border px-3 py-2 text-sm font-medium",
+                    isCommunityRejected
+                        ? "border-destructive/30 bg-destructive/10 text-destructive"
+                        : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                )}>
+                    {isCommunityRejected ? "Rejected by community moderators" : "Pending community approval"}
+                    {post.communityApprovalReason ? `: ${post.communityApprovalReason}` : ""}
+                </div>
+            )}
             {/* Header: Community/Author & Options */}
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 relative z-10">

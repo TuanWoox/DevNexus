@@ -14,8 +14,5 @@ export const useForceApprovePost = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.dashboard() });
       toast.success('Post approved');
     },
-    onError: () => {
-      toast.error('Failed to approve post');
-    },
   });
 };

@@ -15,8 +15,5 @@ export const useApproveQueueEntry = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.dashboard() });
       toast.success('Entry approved');
     },
-    onError: () => {
-      toast.error('Failed to approve entry');
-    },
   });
 };

@@ -14,7 +14,10 @@ namespace platform_core_service.Business.Utils.Extensions
         {
             return query
                 .Where(p => !p.Deleted)
-                .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                .Where(p =>
+                    p.ModerationStatus == ModerationStatus.Approved &&
+                    (p.CommunityApprovalStatus == null ||
+                     p.CommunityApprovalStatus == CommunityApprovalStatus.Approved))
                 .Where(p => !context.ProfileBlocks.Any(b =>
                     (b.OwnerId == currentProfileId && b.BlockedProfileId == p.AuthorId) ||
                     (b.OwnerId == p.AuthorId && b.BlockedProfileId == currentProfileId)))
@@ -44,7 +47,15 @@ namespace platform_core_service.Business.Utils.Extensions
         {
             return query
                 .Where(p => !p.Deleted)
-                .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                .Where(p =>
+                    p.ModerationStatus == ModerationStatus.Approved &&
+                    (p.CommunityApprovalStatus == null ||
+                     p.CommunityApprovalStatus == CommunityApprovalStatus.Approved ||
+                     (p.CommunityId != null &&
+                      (p.AuthorId == currentProfileId ||
+                       p.Community!.OwnerId == currentProfileId ||
+                       p.Community.Moderators.Any(m => m.ModeratorId == currentProfileId)) &&
+                      p.CommunityApprovalStatus == CommunityApprovalStatus.Pending)))
                 .Where(p => !context.ProfileBlocks.Any(b =>
                     (b.OwnerId == currentProfileId && b.BlockedProfileId == p.AuthorId) ||
                     (b.OwnerId == p.AuthorId && b.BlockedProfileId == currentProfileId)))
@@ -118,6 +129,8 @@ namespace platform_core_service.Business.Utils.Extensions
                     (c.PostId != null &&
                         !c.Post!.Deleted &&
                         c.Post.ModerationStatus == ModerationStatus.Approved &&
+                        (c.Post.CommunityApprovalStatus == null ||
+                         c.Post.CommunityApprovalStatus == CommunityApprovalStatus.Approved) &&
                         !context.ProfileBlocks.Any(b =>
                             (b.OwnerId == currentProfileId && b.BlockedProfileId == c.Post.AuthorId) ||
                             (b.OwnerId == c.Post.AuthorId && b.BlockedProfileId == currentProfileId)) &&
@@ -143,6 +156,8 @@ namespace platform_core_service.Business.Utils.Extensions
                             (b.OwnerId == c.Answer.AuthorId && b.BlockedProfileId == currentProfileId)) &&
                         !c.Answer.QAPost.Deleted &&
                         c.Answer.QAPost.ModerationStatus == ModerationStatus.Approved &&
+                        (c.Answer.QAPost.CommunityApprovalStatus == null ||
+                         c.Answer.QAPost.CommunityApprovalStatus == CommunityApprovalStatus.Approved) &&
                         !context.ProfileBlocks.Any(b =>
                             (b.OwnerId == currentProfileId && b.BlockedProfileId == c.Answer.QAPost.AuthorId) ||
                             (b.OwnerId == c.Answer.QAPost.AuthorId && b.BlockedProfileId == currentProfileId)) &&
@@ -165,6 +180,8 @@ namespace platform_core_service.Business.Utils.Extensions
                         c.ReplyToComment!.PostId != null &&
                         !c.ReplyToComment.Post!.Deleted &&
                         c.ReplyToComment.Post.ModerationStatus == ModerationStatus.Approved &&
+                        (c.ReplyToComment.Post.CommunityApprovalStatus == null ||
+                         c.ReplyToComment.Post.CommunityApprovalStatus == CommunityApprovalStatus.Approved) &&
                         !context.ProfileBlocks.Any(b =>
                             (b.OwnerId == currentProfileId && b.BlockedProfileId == c.ReplyToComment.Post.AuthorId) ||
                             (b.OwnerId == c.ReplyToComment.Post.AuthorId && b.BlockedProfileId == currentProfileId)) &&
@@ -197,6 +214,8 @@ namespace platform_core_service.Business.Utils.Extensions
                     (b.OwnerId == a.AuthorId && b.BlockedProfileId == currentProfileId)))
                 .Where(a => !a.QAPost.Deleted)
                 .Where(a => a.QAPost.ModerationStatus == ModerationStatus.Approved)
+                .Where(a => a.QAPost.CommunityApprovalStatus == null ||
+                            a.QAPost.CommunityApprovalStatus == CommunityApprovalStatus.Approved)
                 .Where(a => !context.ProfileBlocks.Any(b =>
                     (b.OwnerId == currentProfileId && b.BlockedProfileId == a.QAPost.AuthorId) ||
                     (b.OwnerId == a.QAPost.AuthorId && b.BlockedProfileId == currentProfileId)))

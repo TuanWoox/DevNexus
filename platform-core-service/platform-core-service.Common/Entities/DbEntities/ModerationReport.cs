@@ -45,6 +45,8 @@ namespace platform_core_service.Common.Entities.DbEntities
 
         public ReportResolution? Resolution { get; set; }
 
+        public ReportTargetAction? TargetAction { get; set; }
+
         [MaxLength(1000)]
         public string? ResolutionNote { get; set; }
 

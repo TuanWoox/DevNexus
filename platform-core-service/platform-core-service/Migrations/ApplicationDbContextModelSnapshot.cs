@@ -622,6 +622,9 @@ namespace platform_core_service.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("RequireContentApproval")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -1000,6 +1003,9 @@ namespace platform_core_service.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("TargetAction")
+                        .HasColumnType("integer");
+
                     b.Property<string>("TargetHistoryId")
                         .HasMaxLength(450)
                         .HasColumnType("character varying(450)");
@@ -1028,16 +1034,16 @@ namespace platform_core_service.Migrations
 
                     b.HasIndex("AssignedModeratorId", "Status", "DateCreated");
 
+                    b.HasIndex("ReporterId", "TargetType", "TargetId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ModerationReports_OpenDuplicateGuard")
+                        .HasFilter("\"Deleted\" = false AND \"Status\" IN (0, 1, 4)");
+
                     b.HasIndex("TargetOwnerId", "Status", "DateCreated");
 
                     b.HasIndex("TargetType", "TargetId", "Status");
 
                     b.HasIndex("ReporterId", "TargetType", "TargetId", "Status");
-
-                    b.HasIndex("ReporterId", "TargetType", "TargetId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_ModerationReports_OpenDuplicateGuard")
-                        .HasFilter("\"Deleted\" = false AND \"Status\" IN (0, 1, 4)");
 
                     b.ToTable("ModerationReports");
                 });
@@ -1051,6 +1057,13 @@ namespace platform_core_service.Migrations
                     b.Property<string>("AuthorId")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("CommunityApprovalReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int?>("CommunityApprovalStatus")
+                        .HasColumnType("integer");
 
                     b.Property<string>("CommunityId")
                         .HasColumnType("text");
@@ -1105,8 +1118,6 @@ namespace platform_core_service.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CommunityId");
-
                     b.HasIndex("Deleted");
 
                     b.HasIndex("Slug");
@@ -1114,6 +1125,8 @@ namespace platform_core_service.Migrations
                     b.HasIndex("ModerationStatus", "DateCreated");
 
                     b.HasIndex("AuthorId", "ModerationStatus", "DateCreated");
+
+                    b.HasIndex("CommunityId", "CommunityApprovalStatus", "DateCreated");
 
                     b.ToTable("Posts");
 

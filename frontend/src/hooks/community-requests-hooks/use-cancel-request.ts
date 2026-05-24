@@ -2,8 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { communityRequestsService } from "@/services/community-requests-service";
 import { communityRequestsQueryKeys } from "./use-community-requests-query-keys";
-import { communityMembersQueryKeys } from "../community-members-hooks/use-community-members-query-keys";
-import { communityQueryKeys } from "../community-hooks/use-community-query-key";
+import { communityMembersQueryKeys } from "@/hooks/community-members-hooks/use-community-members-query-keys";
+import { communityQueryKeys } from "@/hooks/community-hooks/use-community-query-key";
 
 export const useCancelRequest = () => {
     const queryClient = useQueryClient();
