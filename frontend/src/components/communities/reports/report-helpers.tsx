@@ -17,6 +17,7 @@ import {
     XCircle,
 } from "lucide-react";
 import { ReportStatus } from "@/types/report/report-status";
+import { getPostDetailHref, getQAPostDetailHref } from "@/utils/content-routes";
 
 export interface ReportDetails {
     typeLabel: string;
@@ -41,7 +42,7 @@ export function getReportContentDetails(
                 contentId: r.postId,
                 title: r.post?.title || "Untitled Post",
                 preview: r.post?.contentPreview || "No preview available",
-                link: `/post/${r.postId}`,
+                link: getPostDetailHref({ id: r.postId, communityId: r.communityId }),
                 authorId: r.post?.authorId,
                 dateCreated: r.post?.dateCreated,
             };
@@ -53,7 +54,7 @@ export function getReportContentDetails(
                 contentId: r.qaPostId,
                 title: r.qaPost?.title || "Untitled Q&A",
                 preview: r.qaPost?.contentPreview || "No preview available",
-                link: `/questions/${r.qaPostId}`,
+                link: getQAPostDetailHref({ id: r.qaPostId, communityId: r.communityId }),
                 authorId: r.qaPost?.authorId,
                 dateCreated: r.qaPost?.dateCreated,
             };
@@ -65,7 +66,9 @@ export function getReportContentDetails(
                 contentId: r.answerId,
                 title: r.answer?.qaPostTitle ? `Answer to: ${r.answer.qaPostTitle}` : "Answer to Q&A",
                 preview: r.answer?.contentPreview || "No preview available",
-                link: `/questions/${r.answer?.qaPostId || ""}`,
+                link: r.answer?.qaPostId
+                    ? getQAPostDetailHref({ id: r.answer.qaPostId, communityId: r.communityId })
+                    : `/communities/${r.communityId}`,
                 authorId: r.answer?.authorId,
                 dateCreated: r.answer?.dateCreated,
             };
@@ -76,10 +79,10 @@ export function getReportContentDetails(
             let link = `/communities/${r.communityId}`;
             if (r.comment?.postId) {
                 title = `Comment on Post: ${r.comment.postTitle || "Untitled"}`;
-                link = `/post/${r.comment.postId}`;
+                link = getPostDetailHref({ id: r.comment.postId, communityId: r.communityId });
             } else if (r.comment?.qaPostId) {
                 title = `Comment on Q&A: ${r.comment.qaPostTitle || "Untitled"}`;
-                link = `/questions/${r.comment.qaPostId}`;
+                link = getQAPostDetailHref({ id: r.comment.qaPostId, communityId: r.communityId });
             }
             return {
                 typeLabel: "Comment",

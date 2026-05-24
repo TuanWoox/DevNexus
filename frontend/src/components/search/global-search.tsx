@@ -16,6 +16,7 @@ import {
 } from "@/types/search/global-search-result";
 import { SelectPostDTO } from "@/types/post/select-post-dto";
 import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
+import { getPostDetailHref, getQAPostDetailHref } from "@/utils/content-routes";
 
 type GlobalSearchProps = {
   trigger?: ReactNode;
@@ -82,7 +83,7 @@ export function GlobalSearch({ trigger, compact = false }: GlobalSearchProps) {
   function PostRow({ post, question = false }: { post: SelectPostDTO | SelectQAPostDTO; question?: boolean }) {
     const Icon = question ? HelpCircle : FileText;
     return (
-      <ResultButton href={`${question ? "/questions" : "/post"}/${post.id}`}>
+      <ResultButton href={question ? getQAPostDetailHref(post) : getPostDetailHref(post)}>
         <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
           <Icon className="size-4" />
         </div>

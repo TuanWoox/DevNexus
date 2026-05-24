@@ -54,10 +54,13 @@ import { CommunityApprovalStatus, normalizeCommunityApprovalStatus } from '@/typ
 interface Props {
     postId: string;
     isQAPost: boolean;
+    context?: "personal" | "community";
+    routeCommunityId?: string;
 }
 
-export default function PostArticle({ postId, isQAPost }: Props) {
+export default function PostArticle({ postId, isQAPost, context = "personal", routeCommunityId }: Props) {
     const router = useRouter();
+    const isCommunityContext = context === "community";
 
     const [isBookmarkModalOpen, setIsBookmarkModalOpen] = useState(false);
     const [isUnsaveModalOpen, setIsUnsaveModalOpen] = useState(false);
@@ -72,10 +75,11 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     const PostTypeIcon = isQAPost ? HelpCircle : Code2;
     const isPostLoading = isQAPost ? isQALoading : isNormalLoading;
     const communityId = (post as SelectPostDTO | SelectQAPostDTO | undefined)?.communityId;
-    const { data: loadedCommunity } = useGetCommunityById(communityId ?? '', Boolean(communityId));
+    const effectiveCommunityId = isCommunityContext ? (routeCommunityId ?? communityId) : undefined;
+    const { data: loadedCommunity } = useGetCommunityById(effectiveCommunityId ?? '', Boolean(effectiveCommunityId));
 
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(postId);
-    const { checkMuted } = useMuteGuard(communityId);
+    const { checkMuted } = useMuteGuard(effectiveCommunityId);
 
     const isError = isQAPost ? isQAError : isNormalError;
     const error: any = isQAPost ? qaError : normalError;
@@ -102,7 +106,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     const isCommunityRejected = post?.communityId && communityApprovalStatus === CommunityApprovalStatus.Rejected;
 
     const author = post?.author;
-    const community = (post as SelectPostDTO)?.community;
+    const community = isCommunityContext ? (post as SelectPostDTO)?.community : undefined;
     const currentUserRole = loadedCommunity?.currentUserRole;
     const canModerateCommunity =
         currentUserRole === "Owner" ||
@@ -224,7 +228,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                                                 </div>
                                             )}
                                         </Link>
-                                        <ProfileHoverCard profileId={post.authorId} author={author} communityId={post.communityId} showCommunityStatus={Boolean(post.communityId)} canModerateCommunity={canModerateCommunity}>
+                                        <ProfileHoverCard profileId={post.authorId} author={author} communityId={effectiveCommunityId} showCommunityStatus={Boolean(effectiveCommunityId)} canModerateCommunity={canModerateCommunity}>
                                             <Link href={`/profile/${post.authorId}`} className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-card bg-page overflow-hidden">
                                                 <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
                                             </Link>
@@ -235,7 +239,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                                             {community.name}
                                         </Link>
                                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                                            <ProfileHoverCard profileId={post.authorId} author={author} communityId={post.communityId} showCommunityStatus={Boolean(post.communityId)} canModerateCommunity={canModerateCommunity}>
+                                            <ProfileHoverCard profileId={post.authorId} author={author} communityId={effectiveCommunityId} showCommunityStatus={Boolean(effectiveCommunityId)} canModerateCommunity={canModerateCommunity}>
                                                 <Link href={`/profile/${post.authorId}`} className="font-semibold hover:underline text-muted-foreground transition-colors truncate max-w-30">
                                                     {author?.fullName || 'Unknown'}
                                                 </Link>
@@ -295,10 +299,10 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                             </div>
                             <PostActionsDropdown
                                 postId={postId}
-                                communityId={post.communityId}
+                                communityId={isCommunityContext ? post.communityId : undefined}
                                 isQAPost={isQAPost}
                                 isAuthor={isAuthor}
-                                canModerateCommunity={canModerateCommunity}
+                                canModerateCommunity={isCommunityContext ? canModerateCommunity : false}
                                 onDeleted={() => router.push('/feed')}
                             />
                         </div>

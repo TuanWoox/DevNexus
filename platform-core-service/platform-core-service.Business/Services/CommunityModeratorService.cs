@@ -293,10 +293,10 @@ namespace platform_core_service.Business.Services
             var notificationEvent = new NotiicationCreatedEntityDTO
             {
                 EventType = NotificationEventType.COMMUNITY_ROLE_CHANGE,
-                ActorType = ActorType.Profile,
-                ActorId = actorId,
-                ActorName = actor.Name,
-                ActorAvatarUrl = actor.AvatarUrl,
+                ActorType = ActorType.Community,
+                ActorId = communityId,
+                ActorName = community.Name,
+                ActorAvatarUrl = community.CommunityCoverPhotoUrl,
                 RecipientId = targetProfileId,
                 EntityType = NotificationEntityType.COMMUNITY,
                 EntityId = community.Id,
@@ -305,8 +305,8 @@ namespace platform_core_service.Business.Services
                 ActionUrl = $"/communities/{community.Id}",
                 Timestamp = DateTime.UtcNow,
                 Message = isAdded
-                    ? $"You have been promoted to a moderator of {community.Name}."
-                    : $"You have been removed as a moderator of {community.Name}."
+                    ? $"You have been promoted to a moderator of \"{community.Name}\"."
+                    : $"You have been removed as a moderator of \"{community.Name}\"."
             };
 
             _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(

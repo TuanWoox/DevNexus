@@ -30,8 +30,8 @@ const CommunitySettingsPage = () => {
     const hasAccess = isOwner || isModerator;
 
     const validTabs = isOwner ? ["general", "requests", "moderators", "bans", "mutes"] : ["requests", "bans", "mutes"];
-    const activeTab = validTabs.includes(tabParam || "") 
-        ? tabParam as string 
+    const activeTab = validTabs.includes(tabParam || "")
+        ? tabParam as string
         : (isOwner ? "general" : "requests");
 
     const handleTabChange = (val: string) => {
@@ -101,9 +101,9 @@ const CommunitySettingsPage = () => {
                 </div>
 
                 {/* Master Settings Card Container */}
-                <Tabs 
-                    value={activeTab} 
-                    onValueChange={handleTabChange} 
+                <Tabs
+                    value={activeTab}
+                    onValueChange={handleTabChange}
                     className="bg-card border-2 border-border rounded-2xl shadow-2xl flex flex-col lg:flex-row min-h-[calc(100dvh-240px)] transition-all duration-300 w-full lg:min-w-[1152px] lg:max-w-6xl mx-auto"
                 >
                     {/* Left Column: Navigation Sidebar */}
@@ -112,7 +112,7 @@ const CommunitySettingsPage = () => {
                             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Settings Menu</h3>
                             <p className="text-[11px] text-muted-foreground/80 mt-0.5">Configure your community space</p>
                         </div>
-                        
+
                         <TabsList className="flex flex-col justify-start h-auto bg-transparent p-0 w-full gap-1.5 shrink-0">
                             {/* Owner-only tabs */}
                             {isOwner && (

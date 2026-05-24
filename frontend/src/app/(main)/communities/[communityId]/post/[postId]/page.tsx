@@ -1,24 +1,17 @@
-import { redirect } from "next/navigation";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { getQueryClient } from "@/lib/get-query-client";
 import { serverGet } from "@/lib/server-api";
 import { postQueryKeys } from "@/hooks/post-hooks/use-post-query-keys";
 import { SelectPostDTO } from "@/types/post/select-post-dto";
-import { getPostDetailHref } from "@/utils/content-routes";
-import { PersonalPostDetail } from "@/components/post/detail/personal-post-detail";
+import { CommunityPostDetail } from "@/components/post/detail/community-post-detail";
 import PostNotFound from "@/components/post/post-not-found";
 
 type Props = {
-    params: Promise<{ postId: string }>;
+    params: Promise<{ communityId: string; postId: string }>;
 };
 
-export default async function PostDetailPage({ params }: Props) {
-    const { postId } = await params;
-
-    if (!postId) {
-        return <PostNotFound />;
-    }
-
+export default async function CommunityPostDetailPage({ params }: Props) {
+    const { communityId, postId } = await params;
     const queryClient = getQueryClient();
     let post: SelectPostDTO;
 
@@ -27,18 +20,17 @@ export default async function PostDetailPage({ params }: Props) {
             queryKey: postQueryKeys.detail(postId),
             queryFn: () => serverGet<SelectPostDTO>(`/Posts/${postId}`),
         });
-    }
-    catch {
+    } catch (error) {
         return <PostNotFound />;
     }
 
-    if (post.communityId) {
-        redirect(getPostDetailHref(post));
+    if (post.communityId !== communityId) {
+        return <PostNotFound message="This post does not belong to the requested community." />;
     }
 
     return (
         <HydrationBoundary state={dehydrate(queryClient)}>
-            <PersonalPostDetail postId={postId} />
+            <CommunityPostDetail communityId={communityId} postId={postId} />
         </HydrationBoundary>
     );
 }

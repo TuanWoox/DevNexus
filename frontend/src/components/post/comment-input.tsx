@@ -20,10 +20,11 @@ interface CommentInputProps {
     isQAPost?: boolean;
     isDisabled?: boolean;
     communityId?: string | null;
+    context?: "personal" | "community";
     onSuccess?: () => void;
 }
 
-export function CommentInput({ postId, answerId, replyToCommentId, currentUserAvatar, isQAPost, isDisabled, communityId, onSuccess }: CommentInputProps) {
+export function CommentInput({ postId, answerId, replyToCommentId, currentUserAvatar, isQAPost, isDisabled, communityId, context = "personal", onSuccess }: CommentInputProps) {
     const [content, setContent] = useState('');
     const [isExpanded, setIsExpanded] = useState(false);
     const editorRef = useRef<MarkdownEditorHandle>(null);
@@ -35,12 +36,14 @@ export function CommentInput({ postId, answerId, replyToCommentId, currentUserAv
     const isCreatingAnswerPost = isQAPost && !answerId && !replyToCommentId;
     const isSubmitting = isCreatingAnswerPost ? isCreatingAnswer : isCreatingComment;
     const contentType = isQAPost ? ContentType.Answer : ContentType.Comment;
-    const { checkMuted, isMuted } = useMuteGuard(communityId);
+    const isCommunityContext = context === "community" && Boolean(communityId);
+    const effectiveCommunityId = isCommunityContext ? communityId : undefined;
+    const { checkMuted, isMuted } = useMuteGuard(effectiveCommunityId);
     const mutedAction = isCreatingAnswerPost ? 'answer questions in this community' : 'comment in this community';
 
     const handleSubmit = async () => {
         if (!content.trim() || content === '\n') return;
-        if (checkMuted(isCreatingAnswerPost ? 'answer questions' : 'comment')) return;
+        if (isCommunityContext && checkMuted(isCreatingAnswerPost ? 'answer questions' : 'comment')) return;
 
         const pendingFiles = editorRef.current?.getPendingFiles(content) ?? new Map<string, File>();
         let finalContent = content;
@@ -97,7 +100,7 @@ export function CommentInput({ postId, answerId, replyToCommentId, currentUserAv
         setIsExpanded(false);
     };
 
-    if (isMuted) {
+    if (isCommunityContext && isMuted) {
         return (
             <div className="mb-8 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />

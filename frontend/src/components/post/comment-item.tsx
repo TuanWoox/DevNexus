@@ -10,7 +10,7 @@ import { ContentType } from '@/types/content-media/content-type';
 import { useState } from 'react';
 import { CommentInput } from './comment-input';
 
-export function CommentItem({ comment, currentUserId, currentUserAvatar, isDisabled, communityId, canModerateCommunity }: { comment: SelectCommentDTO, currentUserId: string, currentUserAvatar?: string, isDisabled?: boolean, communityId?: string | null, canModerateCommunity?: boolean }) {
+export function CommentItem({ comment, currentUserId, currentUserAvatar, isDisabled, communityId, canModerateCommunity, context = "personal" }: { comment: SelectCommentDTO, currentUserId: string, currentUserAvatar?: string, isDisabled?: boolean, communityId?: string | null, canModerateCommunity?: boolean, context?: "personal" | "community" }) {
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByCommentId(comment.id);
     const { mutate: deleteComment, isPending: isDeletingComment } = useDeleteComment();
     const { mutate: updateComment, isPending: isUpdatingComment } = useUpdateComment();
@@ -41,6 +41,7 @@ export function CommentItem({ comment, currentUserId, currentUserAvatar, isDisab
                 isDisabled={isDisabled}
                 communityId={communityId}
                 canModerateCommunity={canModerateCommunity}
+                context={context}
                 isReplying={isReplying}
                 onToggleReply={() => setIsReplying(!isReplying)}
                 hideReplyButton={!!comment.answerId || !!comment.replyToCommentId}
@@ -51,6 +52,7 @@ export function CommentItem({ comment, currentUserId, currentUserAvatar, isDisab
                         replyToCommentId={comment.id}
                         currentUserAvatar={currentUserAvatar}
                         communityId={communityId}
+                        context={context}
                         onSuccess={() => setIsReplying(false)}
                     />
                 }
@@ -66,6 +68,7 @@ export function CommentItem({ comment, currentUserId, currentUserAvatar, isDisab
                             isDisabled={isDisabled}
                             communityId={communityId}
                             canModerateCommunity={canModerateCommunity}
+                            context={context}
                         />
                     ))}
                 </div>

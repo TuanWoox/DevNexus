@@ -7,6 +7,7 @@ import { SelectPostDTO } from "@/types/post/select-post-dto";
 import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
 import { useIntersectionObserver } from '@/hooks/use-intersection-observer';
 import Link from 'next/link';
+import { getPostDetailHref, getQAPostDetailHref } from '@/utils/content-routes';
 
 interface PostListViewProps {
     title?: string;
@@ -98,31 +99,36 @@ export function PostListView({
                 </div>
             ) : (
                 <div className="grid grid-cols-3 gap-1 sm:gap-6 px-0 sm:px-4">
-                    {posts?.map((post) => (
-                        <Link
-                            key={post.id}
-                            href={`/post/${post.slug}`}
-                            className="relative aspect-square bg-muted group overflow-hidden cursor-pointer border border-border sm:rounded-md"
-                        >
-                            <div className="absolute inset-0 flex items-center justify-center p-4 text-center">
-                                <p className="text-[10px] sm:text-xs font-medium text-foreground line-clamp-3">
-                                    {post.title}
-                                </p>
-                            </div>
+                    {posts?.map((post) => {
+                        const isQaPost = "answerCount" in post;
+                        const detailHref = isQaPost ? getQAPostDetailHref(post) : getPostDetailHref(post);
 
-                            {/* Overlay on hover */}
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-bold text-sm">
-                                <div className="flex items-center gap-1">
-                                    <Heart className="w-4 h-4 fill-white" />
-                                    <span>{(post as SelectPostDTO).upvoteCount || 0}</span>
+                        return (
+                            <Link
+                                key={post.id}
+                                href={detailHref}
+                                className="relative aspect-square bg-muted group overflow-hidden cursor-pointer border border-border sm:rounded-md"
+                            >
+                                <div className="absolute inset-0 flex items-center justify-center p-4 text-center">
+                                    <p className="text-[10px] sm:text-xs font-medium text-foreground line-clamp-3">
+                                        {post.title}
+                                    </p>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    <MessageSquare className="w-4 h-4 fill-white" />
-                                    <span>{(post as SelectPostDTO).commentCount || 0}</span>
+
+                                {/* Overlay on hover */}
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-bold text-sm">
+                                    <div className="flex items-center gap-1">
+                                        <Heart className="w-4 h-4 fill-white" />
+                                        <span>{(post as SelectPostDTO).upvoteCount || 0}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <MessageSquare className="w-4 h-4 fill-white" />
+                                        <span>{(post as SelectPostDTO).commentCount || 0}</span>
+                                    </div>
                                 </div>
-                            </div>
-                        </Link>
-                    ))}
+                            </Link>
+                        );
+                    })}
                 </div>
             )}
 

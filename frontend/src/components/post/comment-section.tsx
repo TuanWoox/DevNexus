@@ -26,9 +26,12 @@ import { CommunityApprovalStatus, normalizeCommunityApprovalStatus } from '@/typ
 interface Props {
     postId: string;
     isQAPost: boolean;
+    context?: "personal" | "community";
+    routeCommunityId?: string;
 }
 
-export default function CommentSection({ postId, isQAPost }: Props) {
+export default function CommentSection({ postId, isQAPost, context = "personal", routeCommunityId }: Props) {
+    const isCommunityContext = context === "community";
     const itemsPayload = useMemo(() => ({
         totalElements: 0,
         orders: [
@@ -61,7 +64,8 @@ export default function CommentSection({ postId, isQAPost }: Props) {
         isFetchingNextPage: isFetchingNextPageComment
     } = useGetCommentsByPostIdInfinite(postId, !isQAPost && !!post, itemsPayload);
     const communityId = post?.communityId;
-    const { data: community } = useGetCommunityById(communityId ?? '', Boolean(communityId));
+    const effectiveCommunityId = isCommunityContext ? (routeCommunityId ?? communityId) : undefined;
+    const { data: community } = useGetCommunityById(effectiveCommunityId ?? '', Boolean(effectiveCommunityId));
     const canModerateCommunity =
         community?.currentUserRole === "Owner" ||
         community?.currentUserRole === "OWNER" ||
@@ -111,7 +115,8 @@ export default function CommentSection({ postId, isQAPost }: Props) {
                     postId={postId}
                     currentUserAvatar={userProfile?.avatarUrl}
                     isQAPost={isQAPost}
-                    communityId={communityId}
+                    communityId={effectiveCommunityId}
+                    context={context}
                 />
             ) : (
                 <div className="bg-muted/30 border border-dashed border-default rounded-xl p-4 text-center text-muted-foreground mb-8">
@@ -161,8 +166,9 @@ export default function CommentSection({ postId, isQAPost }: Props) {
                                 currentUserAvatar={userProfile?.avatarUrl}
                                 isDisabled={!isApproved}
                                 isQuestionAuthor={post?.authorId === user?.profileId}
-                                communityId={communityId}
-                                canModerateCommunity={canModerateCommunity}
+                                communityId={effectiveCommunityId}
+                                canModerateCommunity={isCommunityContext ? canModerateCommunity : false}
+                                context={context}
                             />
                         ) : (
                             <CommentItem
@@ -171,8 +177,9 @@ export default function CommentSection({ postId, isQAPost }: Props) {
                                 currentUserId={user?.profileId as string}
                                 currentUserAvatar={userProfile?.avatarUrl}
                                 isDisabled={!isApproved}
-                                communityId={communityId}
-                                canModerateCommunity={canModerateCommunity}
+                                communityId={effectiveCommunityId}
+                                canModerateCommunity={isCommunityContext ? canModerateCommunity : false}
+                                context={context}
                             />
                         )
                     ))}

@@ -107,7 +107,7 @@ export function NotificationItem({ notification, onClose }: Props) {
             className={cn(
                 "relative flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors group",
                 "hover:bg-subtle",
-                !notification.IsRead && "bg-primary/5",
+                !notification.IsRead && "bg-primary/5  font-semibold",
             )}
         >
             {/* Unread indicator */}

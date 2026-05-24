@@ -69,6 +69,7 @@ export interface BaseReplyItemProps {
     onToggleReply?: () => void;
     replyInput?: React.ReactNode;
     hideReplyButton?: boolean;
+    context?: "personal" | "community";
 }
 
 export function BaseReplyItem({
@@ -99,9 +100,12 @@ export function BaseReplyItem({
     onToggleReply,
     replyInput,
     hideReplyButton,
+    context = "personal",
 }: BaseReplyItemProps) {
     const isAuthor = authorId === currentUserId;
-    const canDelete = isAuthor || (Boolean(communityId) && canModerateCommunity);
+    const isCommunityContext = context === "community" && Boolean(communityId);
+    const effectiveCommunityId = isCommunityContext ? communityId : undefined;
+    const canDelete = isAuthor || (isCommunityContext && canModerateCommunity);
     const [isEditing, setIsEditing] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isReportOpen, setIsReportOpen] = useState(false);
@@ -111,9 +115,9 @@ export function BaseReplyItem({
     const editorRef = useRef<MarkdownEditorHandle>(null);
     const { uploadPendingMedia, isUploading: isUploadingMedia, progress: uploadProgress } = useUploadContentMedia();
     const reportMutation = useCreateCommunityContentReport();
-    const canReportToCommunity = Boolean(communityId) && !isAuthor;
+    const canReportToCommunity = isCommunityContext && !isAuthor;
     const isReportReasonValid = reportReason.trim().length >= 5 && reportReason.trim().length <= 500;
-    const { checkMuted } = useMuteGuard(communityId);
+    const { checkMuted } = useMuteGuard(effectiveCommunityId);
 
     const handleSubmit = async () => {
         if (!editContent.trim() || editContent === '\n') return; // '\n' is newline char, not literal backslash-n
@@ -176,7 +180,7 @@ export function BaseReplyItem({
     return (
         <>
             <div className="flex gap-3 sm:gap-4 group">
-                <ProfileHoverCard profileId={authorId} author={author} communityId={communityId} showCommunityStatus={Boolean(communityId)} canModerateCommunity={canModerateCommunity}>
+                <ProfileHoverCard profileId={authorId} author={author} communityId={effectiveCommunityId} showCommunityStatus={Boolean(effectiveCommunityId)} canModerateCommunity={isCommunityContext ? canModerateCommunity : false}>
                     <Link href={`/profile/${authorId}`} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-secondary shrink-0 overflow-hidden border border-default relative">
                         <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
                     </Link>
@@ -185,7 +189,7 @@ export function BaseReplyItem({
                 <div className="flex-1 min-w-0">
                     <div className={`bg-card border rounded-2xl rounded-tl-none p-3 sm:p-4 inline-block max-w-full overflow-hidden ${isAccepted ? 'border-emerald-500 bg-emerald-500/5 shadow-sm' : 'border-default'}`}>
                         <div className="flex items-center gap-2 mb-1">
-                            <ProfileHoverCard profileId={authorId} author={author} communityId={communityId} showCommunityStatus={Boolean(communityId)} canModerateCommunity={canModerateCommunity}>
+                            <ProfileHoverCard profileId={authorId} author={author} communityId={effectiveCommunityId} showCommunityStatus={Boolean(effectiveCommunityId)} canModerateCommunity={isCommunityContext ? canModerateCommunity : false}>
                                 <Link href={`/profile/${authorId}`} className="text-sm font-semibold text-heading hover:text-primary transition-colors">
                                     {author?.fullName || 'Unknown'}
                                 </Link>
@@ -243,7 +247,7 @@ export function BaseReplyItem({
                     <div className="flex items-center gap-4 mt-1.5 ml-2">
                         <button
                             onClick={() => {
-                                if (checkMuted('vote')) return;
+                                if (isCommunityContext && checkMuted('vote')) return;
                                 onVote(true);
                             }}
                             disabled={isVotePending || isDisabled}
@@ -258,7 +262,7 @@ export function BaseReplyItem({
                         </button>
                         <button
                             onClick={() => {
-                                if (checkMuted('vote')) return;
+                                if (isCommunityContext && checkMuted('vote')) return;
                                 onVote(false);
                             }}
                             disabled={isVotePending || isDisabled}
@@ -274,7 +278,7 @@ export function BaseReplyItem({
                         {!hideReplyButton && (
                             <button
                                 onClick={() => {
-                                    if (checkMuted('reply')) return;
+                                    if (isCommunityContext && checkMuted('reply')) return;
                                     onToggleReply?.();
                                 }}
                                 disabled={isDisabled}

@@ -355,7 +355,10 @@ namespace platform_core_service.Business.Services
         private async Task PublishJoinRequestNotificationAsync(string communityId, string requesterId)
         {
             var community = await _context.Communities
-                .FirstOrDefaultAsync(c => c.Id == communityId);
+                .AsNoTracking()
+                .Where(c => c.Id == communityId)
+                .Select(c => new { c.Id, c.Name, c.OwnerId, c.CommunityCoverPhotoUrl })
+                .FirstOrDefaultAsync();
 
             if (community == null) return;
 
@@ -375,15 +378,16 @@ namespace platform_core_service.Business.Services
             var notificationEvent = new NotiicationCreatedEntityDTO
             {
                 EventType = NotificationEventType.COMMUNITY_JOIN_REQUEST,
-                ActorType = ActorType.Profile,
-                ActorId = requesterId,
-                ActorName = actor.Name,
-                ActorAvatarUrl = actor.AvatarUrl,
+                ActorType = ActorType.Community,
+                ActorId = communityId,
+                ActorName = community.Name,
+                ActorAvatarUrl = community.CommunityCoverPhotoUrl,
                 RecipientId = recipients,
                 EntityType = NotificationEntityType.COMMUNITY,
                 EntityId = community.Id,
                 EntityTitle = community.Name,
                 EntityPreview = null,
+                Message = $"New join request! {actor.Name} wants to join \"{community.Name}\". Tap to review.",
                 ActionUrl = $"/communities/{community.Id}/settings?tab=requests",
                 Timestamp = DateTime.UtcNow
             };
@@ -404,10 +408,10 @@ namespace platform_core_service.Business.Services
             var notificationEvent = new NotiicationCreatedEntityDTO
             {
                 EventType = NotificationEventType.COMMUNITY_ROLE_CHANGE,
-                ActorType = ActorType.Profile,
-                ActorId = community.OwnerId,
-                ActorName = actor.Name,
-                ActorAvatarUrl = actor.AvatarUrl,
+                ActorType = ActorType.Community,
+                ActorId = communityId,
+                ActorName = community.Name,
+                ActorAvatarUrl = community.CommunityCoverPhotoUrl,
                 RecipientId = newMemberId,
                 EntityType = NotificationEntityType.COMMUNITY,
                 EntityId = community.Id,
@@ -415,7 +419,7 @@ namespace platform_core_service.Business.Services
                 EntityPreview = null,
                 ActionUrl = $"/communities/{community.Id}",
                 Timestamp = DateTime.UtcNow,
-                Message = $"Welcome to {community.Name}. Now you can post, connect with other members and more."
+                Message = $"Welcome to \"{community.Name}\". Now you can post, connect with other members and more."
             };
 
             _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
@@ -445,10 +449,10 @@ namespace platform_core_service.Business.Services
             var notificationEvent = new NotiicationCreatedEntityDTO
             {
                 EventType = NotificationEventType.COMMUNITY_ROLE_CHANGE,
-                ActorType = ActorType.Profile,
-                ActorId = newMemberId,
-                ActorName = actor.Name,
-                ActorAvatarUrl = actor.AvatarUrl,
+                ActorType = ActorType.Community,
+                ActorId = communityId,
+                ActorName = community.Name,
+                ActorAvatarUrl = community.CommunityCoverPhotoUrl,
                 RecipientId = recipients,
                 EntityType = NotificationEntityType.COMMUNITY,
                 EntityId = community.Id,
@@ -456,7 +460,7 @@ namespace platform_core_service.Business.Services
                 EntityPreview = null,
                 ActionUrl = $"/profile/{newMemberId}",
                 Timestamp = DateTime.UtcNow,
-                Message = $"A new member has joined your community - {community.Name}. Please check their profile."
+                Message = $"A new member has joined \"{community.Name}\". Please check their profile."
             };
 
             _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
