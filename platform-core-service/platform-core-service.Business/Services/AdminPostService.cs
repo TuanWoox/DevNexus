@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Helper;
 using platform_core_service.Business.Repository;
+using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
@@ -114,6 +115,13 @@ namespace platform_core_service.Business.Services
                 // Build DTO for AI First Responder
                 if (post is QAPost) // Thay QAPost bằng tên entity QA của bác (ví dụ: QaPostEntity)
                 {
+                    if (await _context.Answers.HasExistingAiFirstResponderAnswerAsync(_context, post.Id))
+                    {
+                        DevNexusLogger.Instance.Debug($"[AdminPost] Skipped AI Task for QA Post {post.Id} because an AI answer already exists");
+                        result.Result = true;
+                        return result;
+                    }
+
                     var aiRequest = new platform_core_service.Common.Models.DTOs.AIDTO.AIFirstResponderRequestDTO
                     {
                         PostId = post.Id,

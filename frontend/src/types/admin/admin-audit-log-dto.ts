@@ -21,6 +21,7 @@ export enum AuditActionType {
   ReportResolved = 31,
   ReportDismissed = 32,
   ReportEscalated = 33,
+  ReportTargetActionExecuted = 34,
 }
 
 export interface AdminAuditLogDTO {

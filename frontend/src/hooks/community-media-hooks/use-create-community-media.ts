@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { communityMediaQueryKeys } from "./use-community-media-query-keys";
 import { CreateCommunityMediaDTO } from "@/types/community-media/create-community-media-dto";
 import { communityMediaService } from "@/services/community-media-service";
-import { communityQueryKeys } from "../community-hooks/use-community-query-key";
+import { communityQueryKeys } from "@/hooks/community-hooks/use-community-query-key";
 
 export const useCreateCommunityMedia = () => {
     const queryClient = useQueryClient();

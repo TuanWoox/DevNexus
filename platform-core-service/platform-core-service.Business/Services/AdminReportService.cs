@@ -34,6 +34,7 @@ namespace platform_core_service.Business.Services
         private readonly ICommentHistoryService _commentHistoryService;
         private readonly IAnswerHistoryService _answerHistoryService;
         private readonly IAdminAuditLogService _adminAuditLogService;
+        private readonly IReportTargetActionExecutor _targetActionExecutor;
 
         public AdminReportService(
             ApplicationDbContext context,
@@ -43,7 +44,8 @@ namespace platform_core_service.Business.Services
             IQAPostHistoryService qaPostHistoryService,
             ICommentHistoryService commentHistoryService,
             IAnswerHistoryService answerHistoryService,
-            IAdminAuditLogService adminAuditLogService)
+            IAdminAuditLogService adminAuditLogService,
+            IReportTargetActionExecutor targetActionExecutor)
         {
             _context = context;
             _userContext = userContext;
@@ -53,6 +55,7 @@ namespace platform_core_service.Business.Services
             _commentHistoryService = commentHistoryService;
             _answerHistoryService = answerHistoryService;
             _adminAuditLogService = adminAuditLogService;
+            _targetActionExecutor = targetActionExecutor;
         }
 
         public async Task<ReturnResult<PagedData<AdminReportDTO, string>>> GetPagingAsync(Page<string> page)
@@ -158,7 +161,6 @@ namespace platform_core_service.Business.Services
                 await _context.SaveChangesAsync();
 
                 result = await GetByIdAsync(id);
-                result.Message = "Report assigned successfully.";
             }
             catch (Exception ex)
             {
@@ -172,43 +174,80 @@ namespace platform_core_service.Business.Services
         public async Task<ReturnResult<AdminReportDetailDTO>> ResolveAsync(string id, ResolveReportDTO dto)
         {
             var result = new ReturnResult<AdminReportDetailDTO>();
+            result.Result = null;
             try
             {
-                var report = await GetMutableReportAsync(id);
-                if (report == null)
+                var strategy = _context.Database.CreateExecutionStrategy();
+                await strategy.ExecuteAsync(async () =>
                 {
-                    result.Message = $"Report {id} not found";
-                    return result;
-                }
+                    var report = await GetMutableReportAsync(id);
+                    if (report == null)
+                    {
+                        result.Message = $"Report {id} not found";
+                        return;
+                    }
 
-                var authorizationMessage = await ValidateCanMutateAsync(report, allowEscalateStaffSensitive: false);
-                if (authorizationMessage != null)
-                {
-                    result.Message = authorizationMessage;
-                    return result;
-                }
+                    var authorizationMessage = await ValidateCanMutateAsync(report, allowEscalateStaffSensitive: false);
+                    if (authorizationMessage != null)
+                    {
+                        result.Message = authorizationMessage;
+                        return;
+                    }
 
-                var transitionMessage = ValidateCloseTransition(report, "resolve");
-                if (transitionMessage != null)
-                {
-                    result.Message = transitionMessage;
-                    return result;
-                }
+                    var transitionMessage = ValidateCloseTransition(report, "resolve");
+                    if (transitionMessage != null)
+                    {
+                        result.Message = transitionMessage;
+                        return;
+                    }
 
-                var oldState = BuildAuditState(report);
-                report.Status = ReportStatus.Resolved;
-                report.AssignedModeratorId ??= _userContext.ProfileId;
-                report.ModeratorNote = NormalizeNote(dto?.ModeratorNote) ?? report.ModeratorNote;
-                report.Resolution = dto.Resolution;
-                report.ResolutionNote = NormalizeNote(dto?.ResolutionNote);
-                report.ResolvedById = _userContext.ProfileId;
-                report.ResolvedAt = DateTimeOffset.UtcNow;
+                    // TargetAction validation: only allowed with ViolationConfirmed
+                    var effectiveAction = dto.TargetAction ?? ReportTargetAction.None;
+                    if (effectiveAction != ReportTargetAction.None &&
+                        dto.Resolution != ReportResolution.ViolationConfirmed)
+                    {
+                        result.Message = "TargetAction can only be used with ViolationConfirmed resolution.";
+                        return;
+                    }
 
-                await AddReportAuditAsync(AuditActionType.ReportResolved, report, oldState, BuildAuditState(report), dto?.ResolutionNote);
-                await _context.SaveChangesAsync();
+                    await using var transaction = await _context.Database.BeginTransactionAsync();
 
-                result = await GetByIdAsync(id);
-                result.Message = "Report resolved successfully.";
+                    try
+                    {
+                        // Execute TargetAction BEFORE closing the report so failure keeps report unresolved.
+                        if (effectiveAction != ReportTargetAction.None)
+                        {
+                            var actionResult = await _targetActionExecutor.ExecuteAsync(report, effectiveAction, dto);
+                            if (!actionResult.Result)
+                            {
+                                await transaction.RollbackAsync();
+                                result.Message = actionResult.Message ?? "Target action execution failed.";
+                                return;
+                            }
+                        }
+
+                        var oldState = BuildAuditState(report);
+                        report.Status = ReportStatus.Resolved;
+                        report.AssignedModeratorId ??= _userContext.ProfileId;
+                        report.ModeratorNote = NormalizeNote(dto?.ModeratorNote) ?? report.ModeratorNote;
+                        report.Resolution = dto.Resolution;
+                        report.ResolutionNote = NormalizeNote(dto?.ResolutionNote);
+                        report.ResolvedById = _userContext.ProfileId;
+                        report.ResolvedAt = DateTimeOffset.UtcNow;
+                        report.TargetAction = effectiveAction;
+
+                        await AddReportAuditAsync(AuditActionType.ReportResolved, report, oldState, BuildAuditState(report), dto?.ResolutionNote);
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+
+                        result = await GetByIdAsync(id);
+                    }
+                    catch
+                    {
+                        await transaction.RollbackAsync();
+                        throw;
+                    }
+                });
             }
             catch (Exception ex)
             {
@@ -257,7 +296,6 @@ namespace platform_core_service.Business.Services
                 await _context.SaveChangesAsync();
 
                 result = await GetByIdAsync(id);
-                result.Message = "Report dismissed successfully.";
             }
             catch (Exception ex)
             {
@@ -310,12 +348,10 @@ namespace platform_core_service.Business.Services
 
                 if (isStaffSensitive && !_userContext.IsAdmin)
                 {
-                    result.Message = "Report escalated successfully.";
                     return result;
                 }
 
                 result = await GetByIdAsync(id);
-                result.Message = "Report escalated successfully.";
             }
             catch (Exception ex)
             {
@@ -345,13 +381,14 @@ namespace platform_core_service.Business.Services
                 var isStaffSensitive = await IsStaffProfileAsync(report.TargetOwnerId);
                 if (isStaffSensitive && !_userContext.IsAdmin)
                 {
-                    result.Message = "Only admins can view staff-sensitive reports.";
+                    result.Message = $"Report {id} not found";
                     return result;
                 }
 
                 var reportDto = (await BuildAdminReportDTOsAsync([report])).First();
                 var reportedVersion = await GetReportedVersionAsync(report);
                 var currentTarget = await GetCurrentTargetAsync(report.TargetType, report.TargetId);
+                var currentTargetState = await GetCurrentTargetStateAsync(report.TargetType, report.TargetId);
                 var summaries = await GetProfileSummariesAsync(
                     [report.ReporterId, report.TargetOwnerId, report.ResolvedById, report.AssignedModeratorId]);
 
@@ -364,12 +401,14 @@ namespace platform_core_service.Business.Services
                     TargetOwner = summaries.GetValueOrDefault(report.TargetOwnerId),
                     TargetSnapshotJson = report.TargetSnapshotJson,
                     TargetSnapshot = DeserializeSnapshot(report.TargetSnapshotJson),
+                    CurrentTargetState = currentTargetState,
                     ModeratorNote = report.ModeratorNote,
                     Resolution = report.Resolution,
                     ResolutionNote = report.ResolutionNote,
                     ResolvedById = report.ResolvedById,
                     ResolvedBy = report.ResolvedById == null ? null : summaries.GetValueOrDefault(report.ResolvedById),
-                    ResolvedAt = report.ResolvedAt
+                    ResolvedAt = report.ResolvedAt,
+                    TargetAction = report.TargetAction
                 };
             }
             catch (Exception ex)
@@ -413,7 +452,8 @@ namespace platform_core_service.Business.Services
                     Resolution = report.Resolution,
                     ResolvedAt = report.ResolvedAt,
                     DateCreated = report.DateCreated,
-                    IsStaffSensitive = staffIds.Contains(report.TargetOwnerId)
+                    IsStaffSensitive = staffIds.Contains(report.TargetOwnerId),
+                    TargetAction = report.TargetAction
                 };
             }).ToList();
         }
@@ -503,15 +543,27 @@ namespace platform_core_service.Business.Services
                 return "Report is already closed.";
             }
 
+            // Self-moderation guard: cannot act on reports about your own content
+            if (report.TargetOwnerId == _userContext.ProfileId)
+            {
+                return "You cannot moderate a report about your own content.";
+            }
+
+            // Self-moderation guard: cannot act on reports you submitted
+            if (report.ReporterId == _userContext.ProfileId)
+            {
+                return "You cannot moderate a report you submitted.";
+            }
+
             if (report.Status == ReportStatus.Escalated && !_userContext.IsAdmin && !allowEscalateStaffSensitive)
             {
                 return "Only admins can modify escalated reports.";
             }
 
             var isStaffSensitive = await IsStaffProfileAsync(report.TargetOwnerId);
-            if (isStaffSensitive && !_userContext.IsAdmin && !allowEscalateStaffSensitive)
+            if (isStaffSensitive && !_userContext.IsAdmin)
             {
-                return "Only admins can modify staff-sensitive reports.";
+                return "Report not found.";
             }
 
             return null;
@@ -577,7 +629,8 @@ namespace platform_core_service.Business.Services
                 resolution = report.Resolution?.ToString(),
                 report.ResolutionNote,
                 report.ResolvedById,
-                report.ResolvedAt
+                report.ResolvedAt,
+                targetAction = report.TargetAction?.ToString()
             };
         }
 
@@ -683,6 +736,136 @@ namespace platform_core_service.Business.Services
                 .FirstOrDefaultAsync(a => a.Id == targetId);
 
             return answer == null ? null : _mapper.Map<SelectAnswerDTO>(answer);
+        }
+
+        private async Task<AdminReportTargetStateDTO> GetCurrentTargetStateAsync(ReportTargetType targetType, string targetId)
+        {
+            return targetType switch
+            {
+                ReportTargetType.Profile => await GetCurrentProfileTargetStateAsync(targetId),
+                ReportTargetType.Post => await GetCurrentPostTargetStateAsync(targetId),
+                ReportTargetType.Question => await GetCurrentPostTargetStateAsync(targetId),
+                ReportTargetType.Comment => await GetCurrentCommentTargetStateAsync(targetId),
+                ReportTargetType.Answer => await GetCurrentAnswerTargetStateAsync(targetId),
+                _ => new AdminReportTargetStateDTO { Unavailable = true }
+            };
+        }
+
+        private async Task<AdminReportTargetStateDTO> GetCurrentProfileTargetStateAsync(string targetId)
+        {
+            var profile = await _context.Profiles
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == targetId);
+
+            return profile == null
+                ? new AdminReportTargetStateDTO { Unavailable = true }
+                : new AdminReportTargetStateDTO
+                {
+                    Deleted = profile.Deleted,
+                    DeletedAt = profile.DateDeleted,
+                    Private = profile.IsPrivate,
+                    Suspended = profile.IsSuspended,
+                    SuspendedUntil = profile.SuspendedUntil
+                };
+        }
+
+        private async Task<AdminReportTargetStateDTO> GetCurrentPostTargetStateAsync(string targetId)
+        {
+            var post = await _context.Posts
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == targetId);
+
+            return post == null
+                ? new AdminReportTargetStateDTO { Unavailable = true }
+                : BuildPostTargetState(post);
+        }
+
+        private async Task<AdminReportTargetStateDTO> GetCurrentAnswerTargetStateAsync(string targetId)
+        {
+            var answer = await _context.Answers
+                .IgnoreQueryFilters()
+                .Include(a => a.QAPost)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Id == targetId);
+
+            if (answer == null)
+            {
+                return new AdminReportTargetStateDTO { Unavailable = true };
+            }
+
+            var state = new AdminReportTargetStateDTO
+            {
+                Deleted = answer.Deleted,
+                DeletedAt = answer.DateDeleted
+            };
+
+            ApplyParentPostState(state, answer.QAPost);
+            return state;
+        }
+
+        private async Task<AdminReportTargetStateDTO> GetCurrentCommentTargetStateAsync(string targetId)
+        {
+            var comment = await _context.Comments
+                .IgnoreQueryFilters()
+                .Include(c => c.Post)
+                .Include(c => c.Answer)
+                    .ThenInclude(a => a.QAPost)
+                .Include(c => c.ReplyToComment)
+                    .ThenInclude(c => c!.Post)
+                .Include(c => c.ReplyToComment)
+                    .ThenInclude(c => c!.Answer)
+                        .ThenInclude(a => a!.QAPost)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == targetId);
+
+            if (comment == null)
+            {
+                return new AdminReportTargetStateDTO { Unavailable = true };
+            }
+
+            var state = new AdminReportTargetStateDTO
+            {
+                Deleted = comment.Deleted,
+                DeletedAt = comment.DateDeleted
+            };
+
+            var parentPost = comment.Post ?? comment.Answer?.QAPost ?? comment.ReplyToComment?.Post ?? comment.ReplyToComment?.Answer?.QAPost;
+            ApplyParentPostState(state, parentPost);
+
+            if (comment.Answer != null)
+            {
+                state.ParentDeleted = state.ParentDeleted || comment.Answer.Deleted;
+                state.ParentUnavailable = state.ParentUnavailable || comment.Answer.Deleted;
+            }
+
+            return state;
+        }
+
+        private static AdminReportTargetStateDTO BuildPostTargetState(Post post)
+        {
+            return new AdminReportTargetStateDTO
+            {
+                Deleted = post.Deleted,
+                DeletedAt = post.DateDeleted,
+                Hidden = post.ModerationStatus != ModerationStatus.Approved,
+                ModerationStatus = post.ModerationStatus.ToString()
+            };
+        }
+
+        private static void ApplyParentPostState(AdminReportTargetStateDTO state, Post? parentPost)
+        {
+            if (parentPost == null)
+            {
+                state.ParentUnavailable = true;
+                return;
+            }
+
+            state.ParentDeleted = parentPost.Deleted;
+            state.ParentHidden = parentPost.ModerationStatus != ModerationStatus.Approved;
+            state.ParentModerationStatus = parentPost.ModerationStatus.ToString();
+            state.ParentUnavailable = state.ParentDeleted || state.ParentHidden;
         }
 
         private static ReportTargetSnapshotDTO? DeserializeSnapshot(string? snapshotJson)

@@ -3,8 +3,8 @@ import { CreateBookmarkedItemDTO } from "@/types/bookmarked-item/create-bookmark
 import { useMutation, useQueryClient, InfiniteData } from "@tanstack/react-query"
 import { bookmarkedItemQueryKeys } from "./use-bookmarked-item-query-keys";
 import { postQueryKeys } from "@/hooks/post-hooks/use-post-query-keys";
-import { qaPostQueryKeys } from "../qa-post-hooks/use-qa-post-query-key";
-import { searchQueryKeys } from "../search-hooks/use-global-search";
+import { qaPostQueryKeys } from "@/hooks/qa-post-hooks/use-qa-post-query-key";
+import { searchQueryKeys } from "@/hooks/search-hooks/use-global-search";
 import { GlobalSearchResult } from "@/types/search/global-search-result";
 import { SelectPostDTO } from "@/types/post/select-post-dto";
 import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
@@ -116,7 +116,6 @@ export const useCreateBookmarkedItem = () => {
             context?.previousPostDetails.forEach(([queryKey, oldData]) => queryClient.setQueryData(queryKey, oldData));
             context?.previousQaPostDetails.forEach(([queryKey, oldData]) => queryClient.setQueryData(queryKey, oldData));
             context?.previousSearchQueries.forEach(([queryKey, oldData]) => queryClient.setQueryData(queryKey, oldData));
-            toast.error("Failed to save item.");
         },
 
         onSuccess: (data, payload, context) => {

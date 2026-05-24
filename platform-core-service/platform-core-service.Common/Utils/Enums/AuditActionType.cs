@@ -16,6 +16,8 @@ namespace platform_core_service.Common.Utils.Enums
         ReportAssigned = 30,
         ReportResolved = 31,
         ReportDismissed = 32,
-        ReportEscalated = 33
+        ReportEscalated = 33,
+
+        ReportTargetActionExecuted = 34
     }
 }

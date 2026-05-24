@@ -2,9 +2,9 @@ import { commentService } from "@/services/comment-service";
 import { CreateCommentDTO } from "@/types/comment/create-comment-dto";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { commentQueryKeys } from "./use-comment-query-keys";
-import { answerQueryKeys } from "../answer-hooks/use-answer-query-keys";
-import { qaPostQueryKeys } from "../qa-post-hooks/use-qa-post-query-key";
-import { postQueryKeys } from "../post-hooks/use-post-query-keys";
+import { answerQueryKeys } from "@/hooks/answer-hooks/use-answer-query-keys";
+import { qaPostQueryKeys } from "@/hooks/qa-post-hooks/use-qa-post-query-key";
+import { postQueryKeys } from "@/hooks/post-hooks/use-post-query-keys";
 
 export const useCreateComment = () => {
     const queryClient = useQueryClient();

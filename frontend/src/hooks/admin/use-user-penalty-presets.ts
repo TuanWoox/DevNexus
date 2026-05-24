@@ -16,9 +16,6 @@ export const useTimeout7Days = () => {
       invalidateUsers(queryClient);
       toast.success('7-day timeout applied');
     },
-    onError: () => {
-      toast.error('Failed to apply 7-day timeout');
-    },
   });
 };
 
@@ -30,9 +27,6 @@ export const useTimeout30Days = () => {
       invalidateUsers(queryClient);
       toast.success('30-day timeout applied');
     },
-    onError: () => {
-      toast.error('Failed to apply 30-day timeout');
-    },
   });
 };
 
@@ -43,9 +37,6 @@ export const useBanUser = () => {
     onSuccess: () => {
       invalidateUsers(queryClient);
       toast.success('User permanently banned');
-    },
-    onError: () => {
-      toast.error('Failed to ban user');
     },
   });
 };

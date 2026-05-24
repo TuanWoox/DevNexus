@@ -37,7 +37,7 @@ namespace platform_core_service.Business.Services
         protected override string MediaFolderName => "community-media";
         protected override string CacheKeyPrefix => "community-media-";
         protected override string ApiBaseUrlSettingKey => "ApiSettings:CommunityMediaBaseUrl";
-        protected override string DefaultApiBaseUrl => "https://localhost:7184/api/CommunityMedia";
+        protected override string DefaultApiBaseUrl => "http://localhost:5105/api/CommunityMedia";
         protected override IFormFile GetFile(CreateCommunityMediaDTO dto) => dto.File;
         protected override string GetOwnerId(CreateCommunityMediaDTO dto) => dto.CommunityId;
         protected override string GetOwnerId(UpdatePrimaryCommunityMediaDTO dto) => dto.CommunityId;

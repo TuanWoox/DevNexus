@@ -12,8 +12,5 @@ export const useCreateTag = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.tags.all });
       toast.success('Tag created');
     },
-    onError: () => {
-      toast.error('Failed to create tag');
-    },
   });
 };

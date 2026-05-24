@@ -1,5 +1,6 @@
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Services;
@@ -116,6 +117,13 @@ namespace platform_core_service.Business.Services
 
                 if (post.ModerationStatus == ModerationStatus.Approved && post is QAPost)
                 {
+                    if (await _context.Answers.HasExistingAiFirstResponderAnswerAsync(_context, post.Id))
+                    {
+                        DevNexusLogger.Instance.Debug($"[Moderation] Skipped AI First Responder for QA Post {post.Id} because an AI answer already exists");
+                        result.Result = true;
+                        return result;
+                    }
+
                     // Load Author and Tags now that we know this is a QA post
                     await _context.Entry(post).Reference(p => p.Author).LoadAsync();
                     await _context.Entry(post).Collection(p => p.PostTags).Query()

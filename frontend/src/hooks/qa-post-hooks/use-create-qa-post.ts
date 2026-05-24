@@ -3,7 +3,7 @@ import { CreateQAPostDTO } from "@/types/qa-post/create-qa-post-dto";
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { qaPostQueryKeys } from "./use-qa-post-query-key";
 import { toast } from "sonner";
-import { postQueryKeys } from "../post-hooks";
+import { postQueryKeys } from "@/hooks/post-hooks";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
