@@ -39,7 +39,7 @@ namespace platform_core_service.Business.Services
         protected override string MediaFolderName => "profile-media";
         protected override string CacheKeyPrefix => "profile-media-";
         protected override string ApiBaseUrlSettingKey => "ApiSettings:ProfileMediaBaseUrl";
-        protected override string DefaultApiBaseUrl => "https://localhost:7184/api/ProfileMedia";
+        protected override string DefaultApiBaseUrl => "http://localhost:5105/api/ProfileMedia";
         protected override IFormFile GetFile(CreateProfileMediaDTO dto) => dto.File;
         protected override string GetOwnerId(CreateProfileMediaDTO dto) => _userContext.ProfileId;
         protected override string GetOwnerId(UpdatePrimaryProfileMediaDTO dto) => _userContext.ProfileId;

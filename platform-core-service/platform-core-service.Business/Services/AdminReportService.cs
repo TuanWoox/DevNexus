@@ -161,7 +161,6 @@ namespace platform_core_service.Business.Services
                 await _context.SaveChangesAsync();
 
                 result = await GetByIdAsync(id);
-                result.Message = "Report assigned successfully.";
             }
             catch (Exception ex)
             {
@@ -175,6 +174,7 @@ namespace platform_core_service.Business.Services
         public async Task<ReturnResult<AdminReportDetailDTO>> ResolveAsync(string id, ResolveReportDTO dto)
         {
             var result = new ReturnResult<AdminReportDetailDTO>();
+            result.Result = null;
             try
             {
                 var strategy = _context.Database.CreateExecutionStrategy();
@@ -241,7 +241,6 @@ namespace platform_core_service.Business.Services
                         await transaction.CommitAsync();
 
                         result = await GetByIdAsync(id);
-                        result.Message = "Report resolved successfully.";
                     }
                     catch
                     {
@@ -297,7 +296,6 @@ namespace platform_core_service.Business.Services
                 await _context.SaveChangesAsync();
 
                 result = await GetByIdAsync(id);
-                result.Message = "Report dismissed successfully.";
             }
             catch (Exception ex)
             {
@@ -350,12 +348,10 @@ namespace platform_core_service.Business.Services
 
                 if (isStaffSensitive && !_userContext.IsAdmin)
                 {
-                    result.Message = "Report escalated successfully.";
                     return result;
                 }
 
                 result = await GetByIdAsync(id);
-                result.Message = "Report escalated successfully.";
             }
             catch (Exception ex)
             {
