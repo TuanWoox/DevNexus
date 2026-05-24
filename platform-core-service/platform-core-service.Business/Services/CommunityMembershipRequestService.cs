@@ -405,10 +405,10 @@ namespace platform_core_service.Business.Services
             var notificationEvent = new NotiicationCreatedEntityDTO
             {
                 EventType = NotificationEventType.COMMUNITY_ROLE_CHANGE,
-                ActorType = ActorType.Profile,
-                ActorId = actorId,
-                ActorName = actor.Name,
-                ActorAvatarUrl = actor.AvatarUrl,
+                ActorType = ActorType.Community,
+                ActorId = communityId,
+                ActorName = community.Name,
+                ActorAvatarUrl = community.CommunityCoverPhotoUrl,
                 RecipientId = requesterId,
                 EntityType = NotificationEntityType.COMMUNITY,
                 EntityId = community.Id,
@@ -416,7 +416,7 @@ namespace platform_core_service.Business.Services
                 EntityPreview = null,
                 ActionUrl = $"/communities/{community.Id}",
                 Timestamp = DateTime.UtcNow,
-                Message = $"Welcome to {community.Name}. Now you can post, connect with other members and more."
+                Message = $"Welcome to \"{community.Name}\". Now you can post, connect with other members and more."
             };
 
             _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
