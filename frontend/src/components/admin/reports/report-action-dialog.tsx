@@ -11,7 +11,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -51,6 +50,15 @@ const closeResolutions = [
   ReportResolution.Duplicate,
   ReportResolution.InsufficientEvidence,
   ReportResolution.HandledElsewhere,
+];
+
+const suspensionPresets = [
+  { value: 1, label: "1 day - Minor warning" },
+  { value: 3, label: "3 days - Spam/disruption" },
+  { value: 7, label: "7 days - Policy violation" },
+  { value: 30, label: "30 days - Major violation" },
+  { value: 90, label: "90 days - Repeat offender" },
+  { value: 365, label: "1 year - Extreme violation" },
 ];
 
 function getAvailableTargetActions(targetType?: ReportTargetType): ReportTargetAction[] {
@@ -199,16 +207,22 @@ export function ReportActionDialog({
           {showSuspendDays && (
             <div className="space-y-2">
               <Label htmlFor="report-suspend-days" className="text-heading font-semibold text-xs uppercase tracking-wider">Suspension duration (days)</Label>
-              <Input
-                id="report-suspend-days"
-                type="number"
-                min={1}
-                max={365}
-                value={suspendDays}
-                onChange={(event) => setSuspendDays(Math.max(1, Math.min(365, Number(event.target.value) || 1)))}
+              <Select
+                value={String(suspendDays)}
+                onValueChange={(value) => setSuspendDays(Number(value))}
                 disabled={isPending}
-                className="h-10 border-default bg-background text-body"
-              />
+              >
+                <SelectTrigger id="report-suspend-days" className="h-10 border-default bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="border-default bg-card">
+                  {suspensionPresets.map((preset) => (
+                    <SelectItem key={preset.value} value={String(preset.value)} className="cursor-pointer">
+                      {preset.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-2xs text-muted-foreground">User will be suspended for {suspendDays} day{suspendDays !== 1 ? "s" : ""} from now.</p>
             </div>
           )}

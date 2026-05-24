@@ -17,6 +17,20 @@ export interface AdminReportDetailDTO {
   report: AdminReportDTO;
   reportedVersion?: unknown;
   currentTarget?: unknown;
+  currentTargetState?: {
+    unavailable: boolean;
+    deleted: boolean;
+    deletedAt?: string | null;
+    hidden: boolean;
+    moderationStatus?: string | null;
+    private: boolean;
+    suspended: boolean;
+    suspendedUntil?: string | null;
+    parentUnavailable: boolean;
+    parentDeleted: boolean;
+    parentHidden: boolean;
+    parentModerationStatus?: string | null;
+  } | null;
   reporter?: ProfileSummaryDTO | null;
   targetOwner?: ProfileSummaryDTO | null;
   targetSnapshotJson?: string | null;
@@ -29,4 +43,3 @@ export interface AdminReportDetailDTO {
   resolvedAt?: string | null;
   targetAction?: ReportTargetAction | null;
 }
-
