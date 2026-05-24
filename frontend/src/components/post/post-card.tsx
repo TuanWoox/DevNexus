@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { normalizeModerationStatus } from "@/types/post/moderation-status";
 import { useMuteGuard } from "@/hooks/community-mute-hooks/use-mute-guard";
 import { useGetCommunityById } from "@/hooks/community-hooks/use-get-community-by-id";
+import { getPostDetailHref, getQAPostDetailHref } from "@/utils/content-routes";
 
 interface PostCardProps {
     post: SelectPostDTO | SelectQAPostDTO;
@@ -42,7 +43,7 @@ export function PostCard({ post, canModerateCommunity }: PostCardProps) {
     const hasMounted = useHasMounted();
     const { user } = useSelector((state: RootState) => state.auth);
     const isQaPost = 'answerCount' in post;
-    const basePath = isQaPost ? '/questions' : '/post';
+    const detailHref = isQaPost ? getQAPostDetailHref(post) : getPostDetailHref(post);
     const moderationStatus = normalizeModerationStatus(post.moderationStatus);
     const isApproved = moderationStatus === "Approved";
 
@@ -188,7 +189,7 @@ export function PostCard({ post, canModerateCommunity }: PostCardProps) {
                 "relative z-10 rounded-2xl border border-border/60 bg-background/45 p-3 transition-all sm:p-4",
                 !isApproved && "opacity-70 grayscale-[20%]"
             )}>
-                <Link href={`${basePath}/${post.id}`} className="block after:absolute after:inset-0">
+                <Link href={detailHref} className="block after:absolute after:inset-0">
                     <h2 className="line-clamp-2 text-lg font-bold leading-tight text-heading transition-colors group-hover:text-primary sm:text-xl">
                         {post.title}
                     </h2>
@@ -250,7 +251,7 @@ export function PostCard({ post, canModerateCommunity }: PostCardProps) {
                     {/* Comments/Answers — Link instead of button for right-click support */}
                     {isApproved ? (
                         <Link
-                            href={`${basePath}/${post.id}`}
+                            href={detailHref}
                             className="relative z-10 flex items-center gap-2 rounded-full border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-heading sm:px-3 sm:py-2"
                         >
                             <MessageSquare className="w-5 h-5" />

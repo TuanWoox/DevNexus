@@ -25,6 +25,7 @@ import { ContentType } from '@/types/content-media/content-type'
 import { useUploadContentMedia } from '@/hooks/media/useUploadContentMedia'
 import { useMuteGuard } from '@/hooks/community-mute-hooks/use-mute-guard'
 import { AlertTriangle } from 'lucide-react'
+import { getPostDetailHref, getQAPostDetailHref } from '@/utils/content-routes'
 
 export type PostFormData = {
     title: string;
@@ -171,16 +172,16 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
 
         if (isQAPost) {
             updateQAPost(payload as UpdateQAPostDTO, {
-                onSuccess: () => {
+                onSuccess: (res) => {
                     editorRef.current?.cleanup();
-                    router.push(`/questions/${initialData!.id}`);
+                    router.push(getQAPostDetailHref(res));
                 }
             });
         } else {
             updatePost(payload as UpdatePostDTO, {
-                onSuccess: () => {
+                onSuccess: (res) => {
                     editorRef.current?.cleanup();
-                    router.push(`/post/${initialData!.id}`);
+                    router.push(getPostDetailHref(res));
                 }
             });
         }
@@ -203,7 +204,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                     editorRef.current?.cleanup();
                     reset();
                     setTagInput('');
-                    if (res?.id) router.push(`/questions/${res.id}`);
+                    if (res?.id) router.push(getQAPostDetailHref(res));
                 }
             });
         } else {
@@ -212,7 +213,7 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                     editorRef.current?.cleanup();
                     reset();
                     setTagInput('');
-                    if (res?.id) router.push(`/post/${res.id}`);
+                    if (res?.id) router.push(getPostDetailHref(res));
                 }
             });
         }

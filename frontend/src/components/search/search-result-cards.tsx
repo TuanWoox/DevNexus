@@ -14,6 +14,7 @@ import {
 } from "@/types/search/global-search-result";
 import { SelectPostAuthorDTO, SelectPostDTO } from "@/types/post/select-post-dto";
 import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
+import { getPostDetailHref, getQAPostDetailHref } from "@/utils/content-routes";
 
 function toHoverAuthor(author: SelectPostAuthorDTO) {
   return {
@@ -39,7 +40,7 @@ function profileToHoverAuthor(profile: SearchProfileResult) {
 }
 
 export function SearchPostCard({ post, question = false }: { post: SelectPostDTO | SelectQAPostDTO; question?: boolean }) {
-  const href = `${question ? "/questions" : "/post"}/${post.id}`;
+  const href = question ? getQAPostDetailHref(post) : getPostDetailHref(post);
   const Icon = question ? HelpCircle : FileText;
   const answerOrCommentCount = question ? (post as SelectQAPostDTO).answerCount : post.commentCount;
   const formattedDate = post.dateCreated
