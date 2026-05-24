@@ -35,6 +35,25 @@ namespace platform_core_service.Controllers
         }
 
         /// <summary>
+        /// Check if a target profile is banned from the specified community.
+        /// </summary>
+        [HttpGet("{communityId}/bans/profiles/{targetProfileId}")]
+        public async Task<IActionResult> GetProfileBanStatus(string communityId, string targetProfileId)
+        {
+            var returnResult = new ReturnResult<SelectCommunityBanDTO>();
+            try
+            {
+                returnResult = await _banService.GetProfileBanStatusAsync(communityId, targetProfileId);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
+
+        /// <summary>
         /// Unban a member by ban record ID. Owner or moderator only.
         /// </summary>
         [HttpDelete("bans/{banId}")]
@@ -44,6 +63,25 @@ namespace platform_core_service.Controllers
             try
             {
                 returnResult = await _banService.UnbanMemberAsync(banId);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
+
+        /// <summary>
+        /// Unban a target profile from a community. Owner or moderator only.
+        /// </summary>
+        [HttpDelete("{communityId}/bans/profiles/{targetProfileId}")]
+        public async Task<IActionResult> UnbanProfile(string communityId, string targetProfileId)
+        {
+            var returnResult = new ReturnResult<bool>();
+            try
+            {
+                returnResult = await _banService.UnbanProfileAsync(communityId, targetProfileId);
             }
             catch (Exception ex)
             {

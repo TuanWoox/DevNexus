@@ -3,11 +3,19 @@
 import { useState } from "react";
 import { SelectCommunityDTO } from "@/types/community/select-community-dto";
 import Image from "next/image";
-import { Lock, Users, CalendarDays, ImageIcon, Settings, Plus, Sparkles } from "lucide-react";
+import { ClipboardList, Clock3, Lock, Users, CalendarDays, ImageIcon, Settings, Plus, Sparkles, ShieldAlert, ChevronDown, LogOut, Loader2 } from "lucide-react";
 import { CommunityActionButton } from "./community-action-button";
 import { CommunityMediaUploadModal } from "./community-media-upload-modal";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useLeaveCommunity } from "@/hooks/community-members-hooks/use-leave-community";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface CommunityHeaderProps {
     community: SelectCommunityDTO;
@@ -16,6 +24,7 @@ interface CommunityHeaderProps {
 
 export function CommunityHeader({ community, activeTab }: CommunityHeaderProps) {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const { mutate: leaveCommunity, isPending: isLeaving } = useLeaveCommunity();
 
     const role = community?.currentUserRole;
     const hasManageAccess = role === "OWNER" || role === "MODERATOR";
@@ -88,25 +97,88 @@ export function CommunityHeader({ community, activeTab }: CommunityHeaderProps) 
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="w-full md:w-auto shrink-0 flex flex-col md:flex-col gap-3">
-                        {/* Create Post Button - Pre-filled with community info */}
-                        {(role === "OWNER" || role === "MODERATOR" || role === "MEMBER") && (
-                            <Button asChild className="btn-ai w-full text-white" size="lg">
-                                <Link href={`/post/create?communityId=${community.id}&communityName=${encodeURIComponent(community.name)}&communityIconUrl=${encodeURIComponent(community.communityCoverPhotoUrl || '')}${activeTab === 'qa' ? '&type=qa' : ''}`}>
-                                    {activeTab === 'qa' ? <Plus className="w-5 h-5 mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
-                                    {activeTab === 'qa' ? 'Ask Question' : 'Create Post'}
-                                </Link>
-                            </Button>
+                    <div className="w-full md:w-auto shrink-0 flex flex-row flex-wrap items-center gap-3 md:justify-end">
+                        {/* Guest / Pending / Banned Join Actions */}
+                        {(role !== "OWNER" && role !== "MODERATOR" && role !== "MEMBER") && (
+                            <CommunityActionButton communityId={community.id} role={role} />
                         )}
 
-                        <CommunityActionButton communityId={community.id} role={role} />
-                        {hasManageAccess && (
-                            <Button asChild variant="outline" className="w-full" size="lg">
-                                <Link href={`/communities/${community.id}/settings`}>
-                                    <Settings className="w-4 h-4 mr-2" />
-                                    Settings
-                                </Link>
-                            </Button>
+                        {/* Member / Moderator / Owner Consolidated Console */}
+                        {(role === "OWNER" || role === "MODERATOR" || role === "MEMBER") && (
+                            <>
+                                {/* Primary Action: Create Post */}
+                                <Button asChild className="btn-ai text-white cursor-pointer" size="lg">
+                                    <Link href={`/post/create?communityId=${community.id}&communityName=${encodeURIComponent(community.name)}&communityIconUrl=${encodeURIComponent(community.communityCoverPhotoUrl || '')}${activeTab === 'qa' ? '&type=qa' : ''}`}>
+                                        {activeTab === 'qa' ? <Plus className="w-5 h-5 mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                                        {activeTab === 'qa' ? 'Ask Question' : 'Create Post'}
+                                    </Link>
+                                </Button>
+
+                                {/* Consolidated Action Dropdown */}
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" size="lg" className="gap-2 cursor-pointer">
+                                            <Settings className="w-4 h-4" />
+                                            <span>{hasManageAccess ? "Manage" : "Options"}</span>
+                                            <ChevronDown className="w-4 h-4 opacity-50" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-52">
+                                        {/* Moderator / Owner Actions */}
+                                        {hasManageAccess && (
+                                            <>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/communities/${community.id}/moderate-pending`} className="w-full cursor-pointer flex items-center">
+                                                        <ClipboardList className="mr-2 h-4 w-4" />
+                                                        Pending Queue
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/communities/${community.id}/settings`} className="w-full cursor-pointer flex items-center">
+                                                        <Settings className="mr-2 h-4 w-4" />
+                                                        Settings
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                            </>
+                                        )}
+
+                                        {/* User Utilities */}
+                                        <DropdownMenuItem asChild>
+                                            <Link href={`/communities/${community.id}/pending-posts`} className="w-full cursor-pointer flex items-center">
+                                                <Clock3 className="mr-2 h-4 w-4" />
+                                                My Pending Posts
+                                            </Link>
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuItem asChild>
+                                            <Link href={`/communities/${community.id}/reports`} className="w-full cursor-pointer flex items-center text-amber-500 focus:text-amber-600">
+                                                <ShieldAlert className="mr-2 h-4 w-4" />
+                                                Reports
+                                            </Link>
+                                        </DropdownMenuItem>
+
+                                        {/* Leave Community Action (Not for Owner) */}
+                                        {role !== "OWNER" && (
+                                            <>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem 
+                                                    className="text-destructive focus:text-destructive focus:bg-destructive/10 dark:focus:bg-destructive/20 cursor-pointer flex items-center"
+                                                    disabled={isLeaving}
+                                                    onClick={() => leaveCommunity(community.id)}
+                                                >
+                                                    {isLeaving ? (
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <LogOut className="mr-2 h-4 w-4" />
+                                                    )}
+                                                    Leave Community
+                                                </DropdownMenuItem>
+                                            </>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </>
                         )}
                     </div>
                 </div>

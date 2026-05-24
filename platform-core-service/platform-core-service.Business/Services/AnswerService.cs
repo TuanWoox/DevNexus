@@ -79,6 +79,27 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var parentPost = await _dbContext.Posts
+                    .OfType<QAPost>()
+                    .Where(p => p.Id == answerDTO.QAPostId)
+                    .Select(p => new { p.Id, p.CommunityId })
+                    .FirstOrDefaultAsync();
+                if (parentPost == null)
+                {
+                    result.Message = ResponseMessage.NO_PERMISSION_TO_ANSWER;
+                    return result;
+                }
+
+                if (!string.IsNullOrEmpty(parentPost.CommunityId))
+                {
+                    var muteCheck = await _socialGuardService.CheckIsMutedInCommunityAsync(profileId, parentPost.CommunityId);
+                    if (muteCheck.Message != null)
+                    {
+                        result.Message = muteCheck.Message;
+                        return result;
+                    }
+                }
+
                 // Step 4: Map and set server-side fields
                 var answer = _mapper.Map<Answer>(answerDTO);
                 answer.Id = Guid.NewGuid().ToString();
@@ -276,16 +297,34 @@ namespace platform_core_service.Business.Services
                 }
 
                 // Step 2: Load entity
-                var answer = await _dbContext.Answers.FirstOrDefaultAsync(a => a.Id == answerId);
+                var answer = await _dbContext.Answers
+                    .Include(a => a.QAPost)
+                    .FirstOrDefaultAsync(a => a.Id == answerId);
                 if (answer == null)
                 {
                     result.Message = $"Answer {answerId} not found";
                     return result;
                 }
 
-                // Step 3: Ownership check
+                // Step 3: Check ownership or community moderation permissions
                 var profileId = _userContext.ProfileId;
-                if (answer.AuthorId != profileId)
+                if (string.IsNullOrEmpty(profileId))
+                {
+                    result.Message = "User profile not found";
+                    return result;
+                }
+
+                var communityId = answer.QAPost?.CommunityId;
+                if (!string.IsNullOrEmpty(communityId))
+                {
+                    var isModerator = await _socialGuardService.CheckIsCommunityAdminOrModeratorAsync(profileId, communityId);
+                    if (answer.AuthorId != profileId && !isModerator.Result)
+                    {
+                        result.Message = "You do not have permission to delete this answer";
+                        return result;
+                    }
+                }
+                else if (answer.AuthorId != profileId)
                 {
                     result.Message = "You do not have permission to delete this answer";
                     return result;

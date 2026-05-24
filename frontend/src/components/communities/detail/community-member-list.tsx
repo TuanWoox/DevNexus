@@ -30,7 +30,7 @@ export function CommunityMemberList({ communityId, role }: CommunityMemberListPr
 
     const { data: pagedData, isLoading } = useGetCommunityMembers(communityId, payload);
 
-    const members = pagedData?.data ?? [];
+    const members = (pagedData?.data ?? []).filter(member => !member.hasBlockedRelation && !member.isProfileRestricted);
     const totalPages = Math.ceil((pagedData?.page?.totalElements ?? 0) / PAGE_SIZE);
 
     if (isLoading) {

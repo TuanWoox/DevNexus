@@ -12,6 +12,7 @@ export const useBanCommunityMember = () => {
         mutationFn: (payload: CreateCommunityBanDTO) => communityBansService.banMember(payload),
         onSuccess: (data) => {
             if (data) {
+                queryClient.invalidateQueries({ queryKey: communityBansQueryKeys.all });
                 queryClient.invalidateQueries({ queryKey: communityBansQueryKeys.lists() });
                 queryClient.invalidateQueries({ queryKey: communityMembersQueryKeys.lists() });
                 toast.success("User has been banned successfully.");

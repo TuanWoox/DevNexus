@@ -7,9 +7,11 @@ import { GeneralSettings } from "@/components/communities/settings/general-setti
 import { RequestsManagement } from "@/components/communities/settings/requests-management";
 import { ModeratorsManagement } from "@/components/communities/settings/moderators-management";
 import { BansManagement } from "@/components/communities/settings/bans-management";
+import { MutesManagement } from "@/components/communities/settings/mutes-management";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Settings, Users, Settings2, ShieldCheck, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Settings, Users, Settings2, ShieldCheck, ShieldAlert, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useEffect } from "react";
 
@@ -27,7 +29,7 @@ const CommunitySettingsPage = () => {
     const isModerator = role === "MODERATOR";
     const hasAccess = isOwner || isModerator;
 
-    const validTabs = isOwner ? ["general", "requests", "moderators", "bans"] : ["requests", "bans"];
+    const validTabs = isOwner ? ["general", "requests", "moderators", "bans", "mutes"] : ["requests", "bans", "mutes"];
     const activeTab = validTabs.includes(tabParam || "") 
         ? tabParam as string 
         : (isOwner ? "general" : "requests");
@@ -75,52 +77,59 @@ const CommunitySettingsPage = () => {
     if (isError || !community || !hasAccess) return null;
 
     return (
-        <div className="min-h-screen bg-page pb-12">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <div className="min-h-dvh bg-page pb-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in-up">
                 {/* Header Section */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 border-b border-border/30 pb-6">
                     <Button
                         variant="outline"
                         size="icon"
-                        className="rounded-full shadow-sm hover:bg-muted"
+                        className="rounded-full shadow-sm hover:bg-muted active:scale-95 transition-transform cursor-pointer"
                         onClick={() => router.push(`/communities/${communityId}`)}
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 tracking-tight">
+                        <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2.5 tracking-tight">
                             <Settings className="h-7 w-7 text-primary" />
                             Community Settings
                         </h1>
                         <p className="text-sm md:text-base text-muted-foreground mt-1 flex items-center gap-2">
-                            Manage configurations for <span className="font-medium text-foreground bg-muted px-2 py-0.5 rounded-md text-sm">c/{community.slug || community.id}</span>
+                            Manage configurations for <span className="font-mono font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-md text-sm border border-primary/10">c/{community.slug || community.id}</span>
                         </p>
                     </div>
                 </div>
 
-                {/* Main Content Layout */}
-                <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col gap-8 fade-in">
-
-                    {/* Tab List — owner sees all 4, moderator only sees Requests + Bans */}
-                    <div className="border-b">
-                        <TabsList className="flex flex-row justify-start h-auto bg-transparent p-0 w-full gap-2 overflow-x-auto pb-4 shrink-0 no-scrollbar">
-
+                {/* Master Settings Card Container */}
+                <Tabs 
+                    value={activeTab} 
+                    onValueChange={handleTabChange} 
+                    className="bg-card border-2 border-border rounded-2xl shadow-2xl flex flex-col lg:flex-row min-h-[calc(100dvh-240px)] transition-all duration-300 w-full lg:min-w-[1152px] lg:max-w-6xl mx-auto"
+                >
+                    {/* Left Column: Navigation Sidebar */}
+                    <div className="hidden lg:flex w-[280px] shrink-0 border-r border-border bg-muted/40 p-7 flex-col gap-2">
+                        <div className="pb-4 mb-2 border-b border-border/40">
+                            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Settings Menu</h3>
+                            <p className="text-[11px] text-muted-foreground/80 mt-0.5">Configure your community space</p>
+                        </div>
+                        
+                        <TabsList className="flex flex-col justify-start h-auto bg-transparent p-0 w-full gap-1.5 shrink-0">
                             {/* Owner-only tabs */}
                             {isOwner && (
                                 <TabsTrigger
                                     value="general"
-                                    className="w-max shrink-0 flex items-center gap-3 justify-start px-4 py-2.5 text-left rounded-lg hover:bg-primary/10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-none transition-colors dark:data-[state=active]:text-primary whitespace-nowrap"
+                                    className="w-full shrink-0 flex items-center gap-3 justify-start px-4 py-3 text-left rounded-xl hover:bg-primary/5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-none transition-all duration-200 ease-out border border-transparent data-[state=active]:border-primary/10 text-sm whitespace-nowrap cursor-pointer active:scale-[0.98]"
                                 >
-                                    <Settings2 className="h-4 w-4" />
+                                    <Settings2 className="h-4 w-4 shrink-0" />
                                     General Settings
                                 </TabsTrigger>
                             )}
 
                             <TabsTrigger
                                 value="requests"
-                                className="w-max shrink-0 flex items-center gap-3 justify-start px-4 py-2.5 text-left rounded-lg hover:bg-primary/10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-none transition-colors dark:data-[state=active]:text-primary whitespace-nowrap"
+                                className="w-full shrink-0 flex items-center gap-3 justify-start px-4 py-3 text-left rounded-xl hover:bg-primary/5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-none transition-all duration-200 ease-out border border-transparent data-[state=active]:border-primary/10 text-sm whitespace-nowrap cursor-pointer active:scale-[0.98]"
                             >
-                                <Users className="h-4 w-4" />
+                                <Users className="h-4 w-4 shrink-0" />
                                 Membership Requests
                             </TabsTrigger>
 
@@ -128,71 +137,120 @@ const CommunitySettingsPage = () => {
                             {isOwner && (
                                 <TabsTrigger
                                     value="moderators"
-                                    className="w-max shrink-0 flex items-center gap-3 justify-start px-4 py-2.5 text-left rounded-lg hover:bg-primary/10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-none transition-colors dark:data-[state=active]:text-primary whitespace-nowrap"
+                                    className="w-full shrink-0 flex items-center gap-3 justify-start px-4 py-3 text-left rounded-xl hover:bg-primary/5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-none transition-all duration-200 ease-out border border-transparent data-[state=active]:border-primary/10 text-sm whitespace-nowrap cursor-pointer active:scale-[0.98]"
                                 >
-                                    <ShieldCheck className="h-4 w-4" />
+                                    <ShieldCheck className="h-4 w-4 shrink-0" />
                                     Moderators
                                 </TabsTrigger>
                             )}
 
                             <TabsTrigger
                                 value="bans"
-                                className="w-max shrink-0 flex items-center gap-3 justify-start px-4 py-2.5 text-left rounded-lg hover:bg-red-500/10 hover:text-red-600 data-[state=active]:bg-red-500/10 data-[state=active]:text-red-600 data-[state=active]:font-semibold data-[state=active]:shadow-none transition-colors whitespace-nowrap"
+                                className="w-full shrink-0 flex items-center gap-3 justify-start px-4 py-3 text-left rounded-xl hover:bg-red-500/5 hover:text-red-600 data-[state=active]:bg-red-500/10 data-[state=active]:text-red-600 data-[state=active]:font-semibold data-[state=active]:shadow-none transition-all duration-200 ease-out border border-transparent data-[state=active]:border-red-500/10 text-sm whitespace-nowrap cursor-pointer active:scale-[0.98]"
                             >
-                                <ShieldAlert className="h-4 w-4" />
+                                <ShieldAlert className="h-4 w-4 shrink-0" />
                                 Ban List
+                            </TabsTrigger>
+
+                            <TabsTrigger
+                                value="mutes"
+                                className="w-full shrink-0 flex items-center gap-3 justify-start px-4 py-3 text-left rounded-xl hover:bg-amber-500/5 hover:text-amber-600 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-600 data-[state=active]:font-semibold data-[state=active]:shadow-none transition-all duration-200 ease-out border border-transparent data-[state=active]:border-amber-500/10 text-sm whitespace-nowrap cursor-pointer active:scale-[0.98]"
+                            >
+                                <VolumeX className="h-4 w-4 shrink-0" />
+                                Mutes List
                             </TabsTrigger>
                         </TabsList>
                     </div>
 
-                    {/* Tab Content Areas */}
-                    <div className="flex-1">
-                        <div className="bg-card border border-border/50 rounded-2xl p-6 sm:p-8 shadow-xs relative overflow-hidden">
-                            {/* Subtle gradient background effect for card */}
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none translate-x-1/2 -translate-y-1/2" />
+                    {/* Right Column: Settings Content */}
+                    <div className="flex-1 min-w-0 p-6 sm:p-10 lg:p-12 relative">
+                        {/* Subtle gradient background effect for card */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none translate-x-1/2 -translate-y-1/2" />
 
-                            {isOwner && (
-                                <TabsContent value="general" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-                                    <div className="mb-8 border-b pb-4">
-                                        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">General Information</h2>
-                                        <p className="text-sm sm:text-base text-muted-foreground mt-1">Update your community's identity and privacy configurations.</p>
-                                    </div>
-                                    <GeneralSettings community={community} />
-                                </TabsContent>
-                            )}
-
-                            <TabsContent value="requests" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-                                <div className="mb-8 border-b pb-4">
-                                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                                        Pending Requests
-                                    </h2>
-                                    <p className="text-sm sm:text-base text-muted-foreground mt-1">Review, approve, or reject user requests to join your private community.</p>
-                                </div>
-                                <RequestsManagement community={community} />
-                            </TabsContent>
-
-                            {isOwner && (
-                                <TabsContent value="moderators" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-                                    <div className="mb-8 border-b pb-4">
-                                        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                                            Moderators Management
-                                        </h2>
-                                        <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage users who have administrative access to this community.</p>
-                                    </div>
-                                    <ModeratorsManagement community={community} />
-                                </TabsContent>
-                            )}
-
-                            <TabsContent value="bans" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-                                <div className="mb-8 border-b pb-4">
-                                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-red-600 flex items-center gap-2">
+                        {/* Mobile & Tablet Tab Selector (Hidden on desktop) */}
+                        <div className="block lg:hidden w-full mb-6">
+                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">
+                                Settings Section
+                            </label>
+                            <Select value={activeTab} onValueChange={handleTabChange}>
+                                <SelectTrigger className="w-full h-11 rounded-xl border border-border bg-background px-3 shadow-sm focus:ring-primary/20">
+                                    <SelectValue placeholder="Select section" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl border border-border bg-popover shadow-lg">
+                                    {isOwner && (
+                                        <SelectItem value="general" className="cursor-pointer">
+                                            General Settings
+                                        </SelectItem>
+                                    )}
+                                    <SelectItem value="requests" className="cursor-pointer">
+                                        Membership Requests
+                                    </SelectItem>
+                                    {isOwner && (
+                                        <SelectItem value="moderators" className="cursor-pointer">
+                                            Moderators
+                                        </SelectItem>
+                                    )}
+                                    <SelectItem value="bans" className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-500/5">
                                         Ban List
-                                    </h2>
-                                    <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage users who have been permanently banned from accessing this community.</p>
-                                </div>
-                                <BansManagement community={community} />
-                            </TabsContent>
+                                    </SelectItem>
+                                    <SelectItem value="mutes" className="cursor-pointer text-amber-600 focus:text-amber-600 focus:bg-amber-500/5">
+                                        Mutes List
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
+
+                        {isOwner && (
+                            <TabsContent value="general" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                                <div className="mb-6 border-b border-border/30 pb-4">
+                                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">General Information</h2>
+                                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">Update your community's identity and privacy configurations.</p>
+                                </div>
+                                <GeneralSettings community={community} />
+                            </TabsContent>
+                        )}
+
+                        <TabsContent value="requests" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                            <div className="mb-6 border-b border-border/30 pb-4">
+                                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                                    Pending Requests
+                                </h2>
+                                <p className="text-xs sm:text-sm text-muted-foreground mt-1">Review, approve, or reject user requests to join your private community.</p>
+                            </div>
+                            <RequestsManagement community={community} />
+                        </TabsContent>
+
+                        {isOwner && (
+                            <TabsContent value="moderators" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                                <div className="mb-6 border-b border-border/30 pb-4">
+                                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                                        Moderators Management
+                                    </h2>
+                                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage users who have administrative access to this community.</p>
+                                </div>
+                                <ModeratorsManagement community={community} />
+                            </TabsContent>
+                        )}
+
+                        <TabsContent value="bans" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                            <div className="mb-6 border-b border-border/30 pb-4">
+                                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-red-600 flex items-center gap-2">
+                                    Ban List
+                                </h2>
+                                <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage users who have been permanently banned from accessing this community.</p>
+                            </div>
+                            <BansManagement community={community} />
+                        </TabsContent>
+
+                        <TabsContent value="mutes" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                            <div className="mb-6 border-b border-border/30 pb-4">
+                                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-amber-600 flex items-center gap-2">
+                                    Mutes List
+                                </h2>
+                                <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage users who have been muted and restricted from posting or commenting.</p>
+                            </div>
+                            <MutesManagement community={community} />
+                        </TabsContent>
                     </div>
                 </Tabs>
             </div>

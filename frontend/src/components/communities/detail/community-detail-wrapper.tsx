@@ -10,6 +10,9 @@ import { useGetQAPostsByCommunityIdInfinite } from "@/hooks/qa-post-hooks/use-ge
 import { SortOrderType } from "@/constants/sortOrderType";
 import { CommunityMemberList } from "./community-member-list";
 import { useGetCommunityById } from "@/hooks/community-hooks/use-get-community-by-id";
+import { useGetCommunityMute } from "@/hooks/community-mute-hooks/use-get-community-mute";
+import { MuteBanner } from "@/components/communities/mute-banner";
+import { SelectCommunityDTO } from "@/types/community/select-community-dto";
 
 type CommunityTab = "posts" | "qa" | "members";
 
@@ -39,9 +42,32 @@ const BASE_PAYLOAD = {
 } as const;
 
 export function CommunityDetailWrapper({ communityId, canViewContent }: CommunityDetailWrapperProps) {
+    const { data: community } = useGetCommunityById(communityId);
+
+    if (!community) return null;
+
+    return (
+        <CommunityDetailContent
+            community={community}
+            canViewContent={canViewContent}
+        />
+    );
+}
+
+interface CommunityDetailContentProps {
+    community: SelectCommunityDTO;
+    canViewContent: boolean;
+}
+
+function CommunityDetailContent({ community, canViewContent }: CommunityDetailContentProps) {
     const [activeTab, setActiveTab] = useState<CommunityTab>("posts");
 
-    const { data: community } = useGetCommunityById(communityId);
+    const { data: muteStatus } = useGetCommunityMute(community.id);
+    const canModerateCommunity =
+        community.currentUserRole === "Owner" ||
+        community.currentUserRole === "OWNER" ||
+        community.currentUserRole === "Moderator" ||
+        community.currentUserRole === "MODERATOR";
 
     // Lazy tab-based fetching:
     // Posts only fetch when on posts tab AND user has access to content
@@ -55,7 +81,7 @@ export function CommunityDetailWrapper({ communityId, canViewContent }: Communit
         fetchNextPage: fetchNextPosts,
         hasNextPage: hasNextPosts,
         isFetchingNextPage: isFetchingNextPosts,
-    } = useGetPostsByCommunityIdInfinite(communityId, BASE_PAYLOAD, STALE_TIME, postsEnabled);
+    } = useGetPostsByCommunityIdInfinite(community.id, BASE_PAYLOAD, STALE_TIME, postsEnabled);
 
     const {
         data: qaData,
@@ -64,7 +90,7 @@ export function CommunityDetailWrapper({ communityId, canViewContent }: Communit
         fetchNextPage: fetchNextQA,
         hasNextPage: hasNextQA,
         isFetchingNextPage: isFetchingNextQA,
-    } = useGetQAPostsByCommunityIdInfinite(communityId, BASE_PAYLOAD, STALE_TIME, qaEnabled);
+    } = useGetQAPostsByCommunityIdInfinite(community.id, BASE_PAYLOAD, STALE_TIME, qaEnabled);
 
     const allPosts = useMemo(
         () => postsData?.pages.flatMap((page) => page?.data ?? []),
@@ -75,8 +101,6 @@ export function CommunityDetailWrapper({ communityId, canViewContent }: Communit
         [qaData]
     );
 
-    if (!community) return null;
-
     return (
         <div className="flex flex-col w-full min-h-screen fade-in">
             {/* Header + Cover photo + Action buttons + Tabs */}
@@ -84,11 +108,19 @@ export function CommunityDetailWrapper({ communityId, canViewContent }: Communit
                 <CommunityHeader community={community} activeTab={activeTab} />
                 <CommunityTabs activeTab={activeTab} setActiveTab={setActiveTab} />
             </div>
+            {muteStatus?.isMuted && (
+                <div className="px-4">
+                    <MuteBanner
+                        mutedUntil={muteStatus.mutedUntil}
+                        muteReason={muteStatus.muteReason}
+                    />
+                </div>
+            )}
 
             {/* Tab content */}
             <div className="max-w-6xl mx-auto w-full pb-12">
                 {/* Private community block screen — shown on posts/qa tabs for guest/pending */}
-                {!canViewContent && (activeTab === "posts" || activeTab === "qa") && (
+                {!canViewContent && (activeTab === "posts" || activeTab === "qa" || activeTab === "members") && (
                     <PrivateCommunityBlock />
                 )}
 
@@ -103,6 +135,7 @@ export function CommunityDetailWrapper({ communityId, canViewContent }: Communit
                         emptyTitle="No posts yet"
                         emptySubtitle="Be the first to share something with this community."
                         loadingText="Loading posts..."
+                        canModerateCommunity={canModerateCommunity}
                     />
                 )}
 
@@ -117,10 +150,11 @@ export function CommunityDetailWrapper({ communityId, canViewContent }: Communit
                         emptyTitle="No Q&A posts yet"
                         emptySubtitle="Ask a question to start a discussion in this community."
                         loadingText="Loading Q&A posts..."
+                        canModerateCommunity={canModerateCommunity}
                     />
                 )}
 
-                {activeTab === "members" && (
+                {canViewContent && activeTab === "members" && (
                     <CommunityMemberList communityId={community.id} role={community.currentUserRole} />
                 )}
             </div>
@@ -136,7 +170,7 @@ function PrivateCommunityBlock() {
             </div>
             <h3 className="text-xl font-semibold text-foreground">This is a private community</h3>
             <p className="text-muted-foreground max-w-md text-sm leading-relaxed">
-                Only approved members can view posts and Q&amp;A in this community.
+                Only approved members can view posts, Q&amp;A and members in this community.
                 Join the community or wait for your request to be approved.
             </p>
         </div>

@@ -19,34 +19,79 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { usePostDelete } from '@/hooks/post-hooks/use-post-delete';
 import { useHasMounted } from '@/hooks/use-has-mounted';
+import { useCreateCommunityContentReport } from '@/hooks/community-content-report-hooks/use-create-community-content-report';
+import { ContentType } from '@/types/content-media/content-type';
 import { ReportDialog } from '@/components/report/report-dialog';
 import { ReportTargetType } from '@/types/report/report-target-type';
 
 interface PostActionsDropdownProps {
     postId: string;
+    communityId?: string | null;
     isQAPost: boolean;
     isAuthor: boolean;
+    canModerateCommunity?: boolean;
     onDeleted?: () => void;
     dropdownClassName?: string;
 }
 
 export function PostActionsDropdown({
     postId,
+    communityId,
     isQAPost,
     isAuthor,
+    canModerateCommunity = false,
     onDeleted,
     dropdownClassName = '',
 }: PostActionsDropdownProps) {
     const hasMounted = useHasMounted();
     const router = useRouter();
+    const [isReportOpen, setIsReportOpen] = useState(false);
+    const [reportReason, setReportReason] = useState('');
     const [reportDialogOpen, setReportDialogOpen] = useState(false);
     const basePath = isQAPost ? '/questions' : '/post';
     const { showDeleteAlert, setShowDeleteAlert, isPending, handleDeleteConfirm } = usePostDelete({
         isQAPost,
         onDeleted,
     });
+    const reportMutation = useCreateCommunityContentReport();
+    const canReportToCommunity = Boolean(communityId) && !isAuthor;
+    const canDelete = isAuthor || (Boolean(communityId) && canModerateCommunity);
+    const isReportReasonValid = reportReason.trim().length >= 5 && reportReason.trim().length <= 500;
+
+    const handleSubmitReport = () => {
+        if (!communityId || !isReportReasonValid) return;
+
+        reportMutation.mutate(
+            {
+                communityId,
+                payload: {
+                    contentId: postId,
+                    contentType: isQAPost ? ContentType.QA : ContentType.Post,
+                    reason: reportReason.trim(),
+                },
+            },
+            {
+                onSuccess: (created) => {
+                    if (created) {
+                        setReportReason('');
+                        setIsReportOpen(false);
+                    }
+                },
+            }
+        );
+    };
 
     if (!hasMounted) {
         return (
@@ -80,15 +125,6 @@ export function PostActionsDropdown({
                                 <Edit className="w-4 h-4" />
                                 <span>Edit Post</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={() => setShowDeleteAlert(true)}
-                                disabled={isPending}
-                                variant='destructive'
-                                className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
-                            >
-                                <Trash className="w-4 h-4" />
-                                <span>Delete Post</span>
-                            </DropdownMenuItem>
                         </>
                     ) : (
                         <>
@@ -104,12 +140,81 @@ export function PostActionsDropdown({
                                 className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
                             >
                                 <Flag className="w-4 h-4" />
-                                <span>Report Post</span>
+                                <span>Report to Site</span>
                             </DropdownMenuItem>
+                            {canReportToCommunity && (
+                                <DropdownMenuItem
+                                    onClick={() => setIsReportOpen(true)}
+                                    variant='destructive'
+                                    className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
+                                >
+                                    <Flag className="w-4 h-4" />
+                                    <span>Report to Community</span>
+                                </DropdownMenuItem>
+                            )}
                         </>
+                    )}
+                    {canDelete && (
+                        <DropdownMenuItem
+                            onClick={() => setShowDeleteAlert(true)}
+                            disabled={isPending}
+                            variant='destructive'
+                            className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"
+                        >
+                            <Trash className="w-4 h-4" />
+                            <span>Delete Post</span>
+                        </DropdownMenuItem>
                     )}
                 </DropdownMenuContent>
             </DropdownMenu>
+
+            <Dialog
+                open={isReportOpen}
+                onOpenChange={(open) => {
+                    if (!reportMutation.isPending) setIsReportOpen(open);
+                }}
+            >
+                <DialogContent onClick={(e) => e.stopPropagation()}>
+                    <DialogHeader>
+                        <DialogTitle>Report to community</DialogTitle>
+                        <DialogDescription>
+                            Send this {isQAPost ? 'question' : 'post'} to community moderators for review.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-2">
+                        <Textarea
+                            value={reportReason}
+                            onChange={(event) => setReportReason(event.target.value)}
+                            maxLength={500}
+                            placeholder="Describe the issue..."
+                            className="min-h-28 resize-none"
+                            disabled={reportMutation.isPending}
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Minimum 5 characters.</span>
+                            <span>{reportReason.trim().length}/500</span>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={reportMutation.isPending}
+                            onClick={() => setIsReportOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            disabled={!isReportReasonValid || reportMutation.isPending}
+                            onClick={handleSubmitReport}
+                        >
+                            {reportMutation.isPending ? "Submitting..." : "Submit Report"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <AlertDialog
                 open={showDeleteAlert}

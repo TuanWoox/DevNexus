@@ -20,6 +20,8 @@ import { useIntersectionObserver } from '@/hooks/use-intersection-observer';
 import { Loader2 } from 'lucide-react';
 import { SelectPostDTO } from '@/types/post/select-post-dto';
 import { SelectQAPostDTO } from '@/types/qa-post/select-qa-post-dto';
+import { useGetCommunityById } from '@/hooks/community-hooks/use-get-community-by-id';
+import { CommunityApprovalStatus, normalizeCommunityApprovalStatus } from '@/types/enums/community-approval-status';
 
 interface Props {
     postId: string;
@@ -39,13 +41,17 @@ export default function CommentSection({ postId, isQAPost }: Props) {
     const { user } = useSelector((state: RootState) => state.auth);
     const { data: userProfile } = useGetProfileById(user?.profileId as string);
 
+    const { data: qaPost, isError: isQAError } = useGetQAPostById(postId, isQAPost);
+    const { data: normalPost, isError: isNormalError } = useGetPostById(postId, !isQAPost);
+    const post = isQAPost ? qaPost : normalPost;
+
     const {
         data: answerData,
         isPending: isAnswerLoading,
         hasNextPage: hasNextPageAnswer,
         fetchNextPage: fetchNextPageAnswer,
         isFetchingNextPage: isFetchingNextPageAnswer
-    } = useGetAnswersByPostIdInfinite(postId, isQAPost, itemsPayload);
+    } = useGetAnswersByPostIdInfinite(postId, isQAPost && !!post, itemsPayload);
 
     const {
         data: commentData,
@@ -53,11 +59,14 @@ export default function CommentSection({ postId, isQAPost }: Props) {
         hasNextPage: hasNextPageComment,
         fetchNextPage: fetchNextPageComment,
         isFetchingNextPage: isFetchingNextPageComment
-    } = useGetCommentsByPostIdInfinite(postId, !isQAPost, itemsPayload);
-
-    const { data: qaPost, isError: isQAError } = useGetQAPostById(postId, isQAPost);
-    const { data: normalPost, isError: isNormalError } = useGetPostById(postId, !isQAPost);
-    const post = isQAPost ? qaPost : normalPost;
+    } = useGetCommentsByPostIdInfinite(postId, !isQAPost && !!post, itemsPayload);
+    const communityId = post?.communityId;
+    const { data: community } = useGetCommunityById(communityId ?? '', Boolean(communityId));
+    const canModerateCommunity =
+        community?.currentUserRole === "Owner" ||
+        community?.currentUserRole === "OWNER" ||
+        community?.currentUserRole === "Moderator" ||
+        community?.currentUserRole === "MODERATOR";
     const isError = isQAPost ? isQAError : isNormalError;
 
     const isLoading = isQAPost ? isAnswerLoading : isCommentLoading;
@@ -76,7 +85,11 @@ export default function CommentSection({ postId, isQAPost }: Props) {
     }
 
     const moderationStatus = normalizeModerationStatus(post?.moderationStatus);
-    const isApproved = moderationStatus === "Approved";
+    const communityApprovalStatus = normalizeCommunityApprovalStatus(post?.communityApprovalStatus) ?? (post?.communityId ? CommunityApprovalStatus.Pending : null);
+    const isApproved = moderationStatus === "Approved" &&
+        (!post?.communityId ||
+            communityApprovalStatus == null ||
+            communityApprovalStatus === CommunityApprovalStatus.Approved);
 
     const items = isQAPost
         ? answerData?.pages?.flatMap(p => p?.data ?? []) || []
@@ -94,7 +107,12 @@ export default function CommentSection({ postId, isQAPost }: Props) {
 
             {/* Create Comment Input */}
             {isApproved ? (
-                <CommentInput postId={postId} currentUserAvatar={userProfile?.avatarUrl} isQAPost={isQAPost} />
+                <CommentInput
+                    postId={postId}
+                    currentUserAvatar={userProfile?.avatarUrl}
+                    isQAPost={isQAPost}
+                    communityId={communityId}
+                />
             ) : (
                 <div className="bg-muted/30 border border-dashed border-default rounded-xl p-4 text-center text-muted-foreground mb-8">
                     {isQAPost ? 'Answers' : 'Comments'} are disabled because this post is not approved.
@@ -103,7 +121,6 @@ export default function CommentSection({ postId, isQAPost }: Props) {
 
             {/* Comment List */}
             {isLoading ? (
-                /* SKELETON LOADING STATE */
                 <div className="space-y-6">
                     {[1, 2, 3].map((item) => (
                         <div key={item} className="flex gap-3 sm:gap-4">
@@ -144,6 +161,8 @@ export default function CommentSection({ postId, isQAPost }: Props) {
                                 currentUserAvatar={userProfile?.avatarUrl}
                                 isDisabled={!isApproved}
                                 isQuestionAuthor={post?.authorId === user?.profileId}
+                                communityId={communityId}
+                                canModerateCommunity={canModerateCommunity}
                             />
                         ) : (
                             <CommentItem
@@ -152,6 +171,8 @@ export default function CommentSection({ postId, isQAPost }: Props) {
                                 currentUserId={user?.profileId as string}
                                 currentUserAvatar={userProfile?.avatarUrl}
                                 isDisabled={!isApproved}
+                                communityId={communityId}
+                                canModerateCommunity={canModerateCommunity}
                             />
                         )
                     ))}

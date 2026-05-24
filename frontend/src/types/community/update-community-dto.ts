@@ -5,4 +5,5 @@ export interface UpdateCommunityDTO {
     communityCoverPhotoUrl?: string;
     slug?: string;
     isPrivate?: boolean;
+    requireContentApproval?: boolean;
 }

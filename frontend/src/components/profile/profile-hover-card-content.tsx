@@ -2,20 +2,46 @@
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useSelector } from 'react-redux';
-import { Loader2, MessageSquare, Star, User, X } from 'lucide-react';
+import { Ban, Calendar, Loader2, MessageSquare, Star, User, Volume2, VolumeX, X } from 'lucide-react';
 import { UserAvatar } from '@/components/shared/user-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { RootState } from '@/store/store';
 import { ProfileHoverCardActions } from './profile-hover-card-actions';
 import { useOpenChatByProfile } from '@/features/messages/hooks/chats/use-open-chat-by-profile';
+import { useGetProfileCommunityMute } from '@/hooks/community-mute-hooks/use-get-profile-community-mute';
+import { useGetProfileCommunityBan } from '@/hooks/community-bans-hooks/use-get-profile-community-ban';
+import { useMuteCommunityMember } from '@/hooks/community-mute-hooks/use-mute-community-member';
+import { useUnmuteProfileCommunityMember } from '@/hooks/community-mute-hooks/use-unmute-profile-community-member';
+import { useBanCommunityMember } from '@/hooks/community-bans-hooks/use-ban-community-member';
+import { useUnbanProfileCommunityMember } from '@/hooks/community-bans-hooks/use-unban-profile-community-member';
+
+const MUTE_PRESETS = [
+    { label: "1h", value: "1h" },
+    { label: "12h", value: "12h" },
+    { label: "24h", value: "24h" },
+    { label: "7d", value: "7d" },
+    { label: "Permanent", value: "permanent" },
+    { label: "Custom", value: "custom" },
+];
 
 export interface ProfileHoverCardAuthor {
-    fullName?: string;
-    avatarUrl?: string;
-    backgroundUrl?: string;
-    bio?: string;
+    fullName?: string | null;
+    avatarUrl?: string | null;
+    backgroundUrl?: string | null;
+    bio?: string | null;
     reputationPoints?: number;
     techStacks?: string[];
     isPrivate?: boolean;
@@ -35,6 +61,9 @@ interface ProfileHoverCardContentProps {
     showMessageAction?: boolean;
     showBlockAction?: boolean;
     showProfileAction?: boolean;
+    communityId?: string | null;
+    showCommunityStatus?: boolean;
+    canModerateCommunity?: boolean;
     variant?: 'default' | 'admin';
 }
 
@@ -75,6 +104,9 @@ export function ProfileHoverCardContent({
     showMessageAction = true,
     showBlockAction = true,
     showProfileAction = true,
+    communityId,
+    showCommunityStatus = false,
+    canModerateCommunity = false,
     variant = 'default'
 }: ProfileHoverCardContentProps) {
     const router = useRouter();
@@ -88,10 +120,94 @@ export function ProfileHoverCardContent({
     const canShowProfile = showProfileAction;
     const canShowMessage = showMessageAction && !isOwnProfile;
     const canShowBlock = showBlockAction && !isOwnProfile;
+    const shouldFetchCommunityStatus = Boolean(showCommunityStatus && communityId);
+    const { data: muteStatus } = useGetProfileCommunityMute(
+        communityId,
+        profileId,
+        shouldFetchCommunityStatus
+    );
+    const { data: communityBan } = useGetProfileCommunityBan(
+        communityId,
+        profileId,
+        shouldFetchCommunityStatus
+    );
+    const [isMuteDialogOpen, setIsMuteDialogOpen] = useState(false);
+    const [muteReason, setMuteReason] = useState("");
+    const [mutePreset, setMutePreset] = useState("24h");
+    const [customMutedUntil, setCustomMutedUntil] = useState("");
+    const [minCustomDate] = useState(() => new Date(Date.now() + 60 * 1000).toISOString().slice(0, 16));
+    const [isBanDialogOpen, setIsBanDialogOpen] = useState(false);
+    const [banReason, setBanReason] = useState("");
+    const muteMutation = useMuteCommunityMember();
+    const unmuteMutation = useUnmuteProfileCommunityMember();
+    const banMutation = useBanCommunityMember();
+    const unbanMutation = useUnbanProfileCommunityMember();
     const actionCount = Number(canShowProfile) + Number(canShowMessage);
+    const canShowCommunityModeration =
+        Boolean(communityId) && canModerateCommunity && !isOwnProfile;
     const handleViewProfile = () => {
         router.push(`/profile/${profileId}`);
         onClose?.();
+    };
+    const calculateMutedUntil = () => {
+        if (mutePreset === "permanent") return undefined;
+        if (mutePreset === "custom") {
+            return customMutedUntil ? new Date(customMutedUntil).toISOString() : undefined;
+        }
+
+        const durations: Record<string, number> = {
+            "1h": 60 * 60 * 1000,
+            "12h": 12 * 60 * 60 * 1000,
+            "24h": 24 * 60 * 60 * 1000,
+            "7d": 7 * 24 * 60 * 60 * 1000,
+        };
+
+        return new Date(Date.now() + (durations[mutePreset] ?? durations["24h"])).toISOString();
+    };
+    const handleMuteFromCommunity = () => {
+        if (!communityId || muteMutation.isPending) return;
+        muteMutation.mutate({
+            communityId,
+            mutedProfileId: profileId,
+            muteReason: muteReason.trim() || undefined,
+            mutedUntil: calculateMutedUntil(),
+        }, {
+            onSuccess: () => {
+                setIsMuteDialogOpen(false);
+                setMuteReason("");
+                setMutePreset("24h");
+                setCustomMutedUntil("");
+            },
+        });
+    };
+    const handleMuteToggle = () => {
+        if (muteStatus?.isMuted) {
+            if (communityId) {
+                unmuteMutation.mutate({ communityId, profileId });
+            }
+            return;
+        }
+        setIsMuteDialogOpen(true);
+    };
+    const handleConfirmBlockFromCommunity = () => {
+        if (!communityId || banMutation.isPending) return;
+        banMutation.mutate({
+            communityId,
+            bannedProfileId: profileId,
+            banReason: banReason.trim() || undefined,
+        }, {
+            onSuccess: () => {
+                setIsBanDialogOpen(false);
+                setBanReason("");
+            },
+        });
+    };
+    const handleBlockToggle = () => {
+        if (communityBan && communityId) {
+            unbanMutation.mutate({ communityId, profileId });
+            return;
+        }
+        setIsBanDialogOpen(true);
     };
 
     return (
@@ -171,7 +287,151 @@ export function ProfileHoverCardContent({
                 </div>
             ) : null}
 
+            {canShowCommunityModeration ? (
+                <div className="grid gap-2 border-t border-border px-4 py-3">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleMuteToggle}
+                        disabled={muteMutation.isPending || unmuteMutation.isPending}
+                        className="w-full cursor-pointer"
+                    >
+                        {muteMutation.isPending || unmuteMutation.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : muteStatus?.isMuted ? (
+                            <Volume2 className="mr-2 h-4 w-4" />
+                        ) : (
+                            <VolumeX className="mr-2 h-4 w-4" />
+                        )}
+                        {muteStatus?.isMuted ? 'Unmute from community' : 'Mute from community'}
+                    </Button>
+                    <Button
+                        variant={communityBan?.id ? "outline" : "destructive"}
+                        size="sm"
+                        onClick={handleBlockToggle}
+                        disabled={banMutation.isPending || unbanMutation.isPending}
+                        className="w-full cursor-pointer"
+                    >
+                        {banMutation.isPending || unbanMutation.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <Ban className="mr-2 h-4 w-4" />
+                        )}
+                        {communityBan?.id ? 'Unblock from community' : 'Block from community'}
+                    </Button>
+                </div>
+            ) : null}
+
             {canShowBlock ? <ProfileHoverCardActions profileId={profileId} onClose={onClose} /> : null}
+
+            <Dialog open={isMuteDialogOpen} onOpenChange={setIsMuteDialogOpen}>
+                <DialogContent onClick={(event) => event.stopPropagation()}>
+                    <DialogHeader>
+                        <DialogTitle>Mute from community</DialogTitle>
+                        <DialogDescription>
+                            Choose how long this profile cannot post, comment, answer, or vote in this community.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-3 gap-2">
+                            {MUTE_PRESETS.map((preset) => (
+                                <button
+                                    key={preset.value}
+                                    type="button"
+                                    onClick={() => setMutePreset(preset.value)}
+                                    className={`rounded-md border px-2 py-2 text-xs font-medium transition-colors cursor-pointer ${
+                                        mutePreset === preset.value
+                                            ? "border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                                            : "border-border bg-background text-muted-foreground hover:bg-muted"
+                                    }`}
+                                >
+                                    {preset.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {mutePreset === "custom" ? (
+                            <div className="space-y-2">
+                                <label className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                                    <Calendar className="h-3.5 w-3.5" />
+                                    Mute until
+                                </label>
+                                <Input
+                                    type="datetime-local"
+                                    value={customMutedUntil}
+                                    onChange={(event) => setCustomMutedUntil(event.target.value)}
+                                    min={minCustomDate}
+                                />
+                            </div>
+                        ) : null}
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium text-foreground">Reason</label>
+                            <Textarea
+                                value={muteReason}
+                                onChange={(event) => setMuteReason(event.target.value)}
+                                placeholder="Reason for muting this profile..."
+                                className="min-h-24 resize-none"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={muteMutation.isPending}
+                            onClick={() => setIsMuteDialogOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            disabled={muteMutation.isPending || (mutePreset === "custom" && !customMutedUntil)}
+                            onClick={handleMuteFromCommunity}
+                        >
+                            {muteMutation.isPending ? "Muting..." : "Mute"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isBanDialogOpen} onOpenChange={setIsBanDialogOpen}>
+                <DialogContent onClick={(event) => event.stopPropagation()}>
+                    <DialogHeader>
+                        <DialogTitle>Block from community</DialogTitle>
+                        <DialogDescription>
+                            This removes the profile from the community and prevents them from accessing community content.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2">
+                        <label className="text-xs font-medium text-foreground">Reason</label>
+                        <Textarea
+                            value={banReason}
+                            onChange={(event) => setBanReason(event.target.value)}
+                            placeholder="Reason for blocking this profile from the community..."
+                            className="min-h-24 resize-none"
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={banMutation.isPending}
+                            onClick={() => setIsBanDialogOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            disabled={banMutation.isPending}
+                            onClick={handleConfirmBlockFromCommunity}
+                        >
+                            {banMutation.isPending ? "Blocking..." : "Block"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

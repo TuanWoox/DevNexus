@@ -13,6 +13,7 @@ using platform_core_service.Common.Models.DTOs.HelperDTO;
 using Hangfire;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
+using platform_core_service.Business.Helper;
 
 namespace platform_core_service.Business.Services
 {
@@ -116,6 +117,17 @@ namespace platform_core_service.Business.Services
                 if (!await IsOwnerOrModeratorAsync(request.CommunityId, profileId))
                 {
                     result.Message = "Only the community owner or a moderator can approve membership requests";
+                    return result;
+                }
+
+                var blockedIds = await CommunityManagementPrivacyHelper.GetBlockedProfileIdsAsync(
+                    _context,
+                    profileId,
+                    [request.RequesterId]);
+
+                if (blockedIds.Contains(request.RequesterId))
+                {
+                    result.Message = ResponseMessage.NO_PERMISSION_TO_INTERACT;
                     return result;
                 }
 
@@ -237,6 +249,25 @@ namespace platform_core_service.Business.Services
                     .AsQueryable();
 
                 result.Result = await _requestRepository.GetPagingAsync<Page<string>, SelectCommunityMembershipRequestDTO>(query, page);
+
+                if (result.Result?.Data != null)
+                {
+                    var blockedIds = await CommunityManagementPrivacyHelper.GetBlockedProfileIdsAsync(
+                        _context,
+                        profileId,
+                        result.Result.Data.Select(x => x.RequesterId));
+
+                    foreach (var item in result.Result.Data)
+                    {
+                        var isBlocked = blockedIds.Contains(item.RequesterId);
+                        item.HasBlockedRelation = isBlocked;
+                        item.IsProfileRestricted = isBlocked;
+                        item.RestrictedMessage = isBlocked ? ResponseMessage.BLOCKED_OR_NOT_AVAILABLE : null;
+                        item.CanApprove = !isBlocked;
+                        item.CanReject = true;
+                        item.Requester = CommunityManagementPrivacyHelper.ToManagementProfile(item.Requester, isBlocked);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -272,19 +303,35 @@ namespace platform_core_service.Business.Services
                     returnResult.Message = ResponseMessage.MESSAGE_ALL_ITEM_NOT_FOUND;
                     return returnResult;
                 }
+
+                var blockedIds = await CommunityManagementPrivacyHelper.GetBlockedProfileIdsAsync(
+                    _context,
+                    _userContext.ProfileId,
+                    existingRequest.Select(x => x.RequesterId));
+
+                var approvableRequests = existingRequest
+                    .Where(x => !blockedIds.Contains(x.RequesterId))
+                    .ToList();
+
+                if (approvableRequests.Count == 0)
+                {
+                    returnResult.Message = ResponseMessage.NO_PERMISSION_TO_INTERACT;
+                    return returnResult;
+                }
+
                 //Select => IEnumarable => List
-                var newMembers = existingRequest.Select(x => new CommunityMember
+                var newMembers = approvableRequests.Select(x => new CommunityMember
                 {
                     Id = Guid.NewGuid().ToString(),
                     CommunityId = x.CommunityId,
                     ProfileId = x.RequesterId
                 }).ToList();
 
-                _context.CommunityMembershipRequests.RemoveRange(existingRequest);
+                _context.CommunityMembershipRequests.RemoveRange(approvableRequests);
                 _context.CommunityMembers.AddRange(newMembers);
                 if (await _context.SaveChangesAsync() > 0)
                 {
-                    foreach(var req in existingRequest)
+                    foreach(var req in approvableRequests)
                     {
                         await PublishRequestApprovedNotificationAsync(communityId, req.RequesterId, _userContext.ProfileId);
                     }
@@ -348,6 +395,11 @@ namespace platform_core_service.Business.Services
                 .FirstOrDefaultAsync(c => c.Id == communityId);
 
             if (community == null) return;
+            var blockedIds = await CommunityManagementPrivacyHelper.GetBlockedProfileIdsAsync(
+                _context,
+                actorId,
+                [requesterId]);
+            if (blockedIds.Contains(requesterId)) return;
 
             var actor = await GetProfileSnapshot(actorId);
             var notificationEvent = new NotiicationCreatedEntityDTO

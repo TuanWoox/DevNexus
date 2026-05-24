@@ -1,8 +1,10 @@
 using AutoMapper;
 using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityMember;
+using platform_core_service.Common.Models.DTOs.EntityDTO.CommunityMute;
 using CommunityMemberEntity = platform_core_service.Common.Entities.DbEntities.CommunityMember;
 using CommunityMembershipRequestEntity = platform_core_service.Common.Entities.DbEntities.CommunityMembershipRequest;
 using CommunityBanEntity = platform_core_service.Common.Entities.DbEntities.CommunityBan;
+using CommunityMuteMemberEntity = platform_core_service.Common.Entities.DbEntities.CommunityMuteMember;
 
 namespace platform_core_service.Business.Mappings
 {
@@ -19,6 +21,9 @@ namespace platform_core_service.Business.Mappings
 
             // CommunityBan -> SelectCommunityBanDTO
             CreateMap<CommunityBanEntity, SelectCommunityBanDTO>();
+
+            // CommunityMuteMember -> SelectCommunityMuteDTO
+            CreateMap<CommunityMuteMemberEntity, SelectCommunityMuteDTO>();
         }
     }
 }

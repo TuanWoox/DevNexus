@@ -30,18 +30,29 @@ import { useDeleteBookmarkedItemById } from "@/hooks/bookmarked-item-hooks/use-d
 import { useHasMounted } from "@/hooks/use-has-mounted";
 import { cn } from "@/lib/utils";
 import { normalizeModerationStatus } from "@/types/post/moderation-status";
+import { useMuteGuard } from "@/hooks/community-mute-hooks/use-mute-guard";
+import { useGetCommunityById } from "@/hooks/community-hooks/use-get-community-by-id";
+import { CommunityApprovalStatus, normalizeCommunityApprovalStatus } from "@/types/enums/community-approval-status";
 
 interface PostCardProps {
     post: SelectPostDTO | SelectQAPostDTO;
+    canModerateCommunity?: boolean;
 }
 
-export function PostCard({ post }: PostCardProps) {
+export function PostCard({ post, canModerateCommunity }: PostCardProps) {
     const hasMounted = useHasMounted();
     const { user } = useSelector((state: RootState) => state.auth);
     const isQaPost = 'answerCount' in post;
     const basePath = isQaPost ? '/questions' : '/post';
     const moderationStatus = normalizeModerationStatus(post.moderationStatus);
-    const isApproved = moderationStatus === "Approved";
+    const isModerationApproved = moderationStatus === "Approved";
+    const communityApprovalStatus = normalizeCommunityApprovalStatus(post.communityApprovalStatus) ?? (post.communityId ? CommunityApprovalStatus.Pending : null);
+    const isCommunityApproved = !post.communityId ||
+        communityApprovalStatus == null ||
+        communityApprovalStatus === CommunityApprovalStatus.Approved;
+    const isApproved = isModerationApproved && isCommunityApproved;
+    const isCommunityPending = post.communityId && communityApprovalStatus === CommunityApprovalStatus.Pending;
+    const isCommunityRejected = post.communityId && communityApprovalStatus === CommunityApprovalStatus.Rejected;
 
     const author = post.author;
     const community = (post as SelectPostDTO).community;
@@ -55,6 +66,16 @@ export function PostCard({ post }: PostCardProps) {
 
     const { mutate: unsaveItem, isPending: isUnsavePending } = useDeleteBookmarkedItemById();
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(post.id);
+    const { checkMuted } = useMuteGuard(post.communityId);
+    const shouldFetchCommunityRole = Boolean(post.communityId) && canModerateCommunity === undefined;
+    const { data: loadedCommunity } = useGetCommunityById(post.communityId ?? '', shouldFetchCommunityRole);
+    const currentUserRole = loadedCommunity?.currentUserRole;
+    const canModerateFromCard =
+        currentUserRole === "OWNER" ||
+        currentUserRole === "MODERATOR" ||
+        currentUserRole === "Owner" ||
+        currentUserRole === "Moderator";
+    const canModerateContent = canModerateCommunity ?? canModerateFromCard;
 
     const handleSaveClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -75,6 +96,7 @@ export function PostCard({ post }: PostCardProps) {
     const handleVote = (e: React.MouseEvent, isUpvote: boolean) => {
         e.preventDefault();
         if (!isApproved) return;
+        if (checkMuted('vote')) return;
         updateVote({ isUpvote });
     };
 
@@ -92,6 +114,17 @@ export function PostCard({ post }: PostCardProps) {
             !isApproved && "border-dashed"
         )}>
             <ModerationBanner status={moderationStatus} reason={post.moderationReason} className="relative z-20" />
+            {(isCommunityPending || isCommunityRejected) && (
+                <div className={cn(
+                    "relative z-20 rounded-lg border px-3 py-2 text-sm font-medium",
+                    isCommunityRejected
+                        ? "border-destructive/30 bg-destructive/10 text-destructive"
+                        : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                )}>
+                    {isCommunityRejected ? "Rejected by community moderators" : "Pending community approval"}
+                    {post.communityApprovalReason ? `: ${post.communityApprovalReason}` : ""}
+                </div>
+            )}
             {/* Header: Community/Author & Options */}
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 relative z-10">
@@ -108,7 +141,7 @@ export function PostCard({ post }: PostCardProps) {
                                         </div>
                                     )}
                                 </Link>
-                                <ProfileHoverCard profileId={post.authorId} author={author}>
+                                <ProfileHoverCard profileId={post.authorId} author={author} communityId={post.communityId} showCommunityStatus={Boolean(post.communityId)} canModerateCommunity={canModerateContent}>
                                     <Link href={`/profile/${post.authorId}`} className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-card bg-page overflow-hidden">
                                         <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
                                     </Link>
@@ -121,7 +154,7 @@ export function PostCard({ post }: PostCardProps) {
                                     </Link>
                                 </div>
                                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                                    <ProfileHoverCard profileId={post.authorId} author={author}>
+                                    <ProfileHoverCard profileId={post.authorId} author={author} communityId={post.communityId} showCommunityStatus={Boolean(post.communityId)} canModerateCommunity={canModerateContent}>
                                         <Link href={`/profile/${post.authorId}`} className="font-semibold hover:underline text-muted-foreground transition-colors truncate max-w-[100px]">
                                             {author?.fullName || 'Unknown'}
                                         </Link>
@@ -160,8 +193,10 @@ export function PostCard({ post }: PostCardProps) {
                     </div>
                     <PostActionsDropdown
                         postId={post.id}
+                        communityId={post.communityId}
                         isQAPost={isQaPost}
                         isAuthor={isAuthor}
+                        canModerateCommunity={canModerateContent}
                         dropdownClassName="relative z-10"
                     />
                 </div>

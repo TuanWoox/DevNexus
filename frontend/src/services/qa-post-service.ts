@@ -9,6 +9,9 @@ import { UpdateQAPostDTO } from "@/types/qa-post/update-qa-post-dto";
 export const qaPostService = {
     createQAPost: async (createQAPostDTO: CreateQAPostDTO): Promise<SelectQAPostDTO> => {
         const { data } = await api.post<ReturnResult<SelectQAPostDTO>>('/QAPosts', createQAPostDTO);
+        if (!data.result) {
+            throw new Error(data.message || 'Failed to create question');
+        }
         return data.result;
     },
 
@@ -30,6 +33,26 @@ export const qaPostService = {
     getQAPostsByCommunityId: async (communityId: string, payload: Page<string>): Promise<PagedData<SelectQAPostDTO, string>> => {
         const { data } = await api.post<ReturnResult<PagedData<SelectQAPostDTO, string>>>(`/QAPosts/community/${communityId}/paging`, payload);
         return data.result ?? { data: [], page: payload };
+    },
+
+    getPendingQAPostsByCommunityId: async (communityId: string, payload: Page<string>): Promise<PagedData<SelectQAPostDTO, string>> => {
+        const { data } = await api.post<ReturnResult<PagedData<SelectQAPostDTO, string>>>(`/QAPosts/community/${communityId}/pending/paging`, payload);
+        return data.result ?? { data: [], page: payload };
+    },
+
+    getMyPendingQAPostsByCommunityId: async (communityId: string, payload: Page<string>): Promise<PagedData<SelectQAPostDTO, string>> => {
+        const { data } = await api.post<ReturnResult<PagedData<SelectQAPostDTO, string>>>(`/QAPosts/community/${communityId}/my-pending/paging`, payload);
+        return data.result ?? { data: [], page: payload };
+    },
+
+    approveCommunityQAPost: async (postId: string): Promise<SelectQAPostDTO> => {
+        const { data } = await api.post<ReturnResult<SelectQAPostDTO>>(`/QAPosts/${postId}/community-approve`);
+        return data.result;
+    },
+
+    rejectCommunityQAPost: async (postId: string, reason?: string): Promise<SelectQAPostDTO> => {
+        const { data } = await api.post<ReturnResult<SelectQAPostDTO>>(`/QAPosts/${postId}/community-reject`, { reason });
+        return data.result;
     },
 
     updateQAPost: async (updateQAPostDTO: UpdateQAPostDTO): Promise<SelectQAPostDTO> => {

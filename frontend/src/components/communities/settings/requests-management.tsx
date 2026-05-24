@@ -7,14 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { SelectCommunityDTO } from "@/types/community/select-community-dto";
-import { Loader2, Check, X, Search } from "lucide-react";
+import { Loader2, Check, X, Search, Calendar, Users } from "lucide-react";
 import { useState } from "react";
 import { Page } from "@/types/common/page";
 import { FilterType } from "@/constants/filterType";
 import { SortOrderType } from "@/constants/sortOrderType";
 import { FilterOperator } from "@/constants/filterOperator";
-import Link from "next/link";
-import { UserAvatar } from "@/components/shared/user-avatar";
+import { ManagementProfileCell } from "./management-profile-cell";
+import { useDebounce } from "@/hooks/use-debounce";
 
 interface RequestsManagementProps {
     community: SelectCommunityDTO;
@@ -23,7 +23,7 @@ interface RequestsManagementProps {
 export function RequestsManagement({ community }: RequestsManagementProps) {
     const [pageNumber, setPageNumber] = useState(0);
     const [searchQuery, setSearchQuery] = useState("");
-    const [appliedSearch, setAppliedSearch] = useState("");
+    const debouncedSearch = useDebounce(searchQuery.trim(), 400);
 
     // Page model mapping
     const pagePayload: Page<string> = {
@@ -39,10 +39,10 @@ export function RequestsManagement({ community }: RequestsManagementProps) {
                 dataType: "datetime"
             }
         ],
-        filter: appliedSearch ? [
+        filter: debouncedSearch ? [
             {
                 prop: "Requester.FullName",
-                value: appliedSearch,
+                value: debouncedSearch,
                 filterType: FilterType.Text,
                 filterOperator: FilterOperator.Contains,
                 dynamicProperty: "",
@@ -58,34 +58,26 @@ export function RequestsManagement({ community }: RequestsManagementProps) {
 
     const isProcessing = isApproving || isRejecting;
 
-    const handleSearchSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setAppliedSearch(searchQuery);
-        setPageNumber(0);
-    };
-
-    if (isLoading) {
-        return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
-    }
-
     const requests = pagedData?.data || [];
     const totalPages = Math.ceil((pagedData?.page?.totalElements || 0) / pagePayload.size);
 
     return (
         <div className="space-y-6">
             {/* Search Bar */}
-            <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 max-w-md">
+            <div className="flex items-center gap-2 max-w-md">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search by name..."
-                        className="pl-9"
+                        placeholder="Search by requester name..."
+                        className="pl-10 rounded-xl border border-border/60 bg-muted/10 text-sm focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus-visible:bg-background transition-all duration-200"
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setPageNumber(0);
+                        }}
                     />
                 </div>
-                <Button type="submit" variant="custom" className="btn-secondary">Search</Button>
-            </form>
+            </div>
 
             <div className="rounded-md border bg-card overflow-hidden">
                 <Table>
@@ -97,32 +89,34 @@ export function RequestsManagement({ community }: RequestsManagementProps) {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {requests.length === 0 ? (
+                        {isLoading ? (
                             <TableRow>
                                 <TableCell colSpan={3} className="h-32 text-center text-muted-foreground">
-                                    {appliedSearch ? "No requests match your search." : "No pending membership requests."}
+                                    <div className="flex items-center justify-center gap-2">
+                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                        Loading requests...
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ) : requests.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={3} className="h-32 text-center text-muted-foreground">
+                                    {debouncedSearch ? "No requests match your search." : "No pending membership requests."}
                                 </TableCell>
                             </TableRow>
                         ) : (
                             requests.map((req) => (
                                 <TableRow key={req.id} className="hover:bg-muted/30 transition-colors">
                                     <TableCell className="font-medium">
-                                        <Link
-                                            href={`/profile/${req.requesterId}`}
-                                            className="flex items-center gap-3 group w-fit"
-                                        >
-                                            <UserAvatar
-                                                avatarUrl={req.requester?.avatarUrl}
-                                                fullName={req.requester?.fullName ?? "User"}
-                                                className="w-8 h-8 shrink-0"
-                                            />
-                                            <div className="flex flex-col">
-                                                <span className="font-medium text-sm group-hover:text-primary transition-colors">
-                                                    {req.requester?.fullName || "Unknown User"}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground font-mono">View profile →</span>
-                                            </div>
-                                        </Link>
+                                        <ManagementProfileCell
+                                            profileId={req.requesterId}
+                                            fullName={req.requester?.fullName}
+                                            avatarUrl={req.requester?.avatarUrl}
+                                            profilePreview={req.requester}
+                                            isRestricted={req.isProfileRestricted || req.hasBlockedRelation}
+                                            restrictedMessage={req.restrictedMessage}
+                                            labelFallback="Unknown User"
+                                        />
                                     </TableCell>
                                     <TableCell>
                                         {req.dateCreated ? new Date(req.dateCreated).toLocaleDateString() : "N/A"}
@@ -134,7 +128,8 @@ export function RequestsManagement({ community }: RequestsManagementProps) {
                                                 variant="outline"
                                                 className="h-8 border-green-200 text-green-600 hover:text-green-700 hover:bg-green-50 hover:border-green-300 cursor-pointer"
                                                 onClick={() => approveRequest(req.id)}
-                                                disabled={isProcessing}
+                                                disabled={req.canApprove === false || isProcessing}
+                                                title={req.canApprove === false ? "Cannot approve because this profile is unavailable due to a block relationship." : undefined}
                                             >
                                                 <Check className="h-3.5 w-3.5 mr-1" /> Approve
                                             </Button>
@@ -143,7 +138,7 @@ export function RequestsManagement({ community }: RequestsManagementProps) {
                                                 variant="outline"
                                                 className="h-8 border-red-200 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300 cursor-pointer"
                                                 onClick={() => rejectRequest(req.id)}
-                                                disabled={isProcessing}
+                                                disabled={req.canReject === false || isProcessing}
                                             >
                                                 <X className="h-3.5 w-3.5 mr-1" /> Reject
                                             </Button>
@@ -158,21 +153,21 @@ export function RequestsManagement({ community }: RequestsManagementProps) {
 
             {/* Pagination */}
             {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-4 pt-4">
+                <div className="flex justify-center items-center gap-3 pt-6 border-t border-border/20">
                     <Button
                         variant="outline"
-                        size="sm"
+                        className="h-9 px-3 text-xs rounded-lg hover:bg-muted active:scale-95 transition-transform cursor-pointer"
                         disabled={pageNumber === 0}
                         onClick={() => setPageNumber(prev => prev - 1)}
                     >
                         Previous
                     </Button>
-                    <span className="text-sm text-muted-foreground font-medium">
+                    <span className="text-xs text-muted-foreground font-medium">
                         Page {pageNumber + 1} of {totalPages}
                     </span>
                     <Button
                         variant="outline"
-                        size="sm"
+                        className="h-9 px-3 text-xs rounded-lg hover:bg-muted active:scale-95 transition-transform cursor-pointer"
                         disabled={pageNumber >= totalPages - 1}
                         onClick={() => setPageNumber(prev => prev + 1)}
                     >

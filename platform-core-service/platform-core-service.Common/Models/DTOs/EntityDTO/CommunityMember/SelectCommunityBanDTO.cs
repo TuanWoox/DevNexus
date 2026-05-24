@@ -13,5 +13,10 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.CommunityMember
         public SelectProfileDTO? BannedBy { get; set; }
         public string? BanReason { get; set; }
         public DateTimeOffset? DateCreated { get; set; }
+        public bool HasBlockedRelation { get; set; }
+        public bool IsBannedProfileRestricted { get; set; }
+        public bool IsBannedByRestricted { get; set; }
+        public string? RestrictedMessage { get; set; }
+        public bool CanUnban { get; set; } = true;
     }
 }

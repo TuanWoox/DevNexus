@@ -10,6 +10,7 @@ export const useUnbanCommunityMember = () => {
         mutationFn: (banId: string) => communityBansService.unbanMember(banId),
         onSuccess: (data) => {
             if (data) {
+                queryClient.invalidateQueries({ queryKey: communityBansQueryKeys.all });
                 queryClient.invalidateQueries({ queryKey: communityBansQueryKeys.lists() });
                 toast.success("User has been unbanned.");
             }

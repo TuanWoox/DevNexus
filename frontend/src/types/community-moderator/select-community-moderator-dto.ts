@@ -7,4 +7,8 @@ export interface SelectCommunityModeratorDTO {
     moderatorProfile?: ModeratorProfileDTO;
     dateCreated?: string;
     dateModified?: string;
+    hasBlockedRelation?: boolean;
+    isProfileRestricted?: boolean;
+    restrictedMessage?: string | null;
+    canDemote?: boolean;
 }

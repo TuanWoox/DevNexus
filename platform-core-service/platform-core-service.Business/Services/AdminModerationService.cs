@@ -23,19 +23,25 @@ namespace platform_core_service.Business.Services
         private readonly IRepository<ModerationQueueEntry, string> _queueRepository;
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IAdminAuditLogService _adminAuditLogService;
+        private readonly IPostHistoryService _postHistoryService;
+        private readonly IQAPostHistoryService _qaPostHistoryService;
 
         public AdminModerationService(
             ApplicationDbContext context,
             IUserContext userContext,
             IRepository<ModerationQueueEntry, string> queueRepository,
             IBackgroundJobClient backgroundJobClient,
-            IAdminAuditLogService adminAuditLogService)
+            IAdminAuditLogService adminAuditLogService,
+            IPostHistoryService postHistoryService,
+            IQAPostHistoryService qaPostHistoryService)
         {
             _context = context;
             _userContext = userContext;
             _queueRepository = queueRepository;
             _backgroundJobClient = backgroundJobClient;
             _adminAuditLogService = adminAuditLogService;
+            _postHistoryService = postHistoryService;
+            _qaPostHistoryService = qaPostHistoryService;
         }
 
         public async Task<ReturnResult<PagedData<AdminQueueEntryDTO, string>>> GetPendingQueueAsync(Page<string> page)
@@ -109,6 +115,7 @@ namespace platform_core_service.Business.Services
                     postModerationStatus = entry.Post.ModerationStatus.ToString(),
                     entry.Post.ModerationReason
                 };
+                var wasAlreadyApproved = entry.Post.ModerationStatus == ModerationStatus.Approved;
 
                 // Step 3: Resolve the queue entry
                 entry.Resolution = "Approved";
@@ -144,6 +151,10 @@ namespace platform_core_service.Business.Services
 
                 // Gán entry.Post vào biến post để xài cho gọn và hết lỗi đỏ
                 var post = entry.Post;
+                if (!wasAlreadyApproved)
+                {
+                    await RecordApprovedContentHistoryAsync(post);
+                }
                 await EnqueueModerationNotification(post);
 
                 if (post is QAPost)
@@ -201,6 +212,22 @@ namespace platform_core_service.Business.Services
                 await _context.Answers
                     .IgnoreQueryFilters()
                     .AnyAsync(a => a.QAPostId == postId && adminProfileIds.Contains(a.AuthorId) && !a.Deleted);
+        }
+
+        private async Task RecordApprovedContentHistoryAsync(Post post)
+        {
+            if (post.ModerationStatus != ModerationStatus.Approved)
+            {
+                return;
+            }
+
+            if (post is QAPost)
+            {
+                await _qaPostHistoryService.RecordHistoryAsync(post.Id);
+                return;
+            }
+
+            await _postHistoryService.RecordHistoryAsync(post.Id);
         }
 
         public async Task<ReturnResult<bool>> RejectAsync(AdminQueueResolveDTO dto)

@@ -47,6 +47,9 @@ import { SelectQAPostDTO } from '@/types/qa-post/select-qa-post-dto';
 import { UserAvatar } from '@/components/shared/user-avatar';
 import PostNotFound from './post-not-found';
 import PostHeader from './post-header';
+import { useMuteGuard } from '@/hooks/community-mute-hooks/use-mute-guard';
+import { useGetCommunityById } from '@/hooks/community-hooks/use-get-community-by-id';
+import { CommunityApprovalStatus, normalizeCommunityApprovalStatus } from '@/types/enums/community-approval-status';
 
 interface Props {
     postId: string;
@@ -68,8 +71,11 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     const post = isQAPost ? qaPost : normalPost;
     const PostTypeIcon = isQAPost ? HelpCircle : Code2;
     const isPostLoading = isQAPost ? isQALoading : isNormalLoading;
+    const communityId = (post as SelectPostDTO | SelectQAPostDTO | undefined)?.communityId;
+    const { data: loadedCommunity } = useGetCommunityById(communityId ?? '', Boolean(communityId));
 
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(postId);
+    const { checkMuted } = useMuteGuard(communityId);
 
     const isError = isQAPost ? isQAError : isNormalError;
     const error: any = isQAPost ? qaError : normalError;
@@ -86,10 +92,23 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     const isAdmin = user?.roles?.includes('Admin') || user?.roles?.includes('Moderator');
 
     const moderationStatus = normalizeModerationStatus(post?.moderationStatus);
-    const isApproved = moderationStatus === "Approved";
+    const isModerationApproved = moderationStatus === "Approved";
+    const communityApprovalStatus = normalizeCommunityApprovalStatus(post?.communityApprovalStatus) ?? (post?.communityId ? CommunityApprovalStatus.Pending : null);
+    const isCommunityApproved = !post?.communityId ||
+        communityApprovalStatus == null ||
+        communityApprovalStatus === CommunityApprovalStatus.Approved;
+    const isApproved = isModerationApproved && isCommunityApproved;
+    const isCommunityPending = post?.communityId && communityApprovalStatus === CommunityApprovalStatus.Pending;
+    const isCommunityRejected = post?.communityId && communityApprovalStatus === CommunityApprovalStatus.Rejected;
 
     const author = post?.author;
     const community = (post as SelectPostDTO)?.community;
+    const currentUserRole = loadedCommunity?.currentUserRole;
+    const canModerateCommunity =
+        currentUserRole === "Owner" ||
+        currentUserRole === "OWNER" ||
+        currentUserRole === "Moderator" ||
+        currentUserRole === "MODERATOR";
 
     const handleSaveClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -110,6 +129,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
     const handleVote = (e: React.MouseEvent, isUpvote: boolean) => {
         e.preventDefault();
         if (!isApproved) return;
+        if (checkMuted('vote')) return;
         updateVote({ isUpvote });
     };
 
@@ -204,7 +224,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                                                 </div>
                                             )}
                                         </Link>
-                                        <ProfileHoverCard profileId={post.authorId} author={author}>
+                                        <ProfileHoverCard profileId={post.authorId} author={author} communityId={post.communityId} showCommunityStatus={Boolean(post.communityId)} canModerateCommunity={canModerateCommunity}>
                                             <Link href={`/profile/${post.authorId}`} className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-card bg-page overflow-hidden">
                                                 <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
                                             </Link>
@@ -215,7 +235,7 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                                             {community.name}
                                         </Link>
                                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                                            <ProfileHoverCard profileId={post.authorId} author={author}>
+                                            <ProfileHoverCard profileId={post.authorId} author={author} communityId={post.communityId} showCommunityStatus={Boolean(post.communityId)} canModerateCommunity={canModerateCommunity}>
                                                 <Link href={`/profile/${post.authorId}`} className="font-semibold hover:underline text-muted-foreground transition-colors truncate max-w-30">
                                                     {author?.fullName || 'Unknown'}
                                                 </Link>
@@ -275,8 +295,10 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                             </div>
                             <PostActionsDropdown
                                 postId={postId}
+                                communityId={post.communityId}
                                 isQAPost={isQAPost}
                                 isAuthor={isAuthor}
+                                canModerateCommunity={canModerateCommunity}
                                 onDeleted={() => router.push('/feed')}
                             />
                         </div>
@@ -289,6 +311,18 @@ export default function PostArticle({ postId, isQAPost }: Props) {
                             reason={post.moderationReason}
                             className="mb-1"
                         />
+                    )}
+
+                    {(isCommunityPending || isCommunityRejected) && (
+                        <div className={cn(
+                            "rounded-lg border px-3 py-2 text-sm font-medium",
+                            isCommunityRejected
+                                ? "border-destructive/30 bg-destructive/10 text-destructive"
+                                : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                        )}>
+                            {isCommunityRejected ? "Rejected by community moderators" : "Pending community approval"}
+                            {post.communityApprovalReason ? `: ${post.communityApprovalReason}` : ""}
+                        </div>
                     )}
 
                     {/* Title */}

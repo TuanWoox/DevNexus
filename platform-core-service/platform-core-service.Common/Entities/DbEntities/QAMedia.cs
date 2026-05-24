@@ -14,8 +14,6 @@ namespace platform_core_service.Common.Entities.DbEntities
         public QAPost? QAPost { get; set; }
         
         public ContentMediaType QAMediaType { get; set; }
-
-        public string GetAuthorId() => QAPost?.AuthorId ?? "";
         public string? GetCommunityId() => QAPost?.CommunityId;
     }
 }

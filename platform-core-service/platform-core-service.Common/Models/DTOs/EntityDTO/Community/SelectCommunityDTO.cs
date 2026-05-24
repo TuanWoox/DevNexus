@@ -11,6 +11,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Community
         public string? CommunityCoverPhotoUrl { get; set; }
         public string Slug { get; set; } = null!;
         public bool IsPrivate { get; set; }
+        public bool RequireContentApproval { get; set; }
         public DateTimeOffset? DateCreated { get; set; }
         public DateTimeOffset? DateModified { get; set; }
 

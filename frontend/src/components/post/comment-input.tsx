@@ -9,6 +9,8 @@ import { CreateAnswerDTO } from '@/types/answer/create-answer-dto';
 import { ContentType } from '@/types/content-media/content-type';
 import { useUploadContentMedia } from '@/hooks/media/useUploadContentMedia';
 import { UserAvatar } from '@/components/shared/user-avatar';
+import { AlertTriangle } from 'lucide-react';
+import { useMuteGuard } from '@/hooks/community-mute-hooks/use-mute-guard';
 
 interface CommentInputProps {
     postId?: string;
@@ -17,10 +19,11 @@ interface CommentInputProps {
     currentUserAvatar?: string;
     isQAPost?: boolean;
     isDisabled?: boolean;
+    communityId?: string | null;
     onSuccess?: () => void;
 }
 
-export function CommentInput({ postId, answerId, replyToCommentId, currentUserAvatar, isQAPost, isDisabled, onSuccess }: CommentInputProps) {
+export function CommentInput({ postId, answerId, replyToCommentId, currentUserAvatar, isQAPost, isDisabled, communityId, onSuccess }: CommentInputProps) {
     const [content, setContent] = useState('');
     const [isExpanded, setIsExpanded] = useState(false);
     const editorRef = useRef<MarkdownEditorHandle>(null);
@@ -32,9 +35,12 @@ export function CommentInput({ postId, answerId, replyToCommentId, currentUserAv
     const isCreatingAnswerPost = isQAPost && !answerId && !replyToCommentId;
     const isSubmitting = isCreatingAnswerPost ? isCreatingAnswer : isCreatingComment;
     const contentType = isQAPost ? ContentType.Answer : ContentType.Comment;
+    const { checkMuted, isMuted } = useMuteGuard(communityId);
+    const mutedAction = isCreatingAnswerPost ? 'answer questions in this community' : 'comment in this community';
 
     const handleSubmit = async () => {
         if (!content.trim() || content === '\n') return;
+        if (checkMuted(isCreatingAnswerPost ? 'answer questions' : 'comment')) return;
 
         const pendingFiles = editorRef.current?.getPendingFiles(content) ?? new Map<string, File>();
         let finalContent = content;
@@ -90,6 +96,15 @@ export function CommentInput({ postId, answerId, replyToCommentId, currentUserAv
         setContent('');
         setIsExpanded(false);
     };
+
+    if (isMuted) {
+        return (
+            <div className="mb-8 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p className="text-sm font-medium">You are muted and cannot {mutedAction}.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="flex gap-3 sm:gap-4 mb-8">
