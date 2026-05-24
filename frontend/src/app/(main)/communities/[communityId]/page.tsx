@@ -10,6 +10,8 @@ import { communityQueryKeys } from '@/hooks/community-hooks/use-community-query-
 import { INFINITE_PAGE_SIZE } from '@/constants/feed-payload';
 import { SortOrderType } from '@/constants/sortOrderType';
 import { CommunityDetailWrapper } from '@/components/communities/detail/community-detail-wrapper';
+import CommunityNotFound from '@/components/communities/community-not-found';
+
 
 type Props = {
     params: Promise<{ communityId: string }>;
@@ -67,16 +69,7 @@ export default async function CommunityDetailPage({ params }: Props) {
     );
 
     if (!community) {
-        return (
-            <div className="flex items-center justify-center h-[50vh] bg-page">
-                <div className="text-center space-y-2">
-                    <h2 className="text-2xl font-bold text-foreground">Community Not Found</h2>
-                    <p className="text-muted-foreground">
-                        The community you are looking for does not exist or an error occurred.
-                    </p>
-                </div>
-            </div>
-        );
+        return <CommunityNotFound />;
     }
 
     const roleData = community.currentUserRole;
