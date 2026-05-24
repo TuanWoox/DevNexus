@@ -2,6 +2,7 @@ using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Helper;
 using platform_core_service.Business.Repository;
+using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
@@ -159,7 +160,7 @@ namespace platform_core_service.Business.Services
 
                 if (post is QAPost)
                 {
-                    if (await HasExistingAiFirstResponderAnswerAsync(post.Id))
+                    if (await _context.Answers.HasExistingAiFirstResponderAnswerAsync(_context, post.Id))
                     {
                         DevNexusLogger.Instance.Debug($"[AdminModeration] Skipped AI Task for QA Post {post.Id} because an AI answer already exists");
                         result.Result = true;
@@ -197,21 +198,6 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while approving queue entry: {ex.Message}";
             }
             return result;
-        }
-
-        private async Task<bool> HasExistingAiFirstResponderAnswerAsync(string postId)
-        {
-            var adminProfileIds = await _context.Profiles
-                .Where(p =>
-                    p.ApplicationUser.UserName == "admin" ||
-                    p.ApplicationUser.UserRoles.Any(ur => ur.Role.Name == "Admin"))
-                .Select(p => p.Id)
-                .ToListAsync();
-
-            return adminProfileIds.Count > 0 &&
-                await _context.Answers
-                    .IgnoreQueryFilters()
-                    .AnyAsync(a => a.QAPostId == postId && adminProfileIds.Contains(a.AuthorId) && !a.Deleted);
         }
 
         private async Task RecordApprovedContentHistoryAsync(Post post)
