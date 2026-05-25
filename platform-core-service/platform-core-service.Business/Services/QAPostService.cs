@@ -806,16 +806,24 @@ namespace platform_core_service.Business.Services
                 return;
             }
 
-            var requireApproval = await _dbContext.Communities
+            var communityApproval = await _dbContext.Communities
                 .AsNoTracking()
                 .Where(c => c.Id == qaPost.CommunityId)
-                .Select(c => c.RequireContentApproval)
+                .Select(c => new
+                {
+                    c.RequireContentApproval,
+                    IsOwnerOrModerator = c.OwnerId == _userContext.ProfileId ||
+                        c.Moderators.Any(m => m.ModeratorId == _userContext.ProfileId)
+                })
                 .FirstOrDefaultAsync();
 
-            qaPost.CommunityApprovalStatus = requireApproval
+            var shouldWaitForApproval = communityApproval?.RequireContentApproval == true &&
+                communityApproval?.IsOwnerOrModerator != true;
+
+            qaPost.CommunityApprovalStatus = shouldWaitForApproval
                 ? CommunityApprovalStatus.Pending
                 : CommunityApprovalStatus.Approved;
-            qaPost.CommunityApprovalReason = requireApproval
+            qaPost.CommunityApprovalReason = shouldWaitForApproval
                 ? "Awaiting moderator approval"
                 : null;
         }
