@@ -1,12 +1,11 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import { Check, FileQuestion, FileText, Loader2, Users, User, Tags as TagsIcon, Globe, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { FileQuestion, FileText, Loader2, Users, User, Tags as TagsIcon, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CommunitySelectModal } from "./community-select-modal";
 import { useCreatePostShare } from "@/hooks/post-hooks/use-create-post-share";
 import { useCreateQAPostShare } from "@/hooks/qa-post-hooks/use-create-qa-post-share";
@@ -16,7 +15,6 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { MarkdownEditor } from "@/components/editor/markdown-editor";
-import { MarkdownViewer } from "@/components/editor/markdown-viewer";
 import { useGetProfileById } from "@/hooks/profile-hooks/use-get-profile-by-id";
 import { AiMetadataAssist } from "@/components/post/ai-metadata-assist";
 
