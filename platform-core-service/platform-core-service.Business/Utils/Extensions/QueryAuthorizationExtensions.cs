@@ -78,6 +78,31 @@ namespace platform_core_service.Business.Utils.Extensions
                         b.BannedProfileId == currentProfileId));
         }
 
+        public static IQueryable<PostEntity> ApplyShareSourceVisibilityRules(
+            this IQueryable<PostEntity> query,
+            ApplicationDbContext context,
+            string currentProfileId)
+        {
+            return query
+                .Where(p => !p.Deleted)
+                .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                .Where(p =>
+                    (p.CommunityId == null && p.CommunityApprovalStatus == null) ||
+                    (p.CommunityId != null &&
+                     p.CommunityApprovalStatus == CommunityApprovalStatus.Approved &&
+                     p.Community != null &&
+                     !p.Community.IsPrivate))
+                .Where(p => !p.Author.Deleted && !p.Author.IsSuspended && !p.Author.IsPrivate)
+                .Where(p => !context.ProfileBlocks.Any(b =>
+                    (b.OwnerId == currentProfileId && b.BlockedProfileId == p.AuthorId) ||
+                    (b.OwnerId == p.AuthorId && b.BlockedProfileId == currentProfileId)))
+                .Where(p =>
+                    p.CommunityId == null ||
+                    !context.CommunityBans.Any(b =>
+                        b.CommunityId == p.CommunityId &&
+                        b.BannedProfileId == currentProfileId));
+        }
+
         public static IQueryable<Profile> ApplyProfileVisibilityRules(
             this IQueryable<Profile> query,
             ApplicationDbContext context,

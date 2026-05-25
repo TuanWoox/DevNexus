@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Attributes;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
@@ -292,6 +293,23 @@ namespace platform_core_service.Business.Helper
                 .FirstOrDefaultAsync(x => x.Id == qaPostId || x.Slug == qaPostId);
 
             return await CanViewPostEntity(qaPost, ResponseMessage.QUESTION_NOT_AVAILABLE);
+        }
+
+        public async Task<ReturnResult<bool>> CanSharePostAsync(string postId)
+        {
+            if (string.IsNullOrWhiteSpace(postId))
+            {
+                return Denied(ResponseMessage.CONTENT_NOT_AVAILABLE);
+            }
+
+            var canShare = await _dbContext.Posts
+                .AsNoTracking()
+                .ApplyShareSourceVisibilityRules(_dbContext, _userContext.ProfileId)
+                .AnyAsync(p => p.Id == postId || p.Slug == postId);
+
+            return canShare
+                ? Success()
+                : Denied(ResponseMessage.CONTENT_NOT_AVAILABLE);
         }
 
         public async Task<ReturnResult<bool>> CanViewComment(string commentId)

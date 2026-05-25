@@ -22,3 +22,9 @@ export function getQAPostDetailHref(qaPost: ContentRouteTarget): string {
 
     return `/questions/${qaPost.id}`;
 }
+
+export function getSharedPostDetailHref(sharedPost: ContentRouteTarget & { contentType: number }): string {
+    return sharedPost.contentType === 1
+        ? getQAPostDetailHref(sharedPost)
+        : getPostDetailHref(sharedPost);
+}

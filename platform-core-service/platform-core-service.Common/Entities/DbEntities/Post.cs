@@ -54,5 +54,11 @@ namespace platform_core_service.Common.Entities.DbEntities
         public string? CommunityApprovalReason { get; set; }
 
         public virtual PostModerationResult? ModerationResult { get; set; }
+
+        [ForeignKey(nameof(SharedPost))]
+        public string? SharedPostId { get; set; }
+
+        [JsonIgnore]
+        public virtual Post? SharedPost { get; set; }
     }
 }

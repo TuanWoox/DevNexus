@@ -1,3 +1,4 @@
-import { CreatePostDTO } from "../post/create-post-dto";
+import { CreatePostDTO, CreatePostShareDTO } from "../post/create-post-dto";
 
 export type CreateQAPostDTO = CreatePostDTO 
+export type CreateQAPostShareDTO = CreatePostShareDTO

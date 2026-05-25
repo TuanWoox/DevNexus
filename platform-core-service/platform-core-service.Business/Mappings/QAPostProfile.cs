@@ -11,6 +11,8 @@ namespace platform_core_service.Business.Mappings
         {
             CreateMap<CreateQAPostDTO, QAPost>()
                 .IncludeBase<CreatePostDTO, Post>();
+            CreateMap<CreateQAPostShareDTO, QAPost>()
+                .IncludeBase<CreatePostShareDTO, Post>();
             CreateMap<UpdateQAPostDTO, QAPost>()
                 .IncludeBase<UpdatePostDTO, Post>();
             CreateMap<QAPost, SelectQAPostDTO>()

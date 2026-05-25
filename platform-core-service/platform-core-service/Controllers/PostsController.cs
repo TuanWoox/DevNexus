@@ -38,6 +38,22 @@ namespace platform_core_service.Controllers
             return Ok(returnResult);
         }
 
+        [HttpPost("share")]
+        public async Task<IActionResult> CreateShare([FromBody] CreatePostShareDTO createDTO)
+        {
+            var returnResult = new ReturnResult<SelectPostDTO>();
+            try
+            {
+                returnResult = await _postService.CreateShareAsync(createDTO);
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                returnResult.Message = $"An error occurred: {ex.Message}";
+            }
+            return Ok(returnResult);
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {

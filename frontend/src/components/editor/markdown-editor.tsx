@@ -106,6 +106,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     const isSupportedImage = (file: File) => file.type.startsWith('image/') || IMAGE_EXTENSION_REGEX.test(file.name);
 
     const handlePaste = (event: ClipboardEvent<HTMLDivElement>) => {
+        if (contentType === undefined) return;
         const files = Array.from(event.clipboardData.files).filter(isSupportedImage);
         if (files.length === 0) return;
 
@@ -114,6 +115,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     };
 
     const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+        if (contentType === undefined) return;
         const files = Array.from(event.dataTransfer.files).filter(isSupportedImage);
         if (files.length === 0) return;
 

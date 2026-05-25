@@ -137,9 +137,14 @@ namespace platform_core_service.Data
             {
                 entity.Property(p => p.ModerationStatus).HasConversion<int>();
                 entity.Property(p => p.CommunityApprovalStatus).HasConversion<int>();
+                entity.HasOne(p => p.SharedPost)
+                    .WithMany()
+                    .HasForeignKey(p => p.SharedPostId)
+                    .OnDelete(DeleteBehavior.Restrict);
                 entity.HasIndex(p => new { p.ModerationStatus, p.DateCreated });
                 entity.HasIndex(p => new { p.CommunityId, p.CommunityApprovalStatus, p.DateCreated });
                 entity.HasIndex(p => new { p.AuthorId, p.ModerationStatus, p.DateCreated });
+                entity.HasIndex(p => p.SharedPostId);
                 entity.HasIndex(p => p.Slug);
             });
 
