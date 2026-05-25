@@ -38,10 +38,16 @@ export function GroupAddMembersDialog({ open, onClose, chatId }: GroupAddMembers
         [existingMembers]
     );
     const existingIdsRef = useRef(existingIds);
-    existingIdsRef.current = existingIds;
 
     const selectedRef = useRef(selected);
-    selectedRef.current = selected;
+
+    useEffect(() => {
+        existingIdsRef.current = existingIds;
+    }, [existingIds]);
+
+    useEffect(() => {
+        selectedRef.current = selected;
+    }, [selected]);
 
     const searchProfiles = useCallback(async (q: string) => {
         if (q.trim().length < 1) {

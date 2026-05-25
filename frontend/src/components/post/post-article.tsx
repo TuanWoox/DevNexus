@@ -50,6 +50,8 @@ import PostHeader from './post-header';
 import { useMuteGuard } from '@/hooks/community-mute-hooks/use-mute-guard';
 import { useGetCommunityById } from '@/hooks/community-hooks/use-get-community-by-id';
 import { CommunityApprovalStatus, normalizeCommunityApprovalStatus } from '@/types/enums/community-approval-status';
+import { SharePostDialog } from './share-post-dialog';
+import { SharedPostPreview } from './shared-post-preview';
 
 interface Props {
     postId: string;
@@ -65,6 +67,7 @@ export default function PostArticle({ postId, isQAPost, context = "personal", ro
     const [isBookmarkModalOpen, setIsBookmarkModalOpen] = useState(false);
     const [isUnsaveModalOpen, setIsUnsaveModalOpen] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 
     const { mutate: unsaveItem, isPending: isUnsavePending } = useDeleteBookmarkedItemById();
 
@@ -113,6 +116,7 @@ export default function PostArticle({ postId, isQAPost, context = "personal", ro
         currentUserRole === "OWNER" ||
         currentUserRole === "Moderator" ||
         currentUserRole === "MODERATOR";
+    const canShare = isApproved && loadedCommunity?.isPrivate !== true;
 
     const handleSaveClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -135,6 +139,11 @@ export default function PostArticle({ postId, isQAPost, context = "personal", ro
         if (!isApproved) return;
         if (checkMuted('vote')) return;
         updateVote({ isUpvote });
+    };
+
+    const handleShareClick = () => {
+        if (!canShare) return;
+        setIsShareDialogOpen(true);
     };
 
     const commentCount = isQAPost
@@ -214,7 +223,7 @@ export default function PostArticle({ postId, isQAPost, context = "personal", ro
             )}>
                 <div className="p-3 sm:px-5 flex flex-col gap-3">
                     {/* Header: Community/Author & Options */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between border-b border-border/40 pb-3.5 mb-1">
                         <div className="flex items-center gap-3">
                             {community ? (
                                 <>
@@ -355,6 +364,8 @@ export default function PostArticle({ postId, isQAPost, context = "personal", ro
                         />
                     </div>
 
+                    <SharedPostPreview post={post as SelectPostDTO} />
+
                     {/* Tags */}
                     {post.tagNames.length !== 0 && (
                         <div className="flex flex-wrap gap-2">
@@ -421,7 +432,8 @@ export default function PostArticle({ postId, isQAPost, context = "personal", ro
                             <span className="text-sm font-medium hidden sm:block">{post?.isSaved ? 'Saved' : 'Save'}</span>
                         </button>
                         <button
-                            disabled={!isApproved}
+                            onClick={handleShareClick}
+                            disabled={!canShare}
                             className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg cursor-pointer disabled:cursor-not-allowed transition-colors flex items-center gap-2 disabled:opacity-50"
                         >
                             <Share2 className="w-5 h-5" />
@@ -450,6 +462,12 @@ export default function PostArticle({ postId, isQAPost, context = "personal", ro
                     type={isQAPost ? "qapost" : "post"}
                     open={isHistoryOpen}
                     onClose={() => setIsHistoryOpen(false)}
+                />
+
+                <SharePostDialog
+                    post={post as SelectPostDTO}
+                    open={isShareDialogOpen}
+                    onOpenChange={setIsShareDialogOpen}
                 />
 
                 <AlertDialog open={isUnsaveModalOpen} onOpenChange={setIsUnsaveModalOpen}>

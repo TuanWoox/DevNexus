@@ -39,6 +39,8 @@ namespace platform_core_service.Business.Services
             var communities = await SearchCommunitiesPreviewAsync(query, size, cancellationToken);
             var profiles = await SearchProfilesPreviewAsync(query, size, cancellationToken);
 
+            await posts.HydrateSharedPostsAsync(_context, _userContext.ProfileId);
+            await qaPosts.Cast<SelectPostDTO>().HydrateSharedPostsAsync(_context, _userContext.ProfileId);
             await SetCurrentUserVotesForListAsync(posts);
             await SetCurrentUserSavedForListAsync(posts);
             await SetCurrentUserVotesForListAsync(qaPosts.Cast<SelectPostDTO>().ToList());
@@ -65,6 +67,7 @@ namespace platform_core_service.Business.Services
             var result = await ToPagedDataAsync(postsQuery, page, ProjectPost(), cancellationToken);
             if (result?.Data != null && result.Data.Any())
             {
+                await result.Data.HydrateSharedPostsAsync(_context, _userContext.ProfileId);
                 await SetCurrentUserVotesForListAsync(result.Data.ToList());
                 await SetCurrentUserSavedForListAsync(result.Data.ToList());
             }
@@ -80,6 +83,7 @@ namespace platform_core_service.Business.Services
             var result = await ToPagedDataAsync(qaPostsQuery, page, ProjectQAPost(), cancellationToken);
             if (result?.Data != null && result.Data.Any())
             {
+                await result.Data.Cast<SelectPostDTO>().HydrateSharedPostsAsync(_context, _userContext.ProfileId);
                 await SetCurrentUserVotesForListAsync(result.Data.Cast<SelectPostDTO>().ToList());
                 await SetCurrentUserSavedForListAsync(result.Data.Cast<SelectPostDTO>().ToList());
             }
@@ -278,6 +282,7 @@ namespace platform_core_service.Business.Services
                 IsSaved = false,
                 SavedBookMarkedItemId = null,
                 CommunityId = p.CommunityId,
+                SharedPostId = p.SharedPostId,
                 Community = p.Community != null ? new SelectPostCommunityDTO
                 {
                     Id = p.Community.Id,
@@ -321,6 +326,7 @@ namespace platform_core_service.Business.Services
                 IsSaved = false,
                 SavedBookMarkedItemId = null,
                 CommunityId = p.CommunityId,
+                SharedPostId = p.SharedPostId,
                 Community = p.Community != null ? new SelectPostCommunityDTO
                 {
                     Id = p.Community.Id,

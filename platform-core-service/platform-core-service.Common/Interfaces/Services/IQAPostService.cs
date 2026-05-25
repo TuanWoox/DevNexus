@@ -10,6 +10,7 @@ namespace platform_core_service.Common.Interfaces.Services
     public interface IQAPostService
     {
         Task<ReturnResult<SelectQAPostDTO>> CreateAsync(CreateQAPostDTO createDTO);
+        Task<ReturnResult<SelectQAPostDTO>> CreateShareAsync(CreateQAPostShareDTO createDTO);
         Task<ReturnResult<SelectQAPostDTO>> GetByIdAsync(string postId);
         Task<ReturnResult<PagedData<SelectQAPostDTO, string>>> GetPageAsync(Page<string> page);
         Task<ReturnResult<PagedData<SelectQAPostDTO,string>>> GetPageAsyncByProfileId(Page<string> page, string profileId);

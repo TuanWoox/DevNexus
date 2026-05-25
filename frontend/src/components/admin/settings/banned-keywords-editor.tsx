@@ -49,6 +49,7 @@ export function BannedKeywordsEditor({ initialKeywords, onSave, isSaving }: Bann
   const [inputValue, setInputValue] = useState('')
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft(initialKeywords)
   }, [initialKeywords])
 

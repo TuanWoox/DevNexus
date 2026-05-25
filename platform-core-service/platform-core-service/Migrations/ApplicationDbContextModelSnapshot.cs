@@ -1103,6 +1103,9 @@ namespace platform_core_service.Migrations
                     b.Property<int>("PostType")
                         .HasColumnType("integer");
 
+                    b.Property<string>("SharedPostId")
+                        .HasColumnType("text");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -1119,6 +1122,8 @@ namespace platform_core_service.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Deleted");
+
+                    b.HasIndex("SharedPostId");
 
                     b.HasIndex("Slug");
 
@@ -2254,9 +2259,16 @@ namespace platform_core_service.Migrations
                         .WithMany("Posts")
                         .HasForeignKey("CommunityId");
 
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Post", "SharedPost")
+                        .WithMany()
+                        .HasForeignKey("SharedPostId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Author");
 
                     b.Navigation("Community");
+
+                    b.Navigation("SharedPost");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostHistory", b =>

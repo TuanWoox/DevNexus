@@ -130,6 +130,7 @@ export function MessageComposer({ selectedChat, messages, currentProfileId, edit
 
     useEffect(() => {
         if (editingMessage) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setValue(editingMessage.Content);
             textareaRef.current?.focus();
         } else {

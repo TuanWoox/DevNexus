@@ -8,6 +8,10 @@ export interface CreatePostDTO {
     mediaIds?: string[];
 }
 
+export interface CreatePostShareDTO extends Omit<CreatePostDTO, "mediaIds"> {
+    sharedPostId: string;
+}
+
 export enum PostType {
     MarkDown = 0,
     WYSIWYG = 1
