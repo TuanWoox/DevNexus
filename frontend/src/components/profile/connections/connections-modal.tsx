@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, X } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -36,6 +36,13 @@ export function ConnectionsModal({
     const [activeTab, setActiveTab] = useState<ConnectionsTabValue>(initialTab);
     const [searchTerm, setSearchTerm] = useState("");
     const debouncedSearch = useDebounce(searchTerm, 300);
+
+    useEffect(() => {
+        if (!open) return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setActiveTab(initialTab);
+        setSearchTerm("");
+    }, [initialTab, open]);
 
     // Reset search when tab changes
     const switchTab = (tab: ConnectionsTabValue) => {

@@ -8,12 +8,15 @@ import { ActorType, NotificationEventEnum } from "@/features/notifications/types
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/shared/user-avatar";
-import { FollowRequestOverlay } from "./follow-request-overlay";
+import { ConnectionsModal } from "@/components/profile/connections/connections-modal";
 import { CheckCircle2, Clock3, Flag, ShieldCheck } from "lucide-react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 export function NotificationToastHost() {
     const pathname = usePathname();
     const router = useRouter();
+    const user = useSelector((state: RootState) => state.auth.user);
     const isOnNotificationsPage = pathname.startsWith("/notifications");
     const [activeOverlay, setActiveOverlay] = useState<NotificationEventEnum | null>(null);
 
@@ -108,9 +111,12 @@ export function NotificationToastHost() {
     return (
         <>
             {activeOverlay === NotificationEventEnum.FOLLOW_REQUEST && (
-                <FollowRequestOverlay
+                <ConnectionsModal
                     open={true}
                     onClose={() => setActiveOverlay(null)}
+                    profileId={user?.profileId ?? ""}
+                    isOwnProfile
+                    initialTab="requests"
                 />
             )}
         </>
