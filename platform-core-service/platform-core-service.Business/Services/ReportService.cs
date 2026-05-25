@@ -6,6 +6,7 @@ using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Report;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Utils.Enums;
+using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using System.Text.Json;
 
@@ -187,7 +188,11 @@ namespace platform_core_service.Business.Services
                 .Where(p => p.GetType() == typeof(Post))
                 .Include(p => p.Author)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.Id == targetId && p.ModerationStatus == ModerationStatus.Approved);
+                .FirstOrDefaultAsync(p =>
+                    p.Id == targetId &&
+                    !p.Deleted &&
+                    (p.ModerationStatus == ModerationStatus.Pending ||
+                     p.ModerationStatus == ModerationStatus.Approved));
 
             if (post == null)
             {
@@ -205,7 +210,11 @@ namespace platform_core_service.Business.Services
                 .OfType<QAPost>()
                 .Include(p => p.Author)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.Id == targetId && p.ModerationStatus == ModerationStatus.Approved);
+                .FirstOrDefaultAsync(p =>
+                    p.Id == targetId &&
+                    !p.Deleted &&
+                    (p.ModerationStatus == ModerationStatus.Pending ||
+                     p.ModerationStatus == ModerationStatus.Approved));
 
             if (question == null)
             {
@@ -227,7 +236,7 @@ namespace platform_core_service.Business.Services
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == targetId);
 
-            if (comment == null || !IsCommentReportable(comment))
+            if (comment == null || comment.Deleted || !IsCommentReportable(comment))
             {
                 return null;
             }
@@ -250,7 +259,7 @@ namespace platform_core_service.Business.Services
                 .AsNoTracking()
                 .FirstOrDefaultAsync(a => a.Id == targetId);
 
-            if (answer == null || !IsPostReportable(answer.QAPost))
+            if (answer == null || answer.Deleted || !IsPostReportable(answer.QAPost))
             {
                 return null;
             }
@@ -277,7 +286,7 @@ namespace platform_core_service.Business.Services
 
         private static bool IsPostReportable(Post? post)
         {
-            return post != null && !post.Deleted && post.ModerationStatus == ModerationStatus.Approved;
+            return post != null && !post.Deleted && post.ModerationStatus.IsPubliclyVisible();
         }
 
         private static string BuildSnapshotJson(

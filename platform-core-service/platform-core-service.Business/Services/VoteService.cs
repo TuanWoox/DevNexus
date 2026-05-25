@@ -62,7 +62,7 @@ namespace platform_core_service.Business.Services
                     if (post == null)
                         return ReturnError(result, $"Post {postId} not found");
 
-                    if (post.ModerationStatus != ModerationStatus.Approved)
+                    if (!post.ModerationStatus.IsPubliclyVisible())
                         return ReturnError(result, "You cannot vote on a post while it is under moderation");
 
                     var existingVote = await _dbContext.Votes
@@ -151,7 +151,7 @@ namespace platform_core_service.Business.Services
                     if (answer == null)
                         return ReturnError(result, $"Answer {answerId} not found");
 
-                    if (answer.QAPost?.ModerationStatus != ModerationStatus.Approved)
+                    if (answer.QAPost == null || !answer.QAPost.ModerationStatus.IsPubliclyVisible())
                         return ReturnError(result, "You cannot vote on an answer while the question is under moderation");
 
                     var existingVote = await _dbContext.Votes
@@ -247,7 +247,7 @@ namespace platform_core_service.Business.Services
                         return ReturnError(result, $"Comment {commentId} not found");
 
                     var moderatedRootPost = comment.Post ?? comment.Answer?.QAPost ?? comment.ReplyToComment?.Answer?.QAPost ?? comment.ReplyToComment?.Post;
-                    if (moderatedRootPost?.ModerationStatus != ModerationStatus.Approved)
+                    if (moderatedRootPost == null || !moderatedRootPost.ModerationStatus.IsPubliclyVisible())
                         return ReturnError(result, "You cannot vote on a comment while the parent post is under moderation");
 
                     var existingVote = await _dbContext.Votes
