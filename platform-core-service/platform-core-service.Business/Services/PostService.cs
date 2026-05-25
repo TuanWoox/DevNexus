@@ -837,16 +837,24 @@ namespace platform_core_service.Business.Services
                 return;
             }
 
-            var requireApproval = await _context.Communities
+            var communityApproval = await _context.Communities
                 .AsNoTracking()
                 .Where(c => c.Id == post.CommunityId)
-                .Select(c => c.RequireContentApproval)
+                .Select(c => new
+                {
+                    c.RequireContentApproval,
+                    IsOwnerOrModerator = c.OwnerId == _userContext.ProfileId ||
+                        c.Moderators.Any(m => m.ModeratorId == _userContext.ProfileId)
+                })
                 .FirstOrDefaultAsync();
 
-            post.CommunityApprovalStatus = requireApproval
+            var shouldWaitForApproval = communityApproval?.RequireContentApproval == true &&
+                communityApproval?.IsOwnerOrModerator != true;
+
+            post.CommunityApprovalStatus = shouldWaitForApproval
                 ? CommunityApprovalStatus.Pending
                 : CommunityApprovalStatus.Approved;
-            post.CommunityApprovalReason = requireApproval
+            post.CommunityApprovalReason = shouldWaitForApproval
                 ? "Awaiting moderator approval"
                 : null;
         }
