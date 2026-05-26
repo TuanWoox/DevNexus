@@ -70,13 +70,15 @@ namespace platform_core_service.Business.Services
                 var profileBlock = _mapper.Map<ProfileBlock>(createProfileBlock);
                 profileBlock.OwnerId = _userContext.ProfileId;
                 await _dbContext.ProfileBlocks.AddAsync(profileBlock);
+
+                await DeleteFollowRequestAndUserFollow(
+                    _userContext.ProfileId,
+                    createProfileBlock.BlockedProfileId);
+
                 var savedResult = await _dbContext.SaveChangesAsync();
                 if (savedResult > 0)
                 {
                     returnResult.Result = _mapper.Map<SelectProfileBlock>(profileBlock);
-                    //After that run background job to delete userfollow and follow request
-                    _backgroundJobClient.Enqueue<IProfileBlockBackgroundJobs>(x => x.DeleteFollowRequestAndUserFollow(_userContext.ProfileId, 
-                                                                                createProfileBlock.BlockedProfileId));
 
                     //Send this over to rabbitmq 
                     _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
@@ -91,6 +93,22 @@ namespace platform_core_service.Business.Services
                 returnResult.Message = ex.Message;
             }
             return returnResult;
+        }
+
+        private async Task DeleteFollowRequestAndUserFollow(string profileId, string blockedProfileId)
+        {
+            var existingFollowRequests = await _dbContext.FollowRequests
+                .Where(x => (x.RequesterProfileId == blockedProfileId || x.RequesterProfileId == profileId)
+                         && (x.TargetProfileId == profileId || x.TargetProfileId == blockedProfileId))
+                .ToListAsync();
+
+            var existingUserFollows = await _dbContext.UserFollows
+                .Where(x => (x.FollowingProfileId == blockedProfileId || x.FollowingProfileId == profileId)
+                         && (x.OwnerId == profileId || x.OwnerId == blockedProfileId))
+                .ToListAsync();
+
+            _dbContext.UserFollows.RemoveRange(existingUserFollows);
+            _dbContext.FollowRequests.RemoveRange(existingFollowRequests);
         }
 
         public async Task<ReturnResult<PagedData<SelectProfileBlock, string>>> GetPagingAsync(Page<string> page)

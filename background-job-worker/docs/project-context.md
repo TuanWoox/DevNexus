@@ -47,8 +47,6 @@ Configured in `Infrastructures/HangfireSetupExtensions.cs`.
 - `MediaBackgroundJobs.CleanUpAbandonedTempFolders()`
   - Deletes abandoned chunk-upload temp folders older than 24 hours from configured upload roots.
 
-- `ProfileBackgroundJobs.DeleteFollowRequestAndUserFollow(profileId, blockProfileId)`
-  - Removes conflicting follow requests and user-follow rows after a block.
 
 - `PublishMessageBackgroundJobs.PublishEntity(entity, messageBus, messageBusEntity)`
   - Wraps an entity in `PublishMessageBusDTO` and publishes it to the default sync bus.
