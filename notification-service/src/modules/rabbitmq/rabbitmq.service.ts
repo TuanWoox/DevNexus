@@ -130,11 +130,12 @@ export class RabbitMQService implements OnModuleInit {
 
     const globalSettingMap = new Map(globalSettings.map((s) => [s.ProfileId, s]));
     const mutedSet = new Set(muteSettings.map((m) => m.ProfileId));
-    const existingMap = new Map(
-      existingNotifications
-        .filter((n): n is typeof n & { GroupKey: string } => n.GroupKey !== null)
-        .map((n) => [n.GroupKey, n]),
-    );
+    const existingMap = new Map<string, Notification>();
+    for (const notification of existingNotifications) {
+      if (notification.GroupKey && !existingMap.has(notification.GroupKey)) {
+        existingMap.set(notification.GroupKey, notification);
+      }
+    }
 
     const createdResults = await Promise.allSettled(
       recipientIds.map((recipientId) =>
@@ -202,6 +203,8 @@ export class RabbitMQService implements OnModuleInit {
 
     return this.prisma.$transaction(async (tx) => {
       if (existing) {
+        const shouldAggregate = existing.ActorId !== event.ActorId;
+
         return tx.notification.update({
           where: { Id: existing.Id },
           data: {
@@ -209,11 +212,13 @@ export class RabbitMQService implements OnModuleInit {
             ActorId: event.ActorId,
             ActorName: event.ActorName,
             ActorAvatarUrl: event.ActorAvatarUrl,
-            AggregatedCount: { increment: 1 },
+            ...(shouldAggregate
+              ? { AggregatedCount: { increment: 1 } }
+              : {}),
+            ...(!shouldAggregate && event.Message ? { Message: event.Message } : {}),
             IsRead: false,
             ReadAt: null,
             DateModified: new Date(),
-            ...(event.Message ? { Message: event.Message } : {}),
             DateCreated: new Date(),
             ActionUrl: event.ActionUrl,
             EntityPreview: event.EntityPreview
