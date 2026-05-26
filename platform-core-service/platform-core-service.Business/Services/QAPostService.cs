@@ -111,9 +111,21 @@ namespace platform_core_service.Business.Services
 
                 await SetCommunityApprovalStateAsync(qaPost);
 
-                // Step 6: Save
+                if (matchedBannedKeywords.Any())
+                {
+                    qaPost.ModerationStatus = ModerationStatus.InReview;
+                    qaPost.ModerationReason = BuildBannedKeywordReason(matchedBannedKeywords);
+                }
+
+                // Step 6: Save. Clean questions default to Pending; banned-keyword questions are hidden immediately.
                 _dbContext.Posts.Add(qaPost);
                 await _dbContext.SaveChangesAsync();
+
+                // Banned-keyword posts bypass AI and go directly to human review.
+                if (matchedBannedKeywords.Any())
+                {
+                    await _moderationService.EnqueueBannedKeywordReviewAsync(qaPost.Id, matchedBannedKeywords);
+                }
 
                 // Step 7: Link pre-uploaded QA media before returning so media URLs render immediately.
                 await _contentMediaLinkService.LinkQAMediaAsync(_userContext.UserId, qaPost.Id, createDTO.MediaIds);
@@ -130,19 +142,8 @@ namespace platform_core_service.Business.Services
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(savedPost);
 
-                // Step 9: Fire-and-forget — submit to AI moderation pipeline.
-                // Runs after response is already built; never blocks or throws to caller.
-                // Banned-keyword posts bypass AI and go directly to human review.
-                if (matchedBannedKeywords.Any())
-                {
-                    await _moderationService.EnqueueBannedKeywordReviewAsync(qaPost.Id, matchedBannedKeywords);
-                    if (result.Result != null)
-                    {
-                        result.Result.ModerationStatus = ModerationStatus.InReview;
-                        result.Result.ModerationReason = BuildBannedKeywordReason(matchedBannedKeywords);
-                    }
-                }
-                else
+                // Step 9: Clean questions are submitted to AI moderation after they are already public as Pending.
+                if (!matchedBannedKeywords.Any())
                 {
                     await _aiWorkerClient.SubmitForModerationAsync(qaPost.Id, createDTO.Title, createDTO.Content);
                 }
@@ -557,6 +558,8 @@ namespace platform_core_service.Business.Services
 
                 // Step 4: Apply DTO to entity
                 var oldSlug = qaPost.Slug;
+                var oldTitle = qaPost.Title;
+                var oldContent = qaPost.Content;
                 _mapper.Map(updateDTO, qaPost);
 
                 // Step 5: Preserve slug uniqueness
@@ -575,31 +578,44 @@ namespace platform_core_service.Business.Services
                     await UpdatePostTagsAsync(qaPost, updateDTO.TagNames, postId);
                 }
 
-                var shouldModerate = !string.IsNullOrWhiteSpace(updateDTO.Content) || !string.IsNullOrWhiteSpace(updateDTO.Title);
+                var shouldModerate =
+                    (updateDTO.Title != null && !string.Equals(updateDTO.Title, oldTitle, StringComparison.Ordinal)) ||
+                    (updateDTO.Content != null && !string.Equals(updateDTO.Content, oldContent, StringComparison.Ordinal));
+
+                List<string> matchedBannedKeywords = [];
+                if (shouldModerate)
+                {
+                    matchedBannedKeywords = await GetMatchedBannedKeywordsAsync(qaPost.Title, qaPost.Content);
+                    if (matchedBannedKeywords.Any())
+                    {
+                        qaPost.ModerationStatus = ModerationStatus.InReview;
+                        qaPost.ModerationReason = BuildBannedKeywordReason(matchedBannedKeywords);
+                    }
+                    else
+                    {
+                        qaPost.ModerationStatus = ModerationStatus.Pending;
+                        qaPost.ModerationReason = null;
+                    }
+                }
+
                 await SetCommunityApprovalStateAsync(qaPost);
 
-                // Step 7: Save
+                // Step 7: Save changes with the new moderation state already applied when content changed.
                 _dbContext.Posts.Update(qaPost);
                 await _dbContext.SaveChangesAsync();
 
                 // Step 8: Link any newly provided pre-uploaded QA media before returning.
                 await _contentMediaLinkService.LinkQAMediaAsync(_userContext.UserId, postId, updateDTO.MediaIds);
 
-                // Step 9: Reset and re-submit for moderation.
-                // Edited content must pass the pipeline again before becoming visible.
+                // Step 9: Submit changed clean content to AI, or send banned-keyword content to human review.
                 if (shouldModerate)
                 {
-                    var matchedBannedKeywords = await GetMatchedBannedKeywordsAsync(qaPost.Title, qaPost.Content);
-
                     if (matchedBannedKeywords.Any())
                     {
                         await _moderationService.EnqueueBannedKeywordReviewAsync(postId, matchedBannedKeywords);
                     }
                     else
                     {
-                        qaPost.ModerationStatus = ModerationStatus.Pending;
-                        qaPost.ModerationReason = null;
-                        await _dbContext.SaveChangesAsync();
                         await _aiWorkerClient.SubmitForModerationAsync(postId, qaPost.Title, qaPost.Content);
                     }
                 }
