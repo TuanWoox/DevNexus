@@ -10,6 +10,7 @@ import { getSharedPostDetailHref } from "@/utils/content-routes";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { ProfileHoverCard } from "@/components/profile/profile-hover-card";
 import { ProfileHoverCardAuthor } from "@/components/profile/profile-hover-card-content";
+import { CommunityHoverCard } from "@/components/communities/community-hover-card";
 import { MarkdownViewer } from "@/components/editor/markdown-viewer";
 import { cn } from "@/lib/utils";
 
@@ -66,24 +67,20 @@ export function SharedPostPreview({ post }: SharedPostPreviewProps) {
                         {sharedCommunity ? (
                             /* Community Post Header Style */
                             <div className="relative flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                                <Link
-                                    href={`/communities/${sharedCommunity.id}`}
-                                    className="block w-9 h-9 rounded-lg overflow-hidden border border-default bg-primary/10 relative"
-                                >
-                                    {sharedCommunity.communityCoverPhotoUrl ? (
-                                        <Image
-                                            src={sharedCommunity.communityCoverPhotoUrl}
-                                            alt={sharedCommunity.name}
-                                            fill
-                                            unoptimized
-                                            className="object-cover"
-                                        />
-                                    ) : (
-                                        <div className="flex items-center justify-center h-full">
-                                            <Globe className="w-4 h-4 text-primary" />
-                                        </div>
-                                    )}
-                                </Link>
+                                <CommunityHoverCard communityId={sharedCommunity.id} community={sharedCommunity} side="right">
+                                    <Link
+                                        href={`/communities/${sharedCommunity.id}`}
+                                        className="relative isolate block size-9 shrink-0 overflow-hidden rounded-lg border border-default bg-primary/10"
+                                    >
+                                        {sharedCommunity.communityCoverPhotoUrl ? (
+                                            <img src={sharedCommunity.communityCoverPhotoUrl} alt={sharedCommunity.name} className="absolute left-1/2 top-1/2 h-[160%] w-full -translate-x-1/2 -translate-y-1/2 object-cover object-center" />
+                                        ) : (
+                                            <div className="flex size-full items-center justify-center">
+                                                <Globe className="w-4 h-4 text-primary" />
+                                            </div>
+                                        )}
+                                    </Link>
+                                </CommunityHoverCard>
                                 {sharedAuthor && (
                                     <ProfileHoverCard
                                         profileId={sharedAuthor.id}
@@ -131,12 +128,14 @@ export function SharedPostPreview({ post }: SharedPostPreviewProps) {
                             {sharedCommunity ? (
                                 <>
                                     <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                                        <Link
-                                            href={`/communities/${sharedCommunity.id}`}
-                                            className="text-[13px] font-bold text-heading hover:underline hover:text-primary transition-colors truncate max-w-[150px] sm:max-w-[200px]"
-                                        >
-                                            {sharedCommunity.name}
-                                        </Link>
+                                        <CommunityHoverCard communityId={sharedCommunity.id} community={sharedCommunity} side="bottom">
+                                            <Link
+                                                href={`/communities/${sharedCommunity.id}`}
+                                                className="text-[13px] font-bold text-heading hover:underline hover:text-primary transition-colors truncate max-w-[150px] sm:max-w-[200px]"
+                                            >
+                                                {sharedCommunity.name}
+                                            </Link>
+                                        </CommunityHoverCard>
                                     </div>
                                     <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-0.5 flex-wrap">
                                         {sharedAuthor && (

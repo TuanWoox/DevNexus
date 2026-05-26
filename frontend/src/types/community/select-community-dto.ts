@@ -7,6 +7,7 @@ export interface SelectCommunityDTO {
     slug: string;
     isPrivate: boolean;
     requireContentApproval: boolean;
+    memberCount: number;
     dateCreated?: string;
     dateModified?: string;
     currentUserRole: string;

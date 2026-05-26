@@ -18,6 +18,9 @@ export interface SelectPostCommunityDTO {
     name: string;
     slug: string;
     communityCoverPhotoUrl?: string;
+    description?: string | null;
+    memberCount?: number;
+    isPrivate?: boolean;
 }
 
 export enum SharedContentType {
