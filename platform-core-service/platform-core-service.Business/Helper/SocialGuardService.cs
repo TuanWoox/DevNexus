@@ -530,6 +530,15 @@ namespace platform_core_service.Business.Helper
                 {
                     return Denied(ResponseMessage.COMMUNITY_ACCESS_REQUIRED);
                 }
+
+                var isBlocked = await _dbContext.ProfileCommunityBlocks
+                    .AsNoTracking()
+                    .AnyAsync(x => x.CommunityId == communityId && x.ProfileId == viewerProfileId);
+
+                if (isBlocked)
+                {
+                    return Denied(ResponseMessage.COMMUNITY_ACCESS_REQUIRED);
+                }
             }
 
             if (!community.IsPrivate)
