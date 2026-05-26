@@ -52,6 +52,7 @@ import { useGetCommunityById } from '@/hooks/community-hooks/use-get-community-b
 import { CommunityApprovalStatus, normalizeCommunityApprovalStatus } from '@/types/enums/community-approval-status';
 import { SharePostDialog } from './share-post-dialog';
 import { SharedPostPreview } from './shared-post-preview';
+import { CommunityHoverCard } from '@/components/communities/community-hover-card';
 
 interface Props {
     postId: string;
@@ -228,15 +229,17 @@ export default function PostArticle({ postId, isQAPost, context = "personal", ro
                             {community ? (
                                 <>
                                     <div className="relative">
-                                        <Link href={`/communities/${community.id}`} className="block w-10 h-10 rounded-lg overflow-hidden border border-default bg-primary/10 relative">
-                                            {community.communityCoverPhotoUrl ? (
-                                                <Image src={community.communityCoverPhotoUrl} alt={community.name} fill unoptimized className="object-cover" />
-                                            ) : (
-                                                <div className="flex items-center justify-center h-full">
-                                                    <Globe className="w-5 h-5 text-primary" />
-                                                </div>
-                                            )}
-                                        </Link>
+                                        <CommunityHoverCard communityId={community.id} community={community} side="right">
+                                            <Link href={`/communities/${community.id}`} className="relative isolate block size-10 shrink-0 overflow-hidden rounded-lg border border-default bg-primary/10">
+                                                {community.communityCoverPhotoUrl ? (
+                                                    <img src={community.communityCoverPhotoUrl} alt={community.name} className="absolute left-1/2 top-1/2 h-[160%] w-full -translate-x-1/2 -translate-y-1/2 object-cover object-center" />
+                                                ) : (
+                                                    <div className="flex size-full items-center justify-center">
+                                                        <Globe className="w-5 h-5 text-primary" />
+                                                    </div>
+                                                )}
+                                            </Link>
+                                        </CommunityHoverCard>
                                         <ProfileHoverCard profileId={post.authorId} author={author} communityId={effectiveCommunityId} showCommunityStatus={Boolean(effectiveCommunityId)} canModerateCommunity={canModerateCommunity}>
                                             <Link href={`/profile/${post.authorId}`} className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-card bg-page overflow-hidden">
                                                 <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
@@ -244,9 +247,11 @@ export default function PostArticle({ postId, isQAPost, context = "personal", ro
                                         </ProfileHoverCard>
                                     </div>
                                     <div className="flex flex-col">
-                                        <Link href={`/communities/${community.id}`} className="text-sm font-bold text-heading hover:underline transition-colors truncate max-w-37.5 sm:max-w-75">
-                                            {community.name}
-                                        </Link>
+                                        <CommunityHoverCard communityId={community.id} community={community} side="bottom">
+                                            <Link href={`/communities/${community.id}`} className="text-sm font-bold text-heading hover:underline transition-colors truncate max-w-37.5 sm:max-w-75">
+                                                {community.name}
+                                            </Link>
+                                        </CommunityHoverCard>
                                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                                             <ProfileHoverCard profileId={post.authorId} author={author} communityId={effectiveCommunityId} showCommunityStatus={Boolean(effectiveCommunityId)} canModerateCommunity={canModerateCommunity}>
                                                 <Link href={`/profile/${post.authorId}`} className="font-semibold hover:underline text-muted-foreground transition-colors truncate max-w-30">
