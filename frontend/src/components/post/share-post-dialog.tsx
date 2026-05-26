@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useRouter } from "next/navigation";
 import { CommunitySelectModal } from "./community-select-modal";
 import { useCreatePostShare } from "@/hooks/post-hooks/use-create-post-share";
 import { useCreateQAPostShare } from "@/hooks/qa-post-hooks/use-create-qa-post-share";
@@ -17,6 +18,7 @@ import { UserAvatar } from "@/components/shared/user-avatar";
 import { MarkdownEditor } from "@/components/editor/markdown-editor";
 import { useGetProfileById } from "@/hooks/profile-hooks/use-get-profile-by-id";
 import { AiMetadataAssist } from "@/components/post/ai-metadata-assist";
+import { getPostDetailHref, getQAPostDetailHref } from "@/utils/content-routes";
 
 interface SharePostDialogProps {
     post: SelectPostDTO;
@@ -28,6 +30,7 @@ type ShareAs = "post" | "question";
 type Destination = "wall" | "community";
 
 export function SharePostDialog({ post, open, onOpenChange }: SharePostDialogProps) {
+    const router = useRouter();
     const [shareAs, setShareAs] = useState<ShareAs>("post");
     const [destination, setDestination] = useState<Destination>("wall");
     const [title, setTitle] = useState(`Shared: ${post.title}`);
@@ -95,11 +98,20 @@ export function SharePostDialog({ post, open, onOpenChange }: SharePostDialogPro
             sharedPostId: post.id,
         };
 
-        const options = { onSuccess: () => onOpenChange(false) };
         if (shareAs === "question") {
-            createQAPostShare.mutate(payload, options);
+            createQAPostShare.mutate(payload, {
+                onSuccess: (createdQuestion) => {
+                    onOpenChange(false);
+                    router.push(getQAPostDetailHref(createdQuestion));
+                },
+            });
         } else {
-            createPostShare.mutate(payload, options);
+            createPostShare.mutate(payload, {
+                onSuccess: (createdPost) => {
+                    onOpenChange(false);
+                    router.push(getPostDetailHref(createdPost));
+                },
+            });
         }
     };
 
