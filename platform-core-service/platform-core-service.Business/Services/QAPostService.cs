@@ -28,7 +28,6 @@ namespace platform_core_service.Business.Services
         private readonly IUserContext _userContext;
         private readonly IMapper _mapper;
         private readonly IRepository<QAPost, string> _qaPostRepository;
-        private readonly IAiWorkerClient _aiWorkerClient;
         private readonly IConfigurationService _configurationService;
         private readonly ISocialGuardService _socialGuardService;
         private readonly IModerationService _moderationService;
@@ -40,7 +39,6 @@ namespace platform_core_service.Business.Services
             IUserContext userContext,
             IMapper mapper,
             IRepository<QAPost, string> qaPostRepository,
-            IAiWorkerClient aiWorkerClient,
             IConfigurationService configurationService,
             ISocialGuardService socialGuardService,
             IModerationService moderationService,
@@ -52,7 +50,6 @@ namespace platform_core_service.Business.Services
             _userContext = userContext;
             _mapper = mapper;
             _qaPostRepository = qaPostRepository;
-            _aiWorkerClient = aiWorkerClient;
             _configurationService = configurationService;
             _socialGuardService = socialGuardService;
             _moderationService = moderationService;
@@ -145,7 +142,8 @@ namespace platform_core_service.Business.Services
                 // Step 9: Clean questions are submitted to AI moderation after they are already public as Pending.
                 if (!matchedBannedKeywords.Any())
                 {
-                    await _aiWorkerClient.SubmitForModerationAsync(qaPost.Id, createDTO.Title, createDTO.Content);
+                    _backgroundJobClient.Enqueue<IModerationBackgroundJobs>(
+                        x => x.SubmitPostModerationAsync(qaPost.Id));
                 }
 
             }
@@ -616,7 +614,8 @@ namespace platform_core_service.Business.Services
                     }
                     else
                     {
-                        await _aiWorkerClient.SubmitForModerationAsync(postId, qaPost.Title, qaPost.Content);
+                        _backgroundJobClient.Enqueue<IModerationBackgroundJobs>(
+                            x => x.SubmitPostModerationAsync(postId));
                     }
                 }
 

@@ -34,41 +34,28 @@ namespace platform_core_service.Business.Services
             _httpClient.DefaultRequestHeaders.Add("X-Internal-Api-Key", internalKey);
         }
 
-        public Task SubmitForModerationAsync(string postId, string title, string textContent)
+        public async Task SubmitForModerationAsync(string postId, string title, string textContent)
         {
             var moderationText = BuildModerationText(title, textContent);
-            var form = new MultipartFormDataContent
+            using var form = new MultipartFormDataContent
             {
                 { new StringContent(postId),         "post_id"      },
                 { new StringContent(title ?? string.Empty), "title" },
                 { new StringContent(moderationText), "text_content" },
             };
 
-            _ = Task.Run(async () =>
+            var response = await _httpClient.PostAsync($"{_baseUrl}/ai/moderation/submit", form);
+
+            if (!response.IsSuccessStatusCode)
             {
-                try
-                {
-                    var response = await _httpClient.PostAsync($"{_baseUrl}/ai/moderation/submit", form);
+                var errorBody = await response.Content.ReadAsStringAsync();
+                var preview = errorBody.Length > 500 ? errorBody[..500] : errorBody;
+                throw new HttpRequestException(
+                    $"AI moderation submit failed for post {postId}. Status: {(int)response.StatusCode} {response.StatusCode}. Body: {preview}");
+            }
 
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        DevNexusLogger.Instance.Warn(
-                            $"[AiWorkerClient] Moderation submit returned {(int)response.StatusCode} for post {postId}.");
-                    }
-                    else
-                    {
-                        DevNexusLogger.Instance.Debug(
-                            $"[AiWorkerClient] Moderation submit accepted for post {postId}.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    DevNexusLogger.Instance.Error(
-                        $"[AiWorkerClient] Failed to submit post {postId} for moderation: {ex.Message}");
-                }
-            });
-
-            return Task.CompletedTask;
+            DevNexusLogger.Instance.Debug(
+                $"[AiWorkerClient] Moderation submit accepted for post {postId}.");
         }
 
         private static string BuildModerationText(string? title, string? textContent)

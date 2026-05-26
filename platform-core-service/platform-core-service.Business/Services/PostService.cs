@@ -31,7 +31,6 @@ namespace platform_core_service.Business.Services
         private readonly IUserContext _userContext;
         private readonly IRepository<PostEntity, string> _postRepository;
         private readonly ISocialGuardService _socialGuardService;
-        private readonly IAiWorkerClient _aiWorkerClient;
         private readonly IConfigurationService _configurationService;
         private readonly IModerationService _moderationService;
         private readonly IContentMediaLinkService _contentMediaLinkService;
@@ -43,7 +42,6 @@ namespace platform_core_service.Business.Services
             IUserContext userContext,
             IRepository<PostEntity, string> postRepository,
             ISocialGuardService socialGuardService,
-            IAiWorkerClient aiWorkerClient,
             IConfigurationService configurationService,
             IModerationService moderationService,
             IContentMediaLinkService contentMediaLinkService,
@@ -55,7 +53,6 @@ namespace platform_core_service.Business.Services
             _userContext = userContext;
             _postRepository = postRepository;
             _socialGuardService = socialGuardService;
-            _aiWorkerClient = aiWorkerClient;
             _configurationService = configurationService;
             _moderationService = moderationService;
             _contentMediaLinkService = contentMediaLinkService;
@@ -131,7 +128,8 @@ namespace platform_core_service.Business.Services
                 // Step 8: Clean posts are submitted to AI moderation after they are already public as Pending.
                 if (!matchedBannedKeywords.Any())
                 {
-                    await _aiWorkerClient.SubmitForModerationAsync(post.Id, createDTO.Title, createDTO.Content);
+                    _backgroundJobClient.Enqueue<IModerationBackgroundJobs>(
+                        x => x.SubmitPostModerationAsync(post.Id));
                 }
 
             }
@@ -681,7 +679,8 @@ namespace platform_core_service.Business.Services
                     }
                     else
                     {
-                        await _aiWorkerClient.SubmitForModerationAsync(postId, post.Title, post.Content);
+                        _backgroundJobClient.Enqueue<IModerationBackgroundJobs>(
+                            x => x.SubmitPostModerationAsync(postId));
                     }
                 }
 
