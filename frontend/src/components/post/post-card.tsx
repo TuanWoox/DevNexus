@@ -29,7 +29,7 @@ import { useDeleteBookmarkedItemById } from "@/hooks/bookmarked-item-hooks/use-d
 
 import { useHasMounted } from "@/hooks/use-has-mounted";
 import { cn } from "@/lib/utils";
-import { normalizeModerationStatus } from "@/types/post/moderation-status";
+import { normalizeModerationStatus, canInteractWithModeratedContent } from "@/types/post/moderation-status";
 import { useMuteGuard } from "@/hooks/community-mute-hooks/use-mute-guard";
 import { useGetCommunityById } from "@/hooks/community-hooks/use-get-community-by-id";
 import { CommunityApprovalStatus, normalizeCommunityApprovalStatus } from "@/types/enums/community-approval-status";
@@ -46,7 +46,7 @@ export function PostCard({ post, canModerateCommunity }: PostCardProps) {
     const isQaPost = 'answerCount' in post;
     const detailHref = isQaPost ? getQAPostDetailHref(post) : getPostDetailHref(post);
     const moderationStatus = normalizeModerationStatus(post.moderationStatus);
-    const isModerationApproved = moderationStatus === "Approved";
+    const isModerationApproved = canInteractWithModeratedContent(moderationStatus);
     const communityApprovalStatus = normalizeCommunityApprovalStatus(post.communityApprovalStatus) ?? (post.communityId ? CommunityApprovalStatus.Pending : null);
     const isCommunityApproved = !post.communityId ||
         communityApprovalStatus == null ||

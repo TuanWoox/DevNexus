@@ -284,6 +284,11 @@ namespace platform_core_service.Business.Services
 
         private Task EnqueueModerationNotification(Post post)
         {
+            if (post.ModerationStatus == ModerationStatus.Approved)
+            {
+                return Task.CompletedTask;
+            }
+
             var isQuestion = post is QAPost;
             var notificationEvent = new NotiicationCreatedEntityDTO
             {

@@ -30,6 +30,7 @@ import { useCreateCommunityContentReport } from '@/hooks/community-content-repor
 import { ReportDialog } from '@/components/report/report-dialog';
 import { ReportTargetType } from '@/types/report/report-target-type';
 import { useMuteGuard } from '@/hooks/community-mute-hooks/use-mute-guard';
+import { ModerationStatus, normalizeModerationStatus } from '@/types/post/moderation-status';
 
 export interface ReplyAuthor {
     fullName: string;
@@ -59,6 +60,7 @@ export interface BaseReplyItemProps {
     onUpdate: (newContent: string, mediaIds: string[], onSuccess: () => void) => void;
     isUpdating: boolean;
     isDisabled?: boolean;
+    moderationStatus?: ModerationStatus;
     communityId?: string | null;
     canModerateCommunity?: boolean;
     isAccepted?: boolean;
@@ -90,6 +92,7 @@ export function BaseReplyItem({
     onUpdate,
     isUpdating,
     isDisabled,
+    moderationStatus,
     communityId,
     canModerateCommunity = false,
     isAccepted,
@@ -366,7 +369,16 @@ export function BaseReplyItem({
                                 )}
                                 {isDisabled && (
                                     <DropdownMenuItem disabled className="text-xs text-muted-foreground p-2 text-center">
-                                        Actions disabled for unapproved post
+                                        {(() => {
+                                            const status = normalizeModerationStatus(moderationStatus);
+                                            if (status === "InReview") {
+                                                return "Actions disabled while post is under review";
+                                            }
+                                            if (status === "Flagged") {
+                                                return "Actions disabled by moderation restriction";
+                                            }
+                                            return "Actions disabled for restricted post";
+                                        })()}
                                     </DropdownMenuItem>
                                 )}
                             </DropdownMenuContent>

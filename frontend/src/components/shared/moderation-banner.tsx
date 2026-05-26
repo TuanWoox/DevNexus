@@ -1,4 +1,4 @@
-import { Loader2, Clock, AlertTriangle } from 'lucide-react';
+import { Clock, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type NormalizedStatus = 'Pending' | 'InReview' | 'Flagged' | 'Approved';
@@ -10,14 +10,6 @@ interface ModerationBannerProps {
 }
 
 const config = {
-    Pending: {
-        wrapper: 'bg-blue-50/80 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800',
-        title: 'text-blue-700 dark:text-blue-300',
-        desc: 'text-blue-600/90 dark:text-blue-400/90',
-        icon: <Loader2 className="h-4 w-4 text-blue-500 animate-spin shrink-0" />,
-        label: 'AI is analyzing',
-        description: 'Automated checks in progress. Please wait a moment...',
-    },
     InReview: {
         wrapper: 'bg-amber-50/80 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800',
         title: 'text-amber-700 dark:text-amber-300',
@@ -37,9 +29,9 @@ const config = {
 } as const;
 
 export function ModerationBanner({ status, reason, className }: ModerationBannerProps) {
-    if (status === 'Approved') return null;
+    if (status === 'Approved' || status === 'Pending') return null;
 
-    const { wrapper, title, desc, icon, label, description } = config[status];
+    const { wrapper, title, desc, icon, label, description } = config[status as 'InReview' | 'Flagged'];
 
     return (
         <div

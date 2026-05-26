@@ -151,24 +151,28 @@ namespace platform_core_service.Business.Services
         private async Task EnqueueModerationNotification(Post post)
         {
             var isQuestion = post is QAPost;
-            var notificationEvent = new NotiicationCreatedEntityDTO
-            {
-                EventType = NotificationEventType.MODERATION_RESULT,
-                ActorType = ActorType.System,
-                ActorId = "devnexus",
-                ActorName = "DevNexus",
-                RecipientId = post.AuthorId,
-                EntityType = isQuestion ? NotificationEntityType.QUESTION : NotificationEntityType.POST,
-                EntityId = post.Id,
-                EntityTitle = post.Title,
-                EntityPreview = post.ModerationStatus.ToString(),
-                ActionUrl = isQuestion ? $"/questions/{post.Id}" : $"/post/{post.Id}",
-                Timestamp = DateTime.UtcNow,
-                Message = $"Your {(isQuestion ? "question" : "post")} is {post.ModerationStatus}."
-            };
 
-            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
-                x => x.PublicNotification(notificationEvent, "notifications.moderation"));
+            if (post.ModerationStatus != ModerationStatus.Approved)
+            {
+                var notificationEvent = new NotiicationCreatedEntityDTO
+                {
+                    EventType = NotificationEventType.MODERATION_RESULT,
+                    ActorType = ActorType.System,
+                    ActorId = "devnexus",
+                    ActorName = "DevNexus",
+                    RecipientId = post.AuthorId,
+                    EntityType = isQuestion ? NotificationEntityType.QUESTION : NotificationEntityType.POST,
+                    EntityId = post.Id,
+                    EntityTitle = post.Title,
+                    EntityPreview = post.ModerationStatus.ToString(),
+                    ActionUrl = isQuestion ? $"/questions/{post.Id}" : $"/post/{post.Id}",
+                    Timestamp = DateTime.UtcNow,
+                    Message = $"Your {(isQuestion ? "question" : "post")} is {post.ModerationStatus}."
+                };
+
+                _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                    x => x.PublicNotification(notificationEvent, "notifications.moderation"));
+            }
 
             if (post.ModerationStatus != ModerationStatus.Approved ||
                 string.IsNullOrEmpty(post.CommunityId) ||

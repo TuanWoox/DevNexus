@@ -8,12 +8,13 @@ import { useAcceptAnswerById } from '@/hooks/answer-hooks/use-accept-answer-by-i
 import { UpdateAnswerDTO } from '@/types/answer/update-answer-dto';
 import { BaseReplyItem } from './base-reply-item';
 import { ContentType } from '@/types/content-media/content-type';
+import { ModerationStatus } from '@/types/post/moderation-status';
 import { useState } from 'react';
 import { CommentInput } from './comment-input';
 import { CommentItem } from './comment-item';
 import { SelectCommentDTO } from '@/types/comment/select-comment-dto';
 
-export function AnswerItem({ answer, currentUserId, currentUserAvatar, isDisabled, isQuestionAuthor, communityId, canModerateCommunity, context = "personal" }: { answer: SelectAnswerDTO, currentUserId: string, currentUserAvatar?: string, isDisabled?: boolean, isQuestionAuthor?: boolean, communityId?: string | null, canModerateCommunity?: boolean, context?: "personal" | "community" }) {
+export function AnswerItem({ answer, currentUserId, currentUserAvatar, isDisabled, moderationStatus, isQuestionAuthor, communityId, canModerateCommunity, context = "personal" }: { answer: SelectAnswerDTO, currentUserId: string, currentUserAvatar?: string, isDisabled?: boolean, moderationStatus?: ModerationStatus, isQuestionAuthor?: boolean, communityId?: string | null, canModerateCommunity?: boolean, context?: "personal" | "community" }) {
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByAnswerId(answer.id);
     const { mutate: deleteAnswer, isPending: isDeletingAnswer } = useDeleteAnswerById();
     const { mutate: updateAnswer, isPending: isUpdatingAnswer } = useUpdateAnswer();
@@ -43,6 +44,7 @@ export function AnswerItem({ answer, currentUserId, currentUserAvatar, isDisable
                 }}
                 isUpdating={isUpdatingAnswer}
                 isDisabled={isDisabled}
+                moderationStatus={moderationStatus}
                 communityId={communityId}
                 canModerateCommunity={canModerateCommunity}
                 context={context}
@@ -73,6 +75,7 @@ export function AnswerItem({ answer, currentUserId, currentUserAvatar, isDisable
                             currentUserId={currentUserId}
                             currentUserAvatar={currentUserAvatar}
                             isDisabled={isDisabled}
+                            moderationStatus={moderationStatus}
                             communityId={communityId}
                             canModerateCommunity={canModerateCommunity}
                             context={context}

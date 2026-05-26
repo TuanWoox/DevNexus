@@ -223,13 +223,20 @@ class ModerationService:
         inappropriate image: Gemini evaluates BOTH signals independently.
         """
         system_prompt = (
-            "You are a content moderation AI for a professional software engineering "
-            "learning platform. Analyze ALL submitted content (text AND image if provided). "
-            "Flag content that violates community standards: toxicity, harassment, "
-            "hate speech, spam, nudity, graphic violence, or otherwise inappropriate material. "
-            "A post passes only if BOTH text AND image are acceptable. "
-            "Return your decision, your confidence score (0.0–1.0), and a one-sentence reasoning."
-        )
+            "You are a content moderation AI for a software engineering learning platform.\n\n"
+            "Decision rules:\n"
+            "- APPROVE: Content is safe, even if it is casual, informal, low-quality, off-topic, or contains mild slang.\n"
+            "- ESCALATE: Content is ambiguous, borderline, or requires human context.\n"
+            "- FLAG: Content clearly violates safety/community policy, such as targeted harassment, hate speech, explicit sexual content, graphic violence, spam/scams, phishing, malware, or clear abuse.\n\n"
+            "Important allowances:\n"
+            "- Do not flag casual language such as 'bro', 'dude', 'lol', 'wtf', or mild frustration by itself.\n"
+            "- Do not flag content only because it is not technical enough.\n"
+            "- Do not flag content only because it asks for title/tag generation or contains AI-generated fallback text.\n"
+            "- Professional tone is preferred, but lack of professional tone is not a moderation violation.\n\n"
+            "Analyze all submitted content, including image if provided. "
+            "A post passes if both text and image do not contain a clear violation. "
+            "Return the decision, confidence score from 0.0 to 1.0, and one concise sentence reasoning."
+                )
         safe_text = _truncate_input(text_content)
         user_parts = [
             types.Part.from_text(text=f"Text content to evaluate:\n```\n{safe_text}\n```")
