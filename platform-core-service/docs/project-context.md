@@ -56,7 +56,7 @@ Common enqueue patterns:
 - `AccountService`: sends account emails through `IEmailBackgroundJobs`.
 - `ProfileService`: publishes profile create/update sync events.
 - `UserFollowService`: publishes follow create/delete/bulk-delete sync events and notification events.
-- `ProfileBlockService`: publishes block create/delete/bulk-delete sync events and enqueues cleanup of existing follows/follow requests.
+- `ProfileBlockService`: publishes block create/delete/bulk-delete sync events and removes existing follows/follow requests when a block is created.
 - `PostService` and `QAPostService`: link uploaded media to created/updated posts through `IMediaBackgroundJobs`.
 - `VoteService`, `CommentService`, `AnswerService`, moderation/admin services: enqueue notification publishing and moderation-result events.
 - AI-related flows enqueue tasks through `IPublishMessageBackgroundJobs.PublicAiTask`.

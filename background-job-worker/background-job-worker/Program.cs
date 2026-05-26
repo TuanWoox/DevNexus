@@ -56,7 +56,6 @@ builder.Services.AddHttpClient();
 // ── Background Jobs ───────────────────────────────────────────────────────────
 builder.Services.TryAddScoped<IEmailBackgroundJobs, EmailBackgroundJobs>();
 builder.Services.TryAddScoped<IMediaBackgroundJobs, MediaBackgroundJobs>();
-builder.Services.TryAddScoped<IProfileBlockBackgroundJobs, ProfileBackgroundJobs>();
 builder.Services.TryAddScoped<IPublishMessageBackgroundJobs, PublishMessageBackgroundJobs>();
 
 // ── Hosted Services (Consumers) ──────────────────────────────────────────────
