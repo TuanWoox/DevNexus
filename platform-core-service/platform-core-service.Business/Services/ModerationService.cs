@@ -1,6 +1,5 @@
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
-using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Services;
@@ -19,17 +18,20 @@ namespace platform_core_service.Business.Services
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IPostHistoryService _postHistoryService;
         private readonly IQAPostHistoryService _qaPostHistoryService;
+        private readonly IQAPostFirstResponderTriggerService _firstResponderTriggerService;
 
         public ModerationService(
             ApplicationDbContext context,
             IBackgroundJobClient backgroundJobClient,
             IPostHistoryService postHistoryService,
-            IQAPostHistoryService qaPostHistoryService)
+            IQAPostHistoryService qaPostHistoryService,
+            IQAPostFirstResponderTriggerService firstResponderTriggerService)
         {
             _context = context;
             _backgroundJobClient = backgroundJobClient;
             _postHistoryService = postHistoryService;
             _qaPostHistoryService = qaPostHistoryService;
+            _firstResponderTriggerService = firstResponderTriggerService;
         }
 
         public async Task<ReturnResult<bool>> HandleCallbackAsync(ModerationCallbackDTO dto)
@@ -117,36 +119,7 @@ namespace platform_core_service.Business.Services
 
                 if (post.ModerationStatus == ModerationStatus.Approved && post is QAPost)
                 {
-                    if (await _context.Answers.HasExistingAiFirstResponderAnswerAsync(_context, post.Id))
-                    {
-                        DevNexusLogger.Instance.Debug($"[Moderation] Skipped AI First Responder for QA Post {post.Id} because an AI answer already exists");
-                        result.Result = true;
-                        return result;
-                    }
-
-                    // Load Author and Tags now that we know this is a QA post
-                    await _context.Entry(post).Reference(p => p.Author).LoadAsync();
-                    await _context.Entry(post).Collection(p => p.PostTags).Query()
-                        .Include(pt => pt.Tag).LoadAsync();
-
-                    var aiRequest = new platform_core_service.Common.Models.DTOs.AIDTO.AIFirstResponderRequestDTO
-                    {
-                        PostId = post.Id,
-                        Title = post.Title,
-                        Content = post.Content,
-                        Tags = post.PostTags?.Select(pt => pt.Tag.Name).ToList() ?? new List<string>(),
-                        AuthorId = post.AuthorId,
-                        AuthorDisplayName = post.Author?.FullName ?? "Unknown",
-                        CreatedAt = post.DateCreated ?? DateTimeOffset.UtcNow
-                    };
-
-                    string routingKey = "ai.task.firstresponder.request";
-
-                    _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
-                        x => x.PublicAiTask(aiRequest, routingKey, MessageBusEnum.Create, MessageBusEntityEnum.AIFirstResponder)
-                    );
-
-                    DevNexusLogger.Instance.Debug($"[Moderation] AI First Responder Task queued for QA Post {post.Id}");
+                    await _firstResponderTriggerService.TryEnqueueAsync(post.Id, "Moderation");
                 }
 
                 result.Result = true;
