@@ -113,6 +113,15 @@ namespace platform_core_service.Business.Services
                         result.Message = "You have been banned from this community";
                         return result;
                     }
+
+                    var isBlocked = await _context.ProfileCommunityBlocks
+                        .AnyAsync(b => b.CommunityId == community.Id && b.ProfileId == profileId);
+
+                    if (isBlocked)
+                    {
+                        result.Message = "You have blocked this community";
+                        return result;
+                    }
                 }
 
                 result.Result = _mapper.Map<SelectCommunityDTO>(community);
@@ -162,6 +171,11 @@ namespace platform_core_service.Business.Services
                     .Select(b => b.CommunityId)
                     .ToListAsync();
 
+                var blockedCommunityIds = await _context.ProfileCommunityBlocks
+                    .Where(b => b.ProfileId == profileId)
+                    .Select(b => b.CommunityId)
+                    .ToListAsync();
+
                 IQueryable<CommunityEntity> query;
 
                 switch (request.FetchMode)
@@ -186,6 +200,7 @@ namespace platform_core_service.Business.Services
 
                         query = _context.Communities
                             .Where(c => !bannedCommunityIds.Contains(c.Id))
+                            .Where(c => !blockedCommunityIds.Contains(c.Id))
                             .Where(c => c.OwnerId != profileId && !allUserCommunityIds.Contains(c.Id));
                         break;
                     }
@@ -210,6 +225,7 @@ namespace platform_core_service.Business.Services
 
                         query = _context.Communities
                             .Where(c => !bannedCommunityIds.Contains(c.Id))
+                            .Where(c => !blockedCommunityIds.Contains(c.Id))
                             .Where(c => c.OwnerId == profileId || allRelatedIds.Contains(c.Id));
                         break;
                     }
@@ -218,7 +234,8 @@ namespace platform_core_service.Business.Services
                     {
                         // All communities the user is not banned from
                         query = _context.Communities
-                            .Where(c => !bannedCommunityIds.Contains(c.Id));
+                            .Where(c => !bannedCommunityIds.Contains(c.Id))
+                            .Where(c => !blockedCommunityIds.Contains(c.Id));
                         break;
                     }
 

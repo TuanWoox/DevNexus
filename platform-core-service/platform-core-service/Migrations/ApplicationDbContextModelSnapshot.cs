@@ -1394,6 +1394,36 @@ namespace platform_core_service.Migrations
                     b.ToTable("ProfileBlocks");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ProfileCommunityBlock", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommunityId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ProfileId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommunityId");
+
+                    b.HasIndex("ProfileId", "CommunityId")
+                        .IsUnique();
+
+                    b.ToTable("ProfileCommunityBlocks");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ProfileMedia", b =>
                 {
                     b.Property<string>("Id")
@@ -2351,6 +2381,25 @@ namespace platform_core_service.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ProfileCommunityBlock", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
+                        .WithMany()
+                        .HasForeignKey("CommunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Profile")
+                        .WithMany("BlockedCommunities")
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Community");
+
+                    b.Navigation("Profile");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ProfileMedia", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Profile")
@@ -2664,6 +2713,8 @@ namespace platform_core_service.Migrations
                     b.Navigation("BlockRecords");
 
                     b.Navigation("BlockedByRecords");
+
+                    b.Navigation("BlockedCommunities");
 
                     b.Navigation("BookMarks");
 
