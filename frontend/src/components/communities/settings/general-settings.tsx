@@ -40,7 +40,7 @@ export function GeneralSettings({ community }: GeneralSettingsProps) {
         <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-5">
                 <div className="space-y-2">
-                    <Label htmlFor="name" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    <Label htmlFor="name" className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
                         Community Name
                     </Label>
                     <Input
@@ -54,7 +54,7 @@ export function GeneralSettings({ community }: GeneralSettingsProps) {
                 </div>
 
                 <div className="space-y-2">
-                    <Label htmlFor="description" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    <Label htmlFor="description" className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
                         Description
                     </Label>
                     <Textarea
@@ -69,8 +69,8 @@ export function GeneralSettings({ community }: GeneralSettingsProps) {
 
                 <div className="flex items-center justify-between rounded-2xl border border-border/40 bg-muted/5 p-5 hover:bg-muted/10 transition-colors duration-200">
                     <div className="space-y-1 pr-4">
-                        <Label className="text-sm font-semibold text-foreground">Private Community</Label>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
+                        <Label className="text-base font-semibold text-foreground">Private Community</Label>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                             When enabled, users must request and be approved by a moderator or owner to join this community.
                         </p>
                     </div>
@@ -83,8 +83,8 @@ export function GeneralSettings({ community }: GeneralSettingsProps) {
 
                 <div className="flex items-center justify-between rounded-2xl border border-border/40 bg-muted/5 p-5 hover:bg-muted/10 transition-colors duration-200">
                     <div className="space-y-1 pr-4">
-                        <Label className="text-sm font-semibold text-foreground">Require Content Approval</Label>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
+                        <Label className="text-base font-semibold text-foreground">Require Content Approval</Label>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                             New posts and questions must be approved before appearing in the community feed.
                         </p>
                     </div>
@@ -97,10 +97,10 @@ export function GeneralSettings({ community }: GeneralSettingsProps) {
             </div>
 
             <div className="flex justify-end pt-2">
-                <Button 
-                    type="submit" 
-                    disabled={isPending} 
-                    variant="custom" 
+                <Button
+                    type="submit"
+                    disabled={isPending}
+                    variant="custom"
                     className="btn-primary text-white font-medium shadow-xs hover:shadow-md active:scale-[0.98] transition-all duration-150 ease-out cursor-pointer h-10 px-5 rounded-xl"
                 >
                     {isPending ? (

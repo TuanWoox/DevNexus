@@ -165,11 +165,11 @@ export function MutesManagement({ community }: MutesManagementProps) {
             <div className="flex flex-col bg-amber-500/5 border border-amber-500/10 p-5 rounded-2xl gap-4 transition-all duration-200">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
-                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
                             <VolumeX className="h-4.5 w-4.5 text-amber-600 dark:text-amber-400" />
                             Mute Community Member
                         </h3>
-                        <p className="text-xs text-muted-foreground leading-relaxed max-w-md">
+                        <p className="text-sm text-muted-foreground leading-relaxed max-w-md">
                             Temporary or indefinite restriction preventing a member from posting content or writing comments in this community.
                         </p>
                     </div>
@@ -217,11 +217,10 @@ export function MutesManagement({ community }: MutesManagementProps) {
                                                 setMinDateTime(new Date(Date.now() + 60 * 1000).toISOString().slice(0, 16));
                                             }
                                         }}
-                                        className={`px-3 py-2 text-xs font-medium rounded-xl border text-center transition-all duration-200 cursor-pointer ${
-                                            selectedPreset === preset.value
+                                        className={`px-3 py-2 text-xs font-medium rounded-xl border text-center transition-all duration-200 cursor-pointer ${selectedPreset === preset.value
                                                 ? "bg-amber-500/10 border-amber-500 text-amber-700 dark:text-amber-400 font-semibold"
                                                 : "border-border/60 bg-background/50 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                                        }`}
+                                            }`}
                                     >
                                         {preset.label}
                                     </button>
@@ -346,11 +345,10 @@ export function MutesManagement({ community }: MutesManagementProps) {
                                         {mute?.muteReason || "No reason provided"}
                                     </TableCell>
                                     <TableCell>
-                                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-full ${
-                                            !mute.mutedUntil 
+                                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-full ${!mute.mutedUntil
                                                 ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
                                                 : "bg-orange-500/10 text-orange-700 dark:text-orange-400"
-                                        }`}>
+                                            }`}>
                                             <Clock className="h-3 w-3" />
                                             {getMuteStatusText(mute.mutedUntil)}
                                         </span>

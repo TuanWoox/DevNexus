@@ -71,11 +71,11 @@ export function ModeratorsManagement({ community }: ModeratorsManagementProps) {
             {/* Add Moderator via modal */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-primary/5 border border-primary/10 p-5 rounded-2xl gap-4">
                 <div className="space-y-1">
-                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
                         <ShieldCheck className="h-4 w-4 text-primary" />
                         Add New Moderator
                     </h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed max-w-md">
+                    <p className="text-sm text-muted-foreground leading-relaxed max-w-md">
                         Promote an existing member of your community to a moderator role to help manage content, requests, and bans.
                     </p>
                 </div>

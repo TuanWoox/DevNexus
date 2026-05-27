@@ -127,14 +127,20 @@ export function CommunityHeader({ community, activeTab }: CommunityHeaderProps) 
                                         {/* Moderator / Owner Actions */}
                                         {hasManageAccess && (
                                             <>
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`/communities/${community.id}/moderate-pending`} className="w-full cursor-pointer flex items-center">
+                                                <DropdownMenuItem
+                                                    asChild
+                                                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer font-semibold"
+                                                >
+                                                    <Link href={`/communities/${community.id}/moderate-pending`}>
                                                         <ClipboardList className="mr-2 h-4 w-4" />
                                                         Pending Queue
                                                     </Link>
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`/communities/${community.id}/settings`} className="w-full cursor-pointer flex items-center">
+                                                <DropdownMenuItem
+                                                    asChild
+                                                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer font-semibold"
+                                                >
+                                                    <Link href={`/communities/${community.id}/settings`}>
                                                         <Settings className="mr-2 h-4 w-4" />
                                                         Settings
                                                     </Link>
@@ -144,16 +150,22 @@ export function CommunityHeader({ community, activeTab }: CommunityHeaderProps) 
                                         )}
 
                                         {/* User Utilities */}
-                                        <DropdownMenuItem asChild>
-                                            <Link href={`/communities/${community.id}/pending-posts`} className="w-full cursor-pointer flex items-center">
+                                        <DropdownMenuItem
+                                            asChild
+                                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer font-semibold"
+                                        >
+                                            <Link href={`/communities/${community.id}/pending-posts`}>
                                                 <Clock3 className="mr-2 h-4 w-4" />
                                                 My Pending Posts
                                             </Link>
                                         </DropdownMenuItem>
 
-                                        <DropdownMenuItem asChild>
-                                            <Link href={`/communities/${community.id}/reports`} className="w-full cursor-pointer flex items-center text-amber-500 focus:text-amber-600">
-                                                <ShieldAlert className="mr-2 h-4 w-4" />
+                                        <DropdownMenuItem
+                                            asChild
+                                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-amber-500/10 transition-colors cursor-pointer text-amber-500 focus:text-amber-600 font-semibold"
+                                        >
+                                            <Link href={`/communities/${community.id}/reports`}>
+                                                <ShieldAlert className="mr-2 h-4 w-4 text-amber-500" />
                                                 Reports
                                             </Link>
                                         </DropdownMenuItem>
@@ -162,9 +174,10 @@ export function CommunityHeader({ community, activeTab }: CommunityHeaderProps) 
                                         {role !== "OWNER" && (
                                             <>
                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem 
-                                                    className="text-destructive focus:text-destructive focus:bg-destructive/10 dark:focus:bg-destructive/20 cursor-pointer flex items-center"
+                                                <DropdownMenuItem
+                                                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors cursor-pointer disabled:opacity-50 font-semibold"
                                                     disabled={isLeaving}
+                                                    variant="destructive"
                                                     onClick={() => leaveCommunity(community.id)}
                                                 >
                                                     {isLeaving ? (
