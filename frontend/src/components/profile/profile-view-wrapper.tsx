@@ -8,7 +8,6 @@ import { ProfileInfo } from "./profile-info";
 import { ProfileTabs } from "./profile-tabs";
 import { ProfileContent } from "./profile-content";
 import { EditProfileModal } from "./edit-profile-modal";
-import { ChangePasswordModal } from "./change-password-modal";
 import { ProfileNotFound } from "./profile-not-found";
 
 import { useGetProfileById } from "@/hooks/profile-hooks/use-get-profile-by-id";
@@ -20,9 +19,8 @@ interface ProfileViewWrapperProps {
 }
 
 export function ProfileViewWrapper({ profileId, currentProfileId }: ProfileViewWrapperProps) {
-    const [activeTab, setActiveTab] = useState<"overview" | "post" | "qa-post" | "saved">("overview");
+    const [activeTab, setActiveTab] = useState<"overview" | "post" | "qa-post">("overview");
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
     const { data: profile, isLoading } = useGetProfileById(profileId);
     const { user } = useSelector((state: RootState) => state.auth);
@@ -57,13 +55,11 @@ export function ProfileViewWrapper({ profileId, currentProfileId }: ProfileViewW
                     profile={profile}
                     isOwnProfile={isOwnProfile}
                     onEdit={() => setIsEditModalOpen(true)}
-                    onChangePassword={() => setIsChangePasswordOpen(true)}
                 />
 
                 <ProfileTabs
                     activeTab={visibleActiveTab}
                     setActiveTab={setActiveTab}
-                    isOwnProfile={isOwnProfile}
                     canViewContent={profile.canViewProfile}
                 />
             </div>
@@ -82,10 +78,6 @@ export function ProfileViewWrapper({ profileId, currentProfileId }: ProfileViewW
                         isOpen={isEditModalOpen}
                         onClose={() => setIsEditModalOpen(false)}
                         currentProfile={profile}
-                    />
-                    <ChangePasswordModal
-                        isOpen={isChangePasswordOpen}
-                        onClose={() => setIsChangePasswordOpen(false)}
                     />
                 </>
             )}

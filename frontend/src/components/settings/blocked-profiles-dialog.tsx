@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { Ban, Loader2, RotateCcw, Search, UserX, X } from "lucide-react";
+
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
     Dialog,
     DialogContent,
@@ -12,6 +12,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
     blockedProfileIdOf,
     blockIdOf,
@@ -23,14 +24,14 @@ import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { cn } from "@/lib/utils";
 import { SelectProfileBlockDTO } from "@/types/profile-block/select-profile-block-dto";
 
-interface BlockedProfilesModalProps {
+interface BlockedProfilesDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }
 
 const blockedProfileOf = (block: SelectProfileBlockDTO) => block.BlockedProfile ?? block.blockedProfile ?? null;
 
-export function BlockedProfilesModal({ open, onOpenChange }: BlockedProfilesModalProps) {
+export function BlockedProfilesDialog({ open, onOpenChange }: BlockedProfilesDialogProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
@@ -83,7 +84,7 @@ export function BlockedProfilesModal({ open, onOpenChange }: BlockedProfilesModa
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="max-h-[85vh] overflow-hidden sm:max-w-2xl" showCloseButton={false}>
                 <DialogHeader>
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-4">
                         <div className="flex flex-col gap-1">
                             <DialogTitle className="text-xl font-semibold">Manage blocked profiles</DialogTitle>
                             <DialogDescription>
@@ -96,6 +97,7 @@ export function BlockedProfilesModal({ open, onOpenChange }: BlockedProfilesModa
                             size="icon"
                             className="h-8 w-8 rounded-full cursor-pointer"
                             onClick={() => handleOpenChange(false)}
+                            aria-label="Close blocked profiles dialog"
                         >
                             <X className="h-4 w-4" />
                         </Button>

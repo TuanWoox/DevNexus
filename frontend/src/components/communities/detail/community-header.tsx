@@ -211,9 +211,10 @@ export function CommunityHeader({ community, activeTab }: CommunityHeaderProps) 
 
                                             {/* Leave Community Action (Not for Owner) */}
                                             {role !== "OWNER" && (
-                                                <DropdownMenuItem 
+                                                <DropdownMenuItem
                                                     className="group/item flex items-center gap-3 w-full rounded-xl p-2 cursor-pointer transition-all duration-200 hover:bg-rose-500/10 focus:bg-rose-500/10 text-destructive focus:text-destructive outline-hidden"
                                                     disabled={isLeaving}
+                                                    variant="destructive"
                                                     onClick={() => leaveCommunity(community.id)}
                                                 >
                                                     <div className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 group-hover/item:bg-rose-500/20 group-hover/item:scale-105 transition-all duration-200">

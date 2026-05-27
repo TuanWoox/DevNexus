@@ -6,7 +6,7 @@ import { ProfilePostList } from "@/components/profile/profile-post-list";
 import { ProfileQAList } from "@/components/profile/profile-qa-list";
 
 interface ProfileContentProps {
-    activeTab: "overview" | "post" | "qa-post" | "saved";
+    activeTab: "overview" | "post" | "qa-post";
     targetProfileId: string;
     isOwnProfile: boolean;
     isPrivate: boolean;
@@ -45,20 +45,6 @@ export function ProfileContent({ activeTab, targetProfileId, isOwnProfile, isPri
             {canViewContent && activeTab === "qa-post" && (
                 <div className="fade-in">
                     <ProfileQAList profileId={targetProfileId} />
-                </div>
-            )}
-
-            {isOwnProfile && activeTab === "saved" && (
-                <div className="fade-in">
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                        <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
-                            <span className="text-3xl">🔖</span>
-                        </div>
-                        <h3 className="text-xl font-bold text-heading mt-2">No saved items yet</h3>
-                        <p className="text-muted-foreground max-w-sm mx-auto mt-2 text-sm">
-                            Posts and questions you save will appear here.
-                        </p>
-                    </div>
                 </div>
             )}
         </div>
