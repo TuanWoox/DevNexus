@@ -20,7 +20,7 @@ const sections = [
     {
         value: "privacy-safety" as const,
         label: "Privacy & Safety",
-        description: "Blocked profiles and safety controls",
+        description: "Blocked profiles, blocked communities, and safety controls",
         icon: Ban,
     },
 ];

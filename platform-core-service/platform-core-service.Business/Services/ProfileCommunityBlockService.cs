@@ -43,7 +43,7 @@ namespace platform_core_service.Business.Services
 
                 if (community == null)
                 {
-                    returnResult.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_FOUND, "community", createBlock.CommunityId);
+                    returnResult.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_FOUND, "Community", createBlock.CommunityId);
                     return returnResult;
                 }
 
@@ -138,7 +138,7 @@ namespace platform_core_service.Business.Services
 
                 if (existingBlock == null)
                 {
-                    returnResult.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_EXIST, "community block", id);
+                    returnResult.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_EXIST, "Community block", id);
                     return returnResult;
                 }
 
