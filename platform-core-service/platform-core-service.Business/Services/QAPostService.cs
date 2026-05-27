@@ -14,6 +14,7 @@ using platform_core_service.Common.Models.DTOs.EntityDTO.QAPost;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Models.Paging;
+using platform_core_service.Common.Utils;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using PostTagEntity = platform_core_service.Common.Entities.DbEntities.PostTag;
@@ -108,6 +109,9 @@ namespace platform_core_service.Business.Services
 
                 await SetCommunityApprovalStateAsync(qaPost);
 
+                qaPost.ModerationVersion = 1;
+                qaPost.ModerationContentHash = ModerationContentHashHelper.Compute(qaPost.Title, qaPost.Content);
+
                 if (matchedBannedKeywords.Any())
                 {
                     qaPost.ModerationStatus = ModerationStatus.InReview;
@@ -143,7 +147,7 @@ namespace platform_core_service.Business.Services
                 if (!matchedBannedKeywords.Any())
                 {
                     _backgroundJobClient.Enqueue<IModerationBackgroundJobs>(
-                        x => x.SubmitPostModerationAsync(qaPost.Id));
+                        x => x.SubmitPostModerationAsync(qaPost.Id, qaPost.ModerationVersion, qaPost.ModerationContentHash));
                 }
 
             }
@@ -583,6 +587,9 @@ namespace platform_core_service.Business.Services
                 List<string> matchedBannedKeywords = [];
                 if (shouldModerate)
                 {
+                    qaPost.ModerationVersion += 1;
+                    qaPost.ModerationContentHash = ModerationContentHashHelper.Compute(qaPost.Title, qaPost.Content);
+
                     matchedBannedKeywords = await GetMatchedBannedKeywordsAsync(qaPost.Title, qaPost.Content);
                     if (matchedBannedKeywords.Any())
                     {
@@ -615,7 +622,7 @@ namespace platform_core_service.Business.Services
                     else
                     {
                         _backgroundJobClient.Enqueue<IModerationBackgroundJobs>(
-                            x => x.SubmitPostModerationAsync(postId));
+                            x => x.SubmitPostModerationAsync(postId, qaPost.ModerationVersion, qaPost.ModerationContentHash));
                     }
                 }
 

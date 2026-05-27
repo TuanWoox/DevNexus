@@ -34,7 +34,7 @@ namespace platform_core_service.Business.Services
             _httpClient.DefaultRequestHeaders.Add("X-Internal-Api-Key", internalKey);
         }
 
-        public async Task SubmitForModerationAsync(string postId, string title, string textContent)
+        public async Task SubmitForModerationAsync(string postId, string title, string textContent, int moderationVersion, string contentHash)
         {
             var moderationText = BuildModerationText(title, textContent);
             using var form = new MultipartFormDataContent
@@ -42,6 +42,8 @@ namespace platform_core_service.Business.Services
                 { new StringContent(postId),         "post_id"      },
                 { new StringContent(title ?? string.Empty), "title" },
                 { new StringContent(moderationText), "text_content" },
+                { new StringContent(moderationVersion.ToString()), "moderation_version" },
+                { new StringContent(contentHash), "content_hash" },
             };
 
             var response = await _httpClient.PostAsync($"{_baseUrl}/ai/moderation/submit", form);

@@ -17,7 +17,7 @@ namespace platform_core_service.Common.Interfaces.Services
         /// <param name="postId">The ID of the post to moderate.</param>
         /// <param name="title">The post title.</param>
         /// <param name="textContent">The full markdown/text body of the post.</param>
-        Task SubmitForModerationAsync(string postId, string title, string textContent);
+        Task SubmitForModerationAsync(string postId, string title, string textContent, int moderationVersion, string contentHash);
         Task<ReturnResult<AISummarizeResponseDTO>> SummarizeContentAsync(AISummarizeRequestDTO request);
         Task<ReturnResult<AIMetadataResponseDTO>> SuggestMetadataAsync(AIMetadataRequestDTO request);
         Task<ReturnResult<AICodeExplainResponseDTO>> ExplainCodeAsync(AICodeExplainRequestDTO request);

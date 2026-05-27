@@ -2,6 +2,7 @@ using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Services;
+using platform_core_service.Common.Utils;
 using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Data;
 
@@ -21,7 +22,7 @@ namespace background_job_worker.Jobs
         private readonly IBackgroundJobClient _backgroundJobClient = backgroundJobClient;
         private readonly ILogger<ModerationBackgroundJobs> _logger = logger;
 
-        public async Task SubmitPostModerationAsync(string postId)
+        public async Task SubmitPostModerationAsync(string postId, int moderationVersion, string contentHash)
         {
             if (string.IsNullOrWhiteSpace(postId))
             {
@@ -56,9 +57,27 @@ namespace background_job_worker.Jobs
                 return;
             }
 
+            if (post.ModerationVersion != moderationVersion)
+            {
+                _logger.LogInformation(
+                    "Skipped AI moderation submission for post {PostId}: job version {JobVersion} does not match current version {CurrentVersion}.",
+                    postId,
+                    moderationVersion,
+                    post.ModerationVersion);
+                return;
+            }
+
+            if (!string.Equals(post.ModerationContentHash, contentHash, StringComparison.Ordinal))
+            {
+                _logger.LogInformation(
+                    "Skipped AI moderation submission for post {PostId}: job content hash does not match current hash.",
+                    postId);
+                return;
+            }
+
             try
             {
-                await _aiWorkerClient.SubmitForModerationAsync(post.Id, post.Title, post.Content);
+                await _aiWorkerClient.SubmitForModerationAsync(post.Id, post.Title, post.Content, moderationVersion, contentHash);
             }
             catch (Exception ex)
             {
@@ -85,6 +104,10 @@ namespace background_job_worker.Jobs
                 .Select(p => new
                 {
                     p.Id,
+                    p.Title,
+                    p.Content,
+                    p.ModerationVersion,
+                    p.ModerationContentHash,
                     PendingSince = p.DateModified ?? p.DateCreated,
                 })
                 .Take(StuckPendingBatchSize)
@@ -100,8 +123,23 @@ namespace background_job_worker.Jobs
 
             foreach (var post in stuckPosts)
             {
+                var contentHash = post.ModerationContentHash;
+                if (string.IsNullOrWhiteSpace(contentHash))
+                {
+                    contentHash = ModerationContentHashHelper.Compute(post.Title, post.Content);
+
+                    await _dbContext.Posts
+                        .IgnoreQueryFilters()
+                        .Where(p => p.Id == post.Id && p.ModerationStatus == ModerationStatus.Pending && !p.Deleted)
+                        .ExecuteUpdateAsync(setters => setters.SetProperty(p => p.ModerationContentHash, contentHash));
+
+                    _logger.LogWarning(
+                        "Stuck pending moderation watchdog repaired missing moderation hash for post {PostId}.",
+                        post.Id);
+                }
+
                 _backgroundJobClient.Enqueue<IModerationBackgroundJobs>(
-                    job => job.SubmitPostModerationAsync(post.Id));
+                    job => job.SubmitPostModerationAsync(post.Id, post.ModerationVersion, contentHash));
             }
 
             _logger.LogWarning(

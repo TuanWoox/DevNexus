@@ -71,6 +71,14 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                if (IsStaleModerationMessage(dto.ModerationVersion, dto.ContentHash, post))
+                {
+                    DevNexusLogger.Instance.Debug(
+                        $"[Moderation] Callback ignored for post {dto.PostId} — stale moderation version/hash.");
+                    result.Result = true;
+                    return result;
+                }
+
                 // Map AI Worker decision string → ModerationStatus enum
                 post.ModerationStatus = dto.Decision.ToLower() switch
                 {
@@ -233,11 +241,21 @@ namespace platform_core_service.Business.Services
             {
                 var post = await _context.Posts
                     .IgnoreQueryFilters()
-                    .AnyAsync(p => p.Id == dto.PostId);
+                    .FirstOrDefaultAsync(p => p.Id == dto.PostId);
 
-                if (!post)
+                if (post == null)
                 {
                     result.Message = $"Post {dto.PostId} not found.";
+                    return result;
+                }
+
+                if (post.Deleted ||
+                    post.ModerationStatus != ModerationStatus.Pending ||
+                    IsStaleModerationMessage(dto.ModerationVersion, dto.ContentHash, post))
+                {
+                    DevNexusLogger.Instance.Debug(
+                        $"[Moderation] Queue request ignored for post {dto.PostId} — stale or no longer pending.");
+                    result.Result = new ModerationQueueResponseDTO { Id = string.Empty };
                     return result;
                 }
 
@@ -264,6 +282,12 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while creating moderation queue entry: {ex.Message}";
             }
             return result;
+        }
+
+        private static bool IsStaleModerationMessage(int? moderationVersion, string? contentHash, Post post)
+        {
+            return moderationVersion != post.ModerationVersion ||
+                   !string.Equals(contentHash, post.ModerationContentHash, StringComparison.Ordinal);
         }
 
         public async Task<ReturnResult<ModerationQueueResponseDTO>> EnqueueBannedKeywordReviewAsync(string postId, IReadOnlyCollection<string> matchedKeywords)

@@ -11,6 +11,11 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Moderation
         [Required]
         public string PostId { get; set; } = null!;
 
+        public int? ModerationVersion { get; set; }
+
+        [MaxLength(128)]
+        public string? ContentHash { get; set; }
+
         /// <summary>
         /// One of: "approve", "flag", "escalate"
         /// Maps to AI Worker's ModerationDecision enum string values.

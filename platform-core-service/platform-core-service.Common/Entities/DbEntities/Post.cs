@@ -47,6 +47,11 @@ namespace platform_core_service.Common.Entities.DbEntities
         [StringLength(1000)]
         public string? ModerationReason { get; set; }
 
+        public int ModerationVersion { get; set; } = 0;
+
+        [StringLength(128)]
+        public string? ModerationContentHash { get; set; }
+
         [EnumDataType(typeof(CommunityApprovalStatus), ErrorMessage = "CommunityApprovalStatus must be a valid community approval type")]
         public CommunityApprovalStatus? CommunityApprovalStatus { get; set; } = null;
 

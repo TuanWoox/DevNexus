@@ -13,6 +13,7 @@ using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Models.Paging;
+using platform_core_service.Common.Utils;
 using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
@@ -96,6 +97,9 @@ namespace platform_core_service.Business.Services
 
                 await SetCommunityApprovalStateAsync(post);
 
+                post.ModerationVersion = 1;
+                post.ModerationContentHash = ModerationContentHashHelper.Compute(post.Title, post.Content);
+
                 if (matchedBannedKeywords.Any())
                 {
                     post.ModerationStatus = ModerationStatus.InReview;
@@ -129,7 +133,7 @@ namespace platform_core_service.Business.Services
                 if (!matchedBannedKeywords.Any())
                 {
                     _backgroundJobClient.Enqueue<IModerationBackgroundJobs>(
-                        x => x.SubmitPostModerationAsync(post.Id));
+                        x => x.SubmitPostModerationAsync(post.Id, post.ModerationVersion, post.ModerationContentHash));
                 }
 
             }
@@ -648,6 +652,9 @@ namespace platform_core_service.Business.Services
                 List<string> matchedBannedKeywords = [];
                 if (shouldModerate)
                 {
+                    post.ModerationVersion += 1;
+                    post.ModerationContentHash = ModerationContentHashHelper.Compute(post.Title, post.Content);
+
                     matchedBannedKeywords = await GetMatchedBannedKeywordsAsync(post.Title, post.Content);
                     if (matchedBannedKeywords.Any())
                     {
@@ -680,7 +687,7 @@ namespace platform_core_service.Business.Services
                     else
                     {
                         _backgroundJobClient.Enqueue<IModerationBackgroundJobs>(
-                            x => x.SubmitPostModerationAsync(postId));
+                            x => x.SubmitPostModerationAsync(postId, post.ModerationVersion, post.ModerationContentHash));
                     }
                 }
 

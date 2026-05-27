@@ -29,7 +29,10 @@ router = APIRouter(prefix="/ai/moderation", tags=["Moderation AI"])
 async def submit_content(
     background_tasks: BackgroundTasks,
     post_id: str = Form(..., description="UUID of the post being submitted."),
+    title: str | None = Form(None, description="Optional post title."),
     text_content: str = Form(..., min_length=1, max_length=50000),
+    moderation_version: int = Form(..., description="Platform moderation content version."),
+    content_hash: str = Form(..., description="SHA-256 hash of normalized moderated content."),
     image: UploadFile | None = File(None, description="Optional image file to moderate."),
     db: AsyncSession = Depends(get_db_session),
     gemini_client: genai.Client = Depends(get_gemini_client),
@@ -54,6 +57,8 @@ async def submit_content(
     background_tasks.add_task(
         run_moderation,
         post_id=post_id,
+        moderation_version=moderation_version,
+        content_hash=content_hash,
         text_content=text_content,
         image_bytes=image_bytes,
         image_mime_type=image_mime_type,
