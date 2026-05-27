@@ -59,6 +59,10 @@ namespace platform_core_service.Common.Entities.DbEntities
         [InverseProperty(nameof(ProfileBlock.BlockedProfile))]
         public ICollection<ProfileBlock> BlockedByRecords { get; set; } = [];
 
+        [JsonIgnore]
+        [InverseProperty(nameof(ProfileCommunityBlock.Profile))]
+        public ICollection<ProfileCommunityBlock> BlockedCommunities { get; set; } = [];
+
         public bool IsPrivate { get; set; } = false;
         public bool IsSuspended { get; set; } = false;
         public DateTimeOffset? SuspendedUntil { get; set; }

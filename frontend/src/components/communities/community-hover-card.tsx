@@ -4,11 +4,11 @@ import { useState } from "react";
 import { Ban, ExternalLink, Lock, Users, X } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetCommunityById } from "@/hooks/community-hooks/use-get-community-by-id";
+import { useBlockCommunity } from "@/hooks/profile-community-block-hooks/use-block-community";
 
 export interface CommunityHoverCardInfo {
     id: string;
@@ -41,6 +41,7 @@ export function CommunityHoverCard({
     const router = useRouter();
     const [open, setOpen] = useState(false);
     const shouldFetch = open && Boolean(communityId);
+    const blockCommunityMutation = useBlockCommunity();
 
     const { data: loadedCommunity, isLoading: isCommunityLoading } = useGetCommunityById(communityId, shouldFetch);
 
@@ -61,7 +62,11 @@ export function CommunityHoverCard({
     };
 
     const handleBlockCommunity = () => {
-        toast.info("Community blocking is not connected yet.");
+        blockCommunityMutation.mutate(communityId, {
+            onSuccess: (data) => {
+                if (data.result) setOpen(false);
+            },
+        });
     };
 
     return (
@@ -120,9 +125,15 @@ export function CommunityHoverCard({
                             <ExternalLink className="mr-2 h-4 w-4" />
                             View
                         </Button>
-                        <Button variant="secondary" size="sm" onClick={handleBlockCommunity} className="w-full cursor-pointer">
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={handleBlockCommunity}
+                            disabled={blockCommunityMutation.isPending}
+                            className="w-full cursor-pointer"
+                        >
                             <Ban className="mr-2 h-4 w-4" />
-                            Block
+                            {blockCommunityMutation.isPending ? "Blocking..." : "Block"}
                         </Button>
                     </div>
                 </div>

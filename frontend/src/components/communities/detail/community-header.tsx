@@ -117,78 +117,124 @@ export function CommunityHeader({ community, activeTab }: CommunityHeaderProps) 
                                 {/* Consolidated Action Dropdown */}
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" size="lg" className="gap-2 cursor-pointer">
-                                            <Settings className="w-4 h-4" />
-                                            <span>{hasManageAccess ? "Manage" : "Options"}</span>
+                                        <Button variant="outline" size="lg" className="gap-2 cursor-pointer hover:bg-muted active:scale-[0.98] transition-all duration-150">
+                                            <Settings className="w-4 h-4 text-muted-foreground" />
+                                            <span className="font-medium">{hasManageAccess ? "Manage" : "Options"}</span>
                                             <ChevronDown className="w-4 h-4 opacity-50" />
                                         </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-52">
+                                    <DropdownMenuContent align="end" className="w-80 p-2 rounded-2xl border border-border/80 bg-popover shadow-xl transition-all duration-200">
                                         {/* Moderator / Owner Actions */}
                                         {hasManageAccess && (
-                                            <>
-                                                <DropdownMenuItem
-                                                    asChild
-                                                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer font-semibold"
-                                                >
-                                                    <Link href={`/communities/${community.id}/moderate-pending`}>
-                                                        <ClipboardList className="mr-2 h-4 w-4" />
-                                                        Pending Queue
+                                            <div className="space-y-1">
+                                                <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+                                                    Administration
+                                                </div>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/communities/${community.id}/moderate-pending`} className="group/item flex items-center gap-3 w-full rounded-xl p-2 cursor-pointer transition-all duration-200 hover:bg-emerald-500/5 focus:bg-emerald-500/5 outline-hidden">
+                                                        <div className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 group-hover/item:bg-emerald-500/20 group-hover/item:scale-105 transition-all duration-200">
+                                                            <ClipboardList className="h-4.5 w-4.5" />
+                                                        </div>
+                                                        <div className="flex flex-col gap-0.5 min-w-0">
+                                                            <span className="text-xs font-semibold text-foreground tracking-tight group-hover/item:text-emerald-600 transition-colors">
+                                                                Pending Queue
+                                                            </span>
+                                                            <span className="text-[10px] text-muted-foreground leading-normal">
+                                                                Review join requests & content approvals
+                                                            </span>
+                                                        </div>
                                                     </Link>
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    asChild
-                                                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer font-semibold"
-                                                >
-                                                    <Link href={`/communities/${community.id}/settings`}>
-                                                        <Settings className="mr-2 h-4 w-4" />
-                                                        Settings
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/communities/${community.id}/settings`} className="group/item flex items-center gap-3 w-full rounded-xl p-2 cursor-pointer transition-all duration-200 hover:bg-emerald-500/5 focus:bg-emerald-500/5 outline-hidden">
+                                                        <div className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 group-hover/item:bg-emerald-500/20 group-hover/item:scale-105 transition-all duration-200">
+                                                            <Settings className="h-4.5 w-4.5" />
+                                                        </div>
+                                                        <div className="flex flex-col gap-0.5 min-w-0">
+                                                            <span className="text-xs font-semibold text-foreground tracking-tight group-hover/item:text-emerald-600 transition-colors">
+                                                                Settings
+                                                            </span>
+                                                            <span className="text-[10px] text-muted-foreground leading-normal">
+                                                                Manage configurations & preferences
+                                                            </span>
+                                                        </div>
                                                     </Link>
                                                 </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                            </>
+                                                <DropdownMenuSeparator className="my-1.5 opacity-60" />
+                                            </div>
                                         )}
 
                                         {/* User Utilities */}
-                                        <DropdownMenuItem
-                                            asChild
-                                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer font-semibold"
-                                        >
-                                            <Link href={`/communities/${community.id}/pending-posts`}>
-                                                <Clock3 className="mr-2 h-4 w-4" />
-                                                My Pending Posts
-                                            </Link>
-                                        </DropdownMenuItem>
+                                        <div className="space-y-1">
+                                            <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+                                                Your Space
+                                            </div>
+                                            <DropdownMenuItem asChild>
+                                                <Link href={`/communities/${community.id}/pending-posts`} className="group/item flex items-center gap-3 w-full rounded-xl p-2 cursor-pointer transition-all duration-200 hover:bg-primary/5 focus:bg-primary/5 outline-hidden">
+                                                    <div className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-primary/10 text-primary group-hover/item:bg-primary/20 group-hover/item:scale-105 transition-all duration-200">
+                                                        <Clock3 className="h-4.5 w-4.5" />
+                                                    </div>
+                                                    <div className="flex flex-col gap-0.5 min-w-0">
+                                                        <span className="text-xs font-semibold text-foreground tracking-tight group-hover/item:text-primary transition-colors">
+                                                            My Pending Posts
+                                                        </span>
+                                                        <span className="text-[10px] text-muted-foreground leading-normal">
+                                                            Track your submitted posts awaiting approval
+                                                        </span>
+                                                    </div>
+                                                </Link>
+                                            </DropdownMenuItem>
+                                        </div>
 
-                                        <DropdownMenuItem
-                                            asChild
-                                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-amber-500/10 transition-colors cursor-pointer text-amber-500 focus:text-amber-600 font-semibold"
-                                        >
-                                            <Link href={`/communities/${community.id}/reports`}>
-                                                <ShieldAlert className="mr-2 h-4 w-4 text-amber-500" />
-                                                Reports
-                                            </Link>
-                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator className="my-1.5 opacity-60" />
 
-                                        {/* Leave Community Action (Not for Owner) */}
-                                        {role !== "OWNER" && (
-                                            <>
-                                                <DropdownMenuSeparator />
+                                        {/* Safety & Options */}
+                                        <div className="space-y-1">
+                                            <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+                                                Safety & Options
+                                            </div>
+                                            <DropdownMenuItem asChild>
+                                                <Link href={`/communities/${community.id}/reports`} className="group/item flex items-center gap-3 w-full rounded-xl p-2 cursor-pointer transition-all duration-200 hover:bg-amber-500/5 focus:bg-amber-500/5 outline-hidden">
+                                                    <div className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 group-hover/item:bg-amber-500/20 group-hover/item:scale-105 transition-all duration-200">
+                                                        <ShieldAlert className="h-4.5 w-4.5" />
+                                                    </div>
+                                                    <div className="flex flex-col gap-0.5 min-w-0">
+                                                        <span className="text-xs font-semibold text-foreground tracking-tight group-hover/item:text-amber-600 transition-colors">
+                                                            Reports
+                                                        </span>
+                                                        <span className="text-[10px] text-muted-foreground leading-normal">
+                                                            Flag or check community violations & issues
+                                                        </span>
+                                                    </div>
+                                                </Link>
+                                            </DropdownMenuItem>
+
+                                            {/* Leave Community Action (Not for Owner) */}
+                                            {role !== "OWNER" && (
                                                 <DropdownMenuItem
-                                                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors cursor-pointer disabled:opacity-50 font-semibold"
+                                                    className="group/item flex items-center gap-3 w-full rounded-xl p-2 cursor-pointer transition-all duration-200 hover:bg-rose-500/10 focus:bg-rose-500/10 text-destructive focus:text-destructive outline-hidden"
                                                     disabled={isLeaving}
                                                     variant="destructive"
                                                     onClick={() => leaveCommunity(community.id)}
                                                 >
-                                                    {isLeaving ? (
-                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                    ) : (
-                                                        <LogOut className="mr-2 h-4 w-4" />
-                                                    )}
-                                                    Leave Community
+                                                    <div className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 group-hover/item:bg-rose-500/20 group-hover/item:scale-105 transition-all duration-200">
+                                                        {isLeaving ? (
+                                                            <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                                                        ) : (
+                                                            <LogOut className="h-4.5 w-4.5" />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex flex-col gap-0.5 min-w-0">
+                                                        <span className="text-xs font-semibold group-hover/item:text-rose-600 transition-colors">
+                                                            Leave Community
+                                                        </span>
+                                                        <span className="text-[10px] text-muted-foreground/80 leading-normal">
+                                                            Exit this community and remove membership
+                                                        </span>
+                                                    </div>
                                                 </DropdownMenuItem>
-                                            </>
-                                        )}
+                                            )}
+                                        </div>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </>
