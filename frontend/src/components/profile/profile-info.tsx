@@ -21,7 +21,7 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Lock, Star, UserPlus, UserCheck, Clock, MessageSquare, MoreHorizontal, Share2, ShieldAlert, UserX, Edit3, Loader2, Users, KeyRound, Ban } from "lucide-react";
+import { Lock, Star, UserPlus, UserCheck, Clock, MessageSquare, MoreHorizontal, Share2, ShieldAlert, UserX, Edit3, Loader2, Users } from "lucide-react";
 import { useOpenChatByProfile } from "@/features/messages/hooks/chats/use-open-chat-by-profile";
 import { useCreateUserFollow } from "@/hooks/user-follow-hooks/use-create-user-follow";
 import { useDeleteFollowById } from "@/hooks/user-follow-hooks/use-delete-follow-by-id";
@@ -30,7 +30,6 @@ import { useBlockProfile } from "@/hooks/block-hooks/use-block-profile";
 import { useBlockStatus } from "@/hooks/block-hooks/use-block-status";
 import { useUnblockProfile } from "@/hooks/block-hooks/use-unblock-profile";
 import { ConnectionsModal, type ConnectionsTabValue } from "./connections/connections-modal";
-import { BlockedProfilesModal } from "./blocked-profiles-modal";
 import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/report/report-dialog";
 import { ReportTargetType } from "@/types/report/report-target-type";
@@ -39,10 +38,9 @@ interface ProfileInfoProps {
     profile: SelectProfileDTO;
     isOwnProfile: boolean;
     onEdit?: () => void;
-    onChangePassword?: () => void;
 }
 
-export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }: ProfileInfoProps) {
+export function ProfileInfo({ profile, isOwnProfile, onEdit }: ProfileInfoProps) {
     const dropdownTriggerId = `profile-menu-trigger-${profile.id}`;
     const { openMessagePopup, isCheckingChat } = useOpenChatByProfile({
         id: profile.id,
@@ -63,7 +61,6 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
     const [connectionsInitialTab, setConnectionsInitialTab] = useState<ConnectionsTabValue>("followers");
     const [reportDialogOpen, setReportDialogOpen] = useState(false);
     const [blockDialogOpen, setBlockDialogOpen] = useState(false);
-    const [blockedProfilesOpen, setBlockedProfilesOpen] = useState(false);
 
     const openConnectionsModal = (tab: ConnectionsTabValue) => {
         setConnectionsInitialTab(tab);
@@ -246,24 +243,6 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
                             <Edit3 className="w-4 h-4 mr-2" />
                             Edit Profile
                         </Button>
-                        <Button
-                            onClick={onChangePassword}
-                            variant="secondary"
-                            size="default"
-                            className="h-10 w-full sm:w-fit font-semibold px-5 border shadow-sm cursor-pointer"
-                        >
-                            <KeyRound className="w-4 h-4 mr-2" />
-                            Change Password
-                        </Button>
-                        <Button
-                            onClick={() => setBlockedProfilesOpen(true)}
-                            variant="secondary"
-                            size="default"
-                            className="h-10 w-full sm:w-fit font-semibold px-5 border shadow-sm cursor-pointer"
-                        >
-                            <Ban className="w-4 h-4 mr-2" />
-                            Manage blocked profiles
-                        </Button>
                     </>
                 ) : (
                     <>
@@ -324,13 +303,6 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit, onChangePassword }:
                     targetType={ReportTargetType.Profile}
                     targetId={profile.id}
                     targetLabel={profile.fullName || "Profile"}
-                />
-            )}
-
-            {isOwnProfile && (
-                <BlockedProfilesModal
-                    open={blockedProfilesOpen}
-                    onOpenChange={setBlockedProfilesOpen}
                 />
             )}
 

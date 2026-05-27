@@ -7,7 +7,7 @@ export const useChangePassword = () => {
     return useMutation({
         mutationFn: (changePasswordDTO: ChangePasswordDTO) => accountService.changePassword(changePasswordDTO),
         onSuccess: (data) => {
-            if (data) {
+            if (data?.result === true) {
                 toast.success("Password successfully changed!")
             }
         }
