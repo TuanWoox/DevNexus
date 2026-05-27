@@ -151,18 +151,39 @@ class ModerationService:
         )
 
         if t2.confidence > _T2_CONFIDENCE_THRESHOLD:
-            status = (
-                ModerationStatus.APPROVED if t2.decision == ModerationDecision.APPROVE
-                else ModerationStatus.FLAGGED
-            )
-            await self._notify_platform(post_id, t2.decision, t1=t1, t2=t2)
+            if t2.decision == ModerationDecision.APPROVE:
+                await self._notify_platform(post_id, ModerationDecision.APPROVE, t1=t1, t2=t2)
+                return ModerationTaskResult(
+                    post_id=post_id,
+                    final_status=ModerationStatus.APPROVED,
+                    decision=ModerationDecision.APPROVE,
+                    tier_reached=2,
+                    tier_one=t1,
+                    tier_two=t2,
+                )
+
+            if t2.decision == ModerationDecision.FLAG:
+                await self._notify_platform(post_id, ModerationDecision.FLAG, t1=t1, t2=t2)
+                return ModerationTaskResult(
+                    post_id=post_id,
+                    final_status=ModerationStatus.FLAGGED,
+                    decision=ModerationDecision.FLAG,
+                    tier_reached=2,
+                    tier_one=t1,
+                    tier_two=t2,
+                )
+
+            logger.info("[Moderation][T3] High-confidence escalation — human review required. post=%s", post_id)
+            t3 = await self._run_tier_three(post_id, t1, t2)
+            await self._notify_platform(post_id, ModerationDecision.ESCALATE, t1=t1, t2=t2)
             return ModerationTaskResult(
                 post_id=post_id,
-                final_status=status,
-                decision=t2.decision,
-                tier_reached=2,
+                final_status=ModerationStatus.IN_REVIEW,
+                decision=ModerationDecision.ESCALATE,
+                tier_reached=3,
                 tier_one=t1,
                 tier_two=t2,
+                tier_three=t3,
             )
 
         # ------- Tier 3 (still uncertain) -------
@@ -223,20 +244,25 @@ class ModerationService:
         inappropriate image: Gemini evaluates BOTH signals independently.
         """
         system_prompt = (
-            "You are a content moderation AI for a software engineering learning platform.\n\n"
+            "You are a content moderation AI for a software engineering social and learning platform.\n\n"
             "Decision rules:\n"
-            "- APPROVE: Content is safe, even if it is casual, informal, low-quality, off-topic, or contains mild slang.\n"
-            "- ESCALATE: Content is ambiguous, borderline, or requires human context.\n"
-            "- FLAG: Content clearly violates safety/community policy, such as targeted harassment, hate speech, explicit sexual content, graphic violence, spam/scams, phishing, malware, or clear abuse.\n\n"
+            "- APPROVE: Safe content, including casual language, mild slang/profanity, mild frustration, low-quality posts, off-topic posts, or non-technical posts when there is no clear violation.\n"
+            "- ESCALATE: Ambiguous, borderline, unclear context, or possible abuse/spam that needs human review. If unsure, choose ESCALATE instead of FLAG.\n"
+            "- FLAG: Clear and confident violations only: targeted harassment or abuse, hate speech, explicit sexual content, graphic violence, spam/scams/phishing, malware or dangerous platform abuse, severe threats, or clear safety harm.\n\n"
             "Important allowances:\n"
-            "- Do not flag casual language such as 'bro', 'dude', 'lol', 'wtf', or mild frustration by itself.\n"
-            "- Do not flag content only because it is not technical enough.\n"
-            "- Do not flag content only because it asks for title/tag generation or contains AI-generated fallback text.\n"
-            "- Professional tone is preferred, but lack of professional tone is not a moderation violation.\n\n"
+            "- Do not flag words like 'bro', 'lol', or 'wtf' when they are casual wording or mild frustration rather than abuse.\n"
+            "- Do not flag AI fallback/refusal text solely because it includes words like inappropriate, unsafe, or not suitable.\n"
+            "- Lack of professionalism is not a moderation violation.\n\n"
+            "Examples:\n"
+            "- APPROVE: 'How do I optimize EF Core Include query, bro?'\n"
+            "- APPROVE or ESCALATE, not FLAG: 'what is this bro, pls like wtf' when not attacking a person.\n"
+            "- ESCALATE: unclear hostile context or ambiguous spam/scam signals.\n"
+            "- FLAG: clear phishing, spam, hate, targeted harassment, graphic violence, explicit sexual content, or malware abuse.\n\n"
+            "Reasoning should be concise and non-alarming. For safe casual content, explain that casual wording is present but there is no harassment, spam, or safety violation.\n\n"
             "Analyze all submitted content, including image if provided. "
             "A post passes if both text and image do not contain a clear violation. "
             "Return the decision, confidence score from 0.0 to 1.0, and one concise sentence reasoning."
-                )
+        )
         safe_text = _truncate_input(text_content)
         user_parts = [
             types.Part.from_text(text=f"Text content to evaluate:\n```\n{safe_text}\n```")
