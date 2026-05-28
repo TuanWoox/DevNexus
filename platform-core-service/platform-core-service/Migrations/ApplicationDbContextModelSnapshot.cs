@@ -1629,6 +1629,68 @@ namespace platform_core_service.Migrations
                     b.ToTable("Tags");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.UserContentInteraction", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("DwellTimeSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("InteractionType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("PostId")
+                        .HasMaxLength(26)
+                        .HasColumnType("character varying(26)");
+
+                    b.Property<string>("QAPostId")
+                        .HasMaxLength(26)
+                        .HasColumnType("character varying(26)");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(26)
+                        .HasColumnType("character varying(26)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("InteractionType");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("QAPostId");
+
+                    b.HasIndex("UserId", "DateCreated");
+
+                    b.HasIndex("UserId", "PostId");
+
+                    b.HasIndex("UserId", "QAPostId");
+
+                    b.ToTable("UserContentInteractions");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.UserFollow", b =>
                 {
                     b.Property<string>("Id")
@@ -1656,6 +1718,64 @@ namespace platform_core_service.Migrations
                     b.HasIndex("OwnerId");
 
                     b.ToTable("UserFollows");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.UserRecommendationFeedback", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommunityId")
+                        .HasMaxLength(26)
+                        .HasColumnType("character varying(26)");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("FeedbackType")
+                        .HasMaxLength(30)
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PostId")
+                        .HasMaxLength(26)
+                        .HasColumnType("character varying(26)");
+
+                    b.Property<string>("QAPostId")
+                        .HasMaxLength(26)
+                        .HasColumnType("character varying(26)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(26)
+                        .HasColumnType("character varying(26)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommunityId");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("QAPostId");
+
+                    b.HasIndex("UserId", "CommunityId");
+
+                    b.HasIndex("UserId", "PostId");
+
+                    b.HasIndex("UserId", "QAPostId");
+
+                    b.ToTable("UserRecommendationFeedbacks");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Vote", b =>
@@ -2431,6 +2551,29 @@ namespace platform_core_service.Migrations
                     b.Navigation("QAPost");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.UserContentInteraction", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Post", "Post")
+                        .WithMany()
+                        .HasForeignKey("PostId");
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.QAPost", "QAPost")
+                        .WithMany()
+                        .HasForeignKey("QAPostId");
+
+                    b.HasOne("platform_core_service.Common.Entities.Identities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+
+                    b.Navigation("QAPost");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.UserFollow", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "FollowingProfile")
@@ -2448,6 +2591,35 @@ namespace platform_core_service.Migrations
                     b.Navigation("FollowingProfile");
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.UserRecommendationFeedback", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
+                        .WithMany()
+                        .HasForeignKey("CommunityId");
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Post", "Post")
+                        .WithMany()
+                        .HasForeignKey("PostId");
+
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.QAPost", "QAPost")
+                        .WithMany()
+                        .HasForeignKey("QAPostId");
+
+                    b.HasOne("platform_core_service.Common.Entities.Identities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Community");
+
+                    b.Navigation("Post");
+
+                    b.Navigation("QAPost");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Vote", b =>

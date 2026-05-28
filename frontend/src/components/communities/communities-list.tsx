@@ -11,7 +11,7 @@ export function CommunitiesList() {
     const [searchQuery, setSearchQuery] = useState("");
     const [appliedSearch, setAppliedSearch] = useState("");
     const [currentSort, setCurrentSort] = useState<SortOption>(SORT_OPTIONS[0]);
-    const [activeTab, setActiveTab] = useState<CommunityFetchMode>(CommunityFetchMode.EXPLORE);
+    const [activeTab, setActiveTab] = useState<CommunityFetchMode>(CommunityFetchMode.RECOMMENDED);
 
     const isSearching = appliedSearch.trim().length > 0;
 

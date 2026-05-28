@@ -49,6 +49,8 @@ namespace platform_core_service.Data
         public DbSet<CommunityQAPostReports> CommunityQAPostReports { get; set; }
         public DbSet<CommunityAnswersReport> CommunityAnswersReports { get; set; }
         public DbSet<CommunityMuteMember> CommunityMutedMembers { get; set; }
+        public DbSet<UserContentInteraction> UserContentInteractions { get; set; }
+        public DbSet<UserRecommendationFeedback> UserRecommendationFeedbacks { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
@@ -278,6 +280,23 @@ namespace platform_core_service.Data
                     .WithMany()
                     .HasForeignKey(e => e.CommunityId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // UserContentInteraction indexes
+            builder.Entity<UserContentInteraction>(entity =>
+            {
+                entity.HasIndex(e => new { e.UserId, e.DateCreated });
+                entity.HasIndex(e => new { e.UserId, e.PostId });
+                entity.HasIndex(e => new { e.UserId, e.QAPostId });
+                entity.HasIndex(e => e.InteractionType);
+            });
+
+            // UserRecommendationFeedback indexes
+            builder.Entity<UserRecommendationFeedback>(entity =>
+            {
+                entity.HasIndex(e => new { e.UserId, e.PostId });
+                entity.HasIndex(e => new { e.UserId, e.QAPostId });
+                entity.HasIndex(e => new { e.UserId, e.CommunityId });
             });
         }
 
