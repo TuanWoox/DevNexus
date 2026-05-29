@@ -46,19 +46,19 @@ function mapModerationStatus(status: ModerationStatus | number): { label: string
   if (typeof status === 'number') {
     // Map numeric enums: 0=Pending, 1=Approved, 2=Flagged, 3=InReview
     switch (status) {
-      case 0: return { label: 'Pending', className: 'badge-amber' }
+      case 0: return { label: 'Pending', className: 'badge-cyan' }
       case 1: return { label: 'Approved', className: 'badge-emerald' }
       case 2: return { label: 'Flagged', className: 'badge-red' }
-      case 3: return { label: 'In Review', className: 'badge-cyan' }
+      case 3: return { label: 'In Review', className: 'badge-amber' }
       default: return { label: 'Unknown', className: 'badge-default' }
     }
   }
 
   switch (status) {
-    case 'Pending': return { label: 'Pending', className: 'badge-amber' }
+    case 'Pending': return { label: 'Pending', className: 'badge-cyan' }
     case 'Approved': return { label: 'Approved', className: 'badge-emerald' }
     case 'Flagged': return { label: 'Flagged', className: 'badge-red' }
-    case 'InReview': return { label: 'In Review', className: 'badge-cyan' }
+    case 'InReview': return { label: 'In Review', className: 'badge-amber' }
     default: return { label: String(status), className: 'badge-default' }
   }
 }
@@ -112,7 +112,7 @@ function buildUnifiedRows(
   activeTab: TabValue
 ): UnifiedRow[] {
   if (activeTab === 'needs-review') {
-    // Backend already filtered for Pending/Flagged, show queue entries
+    // Backend already filtered for Flagged/InReview review items, show unresolved queue entries
     return queueEntries
       .filter((e) => !e.resolution) // Only unresolved
       .map((e) => ({ type: 'queue' as const, queueEntry: e }))
@@ -247,7 +247,7 @@ export function UnifiedPostsTable({
                   : (post!.author ? { fullName: post!.author.fullName, id: post!.author.id } : undefined)
                 const entityType = isQueue ? entry!.entityType : post!.entityType
                 const status = isQueue
-                  ? (entry!.resolution ? { label: entry!.resolution, className: entry!.resolution === 'Approved' ? 'badge-emerald' : 'badge-red' } : { label: 'Pending', className: 'badge-amber' })
+                  ? (entry!.resolution ? { label: entry!.resolution, className: entry!.resolution === 'Approved' ? 'badge-emerald' : 'badge-red' } : { label: 'In Review', className: 'badge-amber' })
                   : mapModerationStatus(post!.moderationStatus)
                 const aiScore = isQueue ? entry!.tier1Score : undefined
                 const votes = isQueue ? undefined : { up: post!.upvoteCount, down: post!.downvoteCount }

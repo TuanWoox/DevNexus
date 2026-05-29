@@ -47,6 +47,29 @@ function textValue(value: unknown, fallback?: string): string {
   return typeof value === "string" && value.trim() ? value : fallback ?? "";
 }
 
+const moderationStatusLabels: Record<number, string> = {
+  0: "Pending",
+  1: "Approved",
+  2: "Flagged",
+  3: "In Review",
+};
+
+function formatModerationStatus(status: unknown, fallback = "moderated"): string {
+  if (typeof status === "number") {
+    return moderationStatusLabels[status] ?? String(status);
+  }
+
+  if (typeof status === "string") {
+    const numericStatus = Number(status);
+    if (Number.isInteger(numericStatus) && status.trim() !== "") {
+      return moderationStatusLabels[numericStatus] ?? status;
+    }
+    return status === "InReview" ? "In Review" : status;
+  }
+
+  return status == null ? fallback : String(status);
+}
+
 function InfoRow({ label, value, isMono = false }: { label: string; value?: ReactNode; isMono?: boolean }) {
   return (
     <div className="rounded-lg border border-default bg-background px-3 py-2">
@@ -76,12 +99,12 @@ function StateBadges({ state }: { state?: any }) {
   return (
     <div className="flex flex-wrap gap-2">
       {state.deleted && <span className="badge-red font-mono text-2xs">Deleted</span>}
-      {state.hidden && <span className="badge-amber font-mono text-2xs">Hidden: {state.moderationStatus ?? "moderated"}</span>}
+      {state.hidden && <span className="badge-amber font-mono text-2xs">Hidden: {formatModerationStatus(state.moderationStatus)}</span>}
       {state.private && <span className="badge-purple font-mono text-2xs">Private</span>}
       {state.suspended && <span className="badge-red font-mono text-2xs">Suspended</span>}
       {state.parentUnavailable && (
         <span className="badge-amber font-mono text-2xs">
-          Parent unavailable{state.parentModerationStatus ? `: ${state.parentModerationStatus}` : ""}
+          Parent unavailable{state.parentModerationStatus ? `: ${formatModerationStatus(state.parentModerationStatus)}` : ""}
         </span>
       )}
       {state.unavailable && <span className="badge-red font-mono text-2xs">Unavailable</span>}
@@ -201,7 +224,7 @@ function ReportedContentView({
             )}
             {content.moderationStatus != null && (
               <span className="badge-default font-mono text-2xs">
-                Moderation: {["Pending", "Approved", "Rejected"][content.moderationStatus] ?? String(content.moderationStatus)}
+                Moderation: {formatModerationStatus(content.moderationStatus)}
               </span>
             )}
           </div>
@@ -363,7 +386,7 @@ function ChangeIndicator({
   if (currentTargetState?.hidden) {
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300">
-        <span className="font-bold">HIDDEN:</span> Target content is currently {currentTargetState.moderationStatus ?? "not publicly visible"}.
+        <span className="font-bold">HIDDEN:</span> Target content is currently {formatModerationStatus(currentTargetState.moderationStatus, "not publicly visible")}.
       </div>
     );
   }

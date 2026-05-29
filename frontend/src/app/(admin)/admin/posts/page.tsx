@@ -43,10 +43,10 @@ function buildModerationStatusFilter(tab: TabValue): FilterMapping[] {
     }]
   }
   if (tab === 'needs-review') {
-    // Filter for Pending or Flagged (enum values 0 or 2)
+    // Filter for Flagged or InReview posts (enum values 2 or 3)
     return [{
       prop: 'moderationStatus',
-      value: '0,2',
+      value: '2,3',
       filterOperator: FilterOperator.Contains,
       filterType: FilterType.DropDown,
       dynamicProperty: '',
