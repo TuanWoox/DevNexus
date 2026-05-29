@@ -27,7 +27,7 @@ import { PostActionsDropdown } from './post-actions-dropdown';
 import { ProfileHoverCard } from '@/components/profile/profile-hover-card';
 import { SelectPostDTO } from '@/types/post/select-post-dto';
 import { ModerationBanner } from '@/components/shared/moderation-banner';
-import { normalizeModerationStatus } from '@/types/post/moderation-status';
+import { normalizeModerationStatus, canInteractWithModeratedContent } from '@/types/post/moderation-status';
 import { SaveBookmarkModal } from '../bookmark/save-bookmark-modal';
 import {
     AlertDialog,
@@ -100,7 +100,7 @@ export default function PostArticle({ postId, isQAPost, context = "personal", ro
     const isAdmin = user?.roles?.includes('Admin') || user?.roles?.includes('Moderator');
 
     const moderationStatus = normalizeModerationStatus(post?.moderationStatus);
-    const isModerationApproved = moderationStatus === "Approved";
+    const isModerationApproved = canInteractWithModeratedContent(moderationStatus);
     const communityApprovalStatus = normalizeCommunityApprovalStatus(post?.communityApprovalStatus) ?? (post?.communityId ? CommunityApprovalStatus.Pending : null);
     const isCommunityApproved = !post?.communityId ||
         communityApprovalStatus == null ||

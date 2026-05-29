@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using platform_core_service.Data;
@@ -12,9 +13,11 @@ using platform_core_service.Data;
 namespace platform_core_service.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260527042217_AddModerationVersioning")]
+    partial class AddModerationVersioning
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1110,9 +1113,6 @@ namespace platform_core_service.Migrations
                     b.Property<int>("PostType")
                         .HasColumnType("integer");
 
-                    b.Property<string>("SharedPostId")
-                        .HasColumnType("text");
-
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -1129,8 +1129,6 @@ namespace platform_core_service.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Deleted");
-
-                    b.HasIndex("SharedPostId");
 
                     b.HasIndex("Slug");
 
@@ -1399,36 +1397,6 @@ namespace platform_core_service.Migrations
                         .IsUnique();
 
                     b.ToTable("ProfileBlocks");
-                });
-
-            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ProfileCommunityBlock", b =>
-                {
-                    b.Property<string>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text");
-
-                    b.Property<string>("CommunityId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset?>("DateCreated")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset?>("DateModified")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ProfileId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CommunityId");
-
-                    b.HasIndex("ProfileId", "CommunityId")
-                        .IsUnique();
-
-                    b.ToTable("ProfileCommunityBlocks");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ProfileMedia", b =>
@@ -2296,16 +2264,9 @@ namespace platform_core_service.Migrations
                         .WithMany("Posts")
                         .HasForeignKey("CommunityId");
 
-                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Post", "SharedPost")
-                        .WithMany()
-                        .HasForeignKey("SharedPostId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("Author");
 
                     b.Navigation("Community");
-
-                    b.Navigation("SharedPost");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostHistory", b =>
@@ -2386,25 +2347,6 @@ namespace platform_core_service.Migrations
                     b.Navigation("BlockedProfile");
 
                     b.Navigation("Owner");
-                });
-
-            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ProfileCommunityBlock", b =>
-                {
-                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Community", "Community")
-                        .WithMany()
-                        .HasForeignKey("CommunityId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Profile")
-                        .WithMany("BlockedCommunities")
-                        .HasForeignKey("ProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Community");
-
-                    b.Navigation("Profile");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ProfileMedia", b =>
@@ -2720,8 +2662,6 @@ namespace platform_core_service.Migrations
                     b.Navigation("BlockRecords");
 
                     b.Navigation("BlockedByRecords");
-
-                    b.Navigation("BlockedCommunities");
 
                     b.Navigation("BookMarks");
 

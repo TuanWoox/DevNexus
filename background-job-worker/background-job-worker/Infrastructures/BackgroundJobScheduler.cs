@@ -33,6 +33,16 @@ namespace background_job_worker.Infrastructures
                 {
                     TimeZone = TimeZoneInfo.Utc
                 });
+
+            // Requeue public Pending posts that did not receive an AI moderation callback.
+            RecurringJob.AddOrUpdate<IModerationBackgroundJobs>(
+                recurringJobId: "moderation-requeue-stuck-pending",
+                methodCall: x => x.RequeueStuckPendingModerationAsync(),
+                cronExpression: Cron.MinuteInterval(15),
+                options: new RecurringJobOptions
+                {
+                    TimeZone = TimeZoneInfo.Utc
+                });
         }
     }
 }

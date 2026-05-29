@@ -71,6 +71,8 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IContentMediaServiceFactory, ContentMediaServiceFactory>();
             services.AddScoped<IContentMediaLinkService, ContentMediaLinkService>();
             services.AddScoped<IModerationService, ModerationService>();
+            services.AddScoped<IContentRiskPrecheckService, ContentRiskPrecheckService>();
+            services.AddScoped<IQAPostFirstResponderTriggerService, QAPostFirstResponderTriggerService>();
             services.AddScoped<IMicroserviceSyncService, MicroserviceSyncService>();
             services.AddScoped<IAdminModerationService, AdminModerationService>();
             services.AddScoped<IAdminPostService, AdminPostService>();

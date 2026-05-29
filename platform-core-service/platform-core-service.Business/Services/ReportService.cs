@@ -2,10 +2,12 @@ using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.Contexts;
+using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Report;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Utils.Enums;
+using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using System.Text.Json;
 
@@ -33,6 +35,7 @@ namespace platform_core_service.Business.Services
         private readonly IQAPostHistoryService _qaPostHistoryService;
         private readonly ICommentHistoryService _commentHistoryService;
         private readonly IAnswerHistoryService _answerHistoryService;
+        private readonly ISocialGuardService _socialGuardService;
 
         public ReportService(
             ApplicationDbContext context,
@@ -41,7 +44,8 @@ namespace platform_core_service.Business.Services
             IPostHistoryService postHistoryService,
             IQAPostHistoryService qaPostHistoryService,
             ICommentHistoryService commentHistoryService,
-            IAnswerHistoryService answerHistoryService)
+            IAnswerHistoryService answerHistoryService,
+            ISocialGuardService socialGuardService)
         {
             _context = context;
             _userContext = userContext;
@@ -50,6 +54,7 @@ namespace platform_core_service.Business.Services
             _qaPostHistoryService = qaPostHistoryService;
             _commentHistoryService = commentHistoryService;
             _answerHistoryService = answerHistoryService;
+            _socialGuardService = socialGuardService;
         }
 
         public async Task<ReturnResult<SelectReportDTO>> CreateAsync(CreateReportDTO dto)
@@ -187,9 +192,15 @@ namespace platform_core_service.Business.Services
                 .Where(p => p.GetType() == typeof(Post))
                 .Include(p => p.Author)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.Id == targetId && p.ModerationStatus == ModerationStatus.Approved);
+                .FirstOrDefaultAsync(p => p.Id == targetId);
 
-            if (post == null)
+            if (post == null || !IsPostReportable(post))
+            {
+                return null;
+            }
+
+            var accessCheck = await _socialGuardService.CanViewPost(post.Id);
+            if (!accessCheck.Result)
             {
                 return null;
             }
@@ -205,9 +216,15 @@ namespace platform_core_service.Business.Services
                 .OfType<QAPost>()
                 .Include(p => p.Author)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.Id == targetId && p.ModerationStatus == ModerationStatus.Approved);
+                .FirstOrDefaultAsync(p => p.Id == targetId);
 
-            if (question == null)
+            if (question == null || !IsPostReportable(question))
+            {
+                return null;
+            }
+
+            var accessCheck = await _socialGuardService.CanViewQAPost(question.Id);
+            if (!accessCheck.Result)
             {
                 return null;
             }
@@ -224,10 +241,21 @@ namespace platform_core_service.Business.Services
                 .Include(c => c.Post)
                 .Include(c => c.Answer)
                     .ThenInclude(a => a!.QAPost)
+                .Include(c => c.ReplyToComment)
+                    .ThenInclude(rc => rc!.Post)
+                .Include(c => c.ReplyToComment)
+                    .ThenInclude(rc => rc!.Answer)
+                        .ThenInclude(a => a!.QAPost)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == targetId);
 
-            if (comment == null || !IsCommentReportable(comment))
+            if (comment == null || comment.Deleted || !IsCommentReportable(comment))
+            {
+                return null;
+            }
+
+            var accessCheck = await _socialGuardService.CanViewComment(comment.Id);
+            if (!accessCheck.Result)
             {
                 return null;
             }
@@ -236,7 +264,11 @@ namespace platform_core_service.Business.Services
                 ? $"/post/{comment.PostId}"
                 : comment.Answer?.QAPostId != null
                     ? $"/questions/{comment.Answer.QAPostId}"
-                    : null;
+                    : comment.ReplyToComment?.PostId != null
+                        ? $"/post/{comment.ReplyToComment.PostId}"
+                        : comment.ReplyToComment?.Answer?.QAPostId != null
+                            ? $"/questions/{comment.ReplyToComment.Answer.QAPostId}"
+                            : null;
             return new ResolvedReportTarget(
                 comment.AuthorId,
                 BuildSnapshotJson("Comment", BuildPreview(comment.Content), comment.Author?.FullName, comment.Author?.AvatarUrl, route, comment.DateCreated, comment.DateModified, comment.Deleted));
@@ -250,7 +282,13 @@ namespace platform_core_service.Business.Services
                 .AsNoTracking()
                 .FirstOrDefaultAsync(a => a.Id == targetId);
 
-            if (answer == null || !IsPostReportable(answer.QAPost))
+            if (answer == null || answer.Deleted || !IsPostReportable(answer.QAPost))
+            {
+                return null;
+            }
+
+            var accessCheck = await _socialGuardService.CanViewAnswer(answer.Id);
+            if (!accessCheck.Result)
             {
                 return null;
             }
@@ -272,12 +310,17 @@ namespace platform_core_service.Business.Services
                 return comment.Answer != null && IsPostReportable(comment.Answer.QAPost);
             }
 
+            if (comment.ReplyToCommentId != null)
+            {
+                return comment.ReplyToComment != null && IsCommentReportable(comment.ReplyToComment);
+            }
+
             return false;
         }
 
         private static bool IsPostReportable(Post? post)
         {
-            return post != null && !post.Deleted && post.ModerationStatus == ModerationStatus.Approved;
+            return post != null && !post.Deleted && post.ModerationStatus.IsPubliclyVisible();
         }
 
         private static string BuildSnapshotJson(

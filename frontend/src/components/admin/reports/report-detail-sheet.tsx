@@ -47,6 +47,29 @@ function textValue(value: unknown, fallback?: string): string {
   return typeof value === "string" && value.trim() ? value : fallback ?? "";
 }
 
+const moderationStatusLabels: Record<number, string> = {
+  0: "Pending",
+  1: "Approved",
+  2: "Flagged",
+  3: "In Review",
+};
+
+function formatModerationStatus(status: unknown, fallback = "moderated"): string {
+  if (typeof status === "number") {
+    return moderationStatusLabels[status] ?? String(status);
+  }
+
+  if (typeof status === "string") {
+    const numericStatus = Number(status);
+    if (Number.isInteger(numericStatus) && status.trim() !== "") {
+      return moderationStatusLabels[numericStatus] ?? status;
+    }
+    return status === "InReview" ? "In Review" : status;
+  }
+
+  return status == null ? fallback : String(status);
+}
+
 function InfoRow({ label, value, isMono = false }: { label: string; value?: ReactNode; isMono?: boolean }) {
   return (
     <div className="rounded-lg border border-default bg-background px-3 py-2">
@@ -76,12 +99,12 @@ function StateBadges({ state }: { state?: any }) {
   return (
     <div className="flex flex-wrap gap-2">
       {state.deleted && <span className="badge-red font-mono text-2xs">Deleted</span>}
-      {state.hidden && <span className="badge-amber font-mono text-2xs">Hidden: {state.moderationStatus ?? "moderated"}</span>}
+      {state.hidden && <span className="badge-amber font-mono text-2xs">Hidden: {formatModerationStatus(state.moderationStatus)}</span>}
       {state.private && <span className="badge-purple font-mono text-2xs">Private</span>}
       {state.suspended && <span className="badge-red font-mono text-2xs">Suspended</span>}
       {state.parentUnavailable && (
         <span className="badge-amber font-mono text-2xs">
-          Parent unavailable{state.parentModerationStatus ? `: ${state.parentModerationStatus}` : ""}
+          Parent unavailable{state.parentModerationStatus ? `: ${formatModerationStatus(state.parentModerationStatus)}` : ""}
         </span>
       )}
       {state.unavailable && <span className="badge-red font-mono text-2xs">Unavailable</span>}
@@ -201,7 +224,7 @@ function ReportedContentView({
             )}
             {content.moderationStatus != null && (
               <span className="badge-default font-mono text-2xs">
-                Moderation: {["Pending", "Approved", "Rejected"][content.moderationStatus] ?? String(content.moderationStatus)}
+                Moderation: {formatModerationStatus(content.moderationStatus)}
               </span>
             )}
           </div>
@@ -256,14 +279,101 @@ function ReportedContentView({
   }
 }
 
+function normalizeText(val: unknown): string {
+  if (val == null) return "";
+  return String(val).trim().replace(/\r\n/g, "\n");
+}
+
+function sameStringArray(a: unknown, b: unknown): boolean {
+  const arrA = Array.isArray(a) ? a.map(String).map(s => s.trim()).filter(Boolean) : [];
+  const arrB = Array.isArray(b) ? b.map(String).map(s => s.trim()).filter(Boolean) : [];
+  if (arrA.length !== arrB.length) return false;
+  
+  const sortedA = [...arrA].sort();
+  const sortedB = [...arrB].sort();
+  return sortedA.every((val, idx) => val === sortedB[idx]);
+}
+
+function hasAuthorContentChanged(
+  currentTarget: any,
+  reportedVersion: any,
+  targetSnapshot: any,
+  targetType: number
+): boolean {
+  if (!currentTarget) return false;
+
+  // Unpack history wrapper if present
+  let currentContent = currentTarget;
+  if (currentTarget && typeof currentTarget === "object" && "content" in currentTarget) {
+    currentContent = currentTarget.content;
+  }
+
+  let reportedContent = reportedVersion;
+  if (reportedVersion && typeof reportedVersion === "object" && "content" in reportedVersion) {
+    reportedContent = reportedVersion.content;
+  }
+
+  const currentTitle = normalizeText(currentContent.title || currentContent.fullName || currentContent.displayName);
+  const currentBody = normalizeText(currentContent.content || currentContent.bio);
+  
+  const reportedTitle = normalizeText(
+    reportedContent?.title || 
+    reportedContent?.fullName || 
+    reportedContent?.displayName || 
+    targetSnapshot?.targetTitle || 
+    targetSnapshot?.targetOwnerDisplayName
+  );
+  
+  const reportedBody = normalizeText(
+    reportedContent?.content || 
+    reportedContent?.bio || 
+    targetSnapshot?.targetPreview
+  );
+
+  // 1. Check title/display name
+  if (targetType === 0 || targetType === 1 || targetType === 2) {
+    if (currentTitle !== reportedTitle) {
+      return true;
+    }
+  }
+
+  // 2. Check main body content
+  if (currentBody !== reportedBody) {
+    const isTruncated = reportedBody.endsWith("...");
+    if (isTruncated) {
+      const prefix = reportedBody.slice(0, -3).trim();
+      if (prefix && !currentBody.startsWith(prefix)) {
+        return true;
+      }
+    } else {
+      return true;
+    }
+  }
+
+  // 3. Check tags for posts/questions
+  if (targetType === 1 || targetType === 2) {
+    const currentTags = currentContent.tagNames || [];
+    const reportedTags = reportedContent?.tagNames || [];
+    if (!sameStringArray(currentTags, reportedTags)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function ChangeIndicator({
   currentTarget,
+  reportedVersion,
   targetSnapshot,
   currentTargetState,
+  targetType,
 }: {
   currentTarget: any;
+  reportedVersion?: any;
   targetSnapshot?: any;
   currentTargetState?: any;
+  targetType: number;
 }) {
   if (currentTargetState?.deleted) {
     return (
@@ -276,7 +386,7 @@ function ChangeIndicator({
   if (currentTargetState?.hidden) {
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300">
-        <span className="font-bold">HIDDEN:</span> Target content is currently {currentTargetState.moderationStatus ?? "not publicly visible"}.
+        <span className="font-bold">HIDDEN:</span> Target content is currently {formatModerationStatus(currentTargetState.moderationStatus, "not publicly visible")}.
       </div>
     );
   }
@@ -297,10 +407,9 @@ function ChangeIndicator({
     );
   }
 
-  const currentModified = textValue(currentTarget.dateModified, textValue(currentTarget.dateCreated));
-  const snapshotUpdated = textValue(targetSnapshot?.updatedAt, textValue(targetSnapshot?.createdAt));
+  const contentChanged = hasAuthorContentChanged(currentTarget, reportedVersion, targetSnapshot, targetType);
 
-  if (currentModified && snapshotUpdated && new Date(currentModified) > new Date(snapshotUpdated)) {
+  if (contentChanged) {
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300 animate-fade-in-up">
         <span className="font-bold">CONTENT CHANGED:</span> Target was modified by the author after the report was submitted. Review both historical and current states below.
@@ -406,8 +515,10 @@ export function ReportDetailSheet({ open, onClose, report, onAction }: ReportDet
             <section className="space-y-3">
               <ChangeIndicator 
                 currentTarget={data?.currentTarget} 
+                reportedVersion={data?.reportedVersion}
                 targetSnapshot={data?.targetSnapshot} 
                 currentTargetState={data?.currentTargetState}
+                targetType={activeReport?.targetType ?? 1}
               />
               <div className="rounded-xl border border-default bg-card overflow-hidden">
                 <div className="border-b border-default bg-muted/20 px-4 py-3">

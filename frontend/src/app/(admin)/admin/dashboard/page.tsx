@@ -95,7 +95,7 @@ export default function AdminDashboardPage() {
               trend={{ value: -2.1, label: 'from yesterday' }}
             />
             <DashboardMetricCard
-              title="Pending Moderation"
+              title="Needs Review"
               value={data.queueEntries}
               icon={<AlertTriangle className="w-4 h-4" />}
               trend={{ value: 0, label: 'no change' }}

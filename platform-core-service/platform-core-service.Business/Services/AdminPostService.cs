@@ -1,9 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Helper;
 using platform_core_service.Business.Repository;
-using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
-using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
@@ -14,36 +12,34 @@ using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using PostEntity = platform_core_service.Common.Entities.DbEntities.Post;
 
-using Hangfire;
-
 namespace platform_core_service.Business.Services
 {
     public class AdminPostService : IAdminPostService
     {
         private readonly ApplicationDbContext _context;
         private readonly IRepository<PostEntity, string> _postRepository;
-        private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IUserContext _userContext;
         private readonly IAdminAuditLogService _adminAuditLogService;
         private readonly IPostHistoryService _postHistoryService;
         private readonly IQAPostHistoryService _qaPostHistoryService;
+        private readonly IQAPostFirstResponderTriggerService _firstResponderTriggerService;
 
         public AdminPostService(
             ApplicationDbContext context,
             IRepository<PostEntity, string> postRepository,
-            IBackgroundJobClient backgroundJobClient,
             IUserContext userContext,
             IAdminAuditLogService adminAuditLogService,
             IPostHistoryService postHistoryService,
-            IQAPostHistoryService qaPostHistoryService)
+            IQAPostHistoryService qaPostHistoryService,
+            IQAPostFirstResponderTriggerService firstResponderTriggerService)
         {
             _context = context;
             _postRepository = postRepository;
-            _backgroundJobClient = backgroundJobClient;
             _userContext = userContext;
             _adminAuditLogService = adminAuditLogService;
             _postHistoryService = postHistoryService;
             _qaPostHistoryService = qaPostHistoryService;
+            _firstResponderTriggerService = firstResponderTriggerService;
         }
 
         public async Task<ReturnResult<PagedData<AdminPostDTO, string>>> GetAllPostsAsync(Page<string> page)
@@ -112,34 +108,9 @@ namespace platform_core_service.Business.Services
                     await RecordApprovedContentHistoryAsync(post);
                 }
 
-                // Build DTO for AI First Responder
-                if (post is QAPost) // Thay QAPost bằng tên entity QA của bác (ví dụ: QaPostEntity)
+                if (post is QAPost)
                 {
-                    if (await _context.Answers.HasExistingAiFirstResponderAnswerAsync(_context, post.Id))
-                    {
-                        DevNexusLogger.Instance.Debug($"[AdminPost] Skipped AI Task for QA Post {post.Id} because an AI answer already exists");
-                        result.Result = true;
-                        return result;
-                    }
-
-                    var aiRequest = new platform_core_service.Common.Models.DTOs.AIDTO.AIFirstResponderRequestDTO
-                    {
-                        PostId = post.Id,
-                        Title = post.Title,
-                        Content = post.Content,
-                        Tags = post.PostTags?.Select(pt => pt.Tag.Name).ToList() ?? new List<string>(),
-                        AuthorId = post.AuthorId,
-                        AuthorDisplayName = post.Author?.FullName ?? "Unknown",
-                        CreatedAt = post.DateCreated ?? DateTimeOffset.UtcNow
-                    };
-
-                    string routingKey = "ai.task.firstresponder.request";
-
-                    _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
-                        x => x.PublicAiTask(aiRequest, routingKey, MessageBusEnum.Create, MessageBusEntityEnum.AIFirstResponder)
-                    );
-
-                    DevNexusLogger.Instance.Debug($"[AdminPost] AI Task queued for QA Post {post.Id}");
+                    await _firstResponderTriggerService.TryEnqueueAsync(post.Id, "AdminPost");
                 }
                 else
                 {

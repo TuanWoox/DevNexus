@@ -80,6 +80,8 @@ class ModerationService:
         self,
         *,
         post_id: str,
+        moderation_version: int,
+        content_hash: str,
         text_content: str,
         image_bytes: bytes | None = None,
         image_mime_type: str | None = None,
@@ -96,9 +98,11 @@ class ModerationService:
 
         if t1.combined_score < _SAFE_THRESHOLD:
             logger.info("[Moderation][T1] AUTO APPROVED — post=%s", post_id)
-            await self._notify_platform(post_id, ModerationDecision.APPROVE, t1=t1)
+            await self._notify_platform(post_id, moderation_version, content_hash, ModerationDecision.APPROVE, t1=t1)
             return ModerationTaskResult(
                 post_id=post_id,
+                moderation_version=moderation_version,
+                content_hash=content_hash,
                 final_status=ModerationStatus.APPROVED,
                 decision=ModerationDecision.APPROVE,
                 tier_reached=1,
@@ -107,9 +111,11 @@ class ModerationService:
 
         if t1.combined_score > _TOXIC_THRESHOLD:
             logger.info("[Moderation][T1] AUTO FLAGGED — post=%s", post_id)
-            await self._notify_platform(post_id, ModerationDecision.FLAG, t1=t1)
+            await self._notify_platform(post_id, moderation_version, content_hash, ModerationDecision.FLAG, t1=t1)
             return ModerationTaskResult(
                 post_id=post_id,
+                moderation_version=moderation_version,
+                content_hash=content_hash,
                 final_status=ModerationStatus.FLAGGED,
                 decision=ModerationDecision.FLAG,
                 tier_reached=1,
@@ -133,10 +139,12 @@ class ModerationService:
                 confidence=0.0,
                 reasoning="Gemini moderation unavailable; local model result was inconclusive.",
             )
-            t3 = await self._run_tier_three(post_id, t1, t2)
-            await self._notify_platform(post_id, ModerationDecision.ESCALATE, t1=t1, t2=t2)
+            t3 = await self._run_tier_three(post_id, moderation_version, content_hash, t1, t2)
+            await self._notify_platform(post_id, moderation_version, content_hash, ModerationDecision.ESCALATE, t1=t1, t2=t2)
             return ModerationTaskResult(
                 post_id=post_id,
+                moderation_version=moderation_version,
+                content_hash=content_hash,
                 final_status=ModerationStatus.IN_REVIEW,
                 decision=ModerationDecision.ESCALATE,
                 tier_reached=3,
@@ -151,26 +159,55 @@ class ModerationService:
         )
 
         if t2.confidence > _T2_CONFIDENCE_THRESHOLD:
-            status = (
-                ModerationStatus.APPROVED if t2.decision == ModerationDecision.APPROVE
-                else ModerationStatus.FLAGGED
-            )
-            await self._notify_platform(post_id, t2.decision, t1=t1, t2=t2)
+            if t2.decision == ModerationDecision.APPROVE:
+                await self._notify_platform(post_id, moderation_version, content_hash, ModerationDecision.APPROVE, t1=t1, t2=t2)
+                return ModerationTaskResult(
+                    post_id=post_id,
+                    moderation_version=moderation_version,
+                    content_hash=content_hash,
+                    final_status=ModerationStatus.APPROVED,
+                    decision=ModerationDecision.APPROVE,
+                    tier_reached=2,
+                    tier_one=t1,
+                    tier_two=t2,
+                )
+
+            if t2.decision == ModerationDecision.FLAG:
+                await self._notify_platform(post_id, moderation_version, content_hash, ModerationDecision.FLAG, t1=t1, t2=t2)
+                return ModerationTaskResult(
+                    post_id=post_id,
+                    moderation_version=moderation_version,
+                    content_hash=content_hash,
+                    final_status=ModerationStatus.FLAGGED,
+                    decision=ModerationDecision.FLAG,
+                    tier_reached=2,
+                    tier_one=t1,
+                    tier_two=t2,
+                )
+
+            logger.info("[Moderation][T3] High-confidence escalation — human review required. post=%s", post_id)
+            t3 = await self._run_tier_three(post_id, moderation_version, content_hash, t1, t2)
+            await self._notify_platform(post_id, moderation_version, content_hash, ModerationDecision.ESCALATE, t1=t1, t2=t2)
             return ModerationTaskResult(
                 post_id=post_id,
-                final_status=status,
-                decision=t2.decision,
-                tier_reached=2,
+                moderation_version=moderation_version,
+                content_hash=content_hash,
+                final_status=ModerationStatus.IN_REVIEW,
+                decision=ModerationDecision.ESCALATE,
+                tier_reached=3,
                 tier_one=t1,
                 tier_two=t2,
+                tier_three=t3,
             )
 
         # ------- Tier 3 (still uncertain) -------
         logger.info("[Moderation][T3] Low confidence — escalating to human queue. post=%s", post_id)
-        t3 = await self._run_tier_three(post_id, t1, t2)
-        await self._notify_platform(post_id, ModerationDecision.ESCALATE, t1=t1, t2=t2)
+        t3 = await self._run_tier_three(post_id, moderation_version, content_hash, t1, t2)
+        await self._notify_platform(post_id, moderation_version, content_hash, ModerationDecision.ESCALATE, t1=t1, t2=t2)
         return ModerationTaskResult(
             post_id=post_id,
+            moderation_version=moderation_version,
+            content_hash=content_hash,
             final_status=ModerationStatus.IN_REVIEW,
             decision=ModerationDecision.ESCALATE,
             tier_reached=3,
@@ -223,12 +260,24 @@ class ModerationService:
         inappropriate image: Gemini evaluates BOTH signals independently.
         """
         system_prompt = (
-            "You are a content moderation AI for a professional software engineering "
-            "learning platform. Analyze ALL submitted content (text AND image if provided). "
-            "Flag content that violates community standards: toxicity, harassment, "
-            "hate speech, spam, nudity, graphic violence, or otherwise inappropriate material. "
-            "A post passes only if BOTH text AND image are acceptable. "
-            "Return your decision, your confidence score (0.0–1.0), and a one-sentence reasoning."
+            "You are a content moderation AI for a software engineering social and learning platform.\n\n"
+            "Decision rules:\n"
+            "- APPROVE: Safe content, including casual language, mild slang/profanity, mild frustration, low-quality posts, off-topic posts, or non-technical posts when there is no clear violation.\n"
+            "- ESCALATE: Ambiguous, borderline, unclear context, or possible abuse/spam that needs human review. If unsure, choose ESCALATE instead of FLAG.\n"
+            "- FLAG: Clear and confident violations only: targeted harassment or abuse, hate speech, explicit sexual content, graphic violence, spam/scams/phishing, malware or dangerous platform abuse, severe threats, or clear safety harm.\n\n"
+            "Important allowances:\n"
+            "- Do not flag words like 'bro', 'lol', or 'wtf' when they are casual wording or mild frustration rather than abuse.\n"
+            "- Do not flag AI fallback/refusal text solely because it includes words like inappropriate, unsafe, or not suitable.\n"
+            "- Lack of professionalism is not a moderation violation.\n\n"
+            "Examples:\n"
+            "- APPROVE: 'How do I optimize EF Core Include query, bro?'\n"
+            "- APPROVE or ESCALATE, not FLAG: 'what is this bro, pls like wtf' when not attacking a person.\n"
+            "- ESCALATE: unclear hostile context or ambiguous spam/scam signals.\n"
+            "- FLAG: clear phishing, spam, hate, targeted harassment, graphic violence, explicit sexual content, or malware abuse.\n\n"
+            "Reasoning should be concise and non-alarming. For safe casual content, explain that casual wording is present but there is no harassment, spam, or safety violation.\n\n"
+            "Analyze all submitted content, including image if provided. "
+            "A post passes if both text and image do not contain a clear violation. "
+            "Return the decision, confidence score from 0.0 to 1.0, and one concise sentence reasoning."
         )
         safe_text = _truncate_input(text_content)
         user_parts = [
@@ -284,10 +333,12 @@ class ModerationService:
     # ------------------------------------------------------------------
 
     async def _run_tier_three(
-        self, post_id: str, t1: TierOneResult, t2: TierTwoResult
+        self, post_id: str, moderation_version: int, content_hash: str, t1: TierOneResult, t2: TierTwoResult
     ) -> TierThreeResult:
         payload = {
             "postId": post_id,
+            "moderationVersion": moderation_version,
+            "contentHash": content_hash,
             "reason": "AI inconclusive — requires human review",
             "tier1Score": t1.combined_score,
             "tier2Reasoning": t2.reasoning,
@@ -318,11 +369,18 @@ class ModerationService:
     async def _notify_platform(
         self, 
         post_id: str, 
+        moderation_version: int,
+        content_hash: str,
         decision: ModerationDecision,
         t1: TierOneResult | None = None,
         t2: TierTwoResult | None = None
     ) -> None:
-        payload = {"postId": post_id, "decision": decision.value}
+        payload = {
+            "postId": post_id,
+            "moderationVersion": moderation_version,
+            "contentHash": content_hash,
+            "decision": decision.value,
+        }
         if t1:
             payload["textScore"] = t1.text_score
             payload["imageScore"] = t1.image_score

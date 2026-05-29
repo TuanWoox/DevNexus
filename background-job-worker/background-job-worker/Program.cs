@@ -51,12 +51,15 @@ builder.Services.AddKeyedSingleton<IMessageBusClient, MessageBusClient>("default
 builder.Services.AddKeyedSingleton<IMessageBusClient, NotificationMessageBusClient>("notification");
 builder.Services.AddKeyedSingleton<IMessageBusClient, AITaskMessageBusClient>("aitask");
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
+builder.Services.AddHttpClient<IAiWorkerClient, AiWorkerClient>();
 
 // ── Background Jobs ───────────────────────────────────────────────────────────
 builder.Services.TryAddScoped<IEmailBackgroundJobs, EmailBackgroundJobs>();
 builder.Services.TryAddScoped<IMediaBackgroundJobs, MediaBackgroundJobs>();
 builder.Services.TryAddScoped<IPublishMessageBackgroundJobs, PublishMessageBackgroundJobs>();
+builder.Services.TryAddScoped<IModerationBackgroundJobs, ModerationBackgroundJobs>();
 
 // ── Hosted Services (Consumers) ──────────────────────────────────────────────
 builder.Services.AddHostedService<AIUniversalResultConsumer>();

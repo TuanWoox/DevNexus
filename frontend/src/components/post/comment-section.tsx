@@ -15,7 +15,7 @@ import { AnswerItem } from './answer-item';
 import { CommentItem } from './comment-item';
 import { useGetPostById } from '@/hooks/post-hooks';
 import { useGetQAPostById } from '@/hooks/qa-post-hooks/use-get-qa-post-by-id';
-import { normalizeModerationStatus } from '@/types/post/moderation-status';
+import { normalizeModerationStatus, canInteractWithModeratedContent } from '@/types/post/moderation-status';
 import { useIntersectionObserver } from '@/hooks/use-intersection-observer';
 import { Loader2 } from 'lucide-react';
 import { SelectPostDTO } from '@/types/post/select-post-dto';
@@ -90,10 +90,36 @@ export default function CommentSection({ postId, isQAPost, context = "personal",
 
     const moderationStatus = normalizeModerationStatus(post?.moderationStatus);
     const communityApprovalStatus = normalizeCommunityApprovalStatus(post?.communityApprovalStatus) ?? (post?.communityId ? CommunityApprovalStatus.Pending : null);
-    const isApproved = moderationStatus === "Approved" &&
+    const isApproved = canInteractWithModeratedContent(moderationStatus) &&
         (!post?.communityId ||
             communityApprovalStatus == null ||
             communityApprovalStatus === CommunityApprovalStatus.Approved);
+
+    const getDisabledMessage = () => {
+        if (moderationStatus === "InReview") {
+            return isQAPost
+                ? "Answers are disabled while this post is under review."
+                : "Comments are disabled while this post is under review.";
+        }
+        if (moderationStatus === "Flagged") {
+            return isQAPost
+                ? "Answers are disabled because this post was restricted by moderation."
+                : "Comments are disabled because this post was restricted by moderation.";
+        }
+        if (post?.communityId && communityApprovalStatus === CommunityApprovalStatus.Rejected) {
+            return isQAPost
+                ? "Answers are disabled because this post was rejected by community moderation."
+                : "Comments are disabled because this post was rejected by community moderation.";
+        }
+        if (post?.communityId && communityApprovalStatus === CommunityApprovalStatus.Pending) {
+            return isQAPost
+                ? "Answers are disabled because this post is pending community approval."
+                : "Comments are disabled because this post is pending community approval.";
+        }
+        return isQAPost
+            ? "Answers are disabled because this content is restricted by moderation."
+            : "Comments are disabled because this content is restricted by moderation.";
+    };
 
     const items = isQAPost
         ? answerData?.pages?.flatMap(p => p?.data ?? []) || []
@@ -120,7 +146,7 @@ export default function CommentSection({ postId, isQAPost, context = "personal",
                 />
             ) : (
                 <div className="bg-muted/30 border border-dashed border-default rounded-xl p-4 text-center text-muted-foreground mb-8">
-                    {isQAPost ? 'Answers' : 'Comments'} are disabled because this post is not approved.
+                    {getDisabledMessage()}
                 </div>
             )}
 
@@ -165,6 +191,7 @@ export default function CommentSection({ postId, isQAPost, context = "personal",
                                 currentUserId={user?.profileId as string}
                                 currentUserAvatar={userProfile?.avatarUrl}
                                 isDisabled={!isApproved}
+                                moderationStatus={moderationStatus}
                                 isQuestionAuthor={post?.authorId === user?.profileId}
                                 communityId={effectiveCommunityId}
                                 canModerateCommunity={isCommunityContext ? canModerateCommunity : false}
@@ -177,6 +204,7 @@ export default function CommentSection({ postId, isQAPost, context = "personal",
                                 currentUserId={user?.profileId as string}
                                 currentUserAvatar={userProfile?.avatarUrl}
                                 isDisabled={!isApproved}
+                                moderationStatus={moderationStatus}
                                 communityId={effectiveCommunityId}
                                 canModerateCommunity={isCommunityContext ? canModerateCommunity : false}
                                 context={context}
