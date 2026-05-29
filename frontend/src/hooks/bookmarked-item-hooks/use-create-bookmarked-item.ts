@@ -5,6 +5,7 @@ import { bookmarkedItemQueryKeys } from "./use-bookmarked-item-query-keys";
 import { postQueryKeys } from "@/hooks/post-hooks/use-post-query-keys";
 import { qaPostQueryKeys } from "@/hooks/qa-post-hooks/use-qa-post-query-key";
 import { searchQueryKeys } from "@/hooks/search-hooks/use-global-search";
+import { bookmarkQueryKeys } from "@/hooks/bookmark-hooks/use-bookmark-query-keys";
 import { GlobalSearchResult } from "@/types/search/global-search-result";
 import { SelectPostDTO } from "@/types/post/select-post-dto";
 import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
@@ -169,6 +170,7 @@ export const useCreateBookmarkedItem = () => {
 
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: bookmarkedItemQueryKeys.lists() });
+            queryClient.invalidateQueries({ queryKey: bookmarkQueryKeys.lists() });
         }
     })
 }
