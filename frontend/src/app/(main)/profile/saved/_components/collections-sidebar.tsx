@@ -1,9 +1,10 @@
 "use client";
 
 import { Ref, Fragment } from 'react';
-import { Loader2, Bookmark, Plus } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SelectBookmarkDTO } from '@/types/bookmark/select-bookmark-dto';
+import { CollectionPreviewImage } from '@/components/bookmark/collection-preview-image';
 
 interface CollectionsSidebarProps {
     collections: SelectBookmarkDTO[];
@@ -62,17 +63,18 @@ export const CollectionsSidebar = ({
                                     <button
                                         onClick={() => onSelectCollection(collection.id)}
                                         className={cn(
-                                            "flex items-center gap-4 rounded-lg transition-colors group px-3 py-3 text-left font-medium cursor-pointer",
+                                            "flex items-center gap-3 rounded-lg transition-colors group px-3 py-3 text-left font-medium cursor-pointer",
                                             isActive
                                                 ? 'bg-primary/10 text-primary'
                                                 : 'text-muted-foreground hover:bg-subtle hover:text-primary',
                                         )}
                                     >
-                                        <Bookmark className={cn(
-                                            "h-5 w-5 shrink-0",
-                                            isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary"
-                                        )} />
-                                        <span className="text-base truncate">
+                                        <CollectionPreviewImage
+                                            previewImageMediaId={collection.previewImageMediaId}
+                                            previewImageContentType={collection.previewImageContentType}
+                                            isActive={isActive}
+                                        />
+                                        <span className="min-w-0 flex-1 truncate text-base">
                                             {collection.name}
                                         </span>
                                     </button>
