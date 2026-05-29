@@ -1,6 +1,7 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
+using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces;
@@ -9,6 +10,7 @@ using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.BookMark;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 
@@ -73,6 +75,10 @@ namespace platform_core_service.Business.Services
                     .AsQueryable();
 
                 returnResult.Result = await _repository.GetPagingAsync<Page<string>, SelectBookMark>(query, page);
+                if (returnResult.Result?.Data?.Any() == true)
+                {
+                    await HydrateBookmarkCollectionPreviewsAsync(returnResult.Result.Data);
+                }
             }
             catch (Exception ex)
             {
@@ -80,6 +86,131 @@ namespace platform_core_service.Business.Services
                 returnResult.Message = ex.Message;
             }
             return returnResult;
+        }
+
+        private async Task HydrateBookmarkCollectionPreviewsAsync(IEnumerable<SelectBookMark> bookmarks)
+        {
+            var bookmarkList = bookmarks.ToList();
+            var bookmarkIds = bookmarkList.Select(x => x.Id).ToList();
+
+            if (bookmarkIds.Count == 0)
+            {
+                return;
+            }
+
+            var items = await _dbContext.BookMarkedItems
+                .Where(x => bookmarkIds.Contains(x.BookMarkId))
+                .OrderByDescending(x => x.DateCreated)
+                .Select(x => new
+                {
+                    x.BookMarkId,
+                    x.PostId,
+                    x.QAPostId,
+                    x.DateCreated
+                })
+                .AsNoTracking()
+                .ToListAsync();
+
+            if (items.Count == 0)
+            {
+                return;
+            }
+
+            var postIds = items
+                .Where(x => x.PostId != null)
+                .Select(x => x.PostId!)
+                .Distinct()
+                .ToList();
+
+            var qaPostIds = items
+                .Where(x => x.QAPostId != null)
+                .Select(x => x.QAPostId!)
+                .Distinct()
+                .ToList();
+
+            var visiblePostIds = postIds.Count == 0
+                ? new List<string>()
+                : await _dbContext.Posts
+                    .Where(x => postIds.Contains(x.Id))
+                    .ApplyPostVisibilityRules(_dbContext, _userContext.ProfileId)
+                    .Select(x => x.Id)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+            var visibleQaPostIds = qaPostIds.Count == 0
+                ? new List<string>()
+                : await _dbContext.Posts
+                    .OfType<QAPost>()
+                    .Where(x => qaPostIds.Contains(x.Id))
+                    .ApplyQAPostVisibilityRules(_dbContext, _userContext.ProfileId)
+                    .Select(x => x.Id)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+            var postPreviewLookup = await _dbContext.PostMedias
+                .Where(x => x.PostId != null
+                    && visiblePostIds.Contains(x.PostId)
+                    && x.PostMediaType == ContentMediaType.Image)
+                .OrderBy(x => x.DateCreated)
+                .ThenBy(x => x.Id)
+                .Select(x => new
+                {
+                    PostId = x.PostId!,
+                    x.Id
+                })
+                .AsNoTracking()
+                .ToListAsync();
+
+            var qaPreviewLookup = await _dbContext.QAMedias
+                .Where(x => x.QAPostId != null
+                    && visibleQaPostIds.Contains(x.QAPostId)
+                    && x.QAMediaType == ContentMediaType.Image)
+                .OrderBy(x => x.DateCreated)
+                .ThenBy(x => x.Id)
+                .Select(x => new
+                {
+                    QAPostId = x.QAPostId!,
+                    x.Id
+                })
+                .AsNoTracking()
+                .ToListAsync();
+
+            var firstPostImageByPostId = postPreviewLookup
+                .GroupBy(x => x.PostId)
+                .ToDictionary(x => x.Key, x => x.First().Id);
+
+            var firstQaImageByQaPostId = qaPreviewLookup
+                .GroupBy(x => x.QAPostId)
+                .ToDictionary(x => x.Key, x => x.First().Id);
+
+            var itemsByBookmarkId = items
+                .GroupBy(x => x.BookMarkId)
+                .ToDictionary(x => x.Key, x => x.ToList());
+
+            foreach (var bookmark in bookmarkList)
+            {
+                if (!itemsByBookmarkId.TryGetValue(bookmark.Id, out var orderedItems))
+                {
+                    continue;
+                }
+
+                foreach (var item in orderedItems)
+                {
+                    if (item.PostId != null && firstPostImageByPostId.TryGetValue(item.PostId, out var postMediaId))
+                    {
+                        bookmark.PreviewImageMediaId = postMediaId;
+                        bookmark.PreviewImageContentType = ContentType.Post;
+                        break;
+                    }
+
+                    if (item.QAPostId != null && firstQaImageByQaPostId.TryGetValue(item.QAPostId, out var qaMediaId))
+                    {
+                        bookmark.PreviewImageMediaId = qaMediaId;
+                        bookmark.PreviewImageContentType = ContentType.QA;
+                        break;
+                    }
+                }
+            }
         }
 
         public async Task<ReturnResult<SelectBookMark>> UpdateAsync(UpdateBookMark dto)

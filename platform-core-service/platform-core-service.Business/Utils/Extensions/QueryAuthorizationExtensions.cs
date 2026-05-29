@@ -34,7 +34,12 @@ namespace platform_core_service.Business.Utils.Extensions
                     p.CommunityId == null ||
                     !context.CommunityBans.Any(b =>
                         b.CommunityId == p.CommunityId &&
-                        b.BannedProfileId == currentProfileId));
+                        b.BannedProfileId == currentProfileId))
+                .Where(p =>
+                    p.CommunityId == null ||
+                    !context.ProfileCommunityBlocks.Any(b =>
+                        b.CommunityId == p.CommunityId &&
+                        b.ProfileId == currentProfileId));
         }
 
         public static IQueryable<QAPost> ApplyQAPostVisibilityRules(
@@ -64,7 +69,42 @@ namespace platform_core_service.Business.Utils.Extensions
                     p.CommunityId == null ||
                     !context.CommunityBans.Any(b =>
                         b.CommunityId == p.CommunityId &&
-                        b.BannedProfileId == currentProfileId));
+                        b.BannedProfileId == currentProfileId))
+                .Where(p =>
+                    p.CommunityId == null ||
+                    !context.ProfileCommunityBlocks.Any(b =>
+                        b.CommunityId == p.CommunityId &&
+                        b.ProfileId == currentProfileId));
+        }
+
+        public static IQueryable<PostEntity> ApplyShareSourceVisibilityRules(
+            this IQueryable<PostEntity> query,
+            ApplicationDbContext context,
+            string currentProfileId)
+        {
+            return query
+                .Where(p => !p.Deleted)
+                .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                .Where(p =>
+                    (p.CommunityId == null && p.CommunityApprovalStatus == null) ||
+                    (p.CommunityId != null &&
+                     p.CommunityApprovalStatus == CommunityApprovalStatus.Approved &&
+                     p.Community != null &&
+                     !p.Community.IsPrivate))
+                .Where(p => !p.Author.Deleted && !p.Author.IsSuspended && !p.Author.IsPrivate)
+                .Where(p => !context.ProfileBlocks.Any(b =>
+                    (b.OwnerId == currentProfileId && b.BlockedProfileId == p.AuthorId) ||
+                    (b.OwnerId == p.AuthorId && b.BlockedProfileId == currentProfileId)))
+                .Where(p =>
+                    p.CommunityId == null ||
+                    !context.CommunityBans.Any(b =>
+                        b.CommunityId == p.CommunityId &&
+                        b.BannedProfileId == currentProfileId))
+                .Where(p =>
+                    p.CommunityId == null ||
+                    !context.ProfileCommunityBlocks.Any(b =>
+                        b.CommunityId == p.CommunityId &&
+                        b.ProfileId == currentProfileId));
         }
 
         public static IQueryable<Profile> ApplyProfileVisibilityRules(
@@ -95,7 +135,10 @@ namespace platform_core_service.Business.Utils.Extensions
                     c.Members.Any(m => m.ProfileId == currentProfileId))
                 .Where(c => !context.CommunityBans.Any(b =>
                     b.CommunityId == c.Id &&
-                    b.BannedProfileId == currentProfileId));
+                    b.BannedProfileId == currentProfileId))
+                .Where(c => !context.ProfileCommunityBlocks.Any(b =>
+                    b.CommunityId == c.Id &&
+                    b.ProfileId == currentProfileId));
         }
 
         public static IQueryable<Comment> ApplyCommentVisibilityRules(
@@ -138,7 +181,11 @@ namespace platform_core_service.Business.Utils.Extensions
                         (c.Post.CommunityId == null ||
                          !context.CommunityBans.Any(b =>
                              b.CommunityId == c.Post.CommunityId &&
-                             b.BannedProfileId == currentProfileId))) ||
+                             b.BannedProfileId == currentProfileId)) &&
+                        (c.Post.CommunityId == null ||
+                         !context.ProfileCommunityBlocks.Any(b =>
+                             b.CommunityId == c.Post.CommunityId &&
+                             b.ProfileId == currentProfileId))) ||
                     (c.AnswerId != null &&
                         !c.Answer!.Deleted &&
                         !context.ProfileBlocks.Any(b =>
@@ -166,7 +213,11 @@ namespace platform_core_service.Business.Utils.Extensions
                         (c.Answer.QAPost.CommunityId == null ||
                          !context.CommunityBans.Any(b =>
                              b.CommunityId == c.Answer.QAPost.CommunityId &&
-                             b.BannedProfileId == currentProfileId))) ||
+                             b.BannedProfileId == currentProfileId)) &&
+                        (c.Answer.QAPost.CommunityId == null ||
+                         !context.ProfileCommunityBlocks.Any(b =>
+                             b.CommunityId == c.Answer.QAPost.CommunityId &&
+                             b.ProfileId == currentProfileId))) ||
                     (c.ReplyToCommentId != null &&
                         c.ReplyToComment!.PostId != null &&
                         !c.ReplyToComment.Post!.Deleted &&
@@ -191,7 +242,11 @@ namespace platform_core_service.Business.Utils.Extensions
                         (c.ReplyToComment.Post.CommunityId == null ||
                          !context.CommunityBans.Any(b =>
                              b.CommunityId == c.ReplyToComment.Post.CommunityId &&
-                             b.BannedProfileId == currentProfileId))));
+                             b.BannedProfileId == currentProfileId)) &&
+                        (c.ReplyToComment.Post.CommunityId == null ||
+                         !context.ProfileCommunityBlocks.Any(b =>
+                             b.CommunityId == c.ReplyToComment.Post.CommunityId &&
+                             b.ProfileId == currentProfileId))));
         }
 
         public static IQueryable<Answer> ApplyAnswerVisibilityRules(
@@ -228,7 +283,12 @@ namespace platform_core_service.Business.Utils.Extensions
                     a.QAPost.CommunityId == null ||
                     !context.CommunityBans.Any(b =>
                         b.CommunityId == a.QAPost.CommunityId &&
-                        b.BannedProfileId == currentProfileId));
+                        b.BannedProfileId == currentProfileId))
+                .Where(a =>
+                    a.QAPost.CommunityId == null ||
+                    !context.ProfileCommunityBlocks.Any(b =>
+                        b.CommunityId == a.QAPost.CommunityId &&
+                        b.ProfileId == currentProfileId));
         }
     }
 }

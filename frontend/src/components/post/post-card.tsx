@@ -34,6 +34,9 @@ import { useMuteGuard } from "@/hooks/community-mute-hooks/use-mute-guard";
 import { useGetCommunityById } from "@/hooks/community-hooks/use-get-community-by-id";
 import { CommunityApprovalStatus, normalizeCommunityApprovalStatus } from "@/types/enums/community-approval-status";
 import { getPostDetailHref, getQAPostDetailHref } from "@/utils/content-routes";
+import { SharePostDialog } from "./share-post-dialog";
+import { SharedPostPreview } from "./shared-post-preview";
+import { CommunityHoverCard } from "@/components/communities/community-hover-card";
 
 interface PostCardProps {
     post: SelectPostDTO | SelectQAPostDTO;
@@ -64,6 +67,8 @@ export function PostCard({ post, canModerateCommunity }: PostCardProps) {
 
     const [isBookmarkModalOpen, setIsBookmarkModalOpen] = useState(false);
     const [isUnsaveModalOpen, setIsUnsaveModalOpen] = useState(false);
+    const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+    const [isContentExpanded, setIsContentExpanded] = useState(false);
 
     const { mutate: unsaveItem, isPending: isUnsavePending } = useDeleteBookmarkedItemById();
     const { mutate: updateVote, isPending: isVotePending } = useUpdateVoteByPostId(post.id);
@@ -77,6 +82,7 @@ export function PostCard({ post, canModerateCommunity }: PostCardProps) {
         currentUserRole === "Owner" ||
         currentUserRole === "Moderator";
     const canModerateContent = canModerateCommunity ?? canModerateFromCard;
+    const canShare = isApproved && loadedCommunity?.isPrivate !== true;
 
     const handleSaveClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -99,6 +105,12 @@ export function PostCard({ post, canModerateCommunity }: PostCardProps) {
         if (!isApproved) return;
         if (checkMuted('vote')) return;
         updateVote({ isUpvote });
+    };
+
+    const handleShareClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (!canShare) return;
+        setIsShareDialogOpen(true);
     };
 
     // Note: Dates can cause hydration mismatches if server and client have different locales.
@@ -127,21 +139,23 @@ export function PostCard({ post, canModerateCommunity }: PostCardProps) {
                 </div>
             )}
             {/* Header: Community/Author & Options */}
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-3 border-b border-border/40 pb-3.5 mb-1.5">
                 <div className="flex items-center gap-3 relative z-10">
                     {community ? (
                         /* Community Post Header Style */
                         <>
                             <div className="relative">
-                                <Link href={`/communities/${community.id}`} className="block w-10 h-10 rounded-lg overflow-hidden border border-default bg-primary/10 relative">
-                                    {community.communityCoverPhotoUrl ? (
-                                        <Image src={community.communityCoverPhotoUrl} alt={community.name} fill unoptimized className="object-cover" />
-                                    ) : (
-                                        <div className="flex items-center justify-center h-full">
-                                            <Globe className="w-5 h-5 text-primary" />
-                                        </div>
-                                    )}
-                                </Link>
+                                <CommunityHoverCard communityId={community.id} community={community} side="right">
+                                    <Link href={`/communities/${community.id}`} className="relative isolate block size-10 shrink-0 overflow-hidden rounded-lg border border-default bg-primary/10">
+                                        {community.communityCoverPhotoUrl ? (
+                                            <img src={community.communityCoverPhotoUrl} alt={community.name} className="absolute left-1/2 top-1/2 h-[160%] w-full -translate-x-1/2 -translate-y-1/2 object-cover object-center" />
+                                        ) : (
+                                            <div className="flex size-full items-center justify-center">
+                                                <Globe className="w-5 h-5 text-primary" />
+                                            </div>
+                                        )}
+                                    </Link>
+                                </CommunityHoverCard>
                                 <ProfileHoverCard profileId={post.authorId} author={author} communityId={post.communityId} showCommunityStatus={Boolean(post.communityId)} canModerateCommunity={canModerateContent}>
                                     <Link href={`/profile/${post.authorId}`} className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-card bg-page overflow-hidden">
                                         <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
@@ -150,9 +164,11 @@ export function PostCard({ post, canModerateCommunity }: PostCardProps) {
                             </div>
                             <div className="flex min-w-0 flex-col">
                                 <div className="flex items-center gap-1.5">
-                                    <Link href={`/communities/${community.id}`} className="text-sm font-bold text-heading hover:underline transition-colors truncate max-w-[150px] sm:max-w-[200px]">
-                                        {community.name}
-                                    </Link>
+                                    <CommunityHoverCard communityId={community.id} community={community} side="bottom">
+                                        <Link href={`/communities/${community.id}`} className="text-sm font-bold text-heading hover:underline transition-colors truncate max-w-[150px] sm:max-w-[200px]">
+                                            {community.name}
+                                        </Link>
+                                    </CommunityHoverCard>
                                 </div>
                                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                                     <ProfileHoverCard profileId={post.authorId} author={author} communityId={post.communityId} showCommunityStatus={Boolean(post.communityId)} canModerateCommunity={canModerateContent}>
@@ -203,20 +219,46 @@ export function PostCard({ post, canModerateCommunity }: PostCardProps) {
                 </div>
             </div>
 
-            {/* Content Wrap in Link */}
+            {/* Content Section */}
             <div className={cn(
-                "relative z-10 rounded-2xl border border-border/60 bg-background/45 p-3 transition-all sm:p-4",
+                "relative z-10 flex flex-col gap-2",
                 !isApproved && "opacity-70 grayscale-[20%]"
             )}>
                 <Link href={detailHref} className="block after:absolute after:inset-0">
-                    <h2 className="line-clamp-2 text-lg font-bold leading-tight text-heading transition-colors group-hover:text-primary sm:text-xl">
+                    <h2 className="text-lg font-extrabold leading-snug text-heading transition-colors group-hover:text-primary sm:text-xl tracking-tight">
                         {post.title}
                     </h2>
                 </Link>
-                <div className="mt-2 max-h-[4.875rem] overflow-hidden text-sm leading-relaxed text-body sm:text-base">
-                    <MarkdownViewer source={post.content} />
+                
+                <div className="relative overflow-hidden transition-all duration-300 mt-1">
+                    <div className={cn(
+                        "text-sm leading-relaxed text-muted-foreground/90 transition-all duration-300 font-normal",
+                        !isContentExpanded && post.content.length > 250 && "line-clamp-3 max-h-[72px]"
+                    )}>
+                        <MarkdownViewer source={post.content} />
+                    </div>
+
+                    {!isContentExpanded && post.content.length > 250 && (
+                        <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-card via-card/50 to-transparent pointer-events-none" />
+                    )}
                 </div>
+
+                {post.content.length > 250 && (
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setIsContentExpanded(!isContentExpanded);
+                        }}
+                        className="relative z-20 mt-1 text-xs font-bold text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0 self-start"
+                    >
+                        {isContentExpanded ? "Show less" : "See more"}
+                    </button>
+                )}
             </div>
+
+            <SharedPostPreview post={post as SelectPostDTO} />
 
             {/* Tags */}
             {post.tagNames && post.tagNames.length > 0 && (
@@ -296,7 +338,8 @@ export function PostCard({ post, canModerateCommunity }: PostCardProps) {
                         <span className="text-sm font-medium hidden sm:block">{post.isSaved ? 'Saved' : 'Save'}</span>
                     </button>
                     <button
-                        disabled={!isApproved}
+                        onClick={handleShareClick}
+                        disabled={!canShare}
                         className="relative z-10 flex items-center gap-2 rounded-full cursor-pointer disabled:cursor-not-allowed border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-heading disabled:opacity-50 sm:px-3 sm:py-2"
                     >
                         <Share2 className="w-5 h-5" />
@@ -310,6 +353,12 @@ export function PostCard({ post, canModerateCommunity }: PostCardProps) {
                 onClose={() => setIsBookmarkModalOpen(false)}
                 postId={post.id}
                 isQAPost={isQaPost}
+            />
+
+            <SharePostDialog
+                post={post as SelectPostDTO}
+                open={isShareDialogOpen}
+                onOpenChange={setIsShareDialogOpen}
             />
 
             <AlertDialog open={isUnsaveModalOpen} onOpenChange={setIsUnsaveModalOpen}>

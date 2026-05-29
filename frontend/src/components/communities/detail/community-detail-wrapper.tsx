@@ -13,6 +13,7 @@ import { useGetCommunityById } from "@/hooks/community-hooks/use-get-community-b
 import { useGetCommunityMute } from "@/hooks/community-mute-hooks/use-get-community-mute";
 import { MuteBanner } from "@/components/communities/mute-banner";
 import { SelectCommunityDTO } from "@/types/community/select-community-dto";
+import CommunityNotFound from "@/components/communities/community-not-found";
 
 type CommunityTab = "posts" | "qa" | "members";
 
@@ -44,7 +45,11 @@ const BASE_PAYLOAD = {
 export function CommunityDetailWrapper({ communityId, canViewContent }: CommunityDetailWrapperProps) {
     const { data: community } = useGetCommunityById(communityId);
 
-    if (!community) return null;
+    if (!community) {
+        return (
+            <CommunityNotFound />
+        );
+    }
 
     return (
         <CommunityDetailContent

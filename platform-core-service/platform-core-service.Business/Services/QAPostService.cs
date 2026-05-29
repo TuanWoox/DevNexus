@@ -160,6 +160,96 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
+        public async Task<ReturnResult<SelectQAPostDTO>> CreateShareAsync(CreateQAPostShareDTO createDTO)
+        {
+            var result = new ReturnResult<SelectQAPostDTO>();
+            try
+            {
+                if (createDTO == null)
+                {
+                    result.Message = "Post data is required";
+                    return result;
+                }
+
+                var profileId = _userContext.ProfileId;
+                if (string.IsNullOrEmpty(profileId))
+                {
+                    result.Message = "User profile not found";
+                    return result;
+                }
+
+                var destinationCheck = await _socialGuardService.CheckAddingPost(new CreatePostDTO
+                {
+                    Title = createDTO.Title,
+                    Content = createDTO.Content,
+                    PostType = createDTO.PostType,
+                    Slug = createDTO.Slug,
+                    TagNames = createDTO.TagNames,
+                    CommunityId = createDTO.CommunityId,
+                    MediaIds = new List<string>()
+                });
+                if (destinationCheck.Message != null)
+                {
+                    result.Message = destinationCheck.Message;
+                    return result;
+                }
+
+                var sourceCheck = await _socialGuardService.CanSharePostAsync(createDTO.SharedPostId);
+                if (!sourceCheck.Result)
+                {
+                    result.Message = sourceCheck.Message ?? ResponseMessage.CONTENT_NOT_AVAILABLE;
+                    return result;
+                }
+
+                var matchedBannedKeywords = await GetMatchedBannedKeywordsAsync(createDTO.Title, createDTO.Content);
+
+                var qaPost = _mapper.Map<QAPost>(createDTO);
+                qaPost.AuthorId = profileId;
+                qaPost.Id = Guid.NewGuid().ToString();
+                qaPost.Slug = string.IsNullOrEmpty(qaPost.Slug)
+                    ? $"{GenerateSlug(qaPost.Title)}-{qaPost.Id.Substring(0, 8)}"
+                    : $"{qaPost.Slug}-{qaPost.Id.Substring(0, 8)}";
+                qaPost.PostTags = await CreateOrGetTagsAsync(createDTO.TagNames, qaPost.Id);
+
+                await SetCommunityApprovalStateAsync(qaPost);
+
+                _dbContext.Posts.Add(qaPost);
+                await _dbContext.SaveChangesAsync();
+
+                var savedPost = await _dbContext.Posts
+                    .OfType<QAPost>()
+                    .Include(q => q.Answers)
+                    .Include(q => q.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(q => q.Author)
+                    .Include(q => q.Community)
+                    .FirstOrDefaultAsync(q => q.Id == qaPost.Id);
+
+                result.Result = _mapper.Map<SelectQAPostDTO>(savedPost);
+                await HydrateSharedPostsAsync(new List<SelectQAPostDTO> { result.Result });
+
+                if (matchedBannedKeywords.Any())
+                {
+                    await _moderationService.EnqueueBannedKeywordReviewAsync(qaPost.Id, matchedBannedKeywords);
+                    if (result.Result != null)
+                    {
+                        result.Result.ModerationStatus = ModerationStatus.InReview;
+                        result.Result.ModerationReason = BuildBannedKeywordReason(matchedBannedKeywords);
+                    }
+                }
+                else
+                {
+                    await _aiWorkerClient.SubmitForModerationAsync(qaPost.Id, createDTO.Title, createDTO.Content);
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while sharing post: {ex.Message}";
+            }
+            return result;
+        }
+
         public async Task<ReturnResult<SelectQAPostDTO>> GetByIdAsync(string postId)
         {
             var result = new ReturnResult<SelectQAPostDTO>();
@@ -196,6 +286,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(qaPost);
+                await HydrateSharedPostsAsync(new List<SelectQAPostDTO> { result.Result });
                 await SetCurrentUserVoteAsync(result.Result);
                 await SetCurrentUserSavedAsync(result.Result);
             }
@@ -227,6 +318,9 @@ namespace platform_core_service.Business.Services
                 result.Result = await _qaPostRepository.GetPagingAsync<Page<string>, SelectQAPostDTO>(query, page);
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
+                    await HydrateSharedPostsAsync(result.Result.Data.ToList());
+                    await HydrateSharedPostsAsync(result.Result.Data.ToList());
+                    await HydrateSharedPostsAsync(result.Result.Data.ToList());
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
                     await SetCurrentUserSavedForListAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
@@ -373,6 +467,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(qaPost);
+                await HydrateSharedPostsAsync(new List<SelectQAPostDTO> { result.Result });
                 await SetCurrentUserVoteAsync(result.Result);
                 await SetCurrentUserSavedAsync(result.Result);
             }
@@ -422,6 +517,7 @@ namespace platform_core_service.Business.Services
                 await _dbContext.SaveChangesAsync();
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(qaPost);
+                await HydrateSharedPostsAsync(new List<SelectQAPostDTO> { result.Result });
                 await SetCurrentUserVoteAsync(result.Result);
                 await SetCurrentUserSavedAsync(result.Result);
             }
@@ -461,6 +557,8 @@ namespace platform_core_service.Business.Services
                 result.Result = await _qaPostRepository.GetPagingAsync<Page<string>, SelectQAPostDTO>(query, page);
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
+                    await HydrateSharedPostsAsync(result.Result.Data.ToList());
+                    await HydrateSharedPostsAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
                 }
             }
@@ -638,6 +736,7 @@ namespace platform_core_service.Business.Services
                     .FirstOrDefaultAsync(q => q.Id == postId);
 
                 result.Result = _mapper.Map<SelectQAPostDTO>(updatedPost);
+                await HydrateSharedPostsAsync(new List<SelectQAPostDTO> { result.Result });
                 await SetCurrentUserVoteAsync(result.Result);
                 await SetCurrentUserSavedAsync(result.Result);
 
@@ -940,6 +1039,12 @@ namespace platform_core_service.Business.Services
                 dto.CurrentUserVote = voteMap.TryGetValue(dto.Id, out var vote) ? vote : null;
             }
         }
+
+        private Task HydrateSharedPostsAsync(List<SelectQAPostDTO> dtos)
+        {
+            return dtos.Cast<SelectPostDTO>().HydrateSharedPostsAsync(_dbContext, _userContext.ProfileId);
+        }
+
         private async Task SetCommentCountForListAsync(List<SelectQAPostDTO> dtos)
         {
             if (dtos == null || !dtos.Any()) return;

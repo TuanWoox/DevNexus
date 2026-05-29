@@ -13,9 +13,11 @@ export const communityService = {
         return data.result;
     },
 
-    getCommunityById: async (communityId: string): Promise<SelectCommunityDTO> => {
-        const { data } = await api.get<ReturnResult<SelectCommunityDTO>>(`/Communities/${communityId}`);
-        return data.result;
+    getCommunityById: async (communityId: string): Promise<SelectCommunityDTO | null> => {
+        const { data } = await api.get<ReturnResult<SelectCommunityDTO>>(`/Communities/${communityId}`, {
+            suppressToast: true,
+        });
+        return data.result ?? null;
     },
 
     // Legacy: kept for backward compat, defaults to no mode filter on backend

@@ -103,7 +103,7 @@ export function SidebarUserMenu({ isCollapsed }: { isCollapsed?: boolean }) {
                     asChild
                     className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer"
                 >
-                    <Link href="/profile/settings">
+                    <Link href="/settings">
                         <Settings className="w-5 h-5 shrink-0" />
                         <span className="text-sm font-medium">Settings</span>
                     </Link>

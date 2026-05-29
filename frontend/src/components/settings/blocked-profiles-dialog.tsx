@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Ban, CalendarDays, Loader2, RotateCcw, Search, UserX, X } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Ban, Loader2, RotateCcw, Search, UserX, X } from "lucide-react";
+
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
     Dialog,
     DialogContent,
@@ -12,6 +12,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
     blockedProfileIdOf,
     blockIdOf,
@@ -23,15 +24,14 @@ import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { cn } from "@/lib/utils";
 import { SelectProfileBlockDTO } from "@/types/profile-block/select-profile-block-dto";
 
-interface BlockedProfilesModalProps {
+interface BlockedProfilesDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }
 
 const blockedProfileOf = (block: SelectProfileBlockDTO) => block.BlockedProfile ?? block.blockedProfile ?? null;
-const blockedDateOf = (block: SelectProfileBlockDTO) => block.DateCreated ?? block.dateCreated;
 
-export function BlockedProfilesModal({ open, onOpenChange }: BlockedProfilesModalProps) {
+export function BlockedProfilesDialog({ open, onOpenChange }: BlockedProfilesDialogProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
@@ -84,7 +84,7 @@ export function BlockedProfilesModal({ open, onOpenChange }: BlockedProfilesModa
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="max-h-[85vh] overflow-hidden sm:max-w-2xl" showCloseButton={false}>
                 <DialogHeader>
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-4">
                         <div className="flex flex-col gap-1">
                             <DialogTitle className="text-xl font-semibold">Manage blocked profiles</DialogTitle>
                             <DialogDescription>
@@ -97,6 +97,7 @@ export function BlockedProfilesModal({ open, onOpenChange }: BlockedProfilesModa
                             size="icon"
                             className="h-8 w-8 rounded-full cursor-pointer"
                             onClick={() => handleOpenChange(false)}
+                            aria-label="Close blocked profiles dialog"
                         >
                             <X className="h-4 w-4" />
                         </Button>
@@ -142,7 +143,7 @@ export function BlockedProfilesModal({ open, onOpenChange }: BlockedProfilesModa
                             </h3>
                             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
                                 {normalizedSearchTerm
-                                    ? "Try another name or profile id."
+                                    ? "Try another name."
                                     : "Profiles you block will appear here so you can manage them later."}
                             </p>
                         </div>
@@ -152,40 +153,27 @@ export function BlockedProfilesModal({ open, onOpenChange }: BlockedProfilesModa
                                 const blockId = blockIdOf(block);
                                 const blockedProfileId = blockedProfileIdOf(block);
                                 const profile = blockedProfileOf(block);
-                                const blockedDate = blockedDateOf(block);
                                 const isPending = unblockMutation.isPending && pendingBlockId === blockId;
 
                                 return (
                                     <div
                                         key={blockId}
                                         className={cn(
-                                            "flex items-center gap-3 rounded-xl border border-border bg-card p-3",
+                                            "flex items-center gap-3 rounded-lg border border-border bg-card p-3 shadow-3xs transition-all duration-200 hover:border-primary/25 hover:bg-muted/30 hover:shadow-2xs",
                                             isPending && "opacity-70"
                                         )}
                                     >
-                                        <Avatar className="size-11">
-                                            <AvatarImage
-                                                src={profile?.avatarUrl || "/images/default-avatar.webp"}
-                                                alt={profile?.fullName || "Blocked profile"}
+                                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                                            <UserAvatar
+                                                avatarUrl={profile?.avatarUrl}
+                                                fullName={profile?.fullName}
+                                                className="size-11 shrink-0 border border-border"
                                             />
-                                            <AvatarFallback>
-                                                {profile?.fullName?.charAt(0)?.toUpperCase() ?? "?"}
-                                            </AvatarFallback>
-                                        </Avatar>
-
-                                        <div className="min-w-0 flex-1">
-                                            <p className="truncate font-semibold text-foreground">
-                                                {profile?.fullName || "Unavailable profile"}
-                                            </p>
-                                            <p className="truncate text-xs text-muted-foreground">
-                                                {blockedProfileId || "Profile details are unavailable"}
-                                            </p>
-                                            {blockedDate && (
-                                                <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                                                    <CalendarDays className="h-3 w-3" />
-                                                    Blocked {new Date(blockedDate).toLocaleDateString()}
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate font-semibold text-foreground">
+                                                    {profile?.fullName || "Unavailable profile"}
                                                 </p>
-                                            )}
+                                            </div>
                                         </div>
 
                                         <Button

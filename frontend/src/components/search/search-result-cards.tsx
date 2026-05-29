@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { MarkdownViewer } from "@/components/editor/markdown-viewer";
 import { ProfileHoverCard } from "@/components/profile/profile-hover-card";
+import { CommunityHoverCard } from "@/components/communities/community-hover-card";
 import {
   SearchCommunityResult,
   SearchProfileResult,
@@ -58,7 +59,10 @@ export function SearchPostCard({ post, question = false }: { post: SelectPostDTO
             </Badge>
             {post.community?.name && (
               <span className="min-w-0 truncate text-xs text-muted-foreground">
-                in <span className="font-medium text-heading">{post.community.name}</span>
+                in{" "}
+                <CommunityHoverCard communityId={post.community.id} community={post.community} side="bottom">
+                  <span className="font-medium text-heading">{post.community.name}</span>
+                </CommunityHoverCard>
               </span>
             )}
           </div>
@@ -104,28 +108,30 @@ export function SearchPostCard({ post, question = false }: { post: SelectPostDTO
 export function SearchCommunityCard({ community }: { community: SearchCommunityResult }) {
   return (
     <Card className="group border-default bg-card/95 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-elevated">
-      <Link href={`/communities/${community.id}`} className="flex gap-3 p-4 sm:p-5">
-        <Avatar className="size-12 rounded-lg ring-1 ring-border" size="lg">
-          <AvatarImage src={community.communityCoverPhotoUrl ?? undefined} className="rounded-lg" />
-          <AvatarFallback className="rounded-lg bg-primary/10 text-primary"><Users className="size-5" /></AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-base font-bold text-heading transition-colors group-hover:text-primary">{community.name}</h2>
-            {community.isPrivate && (
-              <Badge variant="outline" className="gap-1">
-                <Lock className="size-3" />
-                Private
-              </Badge>
-            )}
+      <CommunityHoverCard communityId={community.id} community={community} side="top">
+        <Link href={`/communities/${community.id}`} className="flex gap-3 p-4 sm:p-5">
+          <Avatar className="size-12 rounded-lg ring-1 ring-border" size="lg">
+            <AvatarImage src={community.communityCoverPhotoUrl ?? undefined} className="rounded-lg" />
+            <AvatarFallback className="rounded-lg bg-primary/10 text-primary"><Users className="size-5" /></AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="truncate text-base font-bold text-heading transition-colors group-hover:text-primary">{community.name}</h2>
+              {community.isPrivate && (
+                <Badge variant="outline" className="gap-1">
+                  <Lock className="size-3" />
+                  Private
+                </Badge>
+              )}
+            </div>
+            <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{community.description || "No description"}</p>
+            <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+              <Users className="size-3.5 text-primary" />
+              <span>{community.memberCount} members</span>
+            </div>
           </div>
-          <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{community.description || "No description"}</p>
-          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-            <Users className="size-3.5 text-primary" />
-            <span>{community.memberCount} members</span>
-          </div>
-        </div>
-      </Link>
+        </Link>
+      </CommunityHoverCard>
     </Card>
   );
 }

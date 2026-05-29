@@ -2,7 +2,7 @@ import api from "@/lib/axiosConfig";
 import { Page } from "@/types/common/page";
 import { PagedData } from "@/types/common/paged-data";
 import { ReturnResult } from "@/types/common/return-result";
-import { CreateQAPostDTO } from "@/types/qa-post/create-qa-post-dto";
+import { CreateQAPostDTO, CreateQAPostShareDTO } from "@/types/qa-post/create-qa-post-dto";
 import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
 import { UpdateQAPostDTO } from "@/types/qa-post/update-qa-post-dto";
 
@@ -11,6 +11,14 @@ export const qaPostService = {
         const { data } = await api.post<ReturnResult<SelectQAPostDTO>>('/QAPosts', createQAPostDTO);
         if (!data.result) {
             throw new Error(data.message || 'Failed to create question');
+        }
+        return data.result;
+    },
+
+    createShare: async (createQAPostDTO: CreateQAPostShareDTO): Promise<SelectQAPostDTO> => {
+        const { data } = await api.post<ReturnResult<SelectQAPostDTO>>('/QAPosts/share', createQAPostDTO);
+        if (!data.result) {
+            throw new Error(data.message || 'Failed to share question');
         }
         return data.result;
     },

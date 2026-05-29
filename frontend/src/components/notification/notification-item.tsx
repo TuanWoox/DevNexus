@@ -12,10 +12,12 @@ import { ActorType, NotificationEventEnum } from "@/features/notifications/types
 import { useMarkAsRead } from "@/features/notifications/hooks/notifications/use-mark-as-read";
 import { useDeleteNotification } from "@/features/notifications/hooks/notifications/use-delete-notification";
 import { useAddMute, useRemoveMute } from "@/features/notifications/hooks/settings/use-mute-settings";
-import { FollowRequestOverlay } from "./follow-request-overlay";
+import { ConnectionsModal } from "@/components/profile/connections/connections-modal";
 import { toRelativeTime } from "@/features/messages/utils/message-service.helper";
 import { getEntityTypeName, getNotificationTypeName } from "@/features/notifications/utils/notification-helpers";
 import { cn } from "@/lib/utils";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 interface Props {
     notification: Notification;
@@ -28,6 +30,7 @@ export function NotificationItem({ notification, onClose }: Props) {
     const deleteNotif = useDeleteNotification();
     const addMute = useAddMute();
     const removeMute = useRemoveMute();
+    const user = useSelector((state: RootState) => state.auth.user);
     const [activeOverlay, setActiveOverlay] = useState<NotificationEventEnum | null>(null);
 
     const handleClick = () => {
@@ -212,9 +215,12 @@ export function NotificationItem({ notification, onClose }: Props) {
             </div>
 
             {activeOverlay === NotificationEventEnum.FOLLOW_REQUEST && (
-                <FollowRequestOverlay
+                <ConnectionsModal
                     open={true}
                     onClose={() => setActiveOverlay(null)}
+                    profileId={user?.profileId ?? ""}
+                    isOwnProfile
+                    initialTab="requests"
                 />
             )}
         </div>

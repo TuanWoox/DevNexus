@@ -1,22 +1,19 @@
 "use client";
 
 interface ProfileTabsProps {
-    activeTab: "overview" | "post" | "qa-post" | "saved";
-    setActiveTab: (tab: "overview" | "post" | "qa-post" | "saved") => void;
-    isOwnProfile: boolean;
+    activeTab: "overview" | "post" | "qa-post";
+    setActiveTab: (tab: "overview" | "post" | "qa-post") => void;
     canViewContent: boolean;
 }
 
-export function ProfileTabs({ activeTab, setActiveTab, isOwnProfile, canViewContent }: ProfileTabsProps) {
+export function ProfileTabs({ activeTab, setActiveTab, canViewContent }: ProfileTabsProps) {
     const allTabs = [
-        { id: "overview", label: "Overview" },
-        { id: "post", label: "Posts" },
-        { id: "qa-post", label: "Q&A" },
-        { id: "saved", label: "Saved" },
+        { id: "overview" as const, label: "Overview" },
+        { id: "post" as const, label: "Posts" },
+        { id: "qa-post" as const, label: "Q&A" },
     ];
 
     const tabs = allTabs.filter(tab => {
-        if (tab.id === 'saved' && !isOwnProfile) return false;
         if (!canViewContent) {
             return tab.id === 'overview';
         }
@@ -29,7 +26,7 @@ export function ProfileTabs({ activeTab, setActiveTab, isOwnProfile, canViewCont
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
-                        onClick={() => setActiveTab(tab.id as "overview" | "post" | "qa-post" | "saved")}
+                        onClick={() => setActiveTab(tab.id)}
                         className={`
                             relative mt-1 px-4 py-3 text-base font-semibold whitespace-nowrap
                             cursor-pointer transition-colors duration-150 rounded-t-md

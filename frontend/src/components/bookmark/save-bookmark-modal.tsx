@@ -18,6 +18,7 @@ import { useCreateBookmark } from "@/hooks/bookmark-hooks/use-create-bookmark";
 import { useCreateBookmarkedItem } from "@/hooks/bookmarked-item-hooks/use-create-bookmarked-item";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { SortOrderType } from "@/constants/sortOrderType";
+import { CollectionPreviewImage } from "./collection-preview-image";
 
 interface SaveBookmarkModalProps {
     isOpen: boolean;
@@ -178,14 +179,16 @@ export function SaveBookmarkModal({
                                     key={bookmark.id}
                                     type="button"
                                     onClick={() => setSelectedBookmarkId(bookmark.id)}
-                                    className={`flex items-center gap-3 p-3 rounded-xl transition-all text-left hover:bg-primary/5 group ${selectedBookmarkId === bookmark.id
+                                    className={`flex items-center gap-3 p-3 rounded-xl transition-all text-left hover:bg-primary/5 group cursor-pointer ${selectedBookmarkId === bookmark.id
                                         ? "bg-primary/10 border-primary/20"
                                         : "border-transparent"
                                         }`}
                                 >
-                                    <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-primary/10 shrink-0 border border-default group-hover:border-primary/30 flex items-center justify-center">
-                                        <Bookmark className="w-6 h-6 text-primary" />
-                                    </div>
+                                    <CollectionPreviewImage
+                                        previewImageMediaId={bookmark.previewImageMediaId}
+                                        previewImageContentType={bookmark.previewImageContentType}
+                                        isActive={selectedBookmarkId === bookmark.id}
+                                    />
                                     <div className="flex-1 min-w-0 py-1">
                                         <h4 className="font-bold text-heading break-words group-hover:text-primary transition-colors leading-tight mb-1">
                                             {bookmark.name}

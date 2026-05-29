@@ -58,7 +58,6 @@ builder.Services.AddHttpClient<IAiWorkerClient, AiWorkerClient>();
 // ── Background Jobs ───────────────────────────────────────────────────────────
 builder.Services.TryAddScoped<IEmailBackgroundJobs, EmailBackgroundJobs>();
 builder.Services.TryAddScoped<IMediaBackgroundJobs, MediaBackgroundJobs>();
-builder.Services.TryAddScoped<IProfileBlockBackgroundJobs, ProfileBackgroundJobs>();
 builder.Services.TryAddScoped<IPublishMessageBackgroundJobs, PublishMessageBackgroundJobs>();
 builder.Services.TryAddScoped<IModerationBackgroundJobs, ModerationBackgroundJobs>();
 

@@ -56,6 +56,7 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<ICommunityContentReportServiceFactory, CommunityContentReportServiceFactory>();
             services.AddScoped<ICacheService, CacheService>();
             services.AddScoped<IProfileBlockService, ProfileBlockService>();
+            services.AddScoped<IProfileCommunityBlockService, ProfileCommunityBlockService>();
             services.AddScoped<IFollowRequestService, FollowRequestService>();
             services.AddScoped<IUserFollowService, UserFollowService>();
             services.AddScoped<IBookMarkService, BookMarkService>();

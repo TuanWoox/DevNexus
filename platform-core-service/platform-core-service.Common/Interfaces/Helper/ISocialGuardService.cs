@@ -25,6 +25,7 @@ namespace platform_core_service.Common.Interfaces.Helper
         Task<ReturnResult<bool>> CanFollowProfile(string targetProfileId);
         Task<ReturnResult<bool>> CanViewPost(string postId);
         Task<ReturnResult<bool>> CanViewQAPost(string qaPostId);
+        Task<ReturnResult<bool>> CanSharePostAsync(string postId);
         Task<ReturnResult<bool>> CanViewComment(string commentId);
         Task<ReturnResult<bool>> CanViewAnswer(string answerId);
         Task<ReturnResult<bool>> CanCommentOnPost(string postId);

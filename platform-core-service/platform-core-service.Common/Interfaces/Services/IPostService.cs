@@ -8,6 +8,7 @@ namespace platform_core_service.Common.Interfaces.Services
     public interface IPostService
     {
         Task<ReturnResult<SelectPostDTO>> CreateAsync(CreatePostDTO createDTO);
+        Task<ReturnResult<SelectPostDTO>> CreateShareAsync(CreatePostShareDTO createDTO);
         Task<ReturnResult<SelectPostDTO>> GetByIdAsync(string postId);
         Task<ReturnResult<SelectPostDTO>> GetByIdAndCommunityId(string postId, string communityId);
         Task<ReturnResult<PagedData<SelectPostDTO, string>>> GetPageAsync(Page<string> page);

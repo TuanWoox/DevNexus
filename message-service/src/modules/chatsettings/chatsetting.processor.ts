@@ -122,7 +122,7 @@ export class ChatSettingProcessor extends WorkerHost {
                     EntityPreview: messageContent?.substring(0, 100),
                     // Redirect URL to open the related chat
                     // Format: /messages/{chatId}
-                    ActionUrl: `/messages/${chatId}`,
+                    ActionUrl: `/messages/${chatId}?tab=request`,
                     // ISO timestamp for notification creation time
                     Timestamp: new Date().toISOString(),
                 },

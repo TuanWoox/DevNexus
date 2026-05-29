@@ -94,8 +94,8 @@ const CommunitySettingsPage = () => {
                             <Settings className="h-7 w-7 text-primary" />
                             Community Settings
                         </h1>
-                        <p className="text-sm md:text-base text-muted-foreground mt-1 flex items-center gap-2">
-                            Manage configurations for <span className="font-mono font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-md text-sm border border-primary/10">c/{community.slug || community.id}</span>
+                        <p className="text-base text-muted-foreground mt-1 flex items-center gap-2">
+                            Manage configurations for <span className="font-mono font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-md text-base border border-primary/10">c/{community.slug || community.id}</span>
                         </p>
                     </div>
                 </div>
@@ -109,8 +109,8 @@ const CommunitySettingsPage = () => {
                     {/* Left Column: Navigation Sidebar */}
                     <div className="hidden lg:flex w-[280px] shrink-0 border-r border-border bg-muted/40 p-7 flex-col gap-2">
                         <div className="pb-4 mb-2 border-b border-border/40">
-                            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Settings Menu</h3>
-                            <p className="text-[11px] text-muted-foreground/80 mt-0.5">Configure your community space</p>
+                            <h3 className="text-base font-bold text-muted-foreground uppercase tracking-wider">Settings Menu</h3>
+                            <p className="text-sm text-muted-foreground/80 mt-0.5">Configure your community space</p>
                         </div>
 
                         <TabsList className="flex flex-col justify-start h-auto bg-transparent p-0 w-full gap-1.5 shrink-0">
@@ -118,7 +118,7 @@ const CommunitySettingsPage = () => {
                             {isOwner && (
                                 <TabsTrigger
                                     value="general"
-                                    className="w-full shrink-0 flex items-center gap-3 justify-start px-4 py-3 text-left rounded-xl hover:bg-primary/5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-none transition-all duration-200 ease-out border border-transparent data-[state=active]:border-primary/10 text-sm whitespace-nowrap cursor-pointer active:scale-[0.98]"
+                                    className="w-full shrink-0 flex items-center gap-3 justify-start px-4 py-3 text-left rounded-xl hover:bg-primary/5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-none transition-all duration-200 ease-out border border-transparent data-[state=active]:border-primary/10 text-base whitespace-nowrap cursor-pointer active:scale-[0.98]"
                                 >
                                     <Settings2 className="h-4 w-4 shrink-0" />
                                     General Settings
@@ -127,7 +127,7 @@ const CommunitySettingsPage = () => {
 
                             <TabsTrigger
                                 value="requests"
-                                className="w-full shrink-0 flex items-center gap-3 justify-start px-4 py-3 text-left rounded-xl hover:bg-primary/5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-none transition-all duration-200 ease-out border border-transparent data-[state=active]:border-primary/10 text-sm whitespace-nowrap cursor-pointer active:scale-[0.98]"
+                                className="w-full shrink-0 flex items-center gap-3 justify-start px-4 py-3 text-left rounded-xl hover:bg-primary/5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-none transition-all duration-200 ease-out border border-transparent data-[state=active]:border-primary/10 text-base whitespace-nowrap cursor-pointer active:scale-[0.98]"
                             >
                                 <Users className="h-4 w-4 shrink-0" />
                                 Membership Requests
@@ -137,7 +137,7 @@ const CommunitySettingsPage = () => {
                             {isOwner && (
                                 <TabsTrigger
                                     value="moderators"
-                                    className="w-full shrink-0 flex items-center gap-3 justify-start px-4 py-3 text-left rounded-xl hover:bg-primary/5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-none transition-all duration-200 ease-out border border-transparent data-[state=active]:border-primary/10 text-sm whitespace-nowrap cursor-pointer active:scale-[0.98]"
+                                    className="w-full shrink-0 flex items-center gap-3 justify-start px-4 py-3 text-left rounded-xl hover:bg-primary/5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-none transition-all duration-200 ease-out border border-transparent data-[state=active]:border-primary/10 text-base whitespace-nowrap cursor-pointer active:scale-[0.98]"
                                 >
                                     <ShieldCheck className="h-4 w-4 shrink-0" />
                                     Moderators
@@ -146,7 +146,7 @@ const CommunitySettingsPage = () => {
 
                             <TabsTrigger
                                 value="bans"
-                                className="w-full shrink-0 flex items-center gap-3 justify-start px-4 py-3 text-left rounded-xl hover:bg-red-500/5 hover:text-red-600 data-[state=active]:bg-red-500/10 data-[state=active]:text-red-600 data-[state=active]:font-semibold data-[state=active]:shadow-none transition-all duration-200 ease-out border border-transparent data-[state=active]:border-red-500/10 text-sm whitespace-nowrap cursor-pointer active:scale-[0.98]"
+                                className="w-full shrink-0 flex items-center gap-3 justify-start px-4 py-3 text-left rounded-xl hover:bg-red-500/5 hover:text-red-600 data-[state=active]:bg-red-500/10 data-[state=active]:text-red-600 data-[state=active]:font-semibold data-[state=active]:shadow-none transition-all duration-200 ease-out border border-transparent data-[state=active]:border-red-500/10 text-base whitespace-nowrap cursor-pointer active:scale-[0.98]"
                             >
                                 <ShieldAlert className="h-4 w-4 shrink-0" />
                                 Ban List
@@ -154,7 +154,7 @@ const CommunitySettingsPage = () => {
 
                             <TabsTrigger
                                 value="mutes"
-                                className="w-full shrink-0 flex items-center gap-3 justify-start px-4 py-3 text-left rounded-xl hover:bg-amber-500/5 hover:text-amber-600 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-600 data-[state=active]:font-semibold data-[state=active]:shadow-none transition-all duration-200 ease-out border border-transparent data-[state=active]:border-amber-500/10 text-sm whitespace-nowrap cursor-pointer active:scale-[0.98]"
+                                className="w-full shrink-0 flex items-center gap-3 justify-start px-4 py-3 text-left rounded-xl hover:bg-amber-500/5 hover:text-amber-600 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-600 data-[state=active]:font-semibold data-[state=active]:shadow-none transition-all duration-200 ease-out border border-transparent data-[state=active]:border-amber-500/10 text-base whitespace-nowrap cursor-pointer active:scale-[0.98]"
                             >
                                 <VolumeX className="h-4 w-4 shrink-0" />
                                 Mutes List
@@ -169,31 +169,31 @@ const CommunitySettingsPage = () => {
 
                         {/* Mobile & Tablet Tab Selector (Hidden on desktop) */}
                         <div className="block lg:hidden w-full mb-6">
-                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">
+                            <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider block mb-2">
                                 Settings Section
                             </label>
                             <Select value={activeTab} onValueChange={handleTabChange}>
-                                <SelectTrigger className="w-full h-11 rounded-xl border border-border bg-background px-3 shadow-sm focus:ring-primary/20">
+                                <SelectTrigger className="w-full h-11 rounded-xl border border-border bg-background px-3 shadow-sm focus:ring-primary/20 cursor-pointer">
                                     <SelectValue placeholder="Select section" />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-xl border border-border bg-popover shadow-lg">
                                     {isOwner && (
-                                        <SelectItem value="general" className="cursor-pointer">
+                                        <SelectItem value="general" className="flex items-center text-sm font-semibold gap-3 p-2.5 hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer">
                                             General Settings
                                         </SelectItem>
                                     )}
-                                    <SelectItem value="requests" className="cursor-pointer">
+                                    <SelectItem value="requests" className="flex items-center text-sm font-semibold gap-3 p-2.5 hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer">
                                         Membership Requests
                                     </SelectItem>
                                     {isOwner && (
-                                        <SelectItem value="moderators" className="cursor-pointer">
+                                        <SelectItem value="moderators" className="flex items-center text-sm font-semibold gap-3 p-2.5 hover:bg-subtle text-body hover:text-heading transition-colors cursor-pointer">
                                             Moderators
                                         </SelectItem>
                                     )}
-                                    <SelectItem value="bans" className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-500/5">
+                                    <SelectItem value="bans" className="flex items-center text-sm font-semibold gap-3 p-2.5 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-500/5">
                                         Ban List
                                     </SelectItem>
-                                    <SelectItem value="mutes" className="cursor-pointer text-amber-600 focus:text-amber-600 focus:bg-amber-500/5">
+                                    <SelectItem value="mutes" className="flex items-center text-sm font-semibold gap-3 p-2.5 cursor-pointer text-amber-600 focus:text-amber-600 focus:bg-amber-500/5">
                                         Mutes List
                                     </SelectItem>
                                 </SelectContent>
@@ -204,7 +204,7 @@ const CommunitySettingsPage = () => {
                             <TabsContent value="general" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
                                 <div className="mb-6 border-b border-border/30 pb-4">
                                     <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">General Information</h2>
-                                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">Update your community's identity and privacy configurations.</p>
+                                    <p className="text-sm text-muted-foreground mt-1">Update your community's identity and privacy configurations.</p>
                                 </div>
                                 <GeneralSettings community={community} />
                             </TabsContent>
@@ -215,7 +215,7 @@ const CommunitySettingsPage = () => {
                                 <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
                                     Pending Requests
                                 </h2>
-                                <p className="text-xs sm:text-sm text-muted-foreground mt-1">Review, approve, or reject user requests to join your private community.</p>
+                                <p className="text-sm text-muted-foreground mt-1">Review, approve, or reject user requests to join your private community.</p>
                             </div>
                             <RequestsManagement community={community} />
                         </TabsContent>
@@ -226,7 +226,7 @@ const CommunitySettingsPage = () => {
                                     <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
                                         Moderators Management
                                     </h2>
-                                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage users who have administrative access to this community.</p>
+                                    <p className="text-sm text-muted-foreground mt-1">Manage users who have administrative access to this community.</p>
                                 </div>
                                 <ModeratorsManagement community={community} />
                             </TabsContent>
@@ -237,7 +237,7 @@ const CommunitySettingsPage = () => {
                                 <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-red-600 flex items-center gap-2">
                                     Ban List
                                 </h2>
-                                <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage users who have been permanently banned from accessing this community.</p>
+                                <p className="text-sm text-muted-foreground mt-1">Manage users who have been permanently banned from accessing this community.</p>
                             </div>
                             <BansManagement community={community} />
                         </TabsContent>
@@ -247,7 +247,7 @@ const CommunitySettingsPage = () => {
                                 <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-amber-600 flex items-center gap-2">
                                     Mutes List
                                 </h2>
-                                <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage users who have been muted and restricted from posting or commenting.</p>
+                                <p className="text-sm text-muted-foreground mt-1">Manage users who have been muted and restricted from posting or commenting.</p>
                             </div>
                             <MutesManagement community={community} />
                         </TabsContent>

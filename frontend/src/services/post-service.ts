@@ -2,7 +2,7 @@ import api from "@/lib/axiosConfig";
 import { Page } from "@/types/common/page";
 import { PagedData } from "@/types/common/paged-data";
 import { ReturnResult } from "@/types/common/return-result";
-import { CreatePostDTO } from "@/types/post/create-post-dto";
+import { CreatePostDTO, CreatePostShareDTO } from "@/types/post/create-post-dto";
 import { SelectPostDTO } from "@/types/post/select-post-dto";
 import { UpdatePostDTO } from "@/types/post/update-post-dto";
 
@@ -11,6 +11,14 @@ export const postService = {
         const { data } = await api.post<ReturnResult<SelectPostDTO>>('/Posts', createPostDTO);
         if (!data.result) {
             throw new Error(data.message || 'Failed to create post');
+        }
+        return data.result;
+    },
+
+    createShare: async (createPostDTO: CreatePostShareDTO): Promise<SelectPostDTO> => {
+        const { data } = await api.post<ReturnResult<SelectPostDTO>>('/Posts/share', createPostDTO);
+        if (!data.result) {
+            throw new Error(data.message || 'Failed to share post');
         }
         return data.result;
     },

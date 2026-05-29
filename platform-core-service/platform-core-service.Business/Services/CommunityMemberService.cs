@@ -102,6 +102,15 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var hasBlockedCommunity = await _context.ProfileCommunityBlocks
+                    .AnyAsync(b => b.CommunityId == communityId && b.ProfileId == profileId);
+
+                if (hasBlockedCommunity)
+                {
+                    result.Message = "You have blocked this community";
+                    return result;
+                }
+
                 // Step 7: Check if there's already a pending request
                 var hasRequest = await _context.CommunityMembershipRequests
                     .AnyAsync(r => r.CommunityId == communityId && r.RequesterId == profileId);

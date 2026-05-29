@@ -92,11 +92,11 @@ export function BansManagement({ community }: BansManagementProps) {
             <div className="flex flex-col bg-red-500/5 border border-red-500/10 p-5 rounded-2xl gap-4 transition-all duration-200">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
-                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
                             <ShieldAlert className="h-4.5 w-4.5 text-red-600 dark:text-red-400" />
                             Ban Community Member
                         </h3>
-                        <p className="text-xs text-muted-foreground leading-relaxed max-w-md">
+                        <p className="text-sm text-muted-foreground leading-relaxed max-w-md">
                             Prevent a member from viewing, posting, or interacting within this community. Use this responsibly.
                         </p>
                     </div>

@@ -69,6 +69,7 @@ namespace platform_core_service.Business.Services
                 await _context.SaveChangesAsync();
 
                 result.Result = _mapper.Map<SelectCommunityDTO>(community);
+                result.Result.MemberCount = 0;
             }
             catch (Exception ex)
             {
@@ -112,21 +113,32 @@ namespace platform_core_service.Business.Services
                         result.Message = "You have been banned from this community";
                         return result;
                     }
+
+                    var isBlocked = await _context.ProfileCommunityBlocks
+                        .AnyAsync(b => b.CommunityId == community.Id && b.ProfileId == profileId);
+
+                    if (isBlocked)
+                    {
+                        result.Message = "You have blocked this community";
+                        return result;
+                    }
                 }
 
                 result.Result = _mapper.Map<SelectCommunityDTO>(community);
+                result.Result.MemberCount = await _context.CommunityMembers
+                    .CountAsync(m => m.CommunityId == community.Id);
 
                 // Step 4: Populate CurrentUserRole
                 if (result.Result != null && !string.IsNullOrEmpty(profileId))
                 {
                     //var communityId = result.Result.Id;
-                    if (await _context.Communities.AnyAsync(c => c.Id == communityId && c.OwnerId == profileId))
+                    if (await _context.Communities.AnyAsync(c => c.Id == community.Id && c.OwnerId == profileId))
                         result.Result.CurrentUserRole = "OWNER";
-                    else if (await _context.CommunityModerators.AnyAsync(m => m.CommunityId == communityId && m.ModeratorId == profileId))
+                    else if (await _context.CommunityModerators.AnyAsync(m => m.CommunityId == community.Id && m.ModeratorId == profileId))
                         result.Result.CurrentUserRole = "MODERATOR";
-                    else if (await _context.CommunityMembers.AnyAsync(m => m.CommunityId == communityId && m.ProfileId == profileId))
+                    else if (await _context.CommunityMembers.AnyAsync(m => m.CommunityId == community.Id && m.ProfileId == profileId))
                         result.Result.CurrentUserRole = "MEMBER";
-                    else if (await _context.CommunityMembershipRequests.AnyAsync(r => r.CommunityId == communityId && r.RequesterId == profileId))
+                    else if (await _context.CommunityMembershipRequests.AnyAsync(r => r.CommunityId == community.Id && r.RequesterId == profileId))
                         result.Result.CurrentUserRole = "PENDING";
                     else
                         result.Result.CurrentUserRole = "GUEST";
@@ -159,6 +171,11 @@ namespace platform_core_service.Business.Services
                     .Select(b => b.CommunityId)
                     .ToListAsync();
 
+                var blockedCommunityIds = await _context.ProfileCommunityBlocks
+                    .Where(b => b.ProfileId == profileId)
+                    .Select(b => b.CommunityId)
+                    .ToListAsync();
+
                 IQueryable<CommunityEntity> query;
 
                 switch (request.FetchMode)
@@ -183,6 +200,7 @@ namespace platform_core_service.Business.Services
 
                         query = _context.Communities
                             .Where(c => !bannedCommunityIds.Contains(c.Id))
+                            .Where(c => !blockedCommunityIds.Contains(c.Id))
                             .Where(c => c.OwnerId != profileId && !allUserCommunityIds.Contains(c.Id));
                         break;
                     }
@@ -207,6 +225,7 @@ namespace platform_core_service.Business.Services
 
                         query = _context.Communities
                             .Where(c => !bannedCommunityIds.Contains(c.Id))
+                            .Where(c => !blockedCommunityIds.Contains(c.Id))
                             .Where(c => c.OwnerId == profileId || allRelatedIds.Contains(c.Id));
                         break;
                     }
@@ -215,7 +234,8 @@ namespace platform_core_service.Business.Services
                     {
                         // All communities the user is not banned from
                         query = _context.Communities
-                            .Where(c => !bannedCommunityIds.Contains(c.Id));
+                            .Where(c => !bannedCommunityIds.Contains(c.Id))
+                            .Where(c => !blockedCommunityIds.Contains(c.Id));
                         break;
                     }
 
@@ -231,6 +251,12 @@ namespace platform_core_service.Business.Services
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
                     var communityIds = result.Result.Data.Select(c => c.Id).ToList();
+
+                    var memberCounts = await _context.CommunityMembers
+                        .Where(m => communityIds.Contains(m.CommunityId))
+                        .GroupBy(m => m.CommunityId)
+                        .Select(group => new { CommunityId = group.Key, Count = group.Count() })
+                        .ToDictionaryAsync(group => group.CommunityId, group => group.Count);
 
                     // Batch 1: Communities where user is Owner
                     var ownedIds = await _context.Communities
@@ -265,6 +291,8 @@ namespace platform_core_service.Business.Services
                     // Assign role for each DTO in memory — no per-item DB calls
                     foreach (var dto in result.Result.Data)
                     {
+                        dto.MemberCount = memberCounts.GetValueOrDefault(dto.Id, 0);
+
                         if (ownedSet.Contains(dto.Id))
                             dto.CurrentUserRole = "OWNER";
                         else if (moderatorSet.Contains(dto.Id))
@@ -337,6 +365,8 @@ namespace platform_core_service.Business.Services
                 await _context.SaveChangesAsync();
 
                 result.Result = _mapper.Map<SelectCommunityDTO>(community);
+                result.Result.MemberCount = await _context.CommunityMembers
+                    .CountAsync(m => m.CommunityId == community.Id);
             }
             catch (Exception ex)
             {
@@ -467,6 +497,8 @@ namespace platform_core_service.Business.Services
                 _context.Communities.Update(community);
                 await _context.SaveChangesAsync();
                 result.Result = _mapper.Map<SelectCommunityDTO>(community);
+                result.Result.MemberCount = await _context.CommunityMembers
+                    .CountAsync(m => m.CommunityId == community.Id);
             }
             catch (Exception ex)
             {

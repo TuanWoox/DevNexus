@@ -14,6 +14,10 @@ namespace platform_core_service.Business.Mappings
             CreateMap<CreatePostDTO, PostEntity>()
                 .ForMember(dest => dest.PostTags, opt => opt.Ignore()); // Tags handled in service
 
+            CreateMap<CreatePostShareDTO, PostEntity>()
+                .ForMember(dest => dest.PostTags, opt => opt.Ignore())
+                .ForMember(dest => dest.SharedPost, opt => opt.Ignore());
+
             // UpdatePostDTO -> Post
             CreateMap<UpdatePostDTO, PostEntity>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
@@ -29,7 +33,9 @@ namespace platform_core_service.Business.Mappings
                 .ForMember(dest => dest.Author,
                     opt => opt.MapFrom(src => src.Author))
                 .ForMember(dest => dest.Community,
-                    opt => opt.MapFrom(src => src.Community));
+                    opt => opt.MapFrom(src => src.Community))
+                .ForMember(dest => dest.SharedPost,
+                    opt => opt.Ignore());
 
             // Profile -> SelectPostAuthorDTO
             CreateMap<ProfileEntity, SelectPostAuthorDTO>();

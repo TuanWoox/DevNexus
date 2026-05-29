@@ -42,6 +42,9 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Post
 
         public string? CommunityId { get; set; }
         public SelectPostCommunityDTO? Community { get; set; }
+
+        public string? SharedPostId { get; set; }
+        public SelectSharedPostDTO? SharedPost { get; set; }
     }
 
     public class SelectPostAuthorDTO
@@ -67,5 +70,17 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Post
         public string Name { get; set; } = null!;
         public string Slug { get; set; } = null!;
         public string? CommunityCoverPhotoUrl { get; set; }
+    }
+
+    public class SelectSharedPostDTO
+    {
+        public string Id { get; set; } = null!;
+        public string Title { get; set; } = null!;
+        public string ContentPreview { get; set; } = null!;
+        public string? CommunityId { get; set; }
+        public SelectPostCommunityDTO? Community { get; set; }
+        public SelectPostAuthorDTO? Author { get; set; }
+        public SharedContentType ContentType { get; set; }
+        public DateTimeOffset DateCreated { get; set; }
     }
 }

@@ -146,6 +146,87 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
+        public async Task<ReturnResult<SelectPostDTO>> CreateShareAsync(CreatePostShareDTO createDTO)
+        {
+            var result = new ReturnResult<SelectPostDTO>();
+            try
+            {
+                if (createDTO == null)
+                {
+                    result.Message = "Post data is required";
+                    return result;
+                }
+
+                var destinationCheck = await _socialGuardService.CheckAddingPost(new CreatePostDTO
+                {
+                    Title = createDTO.Title,
+                    Content = createDTO.Content,
+                    PostType = createDTO.PostType,
+                    Slug = createDTO.Slug,
+                    TagNames = createDTO.TagNames,
+                    CommunityId = createDTO.CommunityId,
+                    MediaIds = new List<string>()
+                });
+                if (destinationCheck.Message != null)
+                {
+                    result.Message = destinationCheck.Message;
+                    return result;
+                }
+
+                var sourceCheck = await _socialGuardService.CanSharePostAsync(createDTO.SharedPostId);
+                if (!sourceCheck.Result)
+                {
+                    result.Message = sourceCheck.Message ?? ResponseMessage.CONTENT_NOT_AVAILABLE;
+                    return result;
+                }
+
+                var matchedBannedKeywords = await GetMatchedBannedKeywordsAsync(createDTO.Title, createDTO.Content);
+
+                var post = _mapper.Map<PostEntity>(createDTO);
+                post.AuthorId = _userContext.ProfileId;
+                post.Id = Guid.NewGuid().ToString();
+                post.Slug = string.IsNullOrEmpty(post.Slug)
+                    ? $"{GenerateSlug(post.Title)}-{post.Id.Substring(0, 8)}"
+                    : $"{post.Slug}-{post.Id.Substring(0, 8)}";
+                post.PostTags = await CreateOrGetTagsAsync(createDTO.TagNames, post.Id);
+
+                await SetCommunityApprovalStateAsync(post);
+
+                _context.Posts.Add(post);
+                await _context.SaveChangesAsync();
+
+                var savedPost = await _context.Posts
+                    .Include(p => p.PostTags)
+                    .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Author)
+                    .Include(p => p.Community)
+                    .FirstOrDefaultAsync(p => p.Id == post.Id);
+
+                result.Result = _mapper.Map<SelectPostDTO>(savedPost);
+                await HydrateSharedPostsAsync(new List<SelectPostDTO> { result.Result });
+
+                if (matchedBannedKeywords.Any())
+                {
+                    await _moderationService.EnqueueBannedKeywordReviewAsync(post.Id, matchedBannedKeywords);
+                    if (result.Result != null)
+                    {
+                        result.Result.ModerationStatus = ModerationStatus.InReview;
+                        result.Result.ModerationReason = BuildBannedKeywordReason(matchedBannedKeywords);
+                    }
+                }
+                else
+                {
+                    await _aiWorkerClient.SubmitForModerationAsync(post.Id, createDTO.Title, createDTO.Content);
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Debug(ex.Message);
+                result.Message = $"An error occurred while sharing post: {ex.Message}";
+            }
+            return result;
+        }
+
         public async Task<ReturnResult<SelectPostDTO>> GetByIdAsync(string postId)
         {
             var returnResult = new ReturnResult<SelectPostDTO>();
@@ -181,6 +262,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 returnResult.Result = _mapper.Map<SelectPostDTO>(post);
+                await HydrateSharedPostsAsync(new List<SelectPostDTO> { returnResult.Result });
                 await SetCurrentUserVoteAsync(returnResult.Result);
                 await SetCurrentUserSavedAsync(returnResult.Result);
                 await SetCommentCountForListAsync(new List<SelectPostDTO> { returnResult.Result });
@@ -218,6 +300,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 returnResult.Result = _mapper.Map<SelectPostDTO>(post);
+                await HydrateSharedPostsAsync(new List<SelectPostDTO> { returnResult.Result });
                 await SetCurrentUserVoteAsync(returnResult.Result);
                 await SetCurrentUserSavedAsync(returnResult.Result);
                 await SetCommentCountForListAsync(new List<SelectPostDTO> { returnResult.Result });
@@ -252,6 +335,7 @@ namespace platform_core_service.Business.Services
                 result.Result = await _postRepository.GetPagingAsync<Page<string>, SelectPostDTO>(query, page);
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
+                    await HydrateSharedPostsAsync(result.Result.Data.ToList());
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
                     await SetCurrentUserSavedForListAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
@@ -295,6 +379,7 @@ namespace platform_core_service.Business.Services
                 result.Result = await _postRepository.GetPagingAsync<Page<string>, SelectPostDTO>(query, page);
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
+                    await HydrateSharedPostsAsync(result.Result.Data.ToList());
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
                     await SetCurrentUserSavedForListAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
@@ -342,6 +427,7 @@ namespace platform_core_service.Business.Services
                 result.Result = await _postRepository.GetPagingAsync<Page<string>, SelectPostDTO>(query, page);
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
+                    await HydrateSharedPostsAsync(result.Result.Data.ToList());
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
                     await SetCurrentUserSavedForListAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
@@ -386,6 +472,7 @@ namespace platform_core_service.Business.Services
                 result.Result = await _postRepository.GetPagingAsync<Page<string>, SelectPostDTO>(query, page);
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
+                    await HydrateSharedPostsAsync(result.Result.Data.ToList());
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
                     await SetCurrentUserSavedForListAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
@@ -442,6 +529,7 @@ namespace platform_core_service.Business.Services
                 }
 
                 result.Result = _mapper.Map<SelectPostDTO>(post);
+                await HydrateSharedPostsAsync(new List<SelectPostDTO> { result.Result });
                 await SetCurrentUserVoteAsync(result.Result);
                 await SetCurrentUserSavedAsync(result.Result);
                 await SetCommentCountForListAsync(new List<SelectPostDTO> { result.Result });
@@ -491,6 +579,7 @@ namespace platform_core_service.Business.Services
                 await _context.SaveChangesAsync();
 
                 result.Result = _mapper.Map<SelectPostDTO>(post);
+                await HydrateSharedPostsAsync(new List<SelectPostDTO> { result.Result });
                 await SetCurrentUserVoteAsync(result.Result);
                 await SetCurrentUserSavedAsync(result.Result);
                 await SetCommentCountForListAsync(new List<SelectPostDTO> { result.Result });
@@ -530,6 +619,7 @@ namespace platform_core_service.Business.Services
                 result.Result = await _postRepository.GetPagingAsync<Page<string>, SelectPostDTO>(query, page);
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
+                    await HydrateSharedPostsAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
                 }
             }
@@ -570,6 +660,7 @@ namespace platform_core_service.Business.Services
                 result.Result = await _postRepository.GetPagingAsync<Page<string>, SelectPostDTO>(query, page);
                 if (result.Result?.Data != null && result.Result.Data.Any())
                 {
+                    await HydrateSharedPostsAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
                 }
             }
@@ -701,6 +792,7 @@ namespace platform_core_service.Business.Services
                     .FirstOrDefaultAsync(p => p.Id == postId);
 
                 result.Result = _mapper.Map<SelectPostDTO>(updatedPost);
+                await HydrateSharedPostsAsync(new List<SelectPostDTO> { result.Result });
                 await SetCurrentUserVoteAsync(result.Result);
                 await SetCurrentUserSavedAsync(result.Result);
                 await SetCommentCountForListAsync(new List<SelectPostDTO> { result.Result });
@@ -977,6 +1069,12 @@ namespace platform_core_service.Business.Services
                 dto.CurrentUserVote = voteMap.TryGetValue(dto.Id, out var vote) ? vote : null;
             }
         }
+
+        private Task HydrateSharedPostsAsync(List<SelectPostDTO> dtos)
+        {
+            return dtos.HydrateSharedPostsAsync(_context, _userContext.ProfileId);
+        }
+
         private async Task SetCommentCountForListAsync(List<SelectPostDTO> dtos)
         {
             if (dtos == null || !dtos.Any()) return;
