@@ -29,7 +29,7 @@ function buildPage(pageNumber: number, filters: FilterMapping[] = []): Page<stri
   }
 }
 
-// Build filter for ModerationStatus based on active tab
+// Build filter for post-backed tabs. Needs Review is queue-backed via AdminModeration.
 function buildModerationStatusFilter(tab: TabValue): FilterMapping[] {
   if (tab === 'published') {
     // Filter for Approved posts (enum value 1)
@@ -38,17 +38,6 @@ function buildModerationStatusFilter(tab: TabValue): FilterMapping[] {
       value: 1,
       filterOperator: FilterOperator.Equal,
       filterType: FilterType.Number,
-      dynamicProperty: '',
-      delimiter: ''
-    }]
-  }
-  if (tab === 'needs-review') {
-    // Filter for Flagged or InReview posts (enum values 2 or 3)
-    return [{
-      prop: 'moderationStatus',
-      value: '2,3',
-      filterOperator: FilterOperator.Contains,
-      filterType: FilterType.DropDown,
       dynamicProperty: '',
       delimiter: ''
     }]

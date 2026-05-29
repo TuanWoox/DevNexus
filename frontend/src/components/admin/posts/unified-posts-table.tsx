@@ -112,7 +112,7 @@ function buildUnifiedRows(
   activeTab: TabValue
 ): UnifiedRow[] {
   if (activeTab === 'needs-review') {
-    // Backend already filtered for Flagged/InReview review items, show unresolved queue entries
+    // Needs Review is the unresolved moderation queue, not a post status filter.
     return queueEntries
       .filter((e) => !e.resolution) // Only unresolved
       .map((e) => ({ type: 'queue' as const, queueEntry: e }))

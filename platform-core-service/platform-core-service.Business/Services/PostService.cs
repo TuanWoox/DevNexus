@@ -180,7 +180,7 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
-                var matchedBannedKeywords = await GetMatchedBannedKeywordsAsync(createDTO.Title, createDTO.Content);
+                var precheck = await _contentRiskPrecheckService.CheckAsync(createDTO.Title, createDTO.Content);
 
                 var post = _mapper.Map<PostEntity>(createDTO);
                 post.AuthorId = _userContext.ProfileId;
@@ -191,6 +191,20 @@ namespace platform_core_service.Business.Services
                 post.PostTags = await CreateOrGetTagsAsync(createDTO.TagNames, post.Id);
 
                 await SetCommunityApprovalStateAsync(post);
+
+                post.ModerationVersion = 1;
+                post.ModerationContentHash = ModerationContentHashHelper.Compute(post.Title, post.Content);
+
+                if (precheck.HasBannedKeywords)
+                {
+                    post.ModerationStatus = ModerationStatus.InReview;
+                    post.ModerationReason = precheck.ModerationReason;
+                }
+                else
+                {
+                    post.ModerationStatus = ModerationStatus.Pending;
+                    post.ModerationReason = null;
+                }
 
                 _context.Posts.Add(post);
                 await _context.SaveChangesAsync();
@@ -205,18 +219,19 @@ namespace platform_core_service.Business.Services
                 result.Result = _mapper.Map<SelectPostDTO>(savedPost);
                 await HydrateSharedPostsAsync(new List<SelectPostDTO> { result.Result });
 
-                if (matchedBannedKeywords.Any())
+                if (precheck.HasBannedKeywords)
                 {
-                    await _moderationService.EnqueueBannedKeywordReviewAsync(post.Id, matchedBannedKeywords);
+                    await _moderationService.EnqueueBannedKeywordReviewAsync(post.Id, precheck.MatchedBannedKeywords);
                     if (result.Result != null)
                     {
                         result.Result.ModerationStatus = ModerationStatus.InReview;
-                        result.Result.ModerationReason = BuildBannedKeywordReason(matchedBannedKeywords);
+                        result.Result.ModerationReason = precheck.ModerationReason;
                     }
                 }
                 else
                 {
-                    await _aiWorkerClient.SubmitForModerationAsync(post.Id, createDTO.Title, createDTO.Content);
+                    _backgroundJobClient.Enqueue<IModerationBackgroundJobs>(
+                        x => x.SubmitPostModerationAsync(post.Id, post.ModerationVersion, post.ModerationContentHash));
                 }
             }
             catch (Exception ex)
