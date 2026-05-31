@@ -135,10 +135,11 @@ namespace platform_core_service.Business.Services
 
                 if (result.Succeeded)
                 {
-                    var suspensionMessage = await GetActiveSuspensionMessage(user.Id);
-                    if (!string.IsNullOrEmpty(suspensionMessage))
+                    var suspensionStatus = await GetActiveSuspensionStatus(user.Id);
+                    if (suspensionStatus != null)
                     {
-                        returnResult.Message = suspensionMessage;
+                        returnResult.Message = suspensionStatus.Value.Message;
+                        returnResult.ModerationStatus = suspensionStatus.Value.Status;
                         return returnResult;
                     }
 
@@ -186,10 +187,11 @@ namespace platform_core_service.Business.Services
                     return returnResult;
                 }
 
-                var suspensionMessage = await GetActiveSuspensionMessage(user.Id);
-                if (!string.IsNullOrEmpty(suspensionMessage))
+                var suspensionStatus = await GetActiveSuspensionStatus(user.Id);
+                if (suspensionStatus != null)
                 {
-                    returnResult.Message = suspensionMessage;
+                    returnResult.Message = suspensionStatus.Value.Message;
+                    returnResult.ModerationStatus = suspensionStatus.Value.Status;
                     return returnResult;
                 }
 
@@ -580,10 +582,11 @@ namespace platform_core_service.Business.Services
                 if (user != null)
                 {
                     if (!user.EmailConfirmed) user.EmailConfirmed = true;
-                    var suspensionMessage = await GetActiveSuspensionMessage(user.Id);
-                    if (!string.IsNullOrEmpty(suspensionMessage))
+                    var suspensionStatus = await GetActiveSuspensionStatus(user.Id);
+                    if (suspensionStatus != null)
                     {
-                        returnResult.Message = suspensionMessage;
+                        returnResult.Message = suspensionStatus.Value.Message;
+                        returnResult.ModerationStatus = suspensionStatus.Value.Status;
                         return returnResult;
                     }
 
@@ -637,10 +640,11 @@ namespace platform_core_service.Business.Services
                 if (user != null)
                 {
                     if (!user.EmailConfirmed) user.EmailConfirmed = true;
-                    var suspensionMessage = await GetActiveSuspensionMessage(user.Id);
-                    if (!string.IsNullOrEmpty(suspensionMessage))
+                    var suspensionStatus = await GetActiveSuspensionStatus(user.Id);
+                    if (suspensionStatus != null)
                     {
-                        returnResult.Message = suspensionMessage;
+                        returnResult.Message = suspensionStatus.Value.Message;
+                        returnResult.ModerationStatus = suspensionStatus.Value.Status;
                         return returnResult;
                     }
 
@@ -728,7 +732,7 @@ namespace platform_core_service.Business.Services
             return returnResult;
         }
 
-        private async Task<string?> GetActiveSuspensionMessage(string userId)
+        private async Task<(string Message, AccountModerationStatusDTO Status)?> GetActiveSuspensionStatus(string userId)
         {
             var profile = await _context.Profiles
                 .FirstOrDefaultAsync(p => p.ApplicationUserId == userId);
@@ -739,13 +743,14 @@ namespace platform_core_service.Business.Services
             {
                 profile.IsSuspended = false;
                 profile.SuspendedUntil = null;
+                profile.SuspensionReason = null;
                 await _context.SaveChangesAsync();
                 return null;
             }
 
-            return profile.SuspendedUntil == null
-                ? "Your account has been suspended."
-                : $"Your account has been suspended until {profile.SuspendedUntil:MMM dd, yyyy HH:mm} UTC.";
+            return (
+                AccountModerationStatusHelper.BuildSuspensionMessage(profile),
+                AccountModerationStatusHelper.FromProfile(profile));
         }
 
         private async Task<string?> GetGitHubPrimaryEmail(HttpClient http)
