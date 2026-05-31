@@ -5,6 +5,7 @@ import Cookies from "js-cookie";
 import { TokenResponseDTO } from "../types/helper/token-response-dto";
 import { store } from "../store/store";
 import { setToken, clearToken, parseUserFromToken } from "../store/slices/auth-slice";
+import type { AccountModerationStatus } from "../types/common/return-result";
 
 declare module "axios" {
   export interface AxiosRequestConfig<D = any> {
@@ -38,6 +39,41 @@ const api = axios.create({
   },
   withCredentials: true,
 });
+
+const clearAuthState = () => {
+  Cookies.remove('accessToken');
+  Cookies.remove('refreshToken');
+  store.dispatch(clearToken());
+};
+
+const redirectToSuspendedPage = (moderationStatus?: AccountModerationStatus | null) => {
+  clearAuthState();
+  refreshSubscribers = [];
+  isRefreshing = false;
+
+  if (typeof window === 'undefined') return;
+
+  if (moderationStatus) {
+    window.sessionStorage.setItem('accountModerationStatus', JSON.stringify(moderationStatus));
+  }
+
+  if (window.location.pathname !== '/account-suspended') {
+    window.location.href = '/account-suspended';
+  }
+};
+
+const getSuspensionStatus = (payload: any): AccountModerationStatus | null => {
+  if (payload?.moderationStatus?.isSuspended) return payload.moderationStatus;
+  if (payload?.suspendedUntil !== undefined) {
+    return {
+      isSuspended: true,
+      isPermanentBan: payload.suspendedUntil == null,
+      suspendedUntil: payload.suspendedUntil,
+      reason: payload.reason ?? null,
+    };
+  }
+  return null;
+};
 
 // Interceptor cho các Gửi yêu cầu (Request): Chạy trước khi gửi API
 api.interceptors.request.use(
@@ -130,12 +166,16 @@ api.interceptors.response.use(
         return api(originalRequest);
 
       } catch (refreshError) {
+        const suspensionStatus = getSuspensionStatus((refreshError as any)?.response?.data);
+        if (suspensionStatus) {
+          redirectToSuspendedPage(suspensionStatus);
+          return Promise.reject(refreshError);
+        }
+
         // Refresh thất bại (hết hạn or khóa) => Đăng xuất
         isRefreshing = false;
         refreshSubscribers = [];
-        Cookies.remove('accessToken');
-        Cookies.remove('refreshToken');
-        store.dispatch(clearToken());
+        clearAuthState();
 
         // Bạn có thể redirect về Auth
         if (typeof window !== 'undefined') {
@@ -144,6 +184,14 @@ api.interceptors.response.use(
         }
 
         return Promise.reject(refreshError);
+      }
+    }
+
+    if (error.response?.status === 403) {
+      const suspensionStatus = getSuspensionStatus(error.response.data);
+      if (suspensionStatus) {
+        redirectToSuspendedPage(suspensionStatus);
+        return Promise.reject(error);
       }
     }
 
