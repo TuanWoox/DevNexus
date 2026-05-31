@@ -1,15 +1,18 @@
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Helper;
 using platform_core_service.Business.Repository;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Entities.Identities;
+using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Profile;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
@@ -22,6 +25,8 @@ namespace platform_core_service.Business.Services
     public class AdminUserService : IAdminUserService
     {
         private const string LastActiveAdminMessage = "Cannot modify the last active admin account.";
+        private const string DefaultTemporarySuspensionReason = "Temporary suspension applied by administrator decision for violating platform rules.";
+        private const string DefaultPermanentSuspensionReason = "Permanent account suspension applied by administrator decision for severe or repeated platform rules violations.";
         private static readonly HashSet<string> ManagedPlatformRoles = new(StringComparer.OrdinalIgnoreCase)
         {
             "Admin",
@@ -36,6 +41,8 @@ namespace platform_core_service.Business.Services
         private readonly IAdminAuditLogService _adminAuditLogService;
         private readonly IMapper _mapper;
         private readonly IRepository<ProfileEntity, string> _repository;
+        private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IConfigurationService _configurationService;
 
         public AdminUserService(
             ApplicationDbContext context,
@@ -44,7 +51,9 @@ namespace platform_core_service.Business.Services
             IUserContext userContext,
             IAdminAuditLogService adminAuditLogService,
             IMapper mapper,
-            IRepository<ProfileEntity, string> repository)
+            IRepository<ProfileEntity, string> repository,
+            IBackgroundJobClient backgroundJobClient,
+            IConfigurationService configurationService)
         {
             _context = context;
             _userManager = userManager;
@@ -53,6 +62,8 @@ namespace platform_core_service.Business.Services
             _adminAuditLogService = adminAuditLogService;
             _mapper = mapper;
             _repository = repository;
+            _backgroundJobClient = backgroundJobClient;
+            _configurationService = configurationService;
         }
 
         public async Task<ReturnResult<PagedData<AdminProfileDTO, string>>> GetAllUsersAsync(Page<string> page)
@@ -95,7 +106,9 @@ namespace platform_core_service.Business.Services
                     ? null
                     : DateTimeOffset.UtcNow.AddDays(dto.DaySuspend.Value);
 
-                var profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Id == profileId);
+                var profile = await _context.Profiles
+                    .Include(p => p.ApplicationUser)
+                    .FirstOrDefaultAsync(p => p.Id == profileId);
                 if (profile == null)
                 {
                     result.Message = $"Profile {profileId} not found";
@@ -117,11 +130,15 @@ namespace platform_core_service.Business.Services
                 var oldState = new
                 {
                     profile.IsSuspended,
-                    profile.SuspendedUntil
+                    profile.SuspendedUntil,
+                    profile.SuspensionReason
                 };
+
+                var suspensionReason = BuildSuspensionReason(dto);
 
                 profile.IsSuspended = true;
                 profile.SuspendedUntil = until;
+                profile.SuspensionReason = suspensionReason;
 
                 await _adminAuditLogService.AddAsync(AdminAuditLogFactory.ForUserAction(
                     auditActionType ?? AuditActionType.UserSuspended,
@@ -131,14 +148,17 @@ namespace platform_core_service.Business.Services
                     new
                     {
                         profile.IsSuspended,
-                        profile.SuspendedUntil
+                        profile.SuspendedUntil,
+                        profile.SuspensionReason
                     },
                     new
                     {
-                        durationDays = dto?.DaySuspend
+                        durationDays = dto?.DaySuspend,
+                        reason = suspensionReason
                     }));
 
                 await _context.SaveChangesAsync();
+                await EnqueueAccountStatusNotificationsAsync(profile, suspensionReason, isUnsuspended: false);
                 DevNexusLogger.Instance.Debug($"[AdminUser] Profile {profileId} suspended");
                 result.Result = true;
             }
@@ -155,7 +175,9 @@ namespace platform_core_service.Business.Services
             var result = new ReturnResult<bool>();
             try
             {
-                var profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Id == profileId);
+                var profile = await _context.Profiles
+                    .Include(p => p.ApplicationUser)
+                    .FirstOrDefaultAsync(p => p.Id == profileId);
                 if (profile == null)
                 {
                     result.Message = $"Profile {profileId} not found";
@@ -165,11 +187,13 @@ namespace platform_core_service.Business.Services
                 var oldState = new
                 {
                     profile.IsSuspended,
-                    profile.SuspendedUntil
+                    profile.SuspendedUntil,
+                    profile.SuspensionReason
                 };
 
                 profile.IsSuspended = false;
                 profile.SuspendedUntil = null;
+                profile.SuspensionReason = null;
 
                 await _adminAuditLogService.AddAsync(AdminAuditLogFactory.ForUserAction(
                     AuditActionType.UserUnsuspended,
@@ -179,10 +203,12 @@ namespace platform_core_service.Business.Services
                     new
                     {
                         profile.IsSuspended,
-                        profile.SuspendedUntil
+                        profile.SuspendedUntil,
+                        profile.SuspensionReason
                     }));
 
                 await _context.SaveChangesAsync();
+                await EnqueueAccountStatusNotificationsAsync(profile, oldState.SuspensionReason, isUnsuspended: true);
                 DevNexusLogger.Instance.Debug($"[AdminUser] Profile {profileId} unsuspended");
                 result.Result = true;
             }
@@ -311,6 +337,80 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while updating role: {ex.Message}";
             }
             return result;
+        }
+
+        private static string BuildSuspensionReason(AdminSuspendUserDTO? dto)
+        {
+            var reason = dto?.Reason?.Trim();
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                reason = dto?.DaySuspend == null
+                    ? DefaultPermanentSuspensionReason
+                    : DefaultTemporarySuspensionReason;
+            }
+
+            return reason.Length <= 500 ? reason : reason[..500];
+        }
+
+        private async Task EnqueueAccountStatusNotificationsAsync(ProfileEntity profile, string? reason, bool isUnsuspended)
+        {
+            if (!string.IsNullOrWhiteSpace(profile.ApplicationUser?.Email))
+            {
+                var subject = isUnsuspended
+                    ? "DevNexus - Your account is active again"
+                    : profile.SuspendedUntil == null
+                        ? "DevNexus - Your account has been permanently suspended"
+                        : "DevNexus - Your account has been temporarily suspended";
+
+                var templateKey = isUnsuspended
+                    ? "ACCOUNT_UNSUSPENDED_EMAIL"
+                    : profile.SuspendedUntil == null
+                        ? "ACCOUNT_PERMANENTLY_BANNED_EMAIL"
+                        : "ACCOUNT_SUSPENDED_EMAIL";
+
+                var template = (await _configurationService.GetOneByKeyAndGroup(templateKey, "EMAIL_TEMPLATE")).Result?.Value
+                    ?? BuildFallbackEmailTemplate(isUnsuspended, profile.SuspendedUntil == null);
+
+                var emailBody = template
+                    .Replace("{userName}", profile.FullName)
+                    .Replace("{suspendedUntil}", profile.SuspendedUntil?.ToString("MMM dd, yyyy HH:mm 'UTC'") ?? "Indefinite")
+                    .Replace("{reason}", reason ?? "")
+                    .Replace("{currentYear}", DateTime.UtcNow.Year.ToString());
+
+                _backgroundJobClient.Enqueue<IEmailBackgroundJobs>(x => x.SendAsync(profile.ApplicationUser.Email!, subject, emailBody));
+            }
+
+            var notificationEvent = new NotiicationCreatedEntityDTO
+            {
+                EventType = NotificationEventType.SYSTEM_ANNOUNCEMENT,
+                ActorType = Common.Models.DTOs.MessageBusDTO.ActorType.System,
+                ActorId = "devnexus",
+                ActorName = "DevNexus",
+                RecipientId = profile.Id,
+                EntityType = NotificationEntityType.PROFILE,
+                EntityId = profile.Id,
+                EntityTitle = "Account status",
+                EntityPreview = isUnsuspended ? "AccountUnsuspended" : "AccountSuspended",
+                ActionUrl = isUnsuspended ? "/feed" : "/account-suspended",
+                Timestamp = DateTime.UtcNow,
+                Message = isUnsuspended
+                    ? "Your account is active again."
+                    : "Your account status has changed."
+            };
+
+            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                x => x.PublicNotification(notificationEvent, "notifications.account"));
+        }
+
+        private static string BuildFallbackEmailTemplate(bool isUnsuspended, bool isPermanentBan)
+        {
+            if (isUnsuspended)
+            {
+                return "<p>Hello {userName},</p><p>Your DevNexus account is active again.</p><p>DevNexus Team</p><p>{currentYear}</p>";
+            }
+
+            var status = isPermanentBan ? "permanently suspended" : "temporarily suspended until {suspendedUntil}";
+            return $"<p>Hello {{userName}},</p><p>Your DevNexus account has been {status}.</p><p>Reason: {{reason}}</p><p>DevNexus Team</p><p>{{currentYear}}</p>";
         }
 
         private async Task<bool> IsLastActiveAdminAsync(ProfileEntity profile)

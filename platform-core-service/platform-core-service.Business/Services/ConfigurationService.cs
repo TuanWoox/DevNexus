@@ -538,6 +538,33 @@ namespace platform_core_service.Business.Services
                     Key = "UPLOAD_FOLDER",
                     Group = "UPLOAD",
                     Value = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)  ? @"D:\Uploads" : "/var/www/uploads"
+                },
+                new Setting
+                {
+                    Key = "ACCOUNT_SUSPENDED_EMAIL",
+                    Group = "EMAIL_TEMPLATE",
+                    Value = "<p>Hello {userName},</p><p>Your DevNexus account has been temporarily suspended until {suspendedUntil}.</p><p><strong>Reason:</strong> {reason}</p><p>&copy; {currentYear} DevNexus</p>",
+                    DataType = SettingDataType.String,
+                    IsSensitive = false,
+                    Description = "Template for temporary account suspension email"
+                },
+                new Setting
+                {
+                    Key = "ACCOUNT_PERMANENTLY_BANNED_EMAIL",
+                    Group = "EMAIL_TEMPLATE",
+                    Value = "<p>Hello {userName},</p><p>Your DevNexus account has been permanently suspended.</p><p><strong>Reason:</strong> {reason}</p><p>&copy; {currentYear} DevNexus</p>",
+                    DataType = SettingDataType.String,
+                    IsSensitive = false,
+                    Description = "Template for permanent account suspension email"
+                },
+                new Setting
+                {
+                    Key = "ACCOUNT_UNSUSPENDED_EMAIL",
+                    Group = "EMAIL_TEMPLATE",
+                    Value = "<p>Hello {userName},</p><p>Your DevNexus account is active again.</p><p>&copy; {currentYear} DevNexus</p>",
+                    DataType = SettingDataType.String,
+                    IsSensitive = false,
+                    Description = "Template for account unsuspended email"
                 }
             };
 
