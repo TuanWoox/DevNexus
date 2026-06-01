@@ -55,13 +55,28 @@ const redirectToSuspendedPage = (moderationStatus?: AccountModerationStatus | nu
 };
 
 const getSuspensionStatus = (payload: any): AccountModerationStatus | null => {
-    if (payload?.moderationStatus?.isSuspended) return payload.moderationStatus;
-    if (payload?.suspendedUntil !== undefined) {
+    if (!payload) return null;
+
+    const moderationStatus = payload.moderationStatus || payload.ModerationStatus;
+    if (moderationStatus) {
+        const isSuspended = moderationStatus.isSuspended ?? moderationStatus.IsSuspended;
+        if (isSuspended === true) {
+            return {
+                isSuspended: true,
+                isPermanentBan: moderationStatus.isPermanentBan ?? moderationStatus.IsPermanentBan ?? null,
+                suspendedUntil: moderationStatus.suspendedUntil ?? moderationStatus.SuspendedUntil ?? null,
+                reason: moderationStatus.reason ?? moderationStatus.Reason ?? null,
+            };
+        }
+    }
+
+    const suspendedUntil = payload.suspendedUntil ?? payload.SuspendedUntil;
+    if (suspendedUntil !== undefined) {
         return {
             isSuspended: true,
-            isPermanentBan: payload.suspendedUntil == null,
-            suspendedUntil: payload.suspendedUntil,
-            reason: payload.reason ?? null,
+            isPermanentBan: suspendedUntil == null,
+            suspendedUntil: suspendedUntil,
+            reason: payload.reason ?? payload.Reason ?? null,
         };
     }
     return null;
