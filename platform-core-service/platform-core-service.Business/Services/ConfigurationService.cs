@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using platform_core_service.Business.Repository;
@@ -543,7 +543,211 @@ namespace platform_core_service.Business.Services
                 {
                     Key = "ACCOUNT_SUSPENDED_EMAIL",
                     Group = "EMAIL_TEMPLATE",
-                    Value = "<p>Hello {userName},</p><p>Your DevNexus account has been temporarily suspended until {suspendedUntil}.</p><p><strong>Reason:</strong> {reason}</p><p>&copy; {currentYear} DevNexus</p>",
+                    Value = @"<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Account Temporarily Suspended</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .email-wrapper {
+            width: 100%;
+            background-color: #f5f5f5;
+            padding: 40px 0;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e0e0e0;
+        }
+        .email-header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            padding: 35px 20px;
+            text-align: center;
+            border-bottom: 3px solid #f59e0b;
+        }
+        .email-header h1 {
+            color: #ffffff;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            margin: 0;
+        }
+        .email-header .logo-highlight {
+            color: #007bff;
+        }
+        .email-body {
+            padding: 40px 35px;
+        }
+        .status-badge {
+            display: inline-block;
+            background-color: #fffbeb;
+            border: 1px solid #fef3c7;
+            color: #d97706;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .email-body h2 {
+            color: #1a1a1a;
+            font-size: 22px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .email-body p {
+            color: #555;
+            margin-bottom: 20px;
+            font-size: 15px;
+        }
+        .details-card {
+            background-color: #fafafa;
+            border-radius: 8px;
+            border: 1px solid #eaeaea;
+            padding: 20px;
+            margin: 25px 0;
+        }
+        .detail-row {
+            margin-bottom: 12px;
+        }
+        .detail-row:last-child {
+            margin-bottom: 0;
+        }
+        .detail-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .detail-value {
+            font-size: 15px;
+            color: #222;
+            font-weight: 500;
+        }
+        .reason-box {
+            font-style: italic;
+            color: #444;
+            background-color: #f3f4f6;
+            border-left: 4px solid #f59e0b;
+            padding: 12px 16px;
+            border-radius: 0 6px 6px 0;
+            margin-top: 5px;
+        }
+        .notice-card {
+            background-color: #fffdf5;
+            border-left: 4px solid #f59e0b;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .notice-card h3 {
+            color: #b45309;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .notice-card p {
+            color: #78350f;
+            font-size: 14px;
+            margin-bottom: 0;
+        }
+        .notice-card a {
+            color: #b45309;
+            text-decoration: underline;
+            font-weight: 600;
+        }
+        .email-footer {
+            background-color: #fafafa;
+            padding: 30px 20px;
+            text-align: center;
+            border-top: 1px solid #eaeaea;
+        }
+        .email-footer p {
+            color: #888;
+            font-size: 13px;
+            margin: 6px 0;
+        }
+        .email-footer .copyright {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 15px;
+        }
+        .highlight {
+            color: #007bff;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class=""email-wrapper"">
+        <div class=""email-container"">
+            <!-- Header -->
+            <div class=""email-header"">
+                <h1>DEV<span class=""logo-highlight"">NEXUS</span></h1>
+            </div>
+
+            <!-- Body -->
+            <div class=""email-body"">
+                <span class=""status-badge"">Temporary Suspension</span>
+                <h2>Hello {userName},</h2>
+                
+                <p>We are writing to notify you that your <span class=""highlight"">DevNexus</span> account has been temporarily suspended due to a violation of our platform terms.</p>
+                
+                <!-- Details -->
+                <div class=""details-card"">
+                    <div class=""detail-row"">
+                        <div class=""detail-label"">Suspended Until</div>
+                        <div class=""detail-value"" style=""color: #d97706; font-weight: 600;"">{suspendedUntil}</div>
+                    </div>
+                    <div class=""detail-row"" style=""margin-top: 15px;"">
+                        <div class=""detail-label"">Reason for Action</div>
+                        <div class=""reason-box"">{reason}</div>
+                    </div>
+                </div>
+
+                <p>While suspended, you will not be able to access your profile, post new content, write comments, or interact with other members of the community.</p>
+
+                <!-- Notice -->
+                <div class=""notice-card"">
+                    <h3>Need help or want to appeal?</h3>
+                    <p>Please review our <a href=""http://localhost:3000/guidelines"">Community Guidelines</a> to understand our standards. If you believe this suspension was made in error, you can reply directly to this email or contact support at <a href=""mailto:studynest284@gmail.com"">studynest284@gmail.com</a>.</p>
+                </div>
+
+                <p style=""color: #999; font-size: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;"">
+                    <strong>Security Notice:</strong> This is an automated administrative notification regarding your account state.
+                </p>
+            </div>
+
+            <!-- Footer -->
+            <div class=""email-footer"">
+                <p>&copy; {currentYear} DevNexus | The Social Learning Network for Engineers</p>
+                <p>Innovating the way we learn to code.</p>
+                <p class=""copyright"">This is an automated message, please do not reply.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>",
                     DataType = SettingDataType.String,
                     IsSensitive = false,
                     Description = "Template for temporary account suspension email"
@@ -552,7 +756,211 @@ namespace platform_core_service.Business.Services
                 {
                     Key = "ACCOUNT_PERMANENTLY_BANNED_EMAIL",
                     Group = "EMAIL_TEMPLATE",
-                    Value = "<p>Hello {userName},</p><p>Your DevNexus account has been permanently suspended.</p><p><strong>Reason:</strong> {reason}</p><p>&copy; {currentYear} DevNexus</p>",
+                    Value = @"<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Account Permanently Suspended</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .email-wrapper {
+            width: 100%;
+            background-color: #f5f5f5;
+            padding: 40px 0;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e0e0e0;
+        }
+        .email-header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            padding: 35px 20px;
+            text-align: center;
+            border-bottom: 3px solid #ef4444;
+        }
+        .email-header h1 {
+            color: #ffffff;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            margin: 0;
+        }
+        .email-header .logo-highlight {
+            color: #007bff;
+        }
+        .email-body {
+            padding: 40px 35px;
+        }
+        .status-badge {
+            display: inline-block;
+            background-color: #fef2f2;
+            border: 1px solid #fee2e2;
+            color: #dc2626;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .email-body h2 {
+            color: #1a1a1a;
+            font-size: 22px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .email-body p {
+            color: #555;
+            margin-bottom: 20px;
+            font-size: 15px;
+        }
+        .details-card {
+            background-color: #fafafa;
+            border-radius: 8px;
+            border: 1px solid #eaeaea;
+            padding: 20px;
+            margin: 25px 0;
+        }
+        .detail-row {
+            margin-bottom: 12px;
+        }
+        .detail-row:last-child {
+            margin-bottom: 0;
+        }
+        .detail-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .detail-value {
+            font-size: 15px;
+            color: #222;
+            font-weight: 500;
+        }
+        .reason-box {
+            font-style: italic;
+            color: #444;
+            background-color: #f3f4f6;
+            border-left: 4px solid #ef4444;
+            padding: 12px 16px;
+            border-radius: 0 6px 6px 0;
+            margin-top: 5px;
+        }
+        .notice-card {
+            background-color: #fff5f5;
+            border-left: 4px solid #ef4444;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .notice-card h3 {
+            color: #991b1b;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .notice-card p {
+            color: #7f1d1d;
+            font-size: 14px;
+            margin-bottom: 0;
+        }
+        .notice-card a {
+            color: #991b1b;
+            text-decoration: underline;
+            font-weight: 600;
+        }
+        .email-footer {
+            background-color: #fafafa;
+            padding: 30px 20px;
+            text-align: center;
+            border-top: 1px solid #eaeaea;
+        }
+        .email-footer p {
+            color: #888;
+            font-size: 13px;
+            margin: 6px 0;
+        }
+        .email-footer .copyright {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 15px;
+        }
+        .highlight {
+            color: #007bff;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class=""email-wrapper"">
+        <div class=""email-container"">
+            <!-- Header -->
+            <div class=""email-header"">
+                <h1>DEV<span class=""logo-highlight"">NEXUS</span></h1>
+            </div>
+
+            <!-- Body -->
+            <div class=""email-body"">
+                <span class=""status-badge"">Permanent Suspension</span>
+                <h2>Hello {userName},</h2>
+                
+                <p>We are writing to notify you that your <span class=""highlight"">DevNexus</span> account has been permanently suspended due to severe or repeated violations of our platform guidelines.</p>
+                
+                <!-- Details -->
+                <div class=""details-card"">
+                    <div class=""detail-row"">
+                        <div class=""detail-label"">Suspension Status</div>
+                        <div class=""detail-value"" style=""color: #dc2626; font-weight: 600;"">Permanently Terminated</div>
+                    </div>
+                    <div class=""detail-row"" style=""margin-top: 15px;"">
+                        <div class=""detail-label"">Reason for Action</div>
+                        <div class=""reason-box"">{reason}</div>
+                    </div>
+                </div>
+
+                <p>This decision was made after careful review of your account activities. As a result, your access to DevNexus has been completely revoked, and you will no longer be able to log in or create a new account.</p>
+
+                <!-- Notice -->
+                <div class=""notice-card"">
+                    <h3>Questions regarding this ban?</h3>
+                    <p>If you believe there has been a serious error in our decision-making process, you can reach out to our Trust & Safety team at <a href=""mailto:studynest284@gmail.com"">studynest284@gmail.com</a>.</p>
+                </div>
+
+                <p style=""color: #999; font-size: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;"">
+                    <strong>Security Notice:</strong> This is an automated administrative notification regarding your account state.
+                </p>
+            </div>
+
+            <!-- Footer -->
+            <div class=""email-footer"">
+                <p>&copy; {currentYear} DevNexus | The Social Learning Network for Engineers</p>
+                <p>Innovating the way we learn to code.</p>
+                <p class=""copyright"">This is an automated message, please do not reply.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>",
                     DataType = SettingDataType.String,
                     IsSensitive = false,
                     Description = "Template for permanent account suspension email"
@@ -561,7 +969,179 @@ namespace platform_core_service.Business.Services
                 {
                     Key = "ACCOUNT_UNSUSPENDED_EMAIL",
                     Group = "EMAIL_TEMPLATE",
-                    Value = "<p>Hello {userName},</p><p>Your DevNexus account is active again.</p><p>&copy; {currentYear} DevNexus</p>",
+                    Value = @"<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Account Active Again</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .email-wrapper {
+            width: 100%;
+            background-color: #f5f5f5;
+            padding: 40px 0;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e0e0e0;
+        }
+        .email-header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            padding: 35px 20px;
+            text-align: center;
+            border-bottom: 3px solid #10b981;
+        }
+        .email-header h1 {
+            color: #ffffff;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            margin: 0;
+        }
+        .email-header .logo-highlight {
+            color: #007bff;
+        }
+        .email-body {
+            padding: 40px 35px;
+        }
+        .status-badge {
+            display: inline-block;
+            background-color: #ecfdf5;
+            border: 1px solid #d1fae5;
+            color: #059669;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .email-body h2 {
+            color: #1a1a1a;
+            font-size: 22px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .email-body p {
+            color: #555;
+            margin-bottom: 20px;
+            font-size: 15px;
+        }
+        .welcome-card {
+            background-color: #f0fdf4;
+            border-radius: 8px;
+            border: 1px solid #d1fae5;
+            padding: 20px;
+            margin: 25px 0;
+            text-align: center;
+        }
+        .welcome-card p {
+            color: #166534;
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 0;
+        }
+        .button-wrapper {
+            text-align: center;
+            margin: 30px 0 15px 0;
+        }
+        .action-button {
+            display: inline-block;
+            background-color: #10b981;
+            color: #ffffff;
+            padding: 16px 40px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+            transition: all 0.2s ease;
+        }
+        .action-button:hover {
+            background-color: #059669;
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+        }
+        .email-footer {
+            background-color: #fafafa;
+            padding: 30px 20px;
+            text-align: center;
+            border-top: 1px solid #eaeaea;
+        }
+        .email-footer p {
+            color: #888;
+            font-size: 13px;
+            margin: 6px 0;
+        }
+        .email-footer .copyright {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 15px;
+        }
+        .highlight {
+            color: #007bff;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class=""email-wrapper"">
+        <div class=""email-container"">
+            <!-- Header -->
+            <div class=""email-header"">
+                <h1>DEV<span class=""logo-highlight"">NEXUS</span></h1>
+            </div>
+
+            <!-- Body -->
+            <div class=""email-body"">
+                <span class=""status-badge"">Account Re-activated</span>
+                <h2>Hello {userName},</h2>
+                
+                <p>We are absolutely thrilled to welcome you back! Your <span class=""highlight"">DevNexus</span> account has been successfully unsuspended and is now fully active.</p>
+                
+                <!-- Welcome Card -->
+                <div class=""welcome-card"">
+                    <p>You can now log in, share knowledge, publish articles, leave comments, and connect with other engineers on the platform.</p>
+                </div>
+
+                <!-- CTA Button -->
+                <div class=""button-wrapper"">
+                    <a href=""http://localhost:3000/"" class=""action-button"" style=""color: #ffffff"">Go to DevNexus Feed</a>
+                </div>
+
+                <p>We appreciate your cooperation and adherence to keeping our engineering community safe, collaborative, and constructive. Welcome back!</p>
+
+                <p style=""color: #999; font-size: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;"">
+                    <strong>Security Notice:</strong> For your security, please log in through our official secure site. Do not share your password with anyone.
+                </p>
+            </div>
+
+            <!-- Footer -->
+            <div class=""email-footer"">
+                <p>&copy; {currentYear} DevNexus | The Social Learning Network for Engineers</p>
+                <p>Innovating the way we learn to code.</p>
+                <p class=""copyright"">This is an automated message, please do not reply.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>",
                     DataType = SettingDataType.String,
                     IsSensitive = false,
                     Description = "Template for account unsuspended email"

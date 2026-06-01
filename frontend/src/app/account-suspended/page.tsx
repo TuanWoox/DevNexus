@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Footer } from "@/components/footer";
 import { Navbar } from "@/components/navbar";
-import { Ban, LogIn, Mail } from "lucide-react";
+import { Ban, LogIn, Mail, Check } from "lucide-react";
 import type { AccountModerationStatus } from "@/types/common/return-result";
 
 function readStoredModerationStatus(): AccountModerationStatus | null {
@@ -47,6 +47,18 @@ export default function AccountSuspendedPage() {
         : suspendedUntil
             ? "Your account is temporarily suspended"
             : "Your account is suspended";
+
+    const [copied, setCopied] = useState(false);
+
+    const handleContactClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+        e.preventDefault();
+        navigator.clipboard.writeText("studynest284@gmail.com");
+        setCopied(true);
+        setTimeout(() => {
+            setCopied(false);
+            window.location.href = "mailto:studynest284@gmail.com";
+        }, 1000);
+    };
 
     return (
         <div className="min-h-screen flex flex-col bg-page">
@@ -94,7 +106,7 @@ export default function AccountSuspendedPage() {
                     <div className="mt-5 rounded-lg border bg-muted/30 p-5 text-left">
                         <h2 className="text-base font-semibold text-heading">Need help?</h2>
                         <p className="mt-2 text-sm text-body">
-                            If you believe this action was made by mistake or you need more information, please contact support.
+                            If you believe this action was made by mistake or you need more information, please contact support at <span className="font-semibold text-heading select-all cursor-pointer hover:underline" onClick={() => navigator.clipboard.writeText("studynest284@gmail.com")}>studynest284@gmail.com</span>.
                         </p>
                     </div>
 
@@ -103,10 +115,25 @@ export default function AccountSuspendedPage() {
                             <LogIn className="h-4 w-4" />
                             Back to login
                         </Link>
-                        <Link href="mailto:support@devnexus.local" className="btn-ghost gap-2 w-full sm:w-auto">
-                            <Mail className="h-4 w-4" />
-                            Contact support
-                        </Link>
+                        <a
+                            href="mailto:studynest284@gmail.com"
+                            onClick={handleContactClick}
+                            className={`btn-ghost gap-2 w-full sm:w-auto font-mono text-sm px-4 transition-all duration-200 ${
+                                copied ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800" : ""
+                            }`}
+                        >
+                            {copied ? (
+                                <>
+                                    <Check className="h-4 w-4 text-emerald-500 animate-in zoom-in duration-200" />
+                                    <span>Copied &amp; Directing...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Mail className="h-4 w-4" />
+                                    <span>Contact Support</span>
+                                </>
+                            )}
+                        </a>
                     </div>
                 </section>
             </main>
