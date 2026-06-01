@@ -46,6 +46,8 @@ export function SuspendUserDialog({
   if (!user) return null;
 
   function handleConfirm() {
+    if (!user) return;
+
     let days: number | null = null;
     if (suspendType === '7') days = 7;
     else if (suspendType === '30') days = 30;
