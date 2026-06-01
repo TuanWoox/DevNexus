@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Footer } from "@/components/footer";
 import { Navbar } from "@/components/navbar";
@@ -37,7 +37,26 @@ function formatSuspendedUntil(value?: string | null) {
 }
 
 export default function AccountSuspendedPage() {
-    const [status] = useState<AccountModerationStatus | null>(readStoredModerationStatus);
+    const [status, setStatus] = useState<AccountModerationStatus | null>(() => {
+        return readStoredModerationStatus();
+    });
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const params = new URLSearchParams(window.location.search);
+        const urlReason = params.get("reason");
+        const urlUntil = params.get("until");
+
+        if (urlReason !== null || urlUntil !== null) {
+            setStatus({
+                isSuspended: true,
+                isPermanentBan: !urlUntil,
+                suspendedUntil: urlUntil || null,
+                reason: urlReason || null,
+            });
+        }
+    }, []);
 
     const suspendedUntil = formatSuspendedUntil(status?.suspendedUntil);
     const isPermanent = status?.isPermanentBan === true;

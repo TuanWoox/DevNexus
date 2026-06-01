@@ -81,16 +81,31 @@ export function useNotificationGateway() {
                 notification.Type === NotificationEventEnum.SYSTEM_ANNOUNCEMENT &&
                 notification.EntityPreview === "AccountSuspended"
             ) {
+                let reason: string | null = null;
+                let suspendedUntil: string | null = null;
+                let isPermanentBan = true;
+
+                if (notification.ActionUrl) {
+                    try {
+                        const url = new URL(notification.ActionUrl, window.location.origin);
+                        reason = url.searchParams.get("reason");
+                        suspendedUntil = url.searchParams.get("until");
+                        isPermanentBan = !suspendedUntil;
+                    } catch (e) {
+                        console.error("Failed to parse ActionUrl:", e);
+                    }
+                }
+
                 Cookies.remove("accessToken");
                 Cookies.remove("refreshToken");
                 dispatch(clearToken());
                 sessionStorage.setItem("accountModerationStatus", JSON.stringify({
                     isSuspended: true,
-                    isPermanentBan: null,
-                    suspendedUntil: null,
-                    reason: null,
+                    isPermanentBan,
+                    suspendedUntil,
+                    reason,
                 }));
-                router.push("/account-suspended");
+                router.push(notification.ActionUrl || "/account-suspended");
                 return;
             }
 

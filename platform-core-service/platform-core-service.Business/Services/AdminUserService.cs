@@ -391,7 +391,7 @@ namespace platform_core_service.Business.Services
                 EntityId = profile.Id,
                 EntityTitle = "Account status",
                 EntityPreview = isUnsuspended ? "AccountUnsuspended" : "AccountSuspended",
-                ActionUrl = isUnsuspended ? "/feed" : "/account-suspended",
+                ActionUrl = isUnsuspended ? "/feed" : $"/account-suspended?reason={Uri.EscapeDataString(reason ?? "")}&until={Uri.EscapeDataString(profile.SuspendedUntil?.ToString("o") ?? "")}",
                 Timestamp = DateTime.UtcNow,
                 Message = isUnsuspended
                     ? "Your account is active again."
