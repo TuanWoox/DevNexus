@@ -49,6 +49,7 @@ export default function AccountSuspendedPage() {
         const urlUntil = params.get("until");
 
         if (urlReason !== null || urlUntil !== null) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setStatus({
                 isSuspended: true,
                 isPermanentBan: !urlUntil,
