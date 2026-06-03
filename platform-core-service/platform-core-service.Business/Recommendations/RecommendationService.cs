@@ -376,6 +376,9 @@ namespace platform_core_service.Business.Recommendations
             if (posts.Count == 0) return;
 
             var postIds = posts.Select(p => p.Id).ToList();
+
+            await posts.HydrateSharedPostsAsync(_context, profileId);
+
             var votes = await _context.Votes
                 .Where(v => v.AuthorId == profileId && v.PostId != null && postIds.Contains(v.PostId))
                 .Select(v => new { v.PostId, v.IsUpvote })
@@ -386,13 +389,16 @@ namespace platform_core_service.Business.Recommendations
                 .ToDictionary(v => v.PostId!, v => (bool?)v.IsUpvote);
 
             var savedItems = await _context.BookMarkedItems
-                .Where(b => b.PostId != null && postIds.Contains(b.PostId) && b.BookMark.OwnerId == profileId)
-                .Select(b => new { b.PostId, b.Id })
+                .Where(b => b.BookMark.OwnerId == profileId &&
+                            ((b.PostId != null && postIds.Contains(b.PostId)) ||
+                             (b.QAPostId != null && postIds.Contains(b.QAPostId))))
+                .Select(b => new { b.PostId, b.QAPostId, b.Id })
                 .ToListAsync();
 
             var savedMap = savedItems
-                .Where(b => b.PostId != null)
-                .GroupBy(b => b.PostId!)
+                .Select(b => new { ContentId = b.PostId ?? b.QAPostId, b.Id })
+                .Where(b => b.ContentId != null)
+                .GroupBy(b => b.ContentId!)
                 .ToDictionary(g => g.Key, g => g.First().Id);
 
             var commentCounts = await _context.Comments

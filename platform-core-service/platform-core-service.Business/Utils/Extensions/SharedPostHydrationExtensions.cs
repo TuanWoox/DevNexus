@@ -26,7 +26,7 @@ namespace platform_core_service.Business.Utils.Extensions
 
             var sharedPosts = await context.Posts
                 .AsNoTracking()
-                .ApplyShareSourceVisibilityRules(context, currentProfileId)
+                .ApplyPostVisibilityRules(context, currentProfileId)
                 .Where(p => sharedPostIds.Contains(p.Id))
                 .Include(p => p.Author)
                 .Include(p => p.Community)

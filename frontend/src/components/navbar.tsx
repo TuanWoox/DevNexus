@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useTheme } from 'next-themes'
-import { Hexagon, Menu, Sun, Moon, Sparkles, LogOut, User, Loader2, Rss } from 'lucide-react'
+import { Hexagon, Menu, Sun, Moon, Sparkles, LogOut, Loader2, Rss } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
@@ -16,6 +16,8 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet'
+import { UserAvatar } from '@/components/shared/user-avatar'
+import { useGetProfileById } from '@/hooks/profile-hooks/use-get-profile-by-id'
 
 const navLinks = [
     { href: '/', label: 'Home' },
@@ -27,7 +29,11 @@ export function Navbar() {
     const { theme, setTheme } = useTheme()
     const [isOpen, setIsOpen] = useState(false)
     const { isAuthenticated, user } = useSelector((state: RootState) => state.auth)
+    const { data: userProfile } = useGetProfileById(user?.profileId ?? '')
     const { logout, isLoggingOut } = useLogout()
+    const displayName = userProfile?.fullName || user?.userName || 'Developer'
+    const primaryRole = user?.roles?.[0] || 'Member'
+    const profileHref = user?.profileId ? `/profile/${user.profileId}` : '/profile'
 
     return (
         <header className="sticky top-0 z-50 h-14 backdrop-blur-md border-b">
@@ -83,14 +89,12 @@ export function Navbar() {
                                 </Button>
 
                                 {/* Giao diện User Name */}
-                                <div className="flex items-center cursor-pointer">
-                                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                        <User className="h-4 w-4 text-primary" />
-                                    </div>
-                                    <span className="text-sm font-semibold whitespace-nowrap">
-                                        @{user?.userName || 'Developer'}
+                                <Link href={profileHref} className="flex items-center gap-2 rounded-full px-2 py-1.5 transition-colors hover:bg-muted">
+                                    <UserAvatar avatarUrl={userProfile?.avatarUrl} fullName={displayName} className="h-8 w-8 border border-default" />
+                                    <span className="max-w-36 truncate text-sm font-semibold text-heading">
+                                        {displayName}
                                     </span>
-                                </div>
+                                </Link>
 
                                 {/* Nút Logout Desktop */}
                                 <Button
@@ -205,19 +209,19 @@ export function Navbar() {
                                                 </SheetClose>
 
                                                 {/* Giao diện tên user ở Mobile */}
-                                                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl mb-2">
-                                                    <div className="h-10 w-10 rounded-full bg-primary/20 flex shrink-0 items-center justify-center">
-                                                        <User className="h-5 w-5 text-primary" />
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-semibold text-heading">
-                                                            @{user?.userName || 'Developer'}
-                                                        </span>
-                                                        <span className="text-xs text-muted-foreground uppercase py-0.5">
-                                                            {user?.roles?.[0] || 'Member'}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                                <SheetClose asChild>
+                                                    <Link href={profileHref} className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl mb-2 transition-colors hover:bg-muted">
+                                                        <UserAvatar avatarUrl={userProfile?.avatarUrl} fullName={displayName} className="h-10 w-10 shrink-0 border border-default" />
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-semibold text-heading truncate">
+                                                                {displayName}
+                                                            </span>
+                                                            <span className="text-xs text-muted-foreground uppercase py-0.5">
+                                                                {primaryRole}
+                                                            </span>
+                                                        </div>
+                                                    </Link>
+                                                </SheetClose>
 
                                                 <Button
                                                     variant="ghost"
