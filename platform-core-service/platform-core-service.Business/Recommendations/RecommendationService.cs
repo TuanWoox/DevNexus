@@ -407,6 +407,8 @@ namespace platform_core_service.Business.Recommendations
                 .Select(g => new { PostId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.PostId, x => x.Count);
 
+            await posts.HydrateHistoryCountsAsync(_context);
+
             foreach (var post in posts)
             {
                 post.CurrentUserVote = voteMap.GetValueOrDefault(post.Id);

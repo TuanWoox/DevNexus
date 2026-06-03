@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Bookmark, Share2, MessageSquare, ArrowBigUp, ArrowBigDown, Globe, Code2, HelpCircle } from "lucide-react";
+import { Bookmark, Share2, MessageSquare, ArrowBigUp, ArrowBigDown, Globe, Code2, HelpCircle, History } from "lucide-react";
 import { ModerationBanner } from "@/components/shared/moderation-banner";
 import { SelectPostDTO } from "@/types/post/select-post-dto";
 import Link from "next/link";
@@ -37,6 +37,7 @@ import { getPostDetailHref, getQAPostDetailHref } from "@/utils/content-routes";
 import { SharePostDialog } from "./share-post-dialog";
 import { SharedPostPreview } from "./shared-post-preview";
 import { CommunityHoverCard } from "@/components/communities/community-hover-card";
+import { ContentHistoryOverlay } from "@/components/history/content-history-overlay";
 
 interface PostCardProps {
     post: SelectPostDTO | SelectQAPostDTO;
@@ -69,6 +70,7 @@ export function PostCard({ post, canModerateCommunity, isRecommendation }: PostC
     const [isBookmarkModalOpen, setIsBookmarkModalOpen] = useState(false);
     const [isUnsaveModalOpen, setIsUnsaveModalOpen] = useState(false);
     const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isContentExpanded, setIsContentExpanded] = useState(false);
 
     const { mutate: unsaveItem, isPending: isUnsavePending } = useDeleteBookmarkedItemById();
@@ -84,6 +86,7 @@ export function PostCard({ post, canModerateCommunity, isRecommendation }: PostC
         currentUserRole === "Moderator";
     const canModerateContent = canModerateCommunity ?? canModerateFromCard;
     const canShare = isApproved && loadedCommunity?.isPrivate !== true;
+    const hasHistory = (post.historyCount ?? 0) > 1;
 
     const handleSaveClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -112,6 +115,12 @@ export function PostCard({ post, canModerateCommunity, isRecommendation }: PostC
         e.preventDefault();
         if (!canShare) return;
         setIsShareDialogOpen(true);
+    };
+
+    const handleHistoryClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (!isApproved || !hasHistory) return;
+        setIsHistoryOpen(true);
     };
 
     // Note: Dates can cause hydration mismatches if server and client have different locales.
@@ -347,6 +356,16 @@ export function PostCard({ post, canModerateCommunity, isRecommendation }: PostC
                         <Share2 className="w-5 h-5" />
                         <span className="hidden text-sm font-medium sm:block">Share</span>
                     </button>
+                    {hasHistory && (
+                        <button
+                            onClick={handleHistoryClick}
+                            disabled={!isApproved}
+                            className="relative z-10 flex items-center gap-2 rounded-full cursor-pointer disabled:cursor-not-allowed border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-heading disabled:opacity-50 sm:px-3 sm:py-2"
+                        >
+                            <History className="w-5 h-5" />
+                            <span className="hidden text-sm font-medium sm:block">History</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -362,6 +381,15 @@ export function PostCard({ post, canModerateCommunity, isRecommendation }: PostC
                 open={isShareDialogOpen}
                 onOpenChange={setIsShareDialogOpen}
             />
+
+            {hasHistory && (
+                <ContentHistoryOverlay
+                    contentId={post.id}
+                    type={isQaPost ? "qapost" : "post"}
+                    open={isHistoryOpen}
+                    onClose={() => setIsHistoryOpen(false)}
+                />
+            )}
 
             <AlertDialog open={isUnsaveModalOpen} onOpenChange={setIsUnsaveModalOpen}>
                 <AlertDialogContent onClick={(e) => e.stopPropagation()}>

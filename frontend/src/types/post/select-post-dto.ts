@@ -54,6 +54,7 @@ export interface SelectPostDTO {
     upvoteCount: number;
     downvoteCount: number;
     commentCount: number;
+    historyCount: number;
     tagNames: string[];
     dateCreated: string;
     dateModified: string;

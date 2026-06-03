@@ -22,6 +22,7 @@ const services = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  devIndicators: false,
   images: {
     remotePatterns: [
       {

@@ -57,6 +57,7 @@ export const useCreateQAPost = () => {
                 upvoteCount: 0,
                 downvoteCount: 0,
                 commentCount: 0,
+                historyCount: 1,
                 answerCount: 0,
                 tagNames: payload.tagNames,
                 dateCreated: now,

@@ -46,6 +46,8 @@ namespace platform_core_service.Business.Services
             await SetCurrentUserSavedForListAsync(posts);
             await SetCurrentUserVotesForListAsync(qaPosts.Cast<SelectPostDTO>().ToList());
             await SetCurrentUserSavedForListAsync(qaPosts.Cast<SelectPostDTO>().ToList());
+            await posts.HydrateHistoryCountsAsync(_context);
+            await qaPosts.Cast<SelectPostDTO>().HydrateHistoryCountsAsync(_context);
 
             return new ReturnResult<GlobalSearchResultDTO>
             {
@@ -71,6 +73,7 @@ namespace platform_core_service.Business.Services
                 await result.Data.HydrateSharedPostsAsync(_context, _userContext.ProfileId);
                 await SetCurrentUserVotesForListAsync(result.Data.ToList());
                 await SetCurrentUserSavedForListAsync(result.Data.ToList());
+                await result.Data.HydrateHistoryCountsAsync(_context);
             }
             return result;
         }
@@ -87,6 +90,7 @@ namespace platform_core_service.Business.Services
                 await result.Data.Cast<SelectPostDTO>().HydrateSharedPostsAsync(_context, _userContext.ProfileId);
                 await SetCurrentUserVotesForListAsync(result.Data.Cast<SelectPostDTO>().ToList());
                 await SetCurrentUserSavedForListAsync(result.Data.Cast<SelectPostDTO>().ToList());
+                await result.Data.Cast<SelectPostDTO>().HydrateHistoryCountsAsync(_context);
             }
             return result;
         }
@@ -280,6 +284,7 @@ namespace platform_core_service.Business.Services
                 UpvoteCount = p.UpvoteCount,
                 DownvoteCount = p.DownvoteCount,
                 CommentCount = _context.Comments.Count(c => c.PostId == p.Id),
+                HistoryCount = 0,
                 TagNames = p.PostTags.Select(pt => pt.Tag.Name).ToList(),
                 DateCreated = p.DateCreated.GetValueOrDefault(),
                 DateModified = p.DateModified,
@@ -326,6 +331,7 @@ namespace platform_core_service.Business.Services
                 UpvoteCount = p.UpvoteCount,
                 DownvoteCount = p.DownvoteCount,
                 CommentCount = _context.Comments.Count(c => c.PostId == p.Id),
+                HistoryCount = 0,
                 TagNames = p.PostTags.Select(pt => pt.Tag.Name).ToList(),
                 DateCreated = p.DateCreated.GetValueOrDefault(),
                 DateModified = p.DateModified,

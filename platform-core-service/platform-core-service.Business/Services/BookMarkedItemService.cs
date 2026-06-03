@@ -1,6 +1,7 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Repository;
+using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces.Contexts;
@@ -177,6 +178,7 @@ namespace platform_core_service.Business.Services
                     {
                         await SetCurrentUserVotesForListAsync(postDtos!);
                         await SetCommentCountForListAsync(postDtos!);
+                        await postDtos!.HydrateHistoryCountsAsync(_dbContext);
                     }
                 }
             }

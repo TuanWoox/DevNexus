@@ -118,6 +118,7 @@ export default function PostArticle({ postId, isQAPost, context = "personal", ro
         currentUserRole === "Moderator" ||
         currentUserRole === "MODERATOR";
     const canShare = isApproved && loadedCommunity?.isPrivate !== true;
+    const hasHistory = (post?.historyCount ?? 0) > 1;
 
     const handleSaveClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -444,14 +445,16 @@ export default function PostArticle({ postId, isQAPost, context = "personal", ro
                             <Share2 className="w-5 h-5" />
                             <span className="text-sm font-medium hidden sm:block">Share</span>
                         </button>
-                        <button
-                            onClick={() => setIsHistoryOpen(true)}
-                            disabled={!isApproved}
-                            className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg cursor-pointer disabled:cursor-not-allowed transition-colors flex items-center gap-2 disabled:opacity-50"
-                        >
-                            <History className="w-5 h-5" />
-                            <span className="text-sm font-medium hidden sm:block">History</span>
-                        </button>
+                        {hasHistory && (
+                            <button
+                                onClick={() => setIsHistoryOpen(true)}
+                                disabled={!isApproved}
+                                className="p-2 sm:px-3 sm:py-2 text-muted-foreground hover:text-heading hover:bg-subtle rounded-full sm:rounded-lg cursor-pointer disabled:cursor-not-allowed transition-colors flex items-center gap-2 disabled:opacity-50"
+                            >
+                                <History className="w-5 h-5" />
+                                <span className="text-sm font-medium hidden sm:block">History</span>
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -462,12 +465,14 @@ export default function PostArticle({ postId, isQAPost, context = "personal", ro
                     isQAPost={isQAPost}
                 />
 
-                <ContentHistoryOverlay
-                    contentId={postId}
-                    type={isQAPost ? "qapost" : "post"}
-                    open={isHistoryOpen}
-                    onClose={() => setIsHistoryOpen(false)}
-                />
+                {hasHistory && (
+                    <ContentHistoryOverlay
+                        contentId={postId}
+                        type={isQAPost ? "qapost" : "post"}
+                        open={isHistoryOpen}
+                        onClose={() => setIsHistoryOpen(false)}
+                    />
+                )}
 
                 <SharePostDialog
                     post={post as SelectPostDTO}

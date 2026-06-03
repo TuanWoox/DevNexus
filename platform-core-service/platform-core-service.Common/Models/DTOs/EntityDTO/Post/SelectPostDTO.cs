@@ -30,6 +30,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Post
         public int UpvoteCount { get; set; } = 0;
         public int DownvoteCount { get; set; } = 0;
         public int CommentCount { get; set; } = 0;
+        public int HistoryCount { get; set; } = 0;
 
         public List<string> TagNames { get; set; } = new List<string>();
 

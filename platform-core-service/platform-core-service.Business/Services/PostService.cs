@@ -141,6 +141,10 @@ namespace platform_core_service.Business.Services
                 }
 
                 await _postHistoryService.RecordHistoryAsync(post.Id);
+                if (result.Result != null)
+                {
+                    await new List<SelectPostDTO> { result.Result }.HydrateHistoryCountsAsync(_context);
+                }
             }
             catch (Exception ex)
             {
@@ -239,6 +243,10 @@ namespace platform_core_service.Business.Services
                 }
 
                 await _postHistoryService.RecordHistoryAsync(post.Id);
+                if (result.Result != null)
+                {
+                    await new List<SelectPostDTO> { result.Result }.HydrateHistoryCountsAsync(_context);
+                }
             }
             catch (Exception ex)
             {
@@ -287,6 +295,7 @@ namespace platform_core_service.Business.Services
                 await SetCurrentUserVoteAsync(returnResult.Result);
                 await SetCurrentUserSavedAsync(returnResult.Result);
                 await SetCommentCountForListAsync(new List<SelectPostDTO> { returnResult.Result });
+                await new List<SelectPostDTO> { returnResult.Result }.HydrateHistoryCountsAsync(_context);
             }
             catch (Exception ex)
             {
@@ -325,6 +334,7 @@ namespace platform_core_service.Business.Services
                 await SetCurrentUserVoteAsync(returnResult.Result);
                 await SetCurrentUserSavedAsync(returnResult.Result);
                 await SetCommentCountForListAsync(new List<SelectPostDTO> { returnResult.Result });
+                await new List<SelectPostDTO> { returnResult.Result }.HydrateHistoryCountsAsync(_context);
             }
             catch (Exception ex)
             {
@@ -360,6 +370,7 @@ namespace platform_core_service.Business.Services
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
                     await SetCurrentUserSavedForListAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
+                    await result.Result.Data.HydrateHistoryCountsAsync(_context);
                 }
             }
             catch (Exception ex)
@@ -404,6 +415,7 @@ namespace platform_core_service.Business.Services
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
                     await SetCurrentUserSavedForListAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
+                    await result.Result.Data.HydrateHistoryCountsAsync(_context);
                 }
 
             }
@@ -452,6 +464,7 @@ namespace platform_core_service.Business.Services
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
                     await SetCurrentUserSavedForListAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
+                    await result.Result.Data.HydrateHistoryCountsAsync(_context);
                 }
             }
             catch (Exception ex)
@@ -497,6 +510,7 @@ namespace platform_core_service.Business.Services
                     await SetCurrentUserVotesForListAsync(result.Result.Data.ToList());
                     await SetCurrentUserSavedForListAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
+                    await result.Result.Data.HydrateHistoryCountsAsync(_context);
                 }
 
             }
@@ -554,6 +568,7 @@ namespace platform_core_service.Business.Services
                 await SetCurrentUserVoteAsync(result.Result);
                 await SetCurrentUserSavedAsync(result.Result);
                 await SetCommentCountForListAsync(new List<SelectPostDTO> { result.Result });
+                await new List<SelectPostDTO> { result.Result }.HydrateHistoryCountsAsync(_context);
             }
             catch (Exception ex)
             {
@@ -604,6 +619,7 @@ namespace platform_core_service.Business.Services
                 await SetCurrentUserVoteAsync(result.Result);
                 await SetCurrentUserSavedAsync(result.Result);
                 await SetCommentCountForListAsync(new List<SelectPostDTO> { result.Result });
+                await new List<SelectPostDTO> { result.Result }.HydrateHistoryCountsAsync(_context);
             }
             catch (Exception ex)
             {
@@ -642,6 +658,7 @@ namespace platform_core_service.Business.Services
                 {
                     await HydrateSharedPostsAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
+                    await result.Result.Data.HydrateHistoryCountsAsync(_context);
                 }
             }
             catch (Exception ex)
@@ -683,6 +700,7 @@ namespace platform_core_service.Business.Services
                 {
                     await HydrateSharedPostsAsync(result.Result.Data.ToList());
                     await SetCommentCountForListAsync(result.Result.Data.ToList());
+                    await result.Result.Data.HydrateHistoryCountsAsync(_context);
                 }
             }
             catch (Exception ex)
@@ -818,6 +836,7 @@ namespace platform_core_service.Business.Services
                 await SetCurrentUserSavedAsync(result.Result);
                 await SetCommentCountForListAsync(new List<SelectPostDTO> { result.Result });
                 await _postHistoryService.RecordHistoryAsync(post.Id);
+                await new List<SelectPostDTO> { result.Result }.HydrateHistoryCountsAsync(_context);
             }
             catch (Exception ex)
             {
