@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { ArrowBigUp, ArrowBigDown, MoreHorizontal, Flag, UserPlus, Edit, Trash, CheckCircle, Check, History } from 'lucide-react';
+import { ArrowBigUp, ArrowBigDown, MoreHorizontal, Flag, Edit, Trash, CheckCircle, Check, History } from 'lucide-react';
 import { UserAvatar } from '@/components/shared/user-avatar';
 import { MarkdownViewer } from '../editor/markdown-viewer';
 import { MarkdownEditor, MarkdownEditorHandle } from '../editor/markdown-editor';
@@ -312,11 +312,7 @@ export function BaseReplyItem({
                             <DropdownMenuContent align="end" className="w-42 bg-card border rounded-xl shadow-elevated p-1 z-10">
                                 {!isAuthor && (
                                     <>
-                                        <DropdownMenuItem className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium">
-                                            <UserPlus className="w-4 h-4" />
-                                            <span>Follow User</span>
-                                        </DropdownMenuItem>
-                        <DropdownMenuItem
+                                        <DropdownMenuItem
                                             onSelect={() => setIsReportOpen(true)}
                                             variant='destructive'
                                             className="w-full flex items-center gap-2 p-2.5 text-sm text-destructive cursor-pointer rounded-lg transition-colors font-medium"

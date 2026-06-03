@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MoreHorizontal, Edit, Trash, UserPlus, Flag, EyeOff } from "lucide-react";
+import { MoreHorizontal, Edit, Trash, Flag, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSubmitRecommendationFeedback } from "@/hooks/recommendation-hooks/use-submit-recommendation-feedback";
 import {
@@ -133,10 +133,6 @@ export function CommunityPostActionsDropdown({
                         </DropdownMenuItem>
                     ) : (
                         <>
-                            <DropdownMenuItem className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium">
-                                <UserPlus className="w-4 h-4" />
-                                <span>Follow User</span>
-                            </DropdownMenuItem>
                             <DropdownMenuItem
                                 onSelect={() => setReportDialogOpen(true)}
                                 variant="destructive"
