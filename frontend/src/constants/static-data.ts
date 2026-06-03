@@ -1,214 +1,279 @@
 import {
-    Target,
-    Heart,
-    Rocket,
-    Sparkles,
-    Users,
-    BookOpen,
+    Bell,
+    Bookmark,
+    Bot,
     Code2,
-    Zap,
+    Flag,
+    GitBranch,
+    HeartHandshake,
+    HelpCircle,
+    MessageSquare,
+    MessagesSquare,
+    Network,
     Shield,
+    Sparkles,
+    Tags,
+    Users,
 } from 'lucide-react'
 import type { ColorType } from '@/types/color-type'
 
-// FAQ Categories for FAQ page
 export const faqCategories = [
-    // ... Giữ nguyên mảng data faqCategories của bạn ...
     {
         name: 'Getting Started',
         questions: [
             {
                 question: 'What is DevNexus?',
-                answer: 'DevNexus is an AI-enhanced social learning network designed specifically for software engineers. We combine community-driven learning with AI-powered personalization to help you grow your skills faster and more effectively.',
+                answer: 'DevNexus is a social network for developers. It brings posts, technical questions, communities, profiles, messaging, notifications, and AI-assisted coding support into one focused platform.',
+            },
+            {
+                question: 'Who is DevNexus built for?',
+                answer: 'DevNexus is built for programmers who want a dedicated place to discuss code, ask technical questions, follow other developers, join communities, and save useful knowledge for later.',
             },
             {
                 question: 'How do I create an account?',
-                answer: 'Creating an account is simple and free. Click the "Get Started" button on our homepage, enter your email address, and follow the verification steps. You can also sign up using your GitHub or Google account for faster onboarding.',
-            },
-            {
-                question: 'Is DevNexus free to use?',
-                answer: 'Yes! DevNexus offers a generous free tier that includes access to community discussions, basic learning paths, and limited AI features. Premium plans unlock advanced AI recommendations, exclusive content, and priority support.',
-            },
-            {
-                question: 'What technologies can I learn on DevNexus?',
-                answer: 'DevNexus covers a wide range of technologies including React, TypeScript, Next.js, Node.js, Python, Go, Rust, PostgreSQL, GraphQL, Docker, Kubernetes, and cloud platforms like AWS, GCP, and Azure. New topics are added regularly based on community demand.',
+                answer: 'Create an account from the register page with your email, Google account, or GitHub account. After signing in, you can update your profile and start joining developer conversations.',
             },
         ],
     },
     {
-        name: 'AI Features',
+        name: 'Posts and Q&A',
         questions: [
             {
-                question: 'How does AI-powered learning work?',
-                answer: 'Our AI analyzes your learning patterns, skill level, and goals to create personalized learning paths. It recommends content, identifies knowledge gaps, and adapts to your progress in real-time. The AI also provides instant explanations and code examples tailored to your current understanding.',
+                question: 'What can I post on DevNexus?',
+                answer: 'You can share development updates, code snippets, technical notes, project ideas, and discussions that are useful to other developers.',
             },
             {
-                question: 'What makes the AI recommendations special?',
-                answer: 'Unlike generic recommendations, our AI considers your coding style, preferred learning format, available time, and career goals. It learns from thousands of successful learning journeys to suggest the most effective path for you specifically.',
+                question: 'How are questions different from regular posts?',
+                answer: 'Questions are designed for technical problem solving. They support answers, comments, voting, and accepted answers so useful solutions are easier to find.',
             },
             {
-                question: 'Can I turn off AI features?',
-                answer: 'Absolutely. While AI enhances the learning experience, you can disable AI recommendations at any time from your account settings. You will still have full access to all community content and manual learning paths.',
+                question: 'Can I save useful content?',
+                answer: 'Yes. DevNexus includes saved content and bookmark workflows so you can come back to helpful posts, questions, and answers later.',
             },
         ],
     },
     {
-        name: 'Community & Learning',
+        name: 'Communities',
         questions: [
             {
-                question: 'How can I connect with other engineers?',
-                answer: 'DevNexus offers multiple ways to connect: join topic-specific discussion groups, participate in code reviews, collaborate on projects, attend virtual study sessions, and engage in our active Discord community. You can also follow engineers whose work inspires you.',
+                question: 'What are communities used for?',
+                answer: 'Communities group conversations around a topic, stack, project area, or interest. Members can share posts, ask questions, and follow discussions in a more focused space.',
             },
             {
-                question: 'Are there mentorship opportunities?',
-                answer: 'Yes! Our mentorship program pairs learners with experienced engineers. Mentors provide guidance, code reviews, and career advice. You can apply to become a mentee or, as you grow, give back by becoming a mentor yourself.',
+                question: 'Can communities moderate content?',
+                answer: 'Yes. Communities can use moderator workflows for pending content, reports, bans, mutes, and member management so each space can stay useful and focused.',
             },
             {
-                question: 'How do verified skill badges work?',
-                answer: 'Skill badges are earned by completing assessments that test practical knowledge. Unlike participation certificates, our badges verify actual competency through coding challenges and peer reviews. They are recognized by employers in our partner network.',
+                question: 'Can I report harmful or off-topic content?',
+                answer: 'Yes. Reporting workflows help moderators and administrators review posts, questions, answers, comments, and community content.',
             },
         ],
     },
     {
-        name: 'Account & Billing',
+        name: 'AI Assistance',
         questions: [
             {
-                question: 'How do I upgrade to a premium plan?',
-                answer: 'Visit your account settings and select "Upgrade Plan" to view available options. We offer monthly and annual billing, with significant savings on annual plans. All premium plans include a 14-day free trial.',
+                question: 'What does AI help with?',
+                answer: 'AI features support developer workflows such as explaining code, generating code diagrams, assisting with content metadata, drafting first responses for approved questions, and supporting moderation decisions.',
             },
             {
-                question: 'Can I cancel my subscription anytime?',
-                answer: 'Yes, you can cancel your subscription at any time from your account settings. You will retain access to premium features until the end of your current billing period. No refunds are provided for partial months.',
+                question: 'Does AI replace community answers?',
+                answer: 'No. DevNexus is social-first. AI can help unblock a discussion or explain technical context, but community posts, answers, comments, and moderation remain central.',
             },
             {
-                question: 'Do you offer team or enterprise plans?',
-                answer: 'We offer special pricing for teams of 5 or more, and custom enterprise solutions for larger organizations. Enterprise plans include advanced analytics, SSO integration, and dedicated support. Contact our sales team for details.',
+                question: 'What should I use AI answers for?',
+                answer: 'Use AI-generated context as a starting point, then rely on developer answers, comments, votes, and accepted solutions to validate what works for your case.',
+            },
+        ],
+    },
+    {
+        name: 'Messaging and Notifications',
+        questions: [
+            {
+                question: 'Can I message other developers?',
+                answer: 'Yes. DevNexus includes direct and group chat workflows with media, read receipts, typing indicators, edit history, and chat settings.',
+            },
+            {
+                question: 'How do notifications work?',
+                answer: 'Realtime notifications keep you updated when people interact with your posts, questions, answers, comments, follows, messages, or community workflows.',
+            },
+        ],
+    },
+    {
+        name: 'Privacy and Safety',
+        questions: [
+            {
+                question: 'Can I control who interacts with me?',
+                answer: 'DevNexus includes follow, block, and privacy-oriented settings so users can shape their social experience.',
+            },
+            {
+                question: 'How does DevNexus keep communities healthy?',
+                answer: 'The platform combines reporting, moderator tools, admin review, community bans and mutes, notification controls, and AI-supported moderation to reduce low-quality or harmful content.',
             },
         ],
     },
 ]
 
-// Values for About page
 export const values = [
     {
-        icon: Target,
-        title: 'Mission-Driven',
-        description:
-            'We believe every engineer deserves access to world-class learning resources and mentorship.',
-    },
-    {
-        icon: Heart,
+        icon: Users,
         title: 'Community First',
         description:
-            'Our platform thrives because of our passionate community of learners and mentors.',
-    },
-    {
-        icon: Rocket,
-        title: 'Innovation',
-        description:
-            'We continuously push boundaries with AI to create better learning experiences.',
-    },
-]
-
-// Team members for About page
-export const team = [
-    {
-        name: 'Sarah Chen',
-        role: 'CEO & Co-Founder',
-        bio: 'Former Google engineer with a passion for education.',
-        avatar: 'SC',
-    },
-    {
-        name: 'Marcus Johnson',
-        role: 'CTO & Co-Founder',
-        bio: 'Ex-Meta AI researcher, building the future of learning.',
-        avatar: 'MJ',
-    },
-    {
-        name: 'Emily Rodriguez',
-        role: 'Head of Product',
-        bio: '10+ years in edtech, obsessed with user experience.',
-        avatar: 'ER',
-    },
-    {
-        name: 'David Kim',
-        role: 'Head of Engineering',
-        bio: 'Open source contributor and systems architect.',
-        avatar: 'DK',
-    },
-]
-
-// Milestones for About page
-export const milestones = [
-    { year: '2022', event: 'DevNexus founded in San Francisco' },
-    { year: '2023', event: 'Launched AI-powered learning paths' },
-    { year: '2024', event: 'Reached 50,000 active engineers' },
-    { year: '2025', event: 'Expanded to 100+ countries worldwide' },
-]
-
-// Features for Home page
-export const features = [
-    {
-        icon: Sparkles,
-        title: 'AI-Powered Learning',
-        description:
-            'Get personalized recommendations and AI-generated explanations tailored to your learning style.',
-        isAI: true,
-    },
-    {
-        icon: Users,
-        title: 'Community Driven',
-        description:
-            'Connect with engineers worldwide. Share knowledge, ask questions, and grow together.',
-        isAI: false,
-    },
-    {
-        icon: BookOpen,
-        title: 'Curated Content',
-        description:
-            'Access thousands of tutorials, articles, and code examples vetted by industry experts.',
-        isAI: false,
+            'DevNexus is built around developer conversations: posts, questions, answers, comments, and communities.',
     },
     {
         icon: Code2,
-        title: 'Hands-on Practice',
+        title: 'Practical Knowledge',
         description:
-            'Build real projects with interactive coding environments and instant feedback.',
+            'The platform is designed for real programming problems, code snippets, implementation details, and technical discussion.',
+    },
+    {
+        icon: Shield,
+        title: 'Trust and Safety',
+        description:
+            'Reports, moderation queues, bans, mutes, blocks, and admin workflows help keep developer spaces focused.',
+    },
+    {
+        icon: Sparkles,
+        title: 'AI as Assistance',
+        description:
+            'AI supports code understanding and moderation without replacing the developer community.',
+    },
+]
+
+export const platformAreas = [
+    {
+        icon: Network,
+        title: 'Developer Feed',
+        description:
+            'Share updates, ideas, code notes, and technical discussions in a feed built for programmers.',
+    },
+    {
+        icon: HelpCircle,
+        title: 'Q&A Threads',
+        description:
+            'Ask focused questions, collect answers, vote on helpful responses, and keep solutions discoverable.',
+    },
+    {
+        icon: MessagesSquare,
+        title: 'Communities',
+        description:
+            'Join topic-based spaces with member workflows, pending content, and moderator controls.',
+    },
+    {
+        icon: Bell,
+        title: 'Realtime Connection',
+        description:
+            'Stay in sync with notifications, direct chats, group messages, typing indicators, and read receipts.',
+    },
+    {
+        icon: Bookmark,
+        title: 'Saved Knowledge',
+        description:
+            'Bookmark useful posts, questions, and answers so important developer knowledge is easy to revisit.',
+    },
+    {
+        icon: Flag,
+        title: 'Moderation Tools',
+        description:
+            'Review reports, resolve community issues, and support healthier technical discussion spaces.',
+    },
+]
+
+export const features = [
+    {
+        icon: Network,
+        title: 'Developer Feed',
+        description:
+            'Post technical updates, share code snippets, discuss implementation choices, and follow developers whose work you care about.',
         isAI: false,
     },
     {
-        icon: Zap,
-        title: 'Fast Track Progress',
+        icon: HelpCircle,
+        title: 'Q&A for Code Problems',
         description:
-            'AI analyzes your skills and creates the optimal learning path to reach your goals faster.',
+            'Ask focused technical questions, collect answers, vote on useful responses, and mark accepted solutions.',
+        isAI: false,
+    },
+    {
+        icon: MessagesSquare,
+        title: 'Focused Communities',
+        description:
+            'Create and join communities around stacks, project topics, and developer interests with built-in moderation workflows.',
+        isAI: false,
+    },
+    {
+        icon: MessageSquare,
+        title: 'Realtime Messaging',
+        description:
+            'Move from public discussion to direct or group chats with message history, media, read state, and typing indicators.',
+        isAI: false,
+    },
+    {
+        icon: Bot,
+        title: 'AI Code Assistance',
+        description:
+            'Use AI support for code explanations, code diagrams, content assistance, and first responses on approved questions.',
         isAI: true,
     },
     {
         icon: Shield,
-        title: 'Verified Skills',
+        title: 'Safety and Moderation',
         description:
-            'Earn credentials that employers trust. Showcase your expertise with verified badges.',
-        isAI: false,
+            'Reports, blocks, community bans, mutes, admin review, and AI-supported moderation help keep conversations useful.',
+        isAI: true,
     },
 ]
 
-// Tech stacks for Home page
 export const techStacks = [
     { name: 'React', color: 'indigo' },
     { name: 'TypeScript', color: 'indigo' },
     { name: 'Next.js', color: 'indigo' },
+    { name: '.NET', color: 'emerald' },
     { name: 'Node.js', color: 'emerald' },
     { name: 'Python', color: 'amber' },
-    { name: 'Go', color: 'indigo' },
-    { name: 'Rust', color: 'amber' },
     { name: 'PostgreSQL', color: 'indigo' },
-    { name: 'GraphQL', color: 'emerald' },
     { name: 'Docker', color: 'indigo' },
-    { name: 'Kubernetes', color: 'indigo' },
-    { name: 'AWS', color: 'amber' },
+    { name: 'RabbitMQ', color: 'amber' },
+    { name: 'AI Tools', color: 'emerald' },
 ]
 
-// Color classes for tech, skill tag
+export const productStats = [
+    {
+        label: 'Posts',
+        description: 'Share developer updates',
+    },
+    {
+        label: 'Q&A',
+        description: 'Solve technical problems',
+    },
+    {
+        label: 'Communities',
+        description: 'Build focused spaces',
+    },
+]
+
+export const developerWorkflows = [
+    {
+        icon: Tags,
+        title: 'Organize technical context',
+        description:
+            'Tags, communities, and saved content make useful discussions easier to find again.',
+    },
+    {
+        icon: GitBranch,
+        title: 'Move from question to solution',
+        description:
+            'Questions, answers, comments, votes, and accepted answers keep problem solving structured.',
+    },
+    {
+        icon: HeartHandshake,
+        title: 'Stay connected to people',
+        description:
+            'Profiles, follows, messaging, and notifications keep collaboration close to the work.',
+    },
+]
+
 export const colorClasses: Record<ColorType, string> = {
     indigo:
         'dark:bg-indigo-500/10 bg-indigo-50 dark:text-indigo-300 text-indigo-700 dark:border-indigo-500/30 border-indigo-200',
