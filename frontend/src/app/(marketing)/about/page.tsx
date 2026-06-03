@@ -1,20 +1,14 @@
 import { Metadata } from 'next'
-import Link from 'next/link'
 import { Navbar } from '@/components/navbar'
 import { Footer } from '@/components/footer'
-import {
-    Sparkles,
-    Users,
-    Github,
-    Twitter,
-    Linkedin,
-} from 'lucide-react'
-import { values, team, milestones } from '@/constants/static-data'
+import { Network, Sparkles } from 'lucide-react'
+import { developerWorkflows, platformAreas, values } from '@/constants/static-data'
+import { MarketingAuthActions } from '@/components/marketing/marketing-auth-actions'
 
 export const metadata: Metadata = {
-    title: 'About Us',
+    title: 'About DevNexus',
     description:
-        'Learn about DevNexus - our mission to empower software engineers with AI-enhanced learning.',
+        'Learn how DevNexus brings developer posts, Q&A, communities, messaging, moderation, and AI-assisted coding support into one social network.',
 }
 
 export default function AboutPage() {
@@ -22,71 +16,62 @@ export default function AboutPage() {
         <div className="min-h-screen flex flex-col bg-page">
             <Navbar />
             <main className="flex-1">
-                {/* Hero Section */}
                 <section className="relative bg-page py-20 lg:py-28">
                     <div className="absolute inset-0 dark:bg-linear-to-b dark:from-indigo-500/5 dark:via-transparent dark:to-transparent bg-linear-to-b from-indigo-500/5 via-transparent to-transparent" />
 
                     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center max-w-3xl mx-auto">
-                            <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-6 rounded-full dark:bg-slate-800/80 bg-white border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)]">
-                                <Sparkles className="h-4 w-4 dark:text-emerald-400 text-emerald-600" />
-                                <span className="text-xs font-medium bg-linear-to-r from-emerald-400 to-cyan-500 bg-clip-text text-transparent">
-                                    Our Story
+                            <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-6 rounded-full bg-card border border-ai shadow-ai-md">
+                                <Sparkles className="h-4 w-4 text-emerald-500" />
+                                <span className="text-xs font-medium text-ai-gradient">
+                                    About DevNexus
                                 </span>
                             </div>
 
-                            <h1 className="text-4xl sm:text-5xl font-bold text-foreground leading-tight mb-6 text-balance">
-                                Building the Future of{' '}
-                                <span className="bg-linear-to-r from-indigo-400 to-indigo-600 bg-clip-text text-transparent">
-                                    Developer Education
-                                </span>
+                            <h1 className="text-4xl sm:text-5xl font-bold text-heading leading-tight mb-6 text-balance">
+                                Built for developer conversations
                             </h1>
 
-                            <p className="text-lg dark:text-slate-300 text-slate-700 leading-relaxed text-pretty">
-                                DevNexus was born from a simple idea: learning to code should be
-                                collaborative, personalized, and accessible to everyone. We are
-                                building the social learning network that we wished existed when
-                                we were starting our careers.
+                            <p className="text-lg text-body leading-relaxed text-pretty">
+                                Developer knowledge is scattered across feeds, Q&A threads,
+                                chats, bookmarks, and community spaces. DevNexus brings those
+                                workflows together in one network for programmers.
                             </p>
                         </div>
                     </div>
                 </section>
 
-                {/* Mission Section */}
-                <section className="dark:bg-slate-900/50 bg-white py-20 lg:py-24">
+                <section className="bg-card py-20 lg:py-24">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
                             <div>
                                 <p className="text-xs uppercase tracking-wider font-medium text-primary mb-3">
-                                    Our Mission
+                                    Mission
                                 </p>
-                                <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-6 text-balance">
-                                    Empowering Engineers to Reach Their Full Potential
+                                <h2 className="text-3xl sm:text-4xl font-bold text-heading mb-6 text-balance">
+                                    Give programmers a focused place to exchange practical knowledge
                                 </h2>
-                                <p className="text-base dark:text-slate-300 text-slate-700 leading-relaxed mb-6">
-                                    We believe that the best way to learn is by doing, together.
-                                    DevNexus combines the power of AI with community-driven
-                                    learning to create personalized experiences that adapt to each
-                                    engineer&apos;s unique journey.
+                                <p className="text-base text-body leading-relaxed mb-6">
+                                    DevNexus is designed around the way developers already work:
+                                    sharing implementation notes, asking focused questions,
+                                    joining topic-based spaces, following useful people, and
+                                    keeping important answers within reach.
                                 </p>
                                 <p className="text-base text-muted-foreground leading-relaxed">
-                                    Whether you&apos;re a beginner writing your first line of code
-                                    or a senior engineer exploring new technologies, DevNexus is
-                                    your home for continuous growth.
+                                    AI is part of that workflow when it helps explain code,
+                                    draft useful context, generate diagrams, or support moderation.
+                                    The network remains centered on developers and their discussions.
                                 </p>
                             </div>
 
                             <div className="grid gap-4">
                                 {values.map((value) => (
-                                    <div
-                                        key={value.title}
-                                        className="flex gap-4 p-5 rounded-xl bg-card border dark:hover:border-slate-700 hover:border-gray-300 transition-colors"
-                                    >
-                                        <div className="shrink-0 w-10 h-10 rounded-lg dark:bg-indigo-500/10 bg-indigo-50 flex items-center justify-center">
+                                    <div key={value.title} className="card p-5 flex gap-4">
+                                        <div className="shrink-0 w-10 h-10 rounded-lg bg-accent flex items-center justify-center">
                                             <value.icon className="h-5 w-5 text-primary" />
                                         </div>
                                         <div>
-                                            <h3 className="font-semibold text-foreground mb-1">
+                                            <h3 className="font-semibold text-heading mb-1">
                                                 {value.title}
                                             </h3>
                                             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -100,137 +85,73 @@ export default function AboutPage() {
                     </div>
                 </section>
 
-                {/* Timeline Section */}
                 <section className="bg-page py-20 lg:py-24">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center max-w-2xl mx-auto mb-12">
                             <p className="text-xs uppercase tracking-wider font-medium text-primary mb-3">
-                                Our Journey
+                                Product Areas
                             </p>
-                            <h2 className="text-3xl sm:text-4xl font-bold text-foreground text-balance">
-                                Milestones Along the Way
-                            </h2>
-                        </div>
-
-                        <div className="max-w-2xl mx-auto">
-                            <div className="relative">
-                                <div className="absolute left-4 top-0 bottom-0 w-px bg-border" />
-
-                                <div className="space-y-8">
-                                    {milestones.map((milestone, index) => (
-                                        <div key={index} className="relative flex gap-6 pl-12">
-                                            <div className="absolute left-2 w-5 h-5 rounded-full bg-primary border-4" />
-                                            <div className="flex-1 pb-8">
-                                                <span className="font-mono text-sm text-primary font-medium">
-                                                    {milestone.year}
-                                                </span>
-                                                <p className="dark:text-slate-300 text-slate-700 mt-1">
-                                                    {milestone.event}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Team Section */}
-                <section className="dark:bg-slate-900/50 bg-white py-20 lg:py-24">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="text-center max-w-2xl mx-auto mb-12">
-                            <p className="text-xs uppercase tracking-wider font-medium text-primary mb-3">
-                                Our Team
-                            </p>
-                            <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-balance">
-                                Meet the People Behind DevNexus
+                            <h2 className="text-3xl sm:text-4xl font-bold text-heading mb-4 text-balance">
+                                One platform for the social side of software development
                             </h2>
                             <p className="text-base text-muted-foreground">
-                                A passionate team of engineers, designers, and educators working
-                                to transform how developers learn.
+                                DevNexus connects the places where developer knowledge is created,
+                                discussed, moderated, and saved.
                             </p>
                         </div>
 
-                        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {team.map((member) => (
-                                <div
-                                    key={member.name}
-                                    className="p-6 rounded-xl bg-card border dark:hover:border-slate-700 hover:border-gray-300 transition-colors text-center"
-                                >
-                                    <div className="w-16 h-16 mx-auto rounded-full dark:bg-indigo-500/10 bg-indigo-50 flex items-center justify-center mb-4">
-                                        <span className="font-mono text-lg font-semibold text-primary">
-                                            {member.avatar}
-                                        </span>
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {platformAreas.map((area) => (
+                                <div key={area.title} className="card p-6">
+                                    <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-accent mb-4">
+                                        <area.icon className="h-5 w-5 text-primary" />
                                     </div>
-
-                                    <h3 className="font-semibold text-foreground mb-1">
-                                        {member.name}
+                                    <h3 className="text-lg font-semibold text-heading mb-2">
+                                        {area.title}
                                     </h3>
-                                    <p className="text-sm text-primary mb-3">
-                                        {member.role}
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                        {area.description}
                                     </p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {member.bio}
-                                    </p>
-
-                                    <div className="flex items-center justify-center gap-3 mt-4">
-                                        <a
-                                            href="#"
-                                            className="text-muted-foreground hover:text-primary"
-                                        >
-                                            <Twitter className="h-4 w-4" />
-                                        </a>
-                                        <a
-                                            href="#"
-                                            className="text-muted-foreground hover:text-primary"
-                                        >
-                                            <Linkedin className="h-4 w-4" />
-                                        </a>
-                                        <a
-                                            href="#"
-                                            className="text-muted-foreground hover:text-primary"
-                                        >
-                                            <Github className="h-4 w-4" />
-                                        </a>
-                                    </div>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </section>
 
-                {/* Join Section */}
+                <section className="bg-card py-20 lg:py-24">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="grid lg:grid-cols-3 gap-6">
+                            {developerWorkflows.map((workflow) => (
+                                <div key={workflow.title} className="card p-6">
+                                    <workflow.icon className="h-6 w-6 text-primary mb-4" />
+                                    <h3 className="font-semibold text-heading mb-2">
+                                        {workflow.title}
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                        {workflow.description}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
                 <section className="bg-page py-20 lg:py-24">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center max-w-2xl mx-auto">
-                            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-linear-to-br from-indigo-500 to-indigo-600 mb-6">
-                                <Users className="h-7 w-7 text-white" />
+                            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-card border border-ai shadow-ai-md mb-6">
+                                <Network className="h-7 w-7 text-primary" />
                             </div>
 
-                            <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-balance">
-                                Join Our Growing Community
+                            <h2 className="text-3xl sm:text-4xl font-bold text-heading mb-4 text-balance">
+                                Join the developer network
                             </h2>
                             <p className="text-base text-muted-foreground mb-8">
-                                Be part of the movement to make engineering education more
-                                accessible and effective for everyone.
+                                Share posts, ask questions, join communities, and stay connected
+                                to the technical conversations that matter to your work.
                             </p>
 
-                            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                                <Link
-                                    href="/register"
-                                    className="btn-primary text-white"
-                                >
-                                    <Sparkles className="h-4 w-4" />
-                                    Get Started
-                                </Link>
-                                <a
-                                    href="#"
-                                    className="btn-ghost"
-                                >
-                                    View Open Positions
-                                </a>
-                            </div>
+                            <MarketingAuthActions showRegisterIcon />
                         </div>
                     </div>
                 </section>

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useTheme } from 'next-themes'
-import { Hexagon, Menu, Sun, Moon, Sparkles, LogOut, User, Loader2 } from 'lucide-react'
+import { Hexagon, Menu, Sun, Moon, Sparkles, LogOut, User, Loader2, Rss } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
@@ -75,6 +75,13 @@ export function Navbar() {
 
                         {isAuthenticated ? (
                             <div className="flex items-center gap-4 border-l">
+                                <Button asChild className="btn-primary gap-2">
+                                    <Link href="/feed">
+                                        <Rss className="h-4 w-4" />
+                                        Feed
+                                    </Link>
+                                </Button>
+
                                 {/* Giao diện User Name */}
                                 <div className="flex items-center cursor-pointer">
                                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -188,6 +195,15 @@ export function Navbar() {
                                     <div className="flex flex-col gap-3">
                                         {isAuthenticated ? (
                                             <>
+                                                <SheetClose asChild>
+                                                    <Button asChild className="w-full btn-primary justify-center gap-2 py-6">
+                                                        <Link href="/feed">
+                                                            <Rss className="h-5 w-5" />
+                                                            Go to Feed
+                                                        </Link>
+                                                    </Button>
+                                                </SheetClose>
+
                                                 {/* Giao diện tên user ở Mobile */}
                                                 <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl mb-2">
                                                     <div className="h-10 w-10 rounded-full bg-primary/20 flex shrink-0 items-center justify-center">

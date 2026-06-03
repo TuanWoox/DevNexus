@@ -45,6 +45,7 @@ export function CommunityHeader({ community, activeTab }: CommunityHeaderProps) 
     const blockCommunityMutation = useBlockCommunity({ invalidationRefetchType: "none" });
 
     const role = community?.currentUserRole;
+    const isOwner = role === "OWNER";
     const hasManageAccess = role === "OWNER" || role === "MODERATOR";
     const canBlockCommunity = role !== "OWNER" && role !== "MODERATOR";
 
@@ -97,7 +98,7 @@ export function CommunityHeader({ community, activeTab }: CommunityHeaderProps) 
             {/* Cover Photo */}
             <div
                 className={`relative h-48 md:h-64 w-full bg-linear-to-r from-primary/20 to-primary/5 transition-opacity ${hasManageAccess ? 'group cursor-pointer' : ''}`}
-                onClick={() => { if (hasManageAccess) setIsUploadModalOpen(true) }}
+                onClick={() => { if (isOwner) setIsUploadModalOpen(true) }}
             >
                 {community.communityCoverPhotoUrl ? (
                     <Image
@@ -105,14 +106,14 @@ export function CommunityHeader({ community, activeTab }: CommunityHeaderProps) 
                         alt={community.name}
                         fill
                         unoptimized
-                        className={`object-cover ${hasManageAccess ? 'transition-opacity group-hover:opacity-80' : ''}`}
+                        className={`object-cover ${isOwner ? 'transition-opacity group-hover:opacity-80' : ''}`}
                     />
                 ) : (
                     <div className="absolute inset-0 flex items-center justify-center opacity-20">
                         <Users className="w-24 h-24 text-primary" />
                     </div>
                 )}
-                {hasManageAccess && (
+                {isOwner && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="flex flex-col items-center text-white">
                             <ImageIcon className="w-10 h-10 mb-2" />
