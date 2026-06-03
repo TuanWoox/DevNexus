@@ -7,17 +7,23 @@ import { ReturnResult } from "@/types/common/return-result";
 
 export const bookmarkedItemService = {
     createBookmarkedItem: async (payload: CreateBookmarkedItemDTO): Promise<SelectBookmarkedItemDTO> => {
-        const { data } = await api.post<ReturnResult<SelectBookmarkedItemDTO>>('/BookmarkedItems', payload);
+        const { data } = await api.post<ReturnResult<SelectBookmarkedItemDTO>>('/BookMarkedItems', payload);
+        if (!data.result) {
+            throw new Error(data.message || "Unable to save item.");
+        }
         return data.result;
     },
 
     getItemByBookmarkId: async (bookmarkId: string, payload: Page<string>): Promise<PagedData<SelectBookmarkedItemDTO, string>> => {
-        const { data } = await api.post<ReturnResult<PagedData<SelectBookmarkedItemDTO, string>>>(`/BookmarkedItems/paging?bookMarkId=${bookmarkId}`, payload);
+        const { data } = await api.post<ReturnResult<PagedData<SelectBookmarkedItemDTO, string>>>(`/BookMarkedItems/paging?bookMarkId=${bookmarkId}`, payload);
         return data.result;
     },
 
     deleteById: async (bookmarkedItemId: string): Promise<boolean> => {
-        const { data } = await api.delete<ReturnResult<boolean>>(`/BookmarkedItems/${bookmarkedItemId}`);
+        const { data } = await api.delete<ReturnResult<boolean>>(`/BookMarkedItems/${bookmarkedItemId}`);
+        if (!data.result) {
+            throw new Error(data.message || "Unable to remove bookmarked item.");
+        }
         return data.result;
     },
 

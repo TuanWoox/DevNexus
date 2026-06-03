@@ -6,6 +6,7 @@ import { postQueryKeys } from "@/hooks/post-hooks/use-post-query-keys";
 import { qaPostQueryKeys } from "@/hooks/qa-post-hooks/use-qa-post-query-key";
 import { searchQueryKeys } from "@/hooks/search-hooks/use-global-search";
 import { bookmarkQueryKeys } from "@/hooks/bookmark-hooks/use-bookmark-query-keys";
+import { recommendationQueryKeys } from "@/hooks/recommendation-hooks/use-recommendation-query-keys";
 import { GlobalSearchResult } from "@/types/search/global-search-result";
 import { SelectPostDTO } from "@/types/post/select-post-dto";
 import { SelectQAPostDTO } from "@/types/qa-post/select-qa-post-dto";
@@ -27,12 +28,14 @@ const applyUnsaveToInfiniteList = <T extends SelectPostDTO | SelectQAPostDTO>(
     oldData: InfiniteData<PagedData<T, string>> | undefined,
     bookmarkedItemId: string
 ): InfiniteData<PagedData<T, string>> | undefined => {
-    if (!oldData) return oldData;
+    if (!oldData || !Array.isArray(oldData.pages)) return oldData;
     return {
         ...oldData,
         pages: oldData.pages.map((page) => ({
             ...page,
-            data: page.data.map((post) => unsavePost(post, bookmarkedItemId)),
+            data: Array.isArray(page.data)
+                ? page.data.map((post) => unsavePost(post, bookmarkedItemId))
+                : page.data,
         })),
     };
 };
@@ -75,12 +78,14 @@ export const useDeleteBookmarkedItemById = () => {
             await queryClient.cancelQueries({ queryKey: postQueryKeys.all });
             await queryClient.cancelQueries({ queryKey: qaPostQueryKeys.all });
             await queryClient.cancelQueries({ queryKey: searchQueryKeys.all });
+            await queryClient.cancelQueries({ queryKey: recommendationQueryKeys.all });
 
             // 2. Snapshot the previous values
             const previousPostLists = queryClient.getQueriesData<InfiniteData<PagedData<SelectPostDTO, string>>>({ queryKey: postQueryKeys.lists() });
             const previousQaPostLists = queryClient.getQueriesData<InfiniteData<PagedData<SelectQAPostDTO, string>>>({ queryKey: qaPostQueryKeys.lists() });
             const previousBookmarkedLists = queryClient.getQueriesData<InfiniteData<PagedData<SelectBookmarkedItemDTO, string>>>({ queryKey: bookmarkedItemQueryKeys.lists() });
             const previousSearchQueries = queryClient.getQueriesData<any>({ queryKey: searchQueryKeys.all });
+            const previousRecommendationQueries = queryClient.getQueriesData<InfiniteData<PagedData<SelectPostDTO | SelectQAPostDTO, string>>>({ queryKey: recommendationQueryKeys.all });
 
             // Snapshot detail queries
             const previousPostDetails = queryClient.getQueriesData<SelectPostDTO>({ queryKey: postQueryKeys.details() });
@@ -105,6 +110,9 @@ export const useDeleteBookmarkedItemById = () => {
             previousBookmarkedLists.forEach(([queryKey, oldData]) => {
                 queryClient.setQueryData(queryKey, applyDeletionToBookmarkedList(oldData, bookmarkedItemId));
             });
+            previousRecommendationQueries.forEach(([queryKey, oldData]) => {
+                queryClient.setQueryData(queryKey, applyUnsaveToInfiniteList(oldData, bookmarkedItemId));
+            });
 
             // Update Details
             previousPostDetails.forEach(([queryKey, oldData]) => {
@@ -124,7 +132,8 @@ export const useDeleteBookmarkedItemById = () => {
                 previousBookmarkedLists,
                 previousPostDetails,
                 previousQaPostDetails,
-                previousSearchQueries
+                previousSearchQueries,
+                previousRecommendationQueries
             };
         },
 
@@ -148,10 +157,15 @@ export const useDeleteBookmarkedItemById = () => {
             context?.previousSearchQueries.forEach(([queryKey, oldData]) => {
                 queryClient.setQueryData(queryKey, oldData);
             });
+            context?.previousRecommendationQueries.forEach(([queryKey, oldData]) => {
+                queryClient.setQueryData(queryKey, oldData);
+            });
+            toast.error(err instanceof Error ? err.message : "Unable to remove bookmarked item.");
         },
 
         onSuccess: (data) => {
             if (data) {
+                void queryClient.refetchQueries({ queryKey: bookmarkQueryKeys.lists(), type: "active" });
                 toast.success("Bookmark removed successfully!");
             }
         },

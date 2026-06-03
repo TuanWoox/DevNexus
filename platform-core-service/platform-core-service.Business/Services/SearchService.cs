@@ -8,6 +8,7 @@ using platform_core_service.Common.Models.DTOs.EntityDTO.QAPost;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Search;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Data;
 using PostEntity = platform_core_service.Common.Entities.DbEntities.Post;
 
@@ -160,7 +161,9 @@ namespace platform_core_service.Business.Services
             return _context.Posts
                 .OfType<QAPost>()
                 .AsNoTracking()
-                .ApplyQAPostVisibilityRules(_context, currentProfileId);
+                .ApplyQAPostVisibilityRules(_context, currentProfileId)
+                .Where(p => p.CommunityApprovalStatus == null ||
+                            p.CommunityApprovalStatus == CommunityApprovalStatus.Approved);
         }
 
         private IQueryable<Community> GetVisibleCommunities()
@@ -260,6 +263,8 @@ namespace platform_core_service.Business.Services
                 PostType = p.PostType,
                 ModerationStatus = p.ModerationStatus,
                 ModerationReason = p.ModerationReason,
+                CommunityApprovalStatus = p.CommunityApprovalStatus,
+                CommunityApprovalReason = p.CommunityApprovalReason,
                 AuthorId = p.AuthorId,
                 Author = new SelectPostAuthorDTO
                 {
@@ -304,6 +309,8 @@ namespace platform_core_service.Business.Services
                 PostType = p.PostType,
                 ModerationStatus = p.ModerationStatus,
                 ModerationReason = p.ModerationReason,
+                CommunityApprovalStatus = p.CommunityApprovalStatus,
+                CommunityApprovalReason = p.CommunityApprovalReason,
                 AuthorId = p.AuthorId,
                 Author = new SelectPostAuthorDTO
                 {
