@@ -16,21 +16,15 @@ namespace platform_core_service.Business.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IBackgroundJobClient _backgroundJobClient;
-        private readonly IPostHistoryService _postHistoryService;
-        private readonly IQAPostHistoryService _qaPostHistoryService;
         private readonly IQAPostFirstResponderTriggerService _firstResponderTriggerService;
 
         public ModerationService(
             ApplicationDbContext context,
             IBackgroundJobClient backgroundJobClient,
-            IPostHistoryService postHistoryService,
-            IQAPostHistoryService qaPostHistoryService,
             IQAPostFirstResponderTriggerService firstResponderTriggerService)
         {
             _context = context;
             _backgroundJobClient = backgroundJobClient;
-            _postHistoryService = postHistoryService;
-            _qaPostHistoryService = qaPostHistoryService;
             _firstResponderTriggerService = firstResponderTriggerService;
         }
 
@@ -122,7 +116,6 @@ namespace platform_core_service.Business.Services
                 DevNexusLogger.Instance.Debug(
                     $"[Moderation] Post {dto.PostId} → {post.ModerationStatus} (decision={dto.Decision})");
 
-                await RecordApprovedContentHistoryAsync(post);
                 await EnqueueModerationNotification(post);
 
                 if (post.ModerationStatus == ModerationStatus.Approved && post is QAPost)
@@ -138,22 +131,6 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while processing moderation callback: {ex.Message}";
             }
             return result;
-        }
-
-        private async Task RecordApprovedContentHistoryAsync(Post post)
-        {
-            if (post.ModerationStatus != ModerationStatus.Approved)
-            {
-                return;
-            }
-
-            if (post is QAPost)
-            {
-                await _qaPostHistoryService.RecordHistoryAsync(post.Id);
-                return;
-            }
-
-            await _postHistoryService.RecordHistoryAsync(post.Id);
         }
 
         private async Task EnqueueModerationNotification(Post post)

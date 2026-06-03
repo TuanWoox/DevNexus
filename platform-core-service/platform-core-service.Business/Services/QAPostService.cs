@@ -35,6 +35,7 @@ namespace platform_core_service.Business.Services
         private readonly IModerationService _moderationService;
         private readonly IContentMediaLinkService _contentMediaLinkService;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IQAPostHistoryService _qaPostHistoryService;
 
         public QAPostService(
             ApplicationDbContext dbContext,
@@ -45,7 +46,8 @@ namespace platform_core_service.Business.Services
             ISocialGuardService socialGuardService,
             IModerationService moderationService,
             IContentMediaLinkService contentMediaLinkService,
-            IBackgroundJobClient backgroundJobClient
+            IBackgroundJobClient backgroundJobClient,
+            IQAPostHistoryService qaPostHistoryService
             )
         {
             _dbContext = dbContext;
@@ -57,6 +59,7 @@ namespace platform_core_service.Business.Services
             _moderationService = moderationService;
             _contentMediaLinkService = contentMediaLinkService;
             _backgroundJobClient = backgroundJobClient;
+            _qaPostHistoryService = qaPostHistoryService;
         }
 
         public async Task<ReturnResult<SelectQAPostDTO>> CreateAsync(CreateQAPostDTO createDTO)
@@ -151,6 +154,7 @@ namespace platform_core_service.Business.Services
                         x => x.SubmitPostModerationAsync(qaPost.Id, qaPost.ModerationVersion, qaPost.ModerationContentHash));
                 }
 
+                await _qaPostHistoryService.RecordHistoryAsync(qaPost.Id);
             }
             catch (Exception ex)
             {
@@ -256,6 +260,8 @@ namespace platform_core_service.Business.Services
                     _backgroundJobClient.Enqueue<IModerationBackgroundJobs>(
                         x => x.SubmitPostModerationAsync(qaPost.Id, qaPost.ModerationVersion, qaPost.ModerationContentHash));
                 }
+
+                await _qaPostHistoryService.RecordHistoryAsync(qaPost.Id);
             }
             catch (Exception ex)
             {
@@ -754,6 +760,7 @@ namespace platform_core_service.Business.Services
                 await HydrateSharedPostsAsync(new List<SelectQAPostDTO> { result.Result });
                 await SetCurrentUserVoteAsync(result.Result);
                 await SetCurrentUserSavedAsync(result.Result);
+                await _qaPostHistoryService.RecordHistoryAsync(qaPost.Id);
 
             }
             catch (Exception ex)

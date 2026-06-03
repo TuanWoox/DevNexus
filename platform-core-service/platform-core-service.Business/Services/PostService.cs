@@ -37,6 +37,7 @@ namespace platform_core_service.Business.Services
         private readonly IModerationService _moderationService;
         private readonly IContentMediaLinkService _contentMediaLinkService;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IPostHistoryService _postHistoryService;
 
         public PostService(
             ApplicationDbContext context,
@@ -47,7 +48,8 @@ namespace platform_core_service.Business.Services
             IContentRiskPrecheckService contentRiskPrecheckService,
             IModerationService moderationService,
             IContentMediaLinkService contentMediaLinkService,
-            IBackgroundJobClient backgroundJobClient
+            IBackgroundJobClient backgroundJobClient,
+            IPostHistoryService postHistoryService
         )
         {
             _context = context;
@@ -59,6 +61,7 @@ namespace platform_core_service.Business.Services
             _moderationService = moderationService;
             _contentMediaLinkService = contentMediaLinkService;
             _backgroundJobClient = backgroundJobClient;
+            _postHistoryService = postHistoryService;
         }
 
         public async Task<ReturnResult<SelectPostDTO>> CreateAsync(CreatePostDTO createDTO)
@@ -137,6 +140,7 @@ namespace platform_core_service.Business.Services
                         x => x.SubmitPostModerationAsync(post.Id, post.ModerationVersion, post.ModerationContentHash));
                 }
 
+                await _postHistoryService.RecordHistoryAsync(post.Id);
             }
             catch (Exception ex)
             {
@@ -233,6 +237,8 @@ namespace platform_core_service.Business.Services
                     _backgroundJobClient.Enqueue<IModerationBackgroundJobs>(
                         x => x.SubmitPostModerationAsync(post.Id, post.ModerationVersion, post.ModerationContentHash));
                 }
+
+                await _postHistoryService.RecordHistoryAsync(post.Id);
             }
             catch (Exception ex)
             {
@@ -811,6 +817,7 @@ namespace platform_core_service.Business.Services
                 await SetCurrentUserVoteAsync(result.Result);
                 await SetCurrentUserSavedAsync(result.Result);
                 await SetCommentCountForListAsync(new List<SelectPostDTO> { result.Result });
+                await _postHistoryService.RecordHistoryAsync(post.Id);
             }
             catch (Exception ex)
             {
