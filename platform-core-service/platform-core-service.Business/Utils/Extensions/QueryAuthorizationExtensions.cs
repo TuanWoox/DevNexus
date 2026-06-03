@@ -83,8 +83,7 @@ namespace platform_core_service.Business.Utils.Extensions
             string currentProfileId)
         {
             return query
-                .Where(p => !p.Deleted)
-                .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                .ApplyPublicModerationVisibility()
                 .Where(p =>
                     (p.CommunityId == null && p.CommunityApprovalStatus == null) ||
                     (p.CommunityId != null &&

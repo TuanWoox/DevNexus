@@ -51,7 +51,7 @@ export function PostCard({ post, canModerateCommunity, isRecommendation }: PostC
     const isQaPost = 'answerCount' in post;
     const detailHref = isQaPost ? getQAPostDetailHref(post) : getPostDetailHref(post);
     const moderationStatus = normalizeModerationStatus(post.moderationStatus);
-    const isModerationApproved = moderationStatus === "Approved";
+    const isModerationApproved = canInteractWithModeratedContent(moderationStatus);
     const communityApprovalStatus = normalizeCommunityApprovalStatus(post.communityApprovalStatus);
     const isCommunityApproved = !post.communityId ||
         communityApprovalStatus == null ||

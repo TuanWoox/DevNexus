@@ -644,7 +644,7 @@ namespace platform_core_service.Business.Services
                 var query = _context.Posts
                     .Where(p => p.GetType() == typeof(PostEntity))
                     .Where(p => p.CommunityId == communityId)
-                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .ApplyPublicModerationVisibility()
                     .Where(p => p.CommunityApprovalStatus == CommunityApprovalStatus.Pending)
                     .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.Tag)
@@ -685,7 +685,7 @@ namespace platform_core_service.Business.Services
                     .Where(p => p.GetType() == typeof(PostEntity))
                     .Where(p => p.CommunityId == communityId)
                     .Where(p => p.AuthorId == _userContext.ProfileId)
-                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
+                    .ApplyPublicModerationVisibility()
                     .Where(p => p.CommunityApprovalStatus == CommunityApprovalStatus.Pending ||
                                 p.CommunityApprovalStatus == CommunityApprovalStatus.Rejected)
                     .Include(p => p.PostTags)

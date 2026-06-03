@@ -578,7 +578,7 @@ namespace platform_core_service.Business.Services
                 var query = _dbContext.Posts
                     .OfType<QAPost>()
                     .Where(q => q.CommunityId == communityId)
-                    .Where(q => q.ModerationStatus == ModerationStatus.Approved)
+                    .ApplyPublicModerationVisibility()
                     .Where(q => q.CommunityApprovalStatus == CommunityApprovalStatus.Pending)
                     .Include(q => q.Answers)
                     .Include(q => q.PostTags)
@@ -621,7 +621,7 @@ namespace platform_core_service.Business.Services
                     .OfType<QAPost>()
                     .Where(q => q.CommunityId == communityId)
                     .Where(q => q.AuthorId == _userContext.ProfileId)
-                    .Where(q => q.ModerationStatus == ModerationStatus.Approved)
+                    .ApplyPublicModerationVisibility()
                     .Where(q => q.CommunityApprovalStatus == CommunityApprovalStatus.Pending ||
                                 q.CommunityApprovalStatus == CommunityApprovalStatus.Rejected)
                     .Include(q => q.Answers)
