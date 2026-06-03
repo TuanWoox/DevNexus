@@ -8,8 +8,8 @@ namespace platform_core_service.Common.Interfaces.Recommendations
 {
     public interface IRecommendationService
     {
-        Task<ReturnResult<PagedData<SelectPostDTO, string>>> GetPersonalizedPostFeedAsync(string userId, Page<string> page);
-        Task<ReturnResult<PagedData<SelectQAPostDTO, string>>> GetPersonalizedQAPostFeedAsync(string userId, Page<string> page);
-        Task<ReturnResult<PagedData<SelectCommunityDTO, string>>> GetPersonalizedCommunityFeedAsync(string userId, Page<string> page);
+        Task<ReturnResult<PagedData<SelectPostDTO, string>>> GetPersonalizedPostFeedAsync(Page<string> page);
+        Task<ReturnResult<PagedData<SelectQAPostDTO, string>>> GetPersonalizedQAPostFeedAsync(Page<string> page);
+        Task<ReturnResult<PagedData<SelectCommunityDTO, string>>> GetPersonalizedCommunityFeedAsync(Page<string> page);
     }
 }

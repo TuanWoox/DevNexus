@@ -37,7 +37,7 @@ namespace platform_core_service.Controllers
             var returnResult = new ReturnResult<PagedData<SelectPostDTO, string>>();
             try
             {
-                returnResult = await _recommendationService.GetPersonalizedPostFeedAsync(User.GetUserId(), page);
+                returnResult = await _recommendationService.GetPersonalizedPostFeedAsync(page);
             }
             catch (Exception ex)
             {
@@ -54,7 +54,7 @@ namespace platform_core_service.Controllers
             var returnResult = new ReturnResult<PagedData<SelectQAPostDTO, string>>();
             try
             {
-                returnResult = await _recommendationService.GetPersonalizedQAPostFeedAsync(User.GetUserId(), page);
+                returnResult = await _recommendationService.GetPersonalizedQAPostFeedAsync(page);
             }
             catch (Exception ex)
             {
@@ -71,7 +71,7 @@ namespace platform_core_service.Controllers
             var returnResult = new ReturnResult<PagedData<SelectCommunityDTO, string>>();
             try
             {
-                returnResult = await _recommendationService.GetPersonalizedCommunityFeedAsync(User.GetUserId(), page);
+                returnResult = await _recommendationService.GetPersonalizedCommunityFeedAsync(page);
             }
             catch (Exception ex)
             {
@@ -122,7 +122,7 @@ namespace platform_core_service.Controllers
             var returnResult = new ReturnResult<bool>();
             try
             {
-                returnResult = await _interactionService.TrackAsync(User.GetUserId(), dto);
+                returnResult = await _interactionService.TrackAsync(dto);
             }
             catch (Exception ex)
             {
@@ -139,7 +139,7 @@ namespace platform_core_service.Controllers
             var returnResult = new ReturnResult<bool>();
             try
             {
-                returnResult = await _interactionService.SubmitFeedbackAsync(User.GetUserId(), dto);
+                returnResult = await _interactionService.SubmitFeedbackAsync(dto);
             }
             catch (Exception ex)
             {

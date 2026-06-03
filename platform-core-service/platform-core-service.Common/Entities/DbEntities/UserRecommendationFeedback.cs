@@ -15,23 +15,19 @@ namespace platform_core_service.Common.Entities.DbEntities
     {
 
         [Required]
-        [MaxLength(26)]
-        public string UserId { get; set; } = null!;
-        [ForeignKey(nameof(UserId))]
-        public ApplicationUser? User { get; set; }
+        public string ProfileId { get; set; } = null!;
+        [ForeignKey(nameof(ProfileId))]
+        public Profile? Profile { get; set; }
 
-        [MaxLength(26)]
         public string? PostId { get; set; }
 
         [ForeignKey(nameof(PostId))]
         public Post? Post { get; set; }
 
-        [MaxLength(26)]
         public string? QAPostId { get; set; }
         [ForeignKey(nameof(QAPostId))]
         public QAPost? QAPost { get; set; }
 
-        [MaxLength(26)]
         public string? CommunityId { get; set; }
         [ForeignKey(nameof(CommunityId))]
         public Community? Community { get; set; }

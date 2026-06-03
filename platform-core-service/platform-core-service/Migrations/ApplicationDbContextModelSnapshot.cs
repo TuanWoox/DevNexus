@@ -1656,21 +1656,18 @@ namespace platform_core_service.Migrations
                         .HasColumnType("character varying(20)");
 
                     b.Property<string>("PostId")
-                        .HasMaxLength(26)
-                        .HasColumnType("character varying(26)");
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProfileId")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("QAPostId")
-                        .HasMaxLength(26)
-                        .HasColumnType("character varying(26)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Source")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasMaxLength(26)
-                        .HasColumnType("character varying(26)");
 
                     b.HasKey("Id");
 
@@ -1682,11 +1679,11 @@ namespace platform_core_service.Migrations
 
                     b.HasIndex("QAPostId");
 
-                    b.HasIndex("UserId", "DateCreated");
+                    b.HasIndex("ProfileId", "DateCreated");
 
-                    b.HasIndex("UserId", "PostId");
+                    b.HasIndex("ProfileId", "PostId");
 
-                    b.HasIndex("UserId", "QAPostId");
+                    b.HasIndex("ProfileId", "QAPostId");
 
                     b.ToTable("UserContentInteractions");
                 });
@@ -1727,8 +1724,7 @@ namespace platform_core_service.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("CommunityId")
-                        .HasMaxLength(26)
-                        .HasColumnType("character varying(26)");
+                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset?>("DateCreated")
                         .HasColumnType("timestamp with time zone");
@@ -1747,17 +1743,14 @@ namespace platform_core_service.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("PostId")
-                        .HasMaxLength(26)
-                        .HasColumnType("character varying(26)");
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProfileId")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("QAPostId")
-                        .HasMaxLength(26)
-                        .HasColumnType("character varying(26)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasMaxLength(26)
-                        .HasColumnType("character varying(26)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -1769,11 +1762,11 @@ namespace platform_core_service.Migrations
 
                     b.HasIndex("QAPostId");
 
-                    b.HasIndex("UserId", "CommunityId");
+                    b.HasIndex("ProfileId", "CommunityId");
 
-                    b.HasIndex("UserId", "PostId");
+                    b.HasIndex("ProfileId", "PostId");
 
-                    b.HasIndex("UserId", "QAPostId");
+                    b.HasIndex("ProfileId", "QAPostId");
 
                     b.ToTable("UserRecommendationFeedbacks");
                 });
@@ -2557,21 +2550,21 @@ namespace platform_core_service.Migrations
                         .WithMany()
                         .HasForeignKey("PostId");
 
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Profile")
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.QAPost", "QAPost")
                         .WithMany()
                         .HasForeignKey("QAPostId");
 
-                    b.HasOne("platform_core_service.Common.Entities.Identities.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("Post");
 
-                    b.Navigation("QAPost");
+                    b.Navigation("Profile");
 
-                    b.Navigation("User");
+                    b.Navigation("QAPost");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.UserFollow", b =>
@@ -2603,23 +2596,23 @@ namespace platform_core_service.Migrations
                         .WithMany()
                         .HasForeignKey("PostId");
 
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Profile")
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.QAPost", "QAPost")
                         .WithMany()
                         .HasForeignKey("QAPostId");
-
-                    b.HasOne("platform_core_service.Common.Entities.Identities.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("Community");
 
                     b.Navigation("Post");
 
-                    b.Navigation("QAPost");
+                    b.Navigation("Profile");
 
-                    b.Navigation("User");
+                    b.Navigation("QAPost");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Vote", b =>

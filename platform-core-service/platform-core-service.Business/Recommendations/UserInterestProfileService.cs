@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Recommendations;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.RecommendationDTO;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Data;
 
 namespace platform_core_service.Business.Recommendations
@@ -11,33 +13,44 @@ namespace platform_core_service.Business.Recommendations
     {
         private readonly ApplicationDbContext _context;
         private readonly ICacheService _cache;
+        private readonly IUserContext _userContext;
 
         // Signal weights
         private const double WEIGHT_UPVOTE_POST = 3.0;
         private const double WEIGHT_BOOKMARK = 2.5;
         private const double WEIGHT_UPVOTE_ANSWER = 2.5;
         private const double WEIGHT_COMMENT = 2.0;
+        private const double WEIGHT_AUTHORED_CONTENT = 1.75;
         private const double WEIGHT_UPVOTE_COMMENT = 1.5;
         private const double WEIGHT_VIEW_LONG = 1.5;
         private const double WEIGHT_VIEW = 0.5;
         private const double WEIGHT_DOWNVOTE = -2.0;
-        private const double WEIGHT_NEGATIVE_FEEDBACK = -5.0;
+        private const double WEIGHT_NEGATIVE_FEEDBACK = -2.0;
+        private const double WEIGHT_FEEDBACK_NOT_INTERESTED = -3.0;
+        private const double WEIGHT_FEEDBACK_HIDE = -1.0;
+        private const double WEIGHT_FEEDBACK_REPORT_IRRELEVANT = -3.0;
 
-        public UserInterestProfileService(ApplicationDbContext context, ICacheService cache)
+        public UserInterestProfileService(
+            ApplicationDbContext context,
+            ICacheService cache,
+            IUserContext userContext)
         {
             _context = context;
             _cache = cache;
+            _userContext = userContext;
         }
 
-        public async Task<UserInterestProfile> BuildAsync(string userId)
+        public async Task<UserInterestProfile> BuildAsync()
         {
-            var cacheKey = $"interest_profile:{userId}";
+            var profileId = _userContext.ProfileId;
+            var cacheKey = $"interest_profile:{profileId}";
             var userInterestProfile = await _cache.GetCacheAsync<UserInterestProfile>(cacheKey);
             if (userInterestProfile != null)
                 return userInterestProfile;
 
-            var profileId = await ResolveProfileIdAsync(userId);
-            var profile = new UserInterestProfile { UserId = userId };
+            var profile = new UserInterestProfile { ProfileId = profileId };
+            if (string.IsNullOrWhiteSpace(profileId))
+                return profile;
 
             var upvotedPostTags = await _context.Votes
                 .AsNoTracking()
@@ -67,6 +80,15 @@ namespace platform_core_service.Business.Recommendations
                 .Join(_context.PostTags, qaPostId => qaPostId, pt => pt.PostId, (qaPostId, pt) => pt.TagId)
                 .ToListAsync();
             AddWeights(profile.TagWeights, upvotedAnswerTags, WEIGHT_UPVOTE_ANSWER);
+
+
+            var authoredContentTags = await _context.Posts
+                .AsNoTracking()
+                .Where(p => p.AuthorId == profileId && !p.Deleted)
+                .Join(_context.PostTags, p => p.Id, pt => pt.PostId, (p, pt) => pt.TagId)
+                .Take(50)
+                .ToListAsync();
+            AddWeights(profile.TagWeights, authoredContentTags, WEIGHT_AUTHORED_CONTENT);
 
             var commentedPostTags = await _context.Comments
                 .AsNoTracking()
@@ -105,7 +127,7 @@ namespace platform_core_service.Business.Recommendations
             var recentInteractionCutoff = DateTimeOffset.UtcNow.AddDays(-30);
             var viewedPostTags = await _context.UserContentInteractions
                 .AsNoTracking()
-                .Where(i => i.UserId == userId && i.PostId != null)
+                .Where(i => i.ProfileId == profileId && i.PostId != null)
                 .Where(i => i.DateCreated > recentInteractionCutoff)
                 .Join(_context.PostTags,
                     i => i.PostId,
@@ -118,7 +140,7 @@ namespace platform_core_service.Business.Recommendations
 
             var viewedQaPostTags = await _context.UserContentInteractions
                 .AsNoTracking()
-                .Where(i => i.UserId == userId && i.QAPostId != null)
+                .Where(i => i.ProfileId == profileId && i.QAPostId != null)
                 .Where(i => i.DateCreated > recentInteractionCutoff)
                 .Join(_context.PostTags,
                     i => i.QAPostId,
@@ -129,19 +151,7 @@ namespace platform_core_service.Business.Recommendations
                 .ToListAsync();
             AddWeightedTags(profile.TagWeights, viewedQaPostTags);
 
-            var feedbackPostTags = await _context.UserRecommendationFeedbacks
-                .AsNoTracking()
-                .Where(f => f.UserId == userId && f.PostId != null)
-                .Join(_context.PostTags, f => f.PostId, pt => pt.PostId, (f, pt) => pt.TagId)
-                .ToListAsync();
-            AddWeights(profile.TagWeights, feedbackPostTags, WEIGHT_NEGATIVE_FEEDBACK);
-
-            var feedbackQaPostTags = await _context.UserRecommendationFeedbacks
-                .AsNoTracking()
-                .Where(f => f.UserId == userId && f.QAPostId != null)
-                .Join(_context.PostTags, f => f.QAPostId, pt => pt.PostId, (f, pt) => pt.TagId)
-                .ToListAsync();
-            AddWeights(profile.TagWeights, feedbackQaPostTags, WEIGHT_NEGATIVE_FEEDBACK);
+            await ProcessRecommendationFeedbackWeightsAsync(profile, profileId);
 
             profile.FollowedAuthorIds = await _context.UserFollows
                 .AsNoTracking()
@@ -157,21 +167,53 @@ namespace platform_core_service.Business.Recommendations
 
             await _cache.SetCacheAsync(cacheKey, profile, new DistributedCacheEntryOptions
             {
-                SlidingExpiration = TimeSpan.FromHours(1)
+                SlidingExpiration = TimeSpan.FromMinutes(30)
             });
 
             return profile;
         }
 
-        private async Task<string> ResolveProfileIdAsync(string userId)
+        private async Task ProcessRecommendationFeedbackWeightsAsync(UserInterestProfile profile, string profileId)
         {
-            var profileId = await _context.Profiles
+            var feedbackPostTags = await _context.UserRecommendationFeedbacks
                 .AsNoTracking()
-                .Where(p => p.ApplicationUserId == userId)
-                .Select(p => p.Id)
-                .FirstOrDefaultAsync();
+                .Where(f => f.ProfileId == profileId && f.PostId != null)
+                .Join(_context.PostTags,
+                    f => f.PostId,
+                    pt => pt.PostId,
+                    (f, pt) => new { pt.TagId, f.FeedbackType })
+                .ToListAsync();
 
-            return profileId ?? userId;
+            var weightedFeedbackPostTags = feedbackPostTags.Select(x => new WeightedTag(
+                x.TagId,
+                x.FeedbackType switch
+                {
+                    FeedBackType.NotInterested => WEIGHT_FEEDBACK_NOT_INTERESTED,
+                    FeedBackType.Hide => WEIGHT_FEEDBACK_HIDE,
+                    FeedBackType.ReportIrrelevant => WEIGHT_FEEDBACK_REPORT_IRRELEVANT,
+                    _ => WEIGHT_NEGATIVE_FEEDBACK
+                }));
+            AddWeightedTags(profile.TagWeights, weightedFeedbackPostTags);
+
+            var feedbackQaPostTags = await _context.UserRecommendationFeedbacks
+                .AsNoTracking()
+                .Where(f => f.ProfileId == profileId && f.QAPostId != null)
+                .Join(_context.PostTags,
+                    f => f.QAPostId,
+                    pt => pt.PostId,
+                    (f, pt) => new { pt.TagId, f.FeedbackType })
+                .ToListAsync();
+
+            var weightedFeedbackQaPostTags = feedbackQaPostTags.Select(x => new WeightedTag(
+                x.TagId,
+                x.FeedbackType switch
+                {
+                    FeedBackType.NotInterested => WEIGHT_FEEDBACK_NOT_INTERESTED,
+                    FeedBackType.Hide => WEIGHT_FEEDBACK_HIDE,
+                    FeedBackType.ReportIrrelevant => WEIGHT_FEEDBACK_REPORT_IRRELEVANT,
+                    _ => WEIGHT_NEGATIVE_FEEDBACK
+                }));
+            AddWeightedTags(profile.TagWeights, weightedFeedbackQaPostTags);
         }
 
         private static void AddWeights(Dictionary<string, double> weights, IEnumerable<string> tagIds, double weight)

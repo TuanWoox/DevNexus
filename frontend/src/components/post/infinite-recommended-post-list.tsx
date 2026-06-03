@@ -51,6 +51,7 @@ export function InfiniteRecommendedPostList() {
             loadingText="Loading recommendations..."
             emptyTitle="No recommendations yet"
             emptySubtitle="Explore posts, tags, and communities to shape your feed."
+            isRecommendation={true}
         />
     );
 }

@@ -11,9 +11,10 @@ export function CommunitiesList() {
     const [searchQuery, setSearchQuery] = useState("");
     const [appliedSearch, setAppliedSearch] = useState("");
     const [currentSort, setCurrentSort] = useState<SortOption>(SORT_OPTIONS[0]);
-    const [activeTab, setActiveTab] = useState<CommunityFetchMode>(CommunityFetchMode.RECOMMENDED);
+    const [activeTab, setActiveTab] = useState<CommunityFetchMode>(CommunityFetchMode.EXPLORE);
 
     const isSearching = appliedSearch.trim().length > 0;
+    const shouldShowFilters = activeTab !== CommunityFetchMode.RECOMMENDED || isSearching;
 
     const handleSearchSubmit = () => {
         setAppliedSearch(searchQuery);
@@ -24,6 +25,15 @@ export function CommunitiesList() {
         setAppliedSearch("");
     };
 
+    const handleTabChange = (tab: CommunityFetchMode) => {
+        if (tab === CommunityFetchMode.RECOMMENDED) {
+            setSearchQuery("");
+            setAppliedSearch("");
+        }
+
+        setActiveTab(tab);
+    };
+
     return (
         <div className="flex flex-col w-full max-w-7xl mx-auto gap-6">
             <ExploreHeader
@@ -32,13 +42,14 @@ export function CommunitiesList() {
                 currentSort={currentSort}
                 setCurrentSort={setCurrentSort}
                 onSearchSubmit={handleSearchSubmit}
+                showFilters={shouldShowFilters}
             />
 
             {/* Hide tabs when searching globally — show results across all modes instead */}
             {!isSearching && (
                 <CommunityTabs
                     activeTab={activeTab}
-                    setActiveTab={setActiveTab}
+                    setActiveTab={handleTabChange}
                 />
             )}
 

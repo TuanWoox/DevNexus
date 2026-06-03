@@ -285,18 +285,18 @@ namespace platform_core_service.Data
             // UserContentInteraction indexes
             builder.Entity<UserContentInteraction>(entity =>
             {
-                entity.HasIndex(e => new { e.UserId, e.DateCreated });
-                entity.HasIndex(e => new { e.UserId, e.PostId });
-                entity.HasIndex(e => new { e.UserId, e.QAPostId });
+                entity.HasIndex(e => new { e.ProfileId, e.DateCreated });
+                entity.HasIndex(e => new { e.ProfileId, e.PostId });
+                entity.HasIndex(e => new { e.ProfileId, e.QAPostId });
                 entity.HasIndex(e => e.InteractionType);
             });
 
             // UserRecommendationFeedback indexes
             builder.Entity<UserRecommendationFeedback>(entity =>
             {
-                entity.HasIndex(e => new { e.UserId, e.PostId });
-                entity.HasIndex(e => new { e.UserId, e.QAPostId });
-                entity.HasIndex(e => new { e.UserId, e.CommunityId });
+                entity.HasIndex(e => new { e.ProfileId, e.PostId });
+                entity.HasIndex(e => new { e.ProfileId, e.QAPostId });
+                entity.HasIndex(e => new { e.ProfileId, e.CommunityId });
             });
         }
 

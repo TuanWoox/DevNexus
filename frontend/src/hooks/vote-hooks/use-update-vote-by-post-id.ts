@@ -9,6 +9,7 @@ import { bookmarkedItemQueryKeys } from "@/hooks/bookmarked-item-hooks/use-bookm
 import { SelectBookmarkedItemDTO } from "@/types/bookmarked-item/select-bookmarked-item-dto";
 import { searchQueryKeys } from "@/hooks/search-hooks/use-global-search";
 import { GlobalSearchResult } from "@/types/search/global-search-result";
+import { recommendationQueryKeys } from "@/hooks/recommendation-hooks/use-recommendation-query-keys";
 
 const applyVoteToPost = <T extends SelectPostDTO>(post: T, voteRequestDTO: VoteRequestDTO): T => {
     const isToggleOff = post.currentUserVote === voteRequestDTO.isUpvote;
@@ -53,6 +54,17 @@ const applyVoteToInfiniteList = (
             ),
         })),
     };
+};
+
+const applyVoteToFlatList = (
+    oldData: SelectPostDTO[] | undefined,
+    postId: string,
+    voteRequestDTO: VoteRequestDTO
+): SelectPostDTO[] | undefined => {
+    if (!oldData) return oldData;
+    return oldData.map((post) =>
+        post.id === postId ? applyVoteToPost(post, voteRequestDTO) : post
+    );
 };
 
 const applyVoteToBookmarkedList = (
@@ -106,6 +118,7 @@ export const useUpdateVoteByPostId = (postId: string) => {
             await queryClient.cancelQueries({ queryKey: qaPostQueryKeys.all });
             await queryClient.cancelQueries({ queryKey: bookmarkedItemQueryKeys.all });
             await queryClient.cancelQueries({ queryKey: searchQueryKeys.all });
+            await queryClient.cancelQueries({ queryKey: recommendationQueryKeys.all });
 
             const previousPostDetail = queryClient.getQueryData<SelectPostDTO>(postQueryKeys.detail(postId));
             const previousQaPostDetail = queryClient.getQueryData<SelectPostDTO>(qaPostQueryKeys.detail(postId));
@@ -113,6 +126,7 @@ export const useUpdateVoteByPostId = (postId: string) => {
             const previousQaPostLists = queryClient.getQueriesData<InfiniteData<PagedData<SelectPostDTO, string>>>({ queryKey: qaPostQueryKeys.lists() });
             const previousBookmarkedLists = queryClient.getQueriesData<InfiniteData<PagedData<SelectBookmarkedItemDTO, string>>>({ queryKey: bookmarkedItemQueryKeys.lists() });
             const previousSearchQueries = queryClient.getQueriesData<any>({ queryKey: searchQueryKeys.all });
+            const previousRecommendationQueries = queryClient.getQueriesData<any>({ queryKey: recommendationQueryKeys.all });
 
             if (previousPostDetail) {
                 queryClient.setQueryData(postQueryKeys.detail(postId), applyVoteToPost(previousPostDetail, voteRequestDTO));
@@ -122,13 +136,22 @@ export const useUpdateVoteByPostId = (postId: string) => {
             }
 
             previousPostLists.forEach(([queryKey, oldData]) => {
-                queryClient.setQueryData(queryKey, applyVoteToInfiniteList(oldData, postId, voteRequestDTO));
+                if (!oldData) return;
+                if ("pages" in oldData) {
+                    queryClient.setQueryData(queryKey, applyVoteToInfiniteList(oldData, postId, voteRequestDTO));
+                }
             });
             previousQaPostLists.forEach(([queryKey, oldData]) => {
-                queryClient.setQueryData(queryKey, applyVoteToInfiniteList(oldData, postId, voteRequestDTO));
+                if (!oldData) return;
+                if ("pages" in oldData) {
+                    queryClient.setQueryData(queryKey, applyVoteToInfiniteList(oldData, postId, voteRequestDTO));
+                }
             });
             previousBookmarkedLists.forEach(([queryKey, oldData]) => {
-                queryClient.setQueryData(queryKey, applyVoteToBookmarkedList(oldData, postId, voteRequestDTO));
+                if (!oldData) return;
+                if ("pages" in oldData) {
+                    queryClient.setQueryData(queryKey, applyVoteToBookmarkedList(oldData, postId, voteRequestDTO));
+                }
             });
             previousSearchQueries.forEach(([queryKey, oldData]: [any, any]) => {
                 if (!oldData) return;
@@ -138,8 +161,24 @@ export const useUpdateVoteByPostId = (postId: string) => {
                     queryClient.setQueryData(queryKey, applyVoteToGlobalSearch(oldData, postId, voteRequestDTO));
                 }
             });
+            previousRecommendationQueries.forEach(([queryKey, oldData]) => {
+                if (!oldData) return;
+                if ("pages" in oldData) {
+                    queryClient.setQueryData(queryKey, applyVoteToInfiniteList(oldData, postId, voteRequestDTO));
+                } else if (Array.isArray(oldData)) {
+                    queryClient.setQueryData(queryKey, applyVoteToFlatList(oldData as SelectPostDTO[], postId, voteRequestDTO));
+                }
+            });
 
-            return { previousPostDetail, previousQaPostDetail, previousPostLists, previousQaPostLists, previousBookmarkedLists, previousSearchQueries };
+            return {
+                previousPostDetail,
+                previousQaPostDetail,
+                previousPostLists,
+                previousQaPostLists,
+                previousBookmarkedLists,
+                previousSearchQueries,
+                previousRecommendationQueries,
+            };
         },
 
         onError: (err, voteRequestDTO, context) => {
@@ -159,6 +198,9 @@ export const useUpdateVoteByPostId = (postId: string) => {
                 queryClient.setQueryData(queryKey, oldData);
             });
             context?.previousSearchQueries.forEach(([queryKey, oldData]) => {
+                queryClient.setQueryData(queryKey, oldData);
+            });
+            context?.previousRecommendationQueries.forEach(([queryKey, oldData]) => {
                 queryClient.setQueryData(queryKey, oldData);
             });
         },

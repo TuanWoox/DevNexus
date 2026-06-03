@@ -13,19 +13,16 @@ namespace platform_core_service.Common.Entities.DbEntities
     public class UserContentInteraction: BaseEntity<string>
     {
         [Required]
-        [MaxLength(26)]
-        public string UserId { get; set; } = null!;
+        public string ProfileId { get; set; } = null!;
         // Navigation properties
-        [ForeignKey(nameof(UserId))]
-        public ApplicationUser? User { get; set; }
+        [ForeignKey(nameof(ProfileId))]
+        public Profile? Profile { get; set; }
 
-        [MaxLength(26)]
         public string? PostId { get; set; }
 
         [ForeignKey(nameof(PostId))]
         public Post? Post { get; set; }
 
-        [MaxLength(26)]
         public string? QAPostId { get; set; }
         [ForeignKey(nameof(QAPostId))]
         public QAPost? QAPost { get; set; }

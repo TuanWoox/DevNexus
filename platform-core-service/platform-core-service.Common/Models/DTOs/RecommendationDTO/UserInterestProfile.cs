@@ -8,12 +8,12 @@ namespace platform_core_service.Common.Models.DTOs.RecommendationDTO
 {
     public class UserInterestProfile
     {
-        public string UserId { get; set; }
+        public string ProfileId { get; set; }
 
-        /// <summary>Tag ID → accumulated weight from all user interactions</summary>
+        /// <summary>Tag ID → accumulated weight from all profile interactions</summary>
         public Dictionary<string, double> TagWeights { get; set; } = new();
 
-        /// <summary>Author user IDs the user follows</summary>
+        /// <summary>Author profile IDs the profile follows</summary>
         public HashSet<string> FollowedAuthorIds { get; set; } = new();
 
         /// <summary>Communities the user is a member of</summary>

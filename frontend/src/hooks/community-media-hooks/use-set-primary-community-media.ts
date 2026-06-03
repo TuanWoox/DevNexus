@@ -4,6 +4,7 @@ import { communityMediaService } from "@/services/community-media-service";
 import { communityMediaQueryKeys } from "./use-community-media-query-keys";
 import { UpdatePrimaryCommunityMediaDTO } from "@/types/community-media/update-primary-community-media-dto";
 import { communityQueryKeys } from "@/hooks/community-hooks/use-community-query-key";
+import { recommendationQueryKeys } from "@/hooks/recommendation-hooks/use-recommendation-query-keys";
 
 export const useSetPrimaryCommunityMedia = () => {
     const queryClient = useQueryClient();
@@ -15,6 +16,7 @@ export const useSetPrimaryCommunityMedia = () => {
                 queryClient.invalidateQueries({ queryKey: communityMediaQueryKeys.lists() });
                 queryClient.invalidateQueries({ queryKey: communityQueryKeys.detail(data.communityId) });
                 queryClient.invalidateQueries({ queryKey: communityQueryKeys.lists() });
+                queryClient.invalidateQueries({ queryKey: recommendationQueryKeys.all });
                 toast.success("Cover photo updated successfully.");
             }
         }

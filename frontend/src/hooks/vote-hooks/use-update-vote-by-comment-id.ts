@@ -76,7 +76,7 @@ const applyVoteToCommentPagedList = (
     commentId: string,
     voteRequestDTO: VoteRequestDTO
 ): PagedData<SelectCommentDTO, string> | undefined => {
-    if (!oldData) return oldData;
+    if (!oldData || !oldData.data) return oldData;
     return {
         ...oldData,
         data: oldData.data.map((comment) =>
@@ -152,7 +152,7 @@ export const useUpdateVoteByCommentId = (commentId: string) => {
 
                 if ("pages" in oldData) {
                     queryClient.setQueryData(queryKey, applyVoteToCommentInfiniteList(oldData, commentId, voteRequestDTO));
-                } else {
+                } else if ("data" in oldData) {
                     queryClient.setQueryData(queryKey, applyVoteToCommentPagedList(oldData, commentId, voteRequestDTO));
                 }
             });
@@ -162,7 +162,7 @@ export const useUpdateVoteByCommentId = (commentId: string) => {
                 if (!oldData) return;
                 if ("pages" in oldData) {
                     queryClient.setQueryData(queryKey, applyVoteToCommentInAnswerInfiniteList(oldData, commentId, voteRequestDTO));
-                } else {
+                } else if ("data" in oldData) {
                     queryClient.setQueryData(queryKey, applyVoteToCommentInAnswerPagedList(oldData, commentId, voteRequestDTO));
                 }
             });

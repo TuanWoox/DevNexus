@@ -23,7 +23,7 @@ namespace platform_core_service.Common.Interfaces.Services
         Task<ReturnResult<AIMetadataResponseDTO>> SuggestMetadataAsync(AIMetadataRequestDTO request);
         Task<ReturnResult<AICodeExplainResponseDTO>> ExplainCodeAsync(AICodeExplainRequestDTO request);
         Task<ReturnResult<AICodeDiagramResponseDTO>> GenerateCodeDiagramAsync(AICodeDiagramRequestDTO request);
-        Task<ReturnResult<AIEmbeddingResponseDTO>> GetRecommendationEmbeddingAsync(AIEmbeddingRequestDTO request);
+        Task<ReturnResult<AIBatchEmbeddingResponseDTO>> GetRecommendationEmbeddingsAsync(AIBatchEmbeddingRequestDTO request);
         Task<ReturnResult<bool>> UpdateUsageInteractionAsync(int usageLogId, AIUsageInteractionUpdateRequestDTO request);
         Task<ReturnResult<AiUsageLogPageResponseDTO>> GetPageAiUsageLogsAsync(Page<string> page);
         Task<ReturnResult<AdminAiUsageSummaryDTO>> GetSummaryAsync(DateOnly from, DateOnly to);

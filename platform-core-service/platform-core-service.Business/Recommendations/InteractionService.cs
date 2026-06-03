@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Common.Entities.DbEntities;
+using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Recommendations;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.UserContentInteraction;
@@ -15,18 +16,30 @@ namespace platform_core_service.Business.Recommendations
     {
         private readonly ApplicationDbContext _context;
         private readonly ICacheService _cache;
+        private readonly IUserContext _userContext;
 
-        public InteractionService(ApplicationDbContext context, ICacheService cache)
+        public InteractionService(
+            ApplicationDbContext context,
+            ICacheService cache,
+            IUserContext userContext)
         {
             _context = context;
             _cache = cache;
+            _userContext = userContext;
         }
 
-        public async Task<ReturnResult<bool>> TrackAsync(string userId, SelectUserContentInteractionDTO dto)
+        public async Task<ReturnResult<bool>> TrackAsync(SelectUserContentInteractionDTO dto)
         {
             var result = new ReturnResult<bool>();
             try
             {
+                var profileId = _userContext.ProfileId;
+                if (string.IsNullOrWhiteSpace(profileId))
+                {
+                    result.Message = "Profile context is missing";
+                    return result;
+                }
+
                 if (dto == null || (string.IsNullOrEmpty(dto.PostId) && string.IsNullOrEmpty(dto.QAPostId)))
                 {
                     result.Message = "PostId or QAPostId is required";
@@ -45,18 +58,50 @@ namespace platform_core_service.Business.Recommendations
                     return result;
                 }
 
-                _context.UserContentInteractions.Add(new UserContentInteraction
+                var interactionType = NormalizeInteractionType(dto.InteractionType);
+                var source = string.IsNullOrWhiteSpace(dto.Source) ? null : dto.Source.Trim().ToLowerInvariant();
+                var shouldInvalidateProfile = false;
+
+                var existingInteraction = await _context.UserContentInteractions
+                    .FirstOrDefaultAsync(i =>
+                        i.ProfileId == profileId &&
+                        i.PostId == dto.PostId &&
+                        i.QAPostId == dto.QAPostId &&
+                        i.InteractionType == interactionType &&
+                        i.Source == source);
+
+                if (existingInteraction != null)
                 {
-                    UserId = userId,
-                    PostId = dto.PostId,
-                    QAPostId = dto.QAPostId,
-                    InteractionType = NormalizeInteractionType(dto.InteractionType),
-                    DwellTimeSeconds = dto.DwellTimeSeconds,
-                    Source = string.IsNullOrWhiteSpace(dto.Source) ? null : dto.Source.Trim().ToLowerInvariant()
-                });
+                    if (dto.DwellTimeSeconds.HasValue)
+                    {
+                        var dwellTimeSeconds = Math.Max(
+                            existingInteraction.DwellTimeSeconds ?? 0,
+                            dto.DwellTimeSeconds.Value);
+
+                        if (existingInteraction.DwellTimeSeconds != dwellTimeSeconds)
+                        {
+                            existingInteraction.DwellTimeSeconds = dwellTimeSeconds;
+                            shouldInvalidateProfile = true;
+                        }
+                    }
+                }
+                else
+                {
+                    _context.UserContentInteractions.Add(new UserContentInteraction
+                    {
+                        ProfileId = profileId,
+                        PostId = dto.PostId,
+                        QAPostId = dto.QAPostId,
+                        InteractionType = interactionType,
+                        DwellTimeSeconds = dto.DwellTimeSeconds,
+                        Source = source
+                    });
+                    shouldInvalidateProfile = true;
+                }
 
                 await _context.SaveChangesAsync();
-                await _cache.RemoveCacheAsync($"interest_profile:{userId}");
+                if (shouldInvalidateProfile)
+                    await _cache.RemoveCacheAsync($"interest_profile:{profileId}");
 
                 result.Result = true;
             }
@@ -69,11 +114,18 @@ namespace platform_core_service.Business.Recommendations
             return result;
         }
 
-        public async Task<ReturnResult<bool>> SubmitFeedbackAsync(string userId, CreateUserRecommendationFeedbackDTO dto)
+        public async Task<ReturnResult<bool>> SubmitFeedbackAsync(CreateUserRecommendationFeedbackDTO dto)
         {
             var result = new ReturnResult<bool>();
             try
             {
+                var profileId = _userContext.ProfileId;
+                if (string.IsNullOrWhiteSpace(profileId))
+                {
+                    result.Message = "Profile context is missing";
+                    return result;
+                }
+
                 if (dto == null || (string.IsNullOrEmpty(dto.PostId) && string.IsNullOrEmpty(dto.QAPostId) && string.IsNullOrEmpty(dto.CommunityId)))
                 {
                     result.Message = "PostId, QAPostId, or CommunityId is required";
@@ -81,17 +133,33 @@ namespace platform_core_service.Business.Recommendations
                 }
 
                 var feedbackType = ParseFeedbackType(dto.FeedbackType);
-                _context.UserRecommendationFeedbacks.Add(new UserRecommendationFeedback
+                var existingFeedback = await _context.UserRecommendationFeedbacks
+                    .FirstOrDefaultAsync(f =>
+                        f.ProfileId == profileId &&
+                        f.PostId == dto.PostId &&
+                        f.QAPostId == dto.QAPostId &&
+                        f.CommunityId == dto.CommunityId);
+
+                if (existingFeedback != null)
                 {
-                    UserId = userId,
-                    PostId = dto.PostId,
-                    QAPostId = dto.QAPostId,
-                    CommunityId = dto.CommunityId,
-                    FeedbackType = feedbackType
-                });
+                    if (existingFeedback.FeedbackType != feedbackType)
+                    {
+                        existingFeedback.FeedbackType = feedbackType;
+                    }
+                }
+                else
+                {
+                    _context.UserRecommendationFeedbacks.Add(new UserRecommendationFeedback
+                    {
+                        ProfileId = profileId,
+                        PostId = dto.PostId,
+                        QAPostId = dto.QAPostId,
+                        CommunityId = dto.CommunityId,
+                        FeedbackType = feedbackType
+                    });
+                }
 
                 await _context.SaveChangesAsync();
-                await _cache.RemoveCacheAsync($"interest_profile:{userId}");
 
                 result.Result = true;
             }

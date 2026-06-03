@@ -9,9 +9,9 @@ interface CommunityTabsProps {
 
 export function CommunityTabs({ activeTab, setActiveTab }: CommunityTabsProps) {
     const tabs = [
-        { id: CommunityFetchMode.RECOMMENDED, label: "Recommended" },
         { id: CommunityFetchMode.EXPLORE, label: "Discover" },
         { id: CommunityFetchMode.YOURS, label: "Your Communities" },
+        { id: CommunityFetchMode.RECOMMENDED, label: "Recommended" },
     ];
 
     return (

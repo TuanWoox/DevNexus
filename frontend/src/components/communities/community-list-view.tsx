@@ -17,6 +17,7 @@ interface CommunityListViewProps {
     errorText?: string;
     emptyTitle?: string;
     emptySubtitle?: string;
+    isRecommendation?: boolean;
 }
 
 export function CommunityListView({
@@ -30,6 +31,7 @@ export function CommunityListView({
     errorText = "Failed to load communities. Please try again.",
     emptyTitle = "No communities yet",
     emptySubtitle = "Check back later or explore other communities.",
+    isRecommendation
 }: CommunityListViewProps) {
     const handleIntersect = useCallback(() => {
         if (hasNextPage && !isFetchingNextPage && onLoadMore) {
@@ -68,7 +70,11 @@ export function CommunityListView({
                 {!isLoading && !isError && communities && communities.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 fade-in">
                         {communities.map((community) => (
-                            <CommunityCard key={community.id} community={community} />
+                            <CommunityCard 
+                                key={community.id} 
+                                community={community} 
+                                isRecommendation={isRecommendation} 
+                            />
                         ))}
                     </div>
                 )}

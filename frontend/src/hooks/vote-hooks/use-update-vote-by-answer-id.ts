@@ -55,7 +55,7 @@ const applyVoteToAnswerPagedList = (
     answerId: string,
     voteRequestDTO: VoteRequestDTO
 ): PagedData<SelectAnswerDTO, string> | undefined => {
-    if (!oldData) return oldData;
+    if (!oldData || !oldData.data) return oldData;
     return {
         ...oldData,
         data: oldData.data.map((answer) =>
@@ -84,7 +84,7 @@ export const useUpdateVoteByAnswerId = (answerId: string) => {
                 if (!oldData) return;
                 if ("pages" in oldData) {
                     queryClient.setQueryData(queryKey, applyVoteToAnswerInfiniteList(oldData, answerId, voteRequestDTO));
-                } else {
+                } else if ("data" in oldData) {
                     queryClient.setQueryData(queryKey, applyVoteToAnswerPagedList(oldData, answerId, voteRequestDTO));
                 }
             });

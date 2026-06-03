@@ -17,12 +17,7 @@ interface CommunityTabContentProps {
 
 export function CommunityTabContent({ mode, searchQuery, sortOption }: CommunityTabContentProps) {
     if (mode === CommunityFetchMode.RECOMMENDED) {
-        return (
-            <RecommendedCommunityTabContent
-                searchQuery={searchQuery}
-                sortOption={sortOption}
-            />
-        );
+        return <RecommendedCommunityTabContent />;
     }
 
     return (

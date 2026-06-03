@@ -6,7 +6,7 @@ namespace platform_core_service.Common.Interfaces.Recommendations
 {
     public interface IInteractionService
     {
-        Task<ReturnResult<bool>> TrackAsync(string userId, SelectUserContentInteractionDTO dto);
-        Task<ReturnResult<bool>> SubmitFeedbackAsync(string userId, CreateUserRecommendationFeedbackDTO dto);
+        Task<ReturnResult<bool>> TrackAsync(SelectUserContentInteractionDTO dto);
+        Task<ReturnResult<bool>> SubmitFeedbackAsync(CreateUserRecommendationFeedbackDTO dto);
     }
 }

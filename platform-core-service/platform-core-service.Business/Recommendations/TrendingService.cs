@@ -1,11 +1,12 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
+using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Recommendations;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Community;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
-using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 
@@ -15,11 +16,16 @@ namespace platform_core_service.Business.Recommendations
     {
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
+        private readonly IUserContext _userContext;
 
-        public TrendingService(ApplicationDbContext context, IMapper mapper)
+        public TrendingService(
+            ApplicationDbContext context,
+            IMapper mapper,
+            IUserContext userContext)
         {
             _context = context;
             _mapper = mapper;
+            _userContext = userContext;
         }
 
         public async Task<Dictionary<string, double>> GetPostTrendingScoresAsync(IEnumerable<string> postIds)
@@ -82,22 +88,44 @@ namespace platform_core_service.Business.Recommendations
             {
                 limit = Math.Clamp(limit, 1, 50);
                 var cutoff = GetPeriodCutoff(period);
-                var candidates = await _context.Posts
+                var profileId = _userContext.ProfileId;
+                if (string.IsNullOrWhiteSpace(profileId))
+                    return result;
+
+                var baseQuery = _context.Posts
                     .Where(p => p.GetType() == typeof(Post))
-                    .Where(p => !p.Deleted)
-                    .Where(p => p.ModerationStatus == ModerationStatus.Approved)
-                    .Where(p => p.CommunityApprovalStatus == null || p.CommunityApprovalStatus == CommunityApprovalStatus.Approved)
+                    .ApplyPostVisibilityRules(_context, profileId);
+
+                var candidates = await baseQuery
                     .Where(p => p.DateCreated > cutoff)
                     .Include(p => p.PostTags).ThenInclude(pt => pt.Tag)
                     .Include(p => p.Author)
                     .Include(p => p.Community)
                     .AsNoTracking()
+                    .OrderByDescending(p => p.DateCreated)
                     .Take(200)
                     .ToListAsync();
+
+                if (candidates.Count < limit)
+                {
+                    var existingIds = candidates.Select(p => p.Id).ToHashSet();
+                    var fallbackCandidates = await baseQuery
+                        .Where(p => !existingIds.Contains(p.Id))
+                        .Include(p => p.PostTags).ThenInclude(pt => pt.Tag)
+                        .Include(p => p.Author)
+                        .Include(p => p.Community)
+                        .AsNoTracking()
+                        .OrderByDescending(p => p.DateCreated)
+                        .Take(200 - candidates.Count)
+                        .ToListAsync();
+
+                    candidates.AddRange(fallbackCandidates);
+                }
 
                 var scores = await GetPostTrendingScoresAsync(candidates.Select(p => p.Id));
                 result.Result = candidates
                     .OrderByDescending(p => scores.GetValueOrDefault(p.Id, 0))
+                    .ThenByDescending(p => p.DateCreated)
                     .Take(limit)
                     .Select(p => _mapper.Map<SelectPostDTO>(p))
                     .ToList();
@@ -118,8 +146,12 @@ namespace platform_core_service.Business.Recommendations
             {
                 limit = Math.Clamp(limit, 1, 50);
                 var cutoff = GetPeriodCutoff(period);
+                var profileId = _userContext.ProfileId;
+                if (string.IsNullOrWhiteSpace(profileId))
+                    return result;
+
                 var communities = await _context.Communities
-                    .Where(c => !c.Deleted)
+                    .ApplyCommunityVisibilityRules(_context, profileId)
                     .Include(c => c.Members)
                     .Include(c => c.Posts.Where(p => !p.Deleted && p.DateCreated > cutoff))
                     .AsNoTracking()

@@ -266,18 +266,22 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
-        public async Task<ReturnResult<AIEmbeddingResponseDTO>> GetRecommendationEmbeddingAsync(AIEmbeddingRequestDTO request)
+        public async Task<ReturnResult<AIBatchEmbeddingResponseDTO>> GetRecommendationEmbeddingsAsync(AIBatchEmbeddingRequestDTO request)
         {
-            var result = new ReturnResult<AIEmbeddingResponseDTO>();
+            var result = new ReturnResult<AIBatchEmbeddingResponseDTO>();
             try
             {
                 using var httpRequest = new HttpRequestMessage(
                     HttpMethod.Post,
-                    $"{_baseUrl}/ai/recommendations/embedding")
+                    $"{_baseUrl}/ai/recommendations/embeddings")
                 {
                     Content = JsonContent.Create(new
                     {
-                        text = request.Text
+                        items = request.Items.Select(item => new
+                        {
+                            id = item.Id,
+                            text = item.Text
+                        }).ToList()
                     }),
                 };
 
@@ -288,29 +292,29 @@ namespace platform_core_service.Business.Services
                 {
                     var errorBody = await response.Content.ReadAsStringAsync();
                     DevNexusLogger.Instance.Warn(
-                        $"[AiWorkerClient] Recommendation embedding returned {(int)response.StatusCode}: {errorBody}");
-                    result.Message = $"AI worker could not generate a recommendation embedding. Status: {(int)response.StatusCode}.";
+                        $"[AiWorkerClient] Recommendation embeddings returned {(int)response.StatusCode}: {errorBody}");
+                    result.Message = $"AI worker could not generate recommendation embeddings. Status: {(int)response.StatusCode}.";
                     return result;
                 }
 
-                var embedding = await response.Content.ReadFromJsonAsync<AIEmbeddingResponseDTO>();
-                if (embedding == null || embedding.Embedding.Count == 0)
+                var embeddings = await response.Content.ReadFromJsonAsync<AIBatchEmbeddingResponseDTO>();
+                if (embeddings == null || embeddings.Items.Count == 0)
                 {
-                    result.Message = "AI worker returned an empty recommendation embedding.";
+                    result.Message = "AI worker returned empty recommendation embeddings.";
                     return result;
                 }
 
-                result.Result = embedding;
+                result.Result = embeddings;
             }
             catch (TaskCanceledException ex)
             {
-                DevNexusLogger.Instance.Warn($"[AiWorkerClient] GetRecommendationEmbeddingAsync timed out: {ex.Message}");
-                result.Message = "AI recommendation embedding timed out.";
+                DevNexusLogger.Instance.Warn($"[AiWorkerClient] GetRecommendationEmbeddingsAsync timed out: {ex.Message}");
+                result.Message = "AI recommendation embeddings timed out.";
             }
             catch (Exception ex)
             {
-                DevNexusLogger.Instance.Error($"[AiWorkerClient] GetRecommendationEmbeddingAsync failed: {ex.Message}");
-                result.Message = "Could not generate recommendation embedding.";
+                DevNexusLogger.Instance.Error($"[AiWorkerClient] GetRecommendationEmbeddingsAsync failed: {ex.Message}");
+                result.Message = "Could not generate recommendation embeddings.";
             }
 
             return result;

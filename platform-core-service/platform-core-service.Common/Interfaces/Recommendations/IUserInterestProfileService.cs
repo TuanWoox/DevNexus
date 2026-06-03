@@ -4,6 +4,6 @@ namespace platform_core_service.Common.Interfaces.Recommendations
 {
     public interface IUserInterestProfileService
     {
-        Task<UserInterestProfile> BuildAsync(string userId);
+        Task<UserInterestProfile> BuildAsync();
     }
 }

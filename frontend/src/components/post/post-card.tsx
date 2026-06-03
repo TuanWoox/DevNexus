@@ -41,16 +41,17 @@ import { CommunityHoverCard } from "@/components/communities/community-hover-car
 interface PostCardProps {
     post: SelectPostDTO | SelectQAPostDTO;
     canModerateCommunity?: boolean;
+    isRecommendation?: boolean;
 }
 
-export function PostCard({ post, canModerateCommunity }: PostCardProps) {
+export function PostCard({ post, canModerateCommunity, isRecommendation }: PostCardProps) {
     const hasMounted = useHasMounted();
     const { user } = useSelector((state: RootState) => state.auth);
     const isQaPost = 'answerCount' in post;
     const detailHref = isQaPost ? getQAPostDetailHref(post) : getPostDetailHref(post);
     const moderationStatus = normalizeModerationStatus(post.moderationStatus);
     const isModerationApproved = moderationStatus === "Approved";
-    const communityApprovalStatus = normalizeCommunityApprovalStatus(post.communityApprovalStatus) ?? (post.communityId ? CommunityApprovalStatus.Pending : null);
+    const communityApprovalStatus = normalizeCommunityApprovalStatus(post.communityApprovalStatus);
     const isCommunityApproved = !post.communityId ||
         communityApprovalStatus == null ||
         communityApprovalStatus === CommunityApprovalStatus.Approved;
@@ -214,6 +215,7 @@ export function PostCard({ post, canModerateCommunity }: PostCardProps) {
                         isQAPost={isQaPost}
                         isAuthor={isAuthor}
                         canModerateCommunity={canModerateContent}
+                        isRecommendation={isRecommendation}
                         dropdownClassName="relative z-10"
                     />
                 </div>
@@ -229,7 +231,7 @@ export function PostCard({ post, canModerateCommunity }: PostCardProps) {
                         {post.title}
                     </h2>
                 </Link>
-                
+
                 <div className="relative overflow-hidden transition-all duration-300 mt-1">
                     <div className={cn(
                         "text-sm leading-relaxed text-muted-foreground/90 transition-all duration-300 font-normal",

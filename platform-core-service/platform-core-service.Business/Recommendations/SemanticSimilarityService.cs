@@ -26,35 +26,12 @@ namespace platform_core_service.Business.Recommendations
             _cache = cache;
         }
 
-        public async Task<double> ScorePostAsync(Post candidate, string userId, bool qaOnly = false)
+        public async Task<double> ScorePostAsync(Post candidate, string profileId, bool qaOnly = false)
         {
             try
             {
-                var referenceIds = await GetReferenceContentIdsAsync(userId, qaOnly);
-                if (referenceIds.Count == 0)
-                    return 0;
-
-                var candidateEmbedding = await GetEmbeddingAsync(candidate.Id, BuildContentText(candidate));
-                if (candidateEmbedding.Count == 0)
-                    return 0;
-
-                var referencePosts = await _context.Posts
-                    .Where(p => referenceIds.Contains(p.Id))
-                    .Include(p => p.PostTags).ThenInclude(pt => pt.Tag)
-                    .AsNoTracking()
-                    .ToListAsync();
-
-                var bestScore = 0.0;
-                foreach (var reference in referencePosts)
-                {
-                    var referenceEmbedding = await GetEmbeddingAsync(reference.Id, BuildContentText(reference));
-                    if (referenceEmbedding.Count == 0)
-                        continue;
-
-                    bestScore = Math.Max(bestScore, CosineSimilarity(candidateEmbedding, referenceEmbedding));
-                }
-
-                return Math.Clamp(bestScore * 5.0, 0, 5.0);
+                var scores = await ScorePostsAsync([candidate], profileId, qaOnly);
+                return scores.GetValueOrDefault(candidate.Id, 0);
             }
             catch (Exception ex)
             {
@@ -63,11 +40,70 @@ namespace platform_core_service.Business.Recommendations
             }
         }
 
-        private async Task<List<string>> GetReferenceContentIdsAsync(string userId, bool qaOnly)
+        public async Task<Dictionary<string, double>> ScorePostsAsync(
+            IReadOnlyCollection<Post> candidates,
+            string profileId,
+            bool qaOnly = false)
+        {
+            var scores = candidates.ToDictionary(candidate => candidate.Id, _ => 0.0);
+            if (candidates.Count == 0)
+                return scores;
+
+            try
+            {
+                var referenceIds = await GetReferenceContentIdsAsync(profileId, qaOnly);
+                if (referenceIds.Count == 0)
+                    return scores;
+
+                var referencePosts = await _context.Posts
+                    .Where(p => referenceIds.Contains(p.Id))
+                    .Include(p => p.PostTags).ThenInclude(pt => pt.Tag)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                if (referencePosts.Count == 0)
+                    return scores;
+
+                var embeddingInputs = candidates
+                    .Concat(referencePosts)
+                    .GroupBy(post => post.Id)
+                    .Select(group => group.First())
+                    .ToDictionary(post => post.Id, BuildContentText);
+
+                var embeddings = await GetEmbeddingsAsync(embeddingInputs);
+                var referenceEmbeddings = referencePosts
+                    .Select(reference => embeddings.GetValueOrDefault(reference.Id))
+                    .Where(embedding => embedding is { Count: > 0 })
+                    .ToList();
+
+                if (referenceEmbeddings.Count == 0)
+                    return scores;
+
+                foreach (var candidate in candidates)
+                {
+                    var candidateEmbedding = embeddings.GetValueOrDefault(candidate.Id);
+                    if (candidateEmbedding is not { Count: > 0 })
+                        continue;
+
+                    var bestScore = referenceEmbeddings.Max(referenceEmbedding =>
+                        CosineSimilarity(candidateEmbedding, referenceEmbedding));
+
+                    scores[candidate.Id] = Math.Clamp(bestScore * 5.0, 0, 5.0);
+                }
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Warn($"[SemanticSimilarityService] Falling back without AI semantic batch score: {ex.Message}");
+            }
+
+            return scores;
+        }
+
+        private async Task<List<string>> GetReferenceContentIdsAsync(string profileId, bool qaOnly)
         {
             var cutoff = DateTimeOffset.UtcNow.AddDays(-30);
             var query = _context.UserContentInteractions
-                .Where(i => i.UserId == userId && i.DateCreated > cutoff);
+                .Where(i => i.ProfileId == profileId && i.DateCreated > cutoff);
 
             var referenceIds = qaOnly
                 ? await query
@@ -90,26 +126,62 @@ namespace platform_core_service.Business.Recommendations
 
         private async Task<List<float>> GetEmbeddingAsync(string contentId, string text)
         {
-            var cacheKey = $"recommendation_embedding:{contentId}";
-            var cached = await _cache.GetCacheAsync<List<float>>(cacheKey);
-            if (cached is { Count: > 0 })
-                return cached;
-
-            var result = await _aiWorkerClient.GetRecommendationEmbeddingAsync(new AIEmbeddingRequestDTO
+            var embeddings = await GetEmbeddingsAsync(new Dictionary<string, string>
             {
-                Text = text
+                [contentId] = text
             });
 
-            if (result.Result?.Embedding == null || result.Result.Embedding.Count == 0)
-                return [];
-
-            await _cache.SetCacheAsync(cacheKey, result.Result.Embedding, new DistributedCacheEntryOptions
-            {
-                SlidingExpiration = TimeSpan.FromDays(7)
-            });
-
-            return result.Result.Embedding;
+            return embeddings.GetValueOrDefault(contentId, []);
         }
+
+        private async Task<Dictionary<string, List<float>>> GetEmbeddingsAsync(IReadOnlyDictionary<string, string> contentTexts)
+        {
+            var embeddings = new Dictionary<string, List<float>>();
+            var missingItems = new List<AIEmbeddingItemDTO>();
+
+            foreach (var (contentId, text) in contentTexts)
+            {
+                var cached = await _cache.GetCacheAsync<List<float>>(GetEmbeddingCacheKey(contentId));
+                if (cached is { Count: > 0 })
+                {
+                    embeddings[contentId] = cached;
+                    continue;
+                }
+
+                missingItems.Add(new AIEmbeddingItemDTO
+                {
+                    Id = contentId,
+                    Text = text
+                });
+            }
+
+            if (missingItems.Count == 0)
+                return embeddings;
+
+            var result = await _aiWorkerClient.GetRecommendationEmbeddingsAsync(new AIBatchEmbeddingRequestDTO
+            {
+                Items = missingItems
+            });
+
+            if (result.Result?.Items == null || result.Result.Items.Count == 0)
+                return embeddings;
+
+            foreach (var item in result.Result.Items)
+            {
+                if (string.IsNullOrWhiteSpace(item.Id) || item.Embedding.Count == 0)
+                    continue;
+
+                embeddings[item.Id] = item.Embedding;
+                await _cache.SetCacheAsync(GetEmbeddingCacheKey(item.Id), item.Embedding, new DistributedCacheEntryOptions
+                {
+                    SlidingExpiration = TimeSpan.FromDays(7)
+                });
+            }
+
+            return embeddings;
+        }
+
+        private static string GetEmbeddingCacheKey(string contentId) => $"recommendation_embedding:{contentId}";
 
         private static string BuildContentText(Post post)
         {
