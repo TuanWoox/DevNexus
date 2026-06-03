@@ -23,8 +23,6 @@ namespace platform_core_service.Business.Services
         private readonly IRepository<ModerationQueueEntry, string> _queueRepository;
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IAdminAuditLogService _adminAuditLogService;
-        private readonly IPostHistoryService _postHistoryService;
-        private readonly IQAPostHistoryService _qaPostHistoryService;
         private readonly IQAPostFirstResponderTriggerService _firstResponderTriggerService;
 
         public AdminModerationService(
@@ -33,8 +31,6 @@ namespace platform_core_service.Business.Services
             IRepository<ModerationQueueEntry, string> queueRepository,
             IBackgroundJobClient backgroundJobClient,
             IAdminAuditLogService adminAuditLogService,
-            IPostHistoryService postHistoryService,
-            IQAPostHistoryService qaPostHistoryService,
             IQAPostFirstResponderTriggerService firstResponderTriggerService)
         {
             _context = context;
@@ -42,8 +38,6 @@ namespace platform_core_service.Business.Services
             _queueRepository = queueRepository;
             _backgroundJobClient = backgroundJobClient;
             _adminAuditLogService = adminAuditLogService;
-            _postHistoryService = postHistoryService;
-            _qaPostHistoryService = qaPostHistoryService;
             _firstResponderTriggerService = firstResponderTriggerService;
         }
 
@@ -118,8 +112,6 @@ namespace platform_core_service.Business.Services
                     postModerationStatus = entry.Post.ModerationStatus.ToString(),
                     entry.Post.ModerationReason
                 };
-                var wasAlreadyApproved = entry.Post.ModerationStatus == ModerationStatus.Approved;
-
                 // Step 3: Resolve the queue entry
                 entry.Resolution = "Approved";
                 entry.ResolvedAt = DateTimeOffset.UtcNow;
@@ -154,10 +146,6 @@ namespace platform_core_service.Business.Services
 
                 // Gán entry.Post vào biến post để xài cho gọn và hết lỗi đỏ
                 var post = entry.Post;
-                if (!wasAlreadyApproved)
-                {
-                    await RecordApprovedContentHistoryAsync(post);
-                }
                 await EnqueueModerationNotification(post);
 
                 if (post is QAPost)
@@ -176,22 +164,6 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while approving queue entry: {ex.Message}";
             }
             return result;
-        }
-
-        private async Task RecordApprovedContentHistoryAsync(Post post)
-        {
-            if (post.ModerationStatus != ModerationStatus.Approved)
-            {
-                return;
-            }
-
-            if (post is QAPost)
-            {
-                await _qaPostHistoryService.RecordHistoryAsync(post.Id);
-                return;
-            }
-
-            await _postHistoryService.RecordHistoryAsync(post.Id);
         }
 
         public async Task<ReturnResult<bool>> RejectAsync(AdminQueueResolveDTO dto)

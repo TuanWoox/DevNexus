@@ -20,8 +20,6 @@ namespace platform_core_service.Business.Services
         private readonly IRepository<PostEntity, string> _postRepository;
         private readonly IUserContext _userContext;
         private readonly IAdminAuditLogService _adminAuditLogService;
-        private readonly IPostHistoryService _postHistoryService;
-        private readonly IQAPostHistoryService _qaPostHistoryService;
         private readonly IQAPostFirstResponderTriggerService _firstResponderTriggerService;
 
         public AdminPostService(
@@ -29,16 +27,12 @@ namespace platform_core_service.Business.Services
             IRepository<PostEntity, string> postRepository,
             IUserContext userContext,
             IAdminAuditLogService adminAuditLogService,
-            IPostHistoryService postHistoryService,
-            IQAPostHistoryService qaPostHistoryService,
             IQAPostFirstResponderTriggerService firstResponderTriggerService)
         {
             _context = context;
             _postRepository = postRepository;
             _userContext = userContext;
             _adminAuditLogService = adminAuditLogService;
-            _postHistoryService = postHistoryService;
-            _qaPostHistoryService = qaPostHistoryService;
             _firstResponderTriggerService = firstResponderTriggerService;
         }
 
@@ -87,8 +81,6 @@ namespace platform_core_service.Business.Services
                     moderationStatus = post.ModerationStatus.ToString(),
                     post.ModerationReason
                 };
-                var wasAlreadyApproved = post.ModerationStatus == ModerationStatus.Approved;
-
                 post.ModerationStatus = ModerationStatus.Approved;
                 post.ModerationReason = null;
                 await ResolveOpenQueueEntryAsync(post.Id, "Approved", null);
@@ -103,11 +95,6 @@ namespace platform_core_service.Business.Services
                         post.ModerationReason
                     }));
                 await _context.SaveChangesAsync();
-                if (!wasAlreadyApproved)
-                {
-                    await RecordApprovedContentHistoryAsync(post);
-                }
-
                 if (post is QAPost)
                 {
                     await _firstResponderTriggerService.TryEnqueueAsync(post.Id, "AdminPost");
@@ -125,22 +112,6 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while approving post: {ex.Message}";
             }
             return result;
-        }
-
-        private async Task RecordApprovedContentHistoryAsync(Post post)
-        {
-            if (post.ModerationStatus != ModerationStatus.Approved)
-            {
-                return;
-            }
-
-            if (post is QAPost)
-            {
-                await _qaPostHistoryService.RecordHistoryAsync(post.Id);
-                return;
-            }
-
-            await _postHistoryService.RecordHistoryAsync(post.Id);
         }
 
         public async Task<ReturnResult<bool>> ForceRejectAsync(string postId, AdminForceRejectPostDTO dto)
