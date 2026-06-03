@@ -279,7 +279,11 @@ namespace platform_core_service.Business.Services
 
             var result = await _adminUserService.SuspendUserAsync(
                 report.TargetOwnerId,
-                new AdminSuspendUserDTO { DaySuspend = dto.SuspendDays });
+                new AdminSuspendUserDTO
+                {
+                    DaySuspend = dto.SuspendDays,
+                    Reason = dto.TargetActionReason
+                });
 
             if (result.Result)
             {
@@ -295,7 +299,8 @@ namespace platform_core_service.Business.Services
                     },
                     actionMetadata: new
                     {
-                        durationDays = dto.SuspendDays
+                        durationDays = dto.SuspendDays,
+                        reason = dto.TargetActionReason
                     });
             }
 

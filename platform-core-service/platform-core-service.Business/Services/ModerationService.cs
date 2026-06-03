@@ -1,6 +1,5 @@
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
-using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Services;
@@ -19,17 +18,20 @@ namespace platform_core_service.Business.Services
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly IPostHistoryService _postHistoryService;
         private readonly IQAPostHistoryService _qaPostHistoryService;
+        private readonly IQAPostFirstResponderTriggerService _firstResponderTriggerService;
 
         public ModerationService(
             ApplicationDbContext context,
             IBackgroundJobClient backgroundJobClient,
             IPostHistoryService postHistoryService,
-            IQAPostHistoryService qaPostHistoryService)
+            IQAPostHistoryService qaPostHistoryService,
+            IQAPostFirstResponderTriggerService firstResponderTriggerService)
         {
             _context = context;
             _backgroundJobClient = backgroundJobClient;
             _postHistoryService = postHistoryService;
             _qaPostHistoryService = qaPostHistoryService;
+            _firstResponderTriggerService = firstResponderTriggerService;
         }
 
         public async Task<ReturnResult<bool>> HandleCallbackAsync(ModerationCallbackDTO dto)
@@ -65,6 +67,14 @@ namespace platform_core_service.Business.Services
                 {
                     DevNexusLogger.Instance.Debug(
                         $"[Moderation] Callback ignored for post {dto.PostId} — post was deleted.");
+                    result.Result = true;
+                    return result;
+                }
+
+                if (IsStaleModerationMessage(dto.ModerationVersion, dto.ContentHash, post))
+                {
+                    DevNexusLogger.Instance.Debug(
+                        $"[Moderation] Callback ignored for post {dto.PostId} — stale moderation version/hash.");
                     result.Result = true;
                     return result;
                 }
@@ -117,36 +127,7 @@ namespace platform_core_service.Business.Services
 
                 if (post.ModerationStatus == ModerationStatus.Approved && post is QAPost)
                 {
-                    if (await _context.Answers.HasExistingAiFirstResponderAnswerAsync(_context, post.Id))
-                    {
-                        DevNexusLogger.Instance.Debug($"[Moderation] Skipped AI First Responder for QA Post {post.Id} because an AI answer already exists");
-                        result.Result = true;
-                        return result;
-                    }
-
-                    // Load Author and Tags now that we know this is a QA post
-                    await _context.Entry(post).Reference(p => p.Author).LoadAsync();
-                    await _context.Entry(post).Collection(p => p.PostTags).Query()
-                        .Include(pt => pt.Tag).LoadAsync();
-
-                    var aiRequest = new platform_core_service.Common.Models.DTOs.AIDTO.AIFirstResponderRequestDTO
-                    {
-                        PostId = post.Id,
-                        Title = post.Title,
-                        Content = post.Content,
-                        Tags = post.PostTags?.Select(pt => pt.Tag.Name).ToList() ?? new List<string>(),
-                        AuthorId = post.AuthorId,
-                        AuthorDisplayName = post.Author?.FullName ?? "Unknown",
-                        CreatedAt = post.DateCreated ?? DateTimeOffset.UtcNow
-                    };
-
-                    string routingKey = "ai.task.firstresponder.request";
-
-                    _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
-                        x => x.PublicAiTask(aiRequest, routingKey, MessageBusEnum.Create, MessageBusEntityEnum.AIFirstResponder)
-                    );
-
-                    DevNexusLogger.Instance.Debug($"[Moderation] AI First Responder Task queued for QA Post {post.Id}");
+                    await _firstResponderTriggerService.TryEnqueueAsync(post.Id, "Moderation");
                 }
 
                 result.Result = true;
@@ -178,24 +159,28 @@ namespace platform_core_service.Business.Services
         private async Task EnqueueModerationNotification(Post post)
         {
             var isQuestion = post is QAPost;
-            var notificationEvent = new NotiicationCreatedEntityDTO
-            {
-                EventType = NotificationEventType.MODERATION_RESULT,
-                ActorType = ActorType.System,
-                ActorId = "devnexus",
-                ActorName = "DevNexus",
-                RecipientId = post.AuthorId,
-                EntityType = isQuestion ? NotificationEntityType.QUESTION : NotificationEntityType.POST,
-                EntityId = post.Id,
-                EntityTitle = post.Title,
-                EntityPreview = post.ModerationStatus.ToString(),
-                ActionUrl = isQuestion ? $"/questions/{post.Id}" : $"/post/{post.Id}",
-                Timestamp = DateTime.UtcNow,
-                Message = $"Your {(isQuestion ? "question" : "post")} is {post.ModerationStatus}."
-            };
 
-            _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
-                x => x.PublicNotification(notificationEvent, "notifications.moderation"));
+            if (post.ModerationStatus != ModerationStatus.Approved)
+            {
+                var notificationEvent = new NotiicationCreatedEntityDTO
+                {
+                    EventType = NotificationEventType.MODERATION_RESULT,
+                    ActorType = ActorType.System,
+                    ActorId = "devnexus",
+                    ActorName = "DevNexus",
+                    RecipientId = post.AuthorId,
+                    EntityType = isQuestion ? NotificationEntityType.QUESTION : NotificationEntityType.POST,
+                    EntityId = post.Id,
+                    EntityTitle = post.Title,
+                    EntityPreview = post.ModerationStatus.ToString(),
+                    ActionUrl = isQuestion ? $"/questions/{post.Id}" : $"/post/{post.Id}",
+                    Timestamp = DateTime.UtcNow,
+                    Message = $"Your {(isQuestion ? "question" : "post")} is {post.ModerationStatus}."
+                };
+
+                _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
+                    x => x.PublicNotification(notificationEvent, "notifications.moderation"));
+            }
 
             if (post.ModerationStatus != ModerationStatus.Approved ||
                 string.IsNullOrEmpty(post.CommunityId) ||
@@ -256,11 +241,21 @@ namespace platform_core_service.Business.Services
             {
                 var post = await _context.Posts
                     .IgnoreQueryFilters()
-                    .AnyAsync(p => p.Id == dto.PostId);
+                    .FirstOrDefaultAsync(p => p.Id == dto.PostId);
 
-                if (!post)
+                if (post == null)
                 {
                     result.Message = $"Post {dto.PostId} not found.";
+                    return result;
+                }
+
+                if (post.Deleted ||
+                    post.ModerationStatus != ModerationStatus.Pending ||
+                    IsStaleModerationMessage(dto.ModerationVersion, dto.ContentHash, post))
+                {
+                    DevNexusLogger.Instance.Debug(
+                        $"[Moderation] Queue request ignored for post {dto.PostId} — stale or no longer pending.");
+                    result.Result = new ModerationQueueResponseDTO { Id = string.Empty };
                     return result;
                 }
 
@@ -287,6 +282,12 @@ namespace platform_core_service.Business.Services
                 result.Message = $"An error occurred while creating moderation queue entry: {ex.Message}";
             }
             return result;
+        }
+
+        private static bool IsStaleModerationMessage(int? moderationVersion, string? contentHash, Post post)
+        {
+            return moderationVersion != post.ModerationVersion ||
+                   !string.Equals(contentHash, post.ModerationContentHash, StringComparison.Ordinal);
         }
 
         public async Task<ReturnResult<ModerationQueueResponseDTO>> EnqueueBannedKeywordReviewAsync(string postId, IReadOnlyCollection<string> matchedKeywords)

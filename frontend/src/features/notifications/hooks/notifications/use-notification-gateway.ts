@@ -3,8 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 import { RootState } from "@/store/store";
+import { clearToken } from "@/store/slices/auth-slice";
 import type { Notification } from "../../types/contracts";
 import { getWsBaseUrl } from "../../utils/notification-service.helper";
 import {
@@ -36,6 +40,8 @@ export function useNotificationGateway() {
     const token = useSelector((state: RootState) => state.auth.accessToken);
     const currentProfileId = useSelector((state: RootState) => state.auth.user?.profileId);
     const queryClient = useQueryClient();
+    const dispatch = useDispatch();
+    const router = useRouter();
 
     useEffect(() => {
         if (!token || !currentProfileId) return;
@@ -71,6 +77,45 @@ export function useNotificationGateway() {
                 queryClient.invalidateQueries({ queryKey: qaPostQueryKeys.detail(notification.EntityId) });
             }
 
+            if (
+                notification.Type === NotificationEventEnum.SYSTEM_ANNOUNCEMENT &&
+                notification.EntityPreview === "AccountSuspended"
+            ) {
+                let reason: string | null = null;
+                let suspendedUntil: string | null = null;
+                let isPermanentBan = true;
+
+                if (notification.ActionUrl) {
+                    try {
+                        const url = new URL(notification.ActionUrl, window.location.origin);
+                        reason = url.searchParams.get("reason");
+                        suspendedUntil = url.searchParams.get("until");
+                        isPermanentBan = !suspendedUntil;
+                    } catch (e) {
+                        console.error("Failed to parse ActionUrl:", e);
+                    }
+                }
+
+                Cookies.remove("accessToken");
+                Cookies.remove("refreshToken");
+                dispatch(clearToken());
+                sessionStorage.setItem("accountModerationStatus", JSON.stringify({
+                    isSuspended: true,
+                    isPermanentBan,
+                    suspendedUntil,
+                    reason,
+                }));
+                router.push(notification.ActionUrl || "/account-suspended");
+                return;
+            }
+
+            if (
+                notification.Type === NotificationEventEnum.SYSTEM_ANNOUNCEMENT &&
+                notification.EntityPreview === "AccountUnsuspended"
+            ) {
+                queryClient.invalidateQueries();
+            }
+
             // Dispatch event for NotificationToastHost
             window.dispatchEvent(new CustomEvent("new-notification", { detail: notification }));
         });
@@ -91,7 +136,7 @@ export function useNotificationGateway() {
             socketRef.current = null;
             setIsConnected(false);
         };
-    }, [token, currentProfileId, queryClient]);
+    }, [token, currentProfileId, queryClient, dispatch, router]);
 
     return { socketRef, isConnected };
 }

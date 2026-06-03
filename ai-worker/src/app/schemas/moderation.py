@@ -29,6 +29,8 @@ class ModerationDecision(str, Enum):
 class ModerationSubmitRequest(BaseModel):
     """Body sent to the submit endpoint (used internally by the worker)."""
     post_id: str = Field(..., description="UUID of the post being moderated.")
+    moderation_version: int = Field(..., ge=0, description="Platform moderation content version.")
+    content_hash: str = Field(..., min_length=1, max_length=128, description="SHA-256 hash of normalized moderated content.")
     text_content: str = Field(..., min_length=1, max_length=50000)
     image_url: str | None = Field(None, description="Optional URL of the post image.")
 
@@ -63,6 +65,8 @@ class TierThreeResult(BaseModel):
 
 class ModerationTaskResult(BaseModel):
     post_id: str
+    moderation_version: int
+    content_hash: str
     final_status: ModerationStatus
     decision: ModerationDecision
     tier_reached: int = Field(..., ge=1, le=3, description="Highest tier that ran.")

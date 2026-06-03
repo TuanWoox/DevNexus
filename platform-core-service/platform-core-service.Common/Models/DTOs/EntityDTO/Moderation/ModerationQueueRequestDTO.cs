@@ -11,6 +11,11 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Moderation
         [Required]
         public string PostId { get; set; } = null!;
 
+        public int? ModerationVersion { get; set; }
+
+        [MaxLength(128)]
+        public string? ContentHash { get; set; }
+
         [Required]
         [MaxLength(255)]
         public string Reason { get; set; } = null!;

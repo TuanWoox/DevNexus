@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 async def run_moderation(
     *,
     post_id: str,
+    moderation_version: int,
+    content_hash: str,
     text_content: str,
     image_bytes: bytes | None,
     image_mime_type: str | None,
@@ -53,6 +55,8 @@ async def run_moderation(
     try:
         result = await service.process_post(
             post_id=post_id,
+            moderation_version=moderation_version,
+            content_hash=content_hash,
             text_content=text_content,
             image_bytes=image_bytes,
             image_mime_type=image_mime_type,
@@ -65,4 +69,4 @@ async def run_moderation(
     except Exception as exc:
         logger.exception("[Worker] Unhandled error for post=%s: %s", post_id, exc)
         # Best-effort: notify C# to escalate rather than leaving post stuck in PROCESSING
-        await service._notify_platform(post_id, ModerationDecision.ESCALATE)
+        await service._notify_platform(post_id, moderation_version, content_hash, ModerationDecision.ESCALATE)

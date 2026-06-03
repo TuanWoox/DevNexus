@@ -14,6 +14,7 @@ export interface AdminProfileDTO {
 
 export interface AdminSuspendUserDTO {
   daySuspend?: number | null;
+  reason?: string | null;
 }
 
 export interface AdminUpdateRoleDTO {

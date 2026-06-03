@@ -2,7 +2,6 @@ using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Business.Helper;
 using platform_core_service.Business.Repository;
-using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
@@ -26,6 +25,7 @@ namespace platform_core_service.Business.Services
         private readonly IAdminAuditLogService _adminAuditLogService;
         private readonly IPostHistoryService _postHistoryService;
         private readonly IQAPostHistoryService _qaPostHistoryService;
+        private readonly IQAPostFirstResponderTriggerService _firstResponderTriggerService;
 
         public AdminModerationService(
             ApplicationDbContext context,
@@ -34,7 +34,8 @@ namespace platform_core_service.Business.Services
             IBackgroundJobClient backgroundJobClient,
             IAdminAuditLogService adminAuditLogService,
             IPostHistoryService postHistoryService,
-            IQAPostHistoryService qaPostHistoryService)
+            IQAPostHistoryService qaPostHistoryService,
+            IQAPostFirstResponderTriggerService firstResponderTriggerService)
         {
             _context = context;
             _userContext = userContext;
@@ -43,6 +44,7 @@ namespace platform_core_service.Business.Services
             _adminAuditLogService = adminAuditLogService;
             _postHistoryService = postHistoryService;
             _qaPostHistoryService = qaPostHistoryService;
+            _firstResponderTriggerService = firstResponderTriggerService;
         }
 
         public async Task<ReturnResult<PagedData<AdminQueueEntryDTO, string>>> GetPendingQueueAsync(Page<string> page)
@@ -160,31 +162,7 @@ namespace platform_core_service.Business.Services
 
                 if (post is QAPost)
                 {
-                    if (await _context.Answers.HasExistingAiFirstResponderAnswerAsync(_context, post.Id))
-                    {
-                        DevNexusLogger.Instance.Debug($"[AdminModeration] Skipped AI Task for QA Post {post.Id} because an AI answer already exists");
-                        result.Result = true;
-                        return result;
-                    }
-
-                    var aiRequest = new platform_core_service.Common.Models.DTOs.AIDTO.AIFirstResponderRequestDTO
-                    {
-                        PostId = post.Id,
-                        Title = post.Title,
-                        Content = post.Content,
-                        Tags = post.PostTags?.Select(pt => pt.Tag.Name).ToList() ?? new List<string>(),
-                        AuthorId = post.AuthorId,
-                        AuthorDisplayName = post.Author?.FullName ?? "Unknown",
-                        CreatedAt = post.DateCreated ?? DateTimeOffset.UtcNow
-                    };
-
-                    string routingKey = "ai.task.firstresponder.request";
-
-                    _backgroundJobClient.Enqueue<IPublishMessageBackgroundJobs>(
-                        x => x.PublicAiTask(aiRequest, routingKey, MessageBusEnum.Create, MessageBusEntityEnum.AIFirstResponder)
-                    );
-
-                    DevNexusLogger.Instance.Debug($"[AdminModeration] AI Task queued for QA Post {post.Id}");
+                    await _firstResponderTriggerService.TryEnqueueAsync(post.Id, "AdminModeration");
                 }
                 else
                 {
@@ -306,6 +284,11 @@ namespace platform_core_service.Business.Services
 
         private Task EnqueueModerationNotification(Post post)
         {
+            if (post.ModerationStatus == ModerationStatus.Approved)
+            {
+                return Task.CompletedTask;
+            }
+
             var isQuestion = post is QAPost;
             var notificationEvent = new NotiicationCreatedEntityDTO
             {

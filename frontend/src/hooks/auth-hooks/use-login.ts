@@ -1,5 +1,5 @@
 import { accountService } from "@/services/account-service";
-import { setToken, parseUserFromToken } from "@/store/slices/auth-slice";
+import { clearToken, setToken, parseUserFromToken } from "@/store/slices/auth-slice";
 import { LoginAccountDTO } from "@/types/account/login-account-dto";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -17,7 +17,16 @@ const useLogin = () => {
             return accountService.login(payload);
         },
         onSuccess: (data) => {
-            if (data.result.accessToken && data.result.refreshToken) {
+            if (data.moderationStatus?.isSuspended) {
+                Cookies.remove("accessToken");
+                Cookies.remove("refreshToken");
+                dispatch(clearToken());
+                sessionStorage.setItem("accountModerationStatus", JSON.stringify(data.moderationStatus));
+                router.push("/account-suspended");
+                return;
+            }
+
+            if (data.result?.accessToken && data.result.refreshToken) {
                 const parsedData = parseUserFromToken(data.result.accessToken);
 
                 if (parsedData) {

@@ -80,16 +80,17 @@ namespace platform_core_service.Business.Services
                         p.Content,
                         p.AuthorId,
                         p.ModerationStatus,
+                        p.Deleted,
                     })
                     .FirstOrDefaultAsync();
 
-                if (post == null)
+                if (post == null || post.Deleted)
                 {
                     returnResult.Message = "Post not found.";
                     return returnResult;
                 }
 
-                var canViewModerationState = post.ModerationStatus == ModerationStatus.Approved
+                var canViewModerationState = post.ModerationStatus.IsPubliclyVisible()
                     || post.AuthorId == _userContext.ProfileId
                     || _userContext.IsAdmin
                     || _userContext.IsModerator;

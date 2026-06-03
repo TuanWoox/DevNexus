@@ -1093,11 +1093,18 @@ namespace platform_core_service.Migrations
                     b.Property<int>("DownvoteCount")
                         .HasColumnType("integer");
 
+                    b.Property<string>("ModerationContentHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<string>("ModerationReason")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
                     b.Property<int>("ModerationStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ModerationVersion")
                         .HasColumnType("integer");
 
                     b.Property<int>("PostType")
@@ -1348,6 +1355,10 @@ namespace platform_core_service.Migrations
 
                     b.Property<DateTimeOffset?>("SuspendedUntil")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SuspensionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.PrimitiveCollection<List<string>>("TechStacks")
                         .IsRequired()

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
-import { AdminProfileDTO } from '@/types/admin/admin-profile-dto'
+import { AdminProfileDTO, AdminSuspendUserDTO } from '@/types/admin/admin-profile-dto'
 import { useSuspendUser } from '@/hooks/admin/use-suspend-user'
 import { useUnsuspendUser } from '@/hooks/admin/use-unsuspend-user'
 import { useUpdateUserRole } from '@/hooks/admin/use-update-user-role'
@@ -59,7 +59,7 @@ function UserCell({ user }: { user: AdminProfileDTO }) {
 }
 
 type DialogState =
-  | { type: 'suspend'; user: AdminProfileDTO }
+  | { type: 'suspend'; user: AdminProfileDTO; defaultType?: string }
   | { type: 'unsuspend'; user: AdminProfileDTO }
   | { type: 'role'; user: AdminProfileDTO }
   | null
@@ -78,9 +78,9 @@ export function AdminUsersTable({ users }: AdminUsersTableProps) {
 
   function closeDialog() { setDialog(null) }
 
-  function handleSuspendConfirm(user: AdminProfileDTO) {
+  function handleSuspendConfirm(user: AdminProfileDTO, dto: AdminSuspendUserDTO) {
     suspendMutation.mutate(
-      { id: user.id, dto: { daySuspend: null } },
+      { id: user.id, dto },
       { onSettled: closeDialog }
     )
   }
@@ -161,7 +161,7 @@ export function AdminUsersTable({ users }: AdminUsersTableProps) {
                               Unsuspend User
                             </DropdownMenuItem>
                           ) : (
-                            <DropdownMenuItem onSelect={() => setDialog({ type: 'suspend', user })}>
+                            <DropdownMenuItem onSelect={() => setDialog({ type: 'suspend', user, defaultType: '7' })}>
                               Suspend User
                             </DropdownMenuItem>
                           )}
@@ -176,7 +176,7 @@ export function AdminUsersTable({ users }: AdminUsersTableProps) {
                             Apply 30-Day Timeout
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem variant="destructive" onSelect={() => banMutation.mutate(user.id)}>
+                          <DropdownMenuItem variant="destructive" onSelect={() => setDialog({ type: 'suspend', user, defaultType: 'indefinite' })}>
                             Permanently Ban User
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -198,6 +198,7 @@ export function AdminUsersTable({ users }: AdminUsersTableProps) {
         onClose={closeDialog}
         onConfirm={handleSuspendConfirm}
         isPending={suspendMutation.isPending}
+        defaultType={dialog?.type === 'suspend' ? dialog.defaultType : undefined}
       />
 
       <UnsuspendUserDialog

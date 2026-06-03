@@ -477,7 +477,7 @@ namespace platform_core_service.Business.Helper
                         (c.OwnerId == viewerProfileId ||
                          c.Moderators.Any(m => m.ModeratorId == viewerProfileId)));
 
-            if (post.ModerationStatus != ModerationStatus.Approved && !isOwner)
+            if (post.ModerationStatus.IsHiddenByModeration() && !isOwner)
             {
                 return Denied(ResponseMessage.CONTENT_PENDING_OR_HIDDEN);
             }
