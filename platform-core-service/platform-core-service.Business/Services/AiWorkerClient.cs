@@ -255,6 +255,60 @@ namespace platform_core_service.Business.Services
             return result;
         }
 
+        public async Task<ReturnResult<AIBatchEmbeddingResponseDTO>> GetRecommendationEmbeddingsAsync(AIBatchEmbeddingRequestDTO request)
+        {
+            var result = new ReturnResult<AIBatchEmbeddingResponseDTO>();
+            try
+            {
+                using var httpRequest = new HttpRequestMessage(
+                    HttpMethod.Post,
+                    $"{_baseUrl}/ai/recommendations/embeddings")
+                {
+                    Content = JsonContent.Create(new
+                    {
+                        items = request.Items.Select(item => new
+                        {
+                            id = item.Id,
+                            text = item.Text
+                        }).ToList()
+                    }),
+                };
+
+                ForwardAuthorizationHeader(httpRequest);
+
+                var response = await _httpClient.SendAsync(httpRequest);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync();
+                    DevNexusLogger.Instance.Warn(
+                        $"[AiWorkerClient] Recommendation embeddings returned {(int)response.StatusCode}: {errorBody}");
+                    result.Message = $"AI worker could not generate recommendation embeddings. Status: {(int)response.StatusCode}.";
+                    return result;
+                }
+
+                var embeddings = await response.Content.ReadFromJsonAsync<AIBatchEmbeddingResponseDTO>();
+                if (embeddings == null || embeddings.Items.Count == 0)
+                {
+                    result.Message = "AI worker returned empty recommendation embeddings.";
+                    return result;
+                }
+
+                result.Result = embeddings;
+            }
+            catch (TaskCanceledException ex)
+            {
+                DevNexusLogger.Instance.Warn($"[AiWorkerClient] GetRecommendationEmbeddingsAsync timed out: {ex.Message}");
+                result.Message = "AI recommendation embeddings timed out.";
+            }
+            catch (Exception ex)
+            {
+                DevNexusLogger.Instance.Error($"[AiWorkerClient] GetRecommendationEmbeddingsAsync failed: {ex.Message}");
+                result.Message = "Could not generate recommendation embeddings.";
+            }
+
+            return result;
+        }
+
         public async Task<ReturnResult<bool>> UpdateUsageInteractionAsync(
             int usageLogId,
             AIUsageInteractionUpdateRequestDTO request)

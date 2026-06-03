@@ -24,6 +24,7 @@ interface PostListViewProps {
     emptySubtitle?: string;
     viewMode?: 'list' | 'grid';
     canModerateCommunity?: boolean;
+    isRecommendation?: boolean;
 }
 
 export function PostListView({
@@ -40,7 +41,8 @@ export function PostListView({
     emptyTitle = "No posts yet",
     emptySubtitle = "Check back later or create a new post to get started.",
     viewMode = 'list',
-    canModerateCommunity
+    canModerateCommunity,
+    isRecommendation
 }: PostListViewProps) {
     const handleIntersect = useCallback(() => {
         if (hasNextPage && !isFetchingNextPage && onLoadMore) {
@@ -94,7 +96,12 @@ export function PostListView({
             {viewMode === 'list' ? (
                 <div className="flex flex-col gap-4 sm:gap-5">
                     {posts?.map((post) => (
-                        <PostCard key={post.id} post={post} canModerateCommunity={canModerateCommunity} />
+                        <PostCard 
+                            key={post.id} 
+                            post={post} 
+                            canModerateCommunity={canModerateCommunity} 
+                            isRecommendation={isRecommendation} 
+                        />
                     ))}
                 </div>
             ) : (

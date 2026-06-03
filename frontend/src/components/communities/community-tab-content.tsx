@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { CommunityFetchMode } from "@/constants/communityFetchMode";
 import { useGetCommunitiesByModeInfinite } from "@/hooks/community-hooks/use-get-communities-by-mode-infinite";
 import { CommunityListView } from "./community-list-view";
+import { RecommendedCommunityTabContent } from "./recommended-community-tab-content";
 import { SortOption } from "./explore-header";
 import { FilterType } from "@/constants/filterType";
 import { FilterOperator } from "@/constants/filterOperator";
@@ -15,6 +16,20 @@ interface CommunityTabContentProps {
 }
 
 export function CommunityTabContent({ mode, searchQuery, sortOption }: CommunityTabContentProps) {
+    if (mode === CommunityFetchMode.RECOMMENDED) {
+        return <RecommendedCommunityTabContent />;
+    }
+
+    return (
+        <StandardCommunityTabContent
+            mode={mode}
+            searchQuery={searchQuery}
+            sortOption={sortOption}
+        />
+    );
+}
+
+function StandardCommunityTabContent({ mode, searchQuery, sortOption }: CommunityTabContentProps) {
     const basePayload = useMemo(() => ({
         totalElements: 0,
         fetchMode: mode,
@@ -67,6 +82,8 @@ export function CommunityTabContent({ mode, searchQuery, sortOption }: Community
         }
     };
 
+    const emptyDetail = emptyDetails[mode as keyof typeof emptyDetails] ?? emptyDetails[CommunityFetchMode.ALL];
+
     return (
         <CommunityListView
             communities={communities}
@@ -75,8 +92,8 @@ export function CommunityTabContent({ mode, searchQuery, sortOption }: Community
             isFetchingNextPage={isFetchingNextPage}
             hasNextPage={hasNextPage}
             onLoadMore={fetchNextPage}
-            emptyTitle={emptyDetails[mode].title}
-            emptySubtitle={emptyDetails[mode].subtitle}
+            emptyTitle={emptyDetail.title}
+            emptySubtitle={emptyDetail.subtitle}
         />
     );
 }

@@ -1,10 +1,10 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 import { getQueryClient } from '@/lib/get-query-client';
 import { serverPost } from '@/lib/server-api';
-import { qaPostQueryKeys } from '@/hooks/qa-post-hooks/use-qa-post-query-key';
+import { recommendationQueryKeys } from '@/hooks/recommendation-hooks/use-recommendation-query-keys';
 import { PagedData } from '@/types/common/paged-data';
 import { SelectQAPostDTO } from '@/types/qa-post/select-qa-post-dto';
-import { InfiniteQAPostList } from '@/components/post/infinite-qa-post-list';
+import { InfiniteRecommendedQAPostList } from '@/components/post/infinite-recommended-qa-post-list';
 import { QUESTIONS_BASE_PAYLOAD, INFINITE_PAGE_SIZE } from '@/constants/feed-payload';
 import type { Metadata } from 'next';
 
@@ -18,9 +18,9 @@ export default async function QuestionsPage() {
 
     try {
         await queryClient.prefetchInfiniteQuery({
-            queryKey: qaPostQueryKeys.list({ ...QUESTIONS_BASE_PAYLOAD, infinite: true }),
+            queryKey: recommendationQueryKeys.qaFeed({ ...QUESTIONS_BASE_PAYLOAD, infinite: true }),
             queryFn: ({ pageParam = 0 }) =>
-                serverPost<PagedData<SelectQAPostDTO, string>>('/QAPosts/paging', {
+                serverPost<PagedData<SelectQAPostDTO, string>>('/Recommendations/qaposts/feed/paging', {
                     ...QUESTIONS_BASE_PAYLOAD,
                     size: INFINITE_PAGE_SIZE,
                     pageNumber: pageParam as number,
@@ -45,7 +45,7 @@ export default async function QuestionsPage() {
 
     return (
         <HydrationBoundary state={dehydrate(queryClient)}>
-            <InfiniteQAPostList />
+            <InfiniteRecommendedQAPostList />
         </HydrationBoundary>
     );
 }

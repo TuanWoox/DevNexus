@@ -9,9 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useJoinCommunity } from "@/hooks/community-members-hooks/use-join-community";
 import { useCancelRequest } from "@/hooks/community-requests-hooks/use-cancel-request";
+import { useSubmitRecommendationFeedback } from "@/hooks/recommendation-hooks/use-submit-recommendation-feedback";
+import { cn } from "@/lib/utils";
 
 interface CommunityCardProps {
     community: SelectCommunityDTO;
+    isRecommendation?: boolean;
 }
 
 const roleConfig: Record<string, { label: string; icon: React.ReactNode; className: string }> = {
@@ -42,7 +45,7 @@ const roleConfig: Record<string, { label: string; icon: React.ReactNode; classNa
     },
 };
 
-export function CommunityCard({ community }: CommunityCardProps) {
+export function CommunityCard({ community, isRecommendation = false }: CommunityCardProps) {
     const formattedDate = community.dateCreated
         ? new Date(community.dateCreated).toLocaleDateString()
         : "N/A";
@@ -52,6 +55,7 @@ export function CommunityCard({ community }: CommunityCardProps) {
 
     const { mutate: joinCommunity, isPending: isJoining } = useJoinCommunity();
     const { mutate: cancelRequest, isPending: isCancelling } = useCancelRequest();
+    const submitFeedback = useSubmitRecommendationFeedback();
 
     const handleJoin = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -63,6 +67,15 @@ export function CommunityCard({ community }: CommunityCardProps) {
         e.preventDefault();
         e.stopPropagation();
         cancelRequest(community.id);
+    };
+
+    const handleDismiss = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        submitFeedback.mutate({
+            communityId: community.id,
+            feedbackType: "hide",
+        });
     };
 
     return (
@@ -91,9 +104,23 @@ export function CommunityCard({ community }: CommunityCardProps) {
                 )}
                 {/* Private Lock Icon */}
                 {community.isPrivate && (
-                    <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm p-1.5 rounded-full text-muted-foreground shadow-sm z-10">
+                    <div className={cn(
+                        "absolute top-2 bg-background/80 backdrop-blur-sm p-1.5 rounded-full text-muted-foreground shadow-sm z-10",
+                        isRecommendation ? "right-10" : "right-2"
+                    )}>
                         <Lock className="w-4 h-4" />
                     </div>
+                )}
+                {/* Recommendation Dismiss Button */}
+                {isRecommendation && (
+                    <button
+                        onClick={handleDismiss}
+                        disabled={submitFeedback.isPending}
+                        className="absolute top-2 right-2 bg-background/80 hover:bg-destructive hover:text-destructive-foreground backdrop-blur-sm p-1.5 rounded-full text-muted-foreground shadow-sm z-10 transition-colors duration-200 cursor-pointer border-0"
+                        title="Dismiss recommendation"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
                 )}
             </div>
 

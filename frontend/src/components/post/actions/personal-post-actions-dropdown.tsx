@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { MoreHorizontal, Edit, Trash, UserPlus, Flag } from "lucide-react";
+import { MoreHorizontal, Edit, Trash, UserPlus, Flag, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useSubmitRecommendationFeedback } from "@/hooks/recommendation-hooks/use-submit-recommendation-feedback";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -28,6 +29,7 @@ interface PersonalPostActionsDropdownProps {
     postId: string;
     isQAPost: boolean;
     isAuthor: boolean;
+    isRecommendation?: boolean;
     onDeleted?: () => void;
     dropdownClassName?: string;
 }
@@ -36,6 +38,7 @@ export function PersonalPostActionsDropdown({
     postId,
     isQAPost,
     isAuthor,
+    isRecommendation = false,
     onDeleted,
     dropdownClassName = "",
 }: PersonalPostActionsDropdownProps) {
@@ -47,6 +50,13 @@ export function PersonalPostActionsDropdown({
         isQAPost,
         onDeleted,
     });
+    const submitFeedback = useSubmitRecommendationFeedback();
+
+    const handleFeedback = (feedbackType: 'not_interested' | 'hide' | 'report_irrelevant') => {
+        submitFeedback.mutate(
+            isQAPost ? { qaPostId: postId, feedbackType } : { postId: postId, feedbackType }
+        );
+    };
 
     if (!hasMounted) {
         return (
@@ -102,6 +112,32 @@ export function PersonalPostActionsDropdown({
                             <Trash className="w-4 h-4" />
                             <span>Delete Post</span>
                         </DropdownMenuItem>
+                    )}
+                    {isRecommendation && (
+                        <>
+                            <div className="h-px bg-border my-1" />
+                            <DropdownMenuItem
+                                onClick={() => handleFeedback('not_interested')}
+                                className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium"
+                            >
+                                <EyeOff className="w-4 h-4" />
+                                <span>Not Interested</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={() => handleFeedback('hide')}
+                                className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium"
+                            >
+                                <EyeOff className="w-4 h-4 text-muted-foreground" />
+                                <span>Hide Post</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={() => handleFeedback('report_irrelevant')}
+                                className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium"
+                            >
+                                <Flag className="w-4 h-4 text-muted-foreground" />
+                                <span>Not Relevant</span>
+                            </DropdownMenuItem>
+                        </>
                     )}
                 </DropdownMenuContent>
             </DropdownMenu>

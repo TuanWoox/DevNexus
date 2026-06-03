@@ -4,6 +4,7 @@ import { communityRequestsService } from "@/services/community-requests-service"
 import { communityRequestsQueryKeys } from "./use-community-requests-query-keys";
 import { communityMembersQueryKeys } from "@/hooks/community-members-hooks/use-community-members-query-keys";
 import { communityQueryKeys } from "@/hooks/community-hooks/use-community-query-key";
+import { recommendationQueryKeys } from "@/hooks/recommendation-hooks/use-recommendation-query-keys";
 
 export const useCancelRequest = () => {
     const queryClient = useQueryClient();
@@ -15,6 +16,7 @@ export const useCancelRequest = () => {
                 queryClient.invalidateQueries({ queryKey: communityRequestsQueryKeys.lists() });
                 queryClient.invalidateQueries({ queryKey: communityQueryKeys.lists() })
                 queryClient.invalidateQueries({ queryKey: communityQueryKeys.detail(communityId) });
+                queryClient.invalidateQueries({ queryKey: recommendationQueryKeys.all });
                 queryClient.invalidateQueries({ queryKey: communityMembersQueryKeys.myRole(communityId) });
                 toast.success("Join request cancelled.");
             }

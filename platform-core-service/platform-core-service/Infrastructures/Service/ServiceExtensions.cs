@@ -15,6 +15,7 @@ using System.Security.Claims;
 using System.Security.Principal;
 using System.Threading;
 using System.Threading.RateLimiting;
+using StackExchange.Redis;
 namespace platform_core_service.Infrastructures.Service;
 
 public static class ServiceExtensions
@@ -266,8 +267,15 @@ public static class ServiceExtensions
         // Register Redis distributed cache
         services.AddStackExchangeRedisCache(options =>
         {
-            options.Configuration = configuration["RedisCacheOptions:Configuration"];
-            options.InstanceName = configuration["RedisCacheOptions:InstanceName"];
+            var redisConfiguration = configuration["RedisCacheOptions:Configuration"];
+            if (string.IsNullOrWhiteSpace(redisConfiguration))
+                throw new InvalidOperationException("RedisCacheOptions:Configuration is missing in appsettings");
+
+            var configurationOptions = ConfigurationOptions.Parse(redisConfiguration);
+            configurationOptions.AbortOnConnectFail = false;
+
+            options.ConfigurationOptions = configurationOptions;
+            options.InstanceName = configuration["RedisCacheOptions:InstanceName"] ?? "PlatformCaching";
         });
         return services;
     }

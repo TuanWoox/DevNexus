@@ -2,6 +2,7 @@
 
 import { LeftSidebar } from './left-sidebar'
 import { MobileHeader } from './mobile-header'
+import { RightSidebar } from './right-sidebar'
 
 export function MainContainer({ children }: { children: React.ReactNode }) {
     return (
@@ -14,6 +15,8 @@ export function MainContainer({ children }: { children: React.ReactNode }) {
                     {children}
                 </main>
             </div>
+
+            <RightSidebar />
         </div>
     )
 }

@@ -4,6 +4,7 @@ using platform_core_service.Business.Contexts;
 using platform_core_service.Business.Factories;
 using platform_core_service.Business.Helper;
 using platform_core_service.Business.MessageBus;
+using platform_core_service.Business.Recommendations;
 using platform_core_service.Business.Services;
 using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Interfaces;
@@ -11,6 +12,7 @@ using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Factories;
 using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.MessageBus;
+using platform_core_service.Common.Interfaces.Recommendations;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Utils.Enums;
 using StackExchange.Redis;
@@ -85,6 +87,12 @@ namespace platform_core_service.Business.Repository
             services.AddScoped<IReportService, ReportService>();
             services.AddScoped<IAdminReportService, AdminReportService>();
             services.AddScoped<IReportTargetActionExecutor, ReportTargetActionExecutor>();
+            services.AddScoped<IUserInterestProfileService, UserInterestProfileService>();
+            services.AddScoped<IContentBasedScoringService, ContentBasedScoringService>();
+            services.AddScoped<ITrendingService, TrendingService>();
+            services.AddScoped<ISemanticSimilarityService, SemanticSimilarityService>();
+            services.AddScoped<IRecommendationService, RecommendationService>();
+            services.AddScoped<IInteractionService, InteractionService>();
 
             // AiWorkerClient uses IHttpClientFactory — must register with AddHttpClient
             services.AddHttpClient<IAiWorkerClient, AiWorkerClient>();

@@ -1,10 +1,10 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 import { getQueryClient } from '@/lib/get-query-client';
 import { serverPost } from '@/lib/server-api';
-import { postQueryKeys } from '@/hooks/post-hooks/use-post-query-keys';
+import { recommendationQueryKeys } from '@/hooks/recommendation-hooks/use-recommendation-query-keys';
 import { PagedData } from '@/types/common/paged-data';
 import { SelectPostDTO } from '@/types/post/select-post-dto';
-import { InfinitePostList } from '@/components/post/infinite-post-list';
+import { InfiniteRecommendedPostList } from '@/components/post/infinite-recommended-post-list';
 import { FEED_BASE_PAYLOAD, INFINITE_PAGE_SIZE } from '@/constants/feed-payload';
 import type { Metadata } from 'next';
 
@@ -18,9 +18,9 @@ export default async function FeedPage() {
 
     try {
         await queryClient.prefetchInfiniteQuery({
-            queryKey: postQueryKeys.list({ ...FEED_BASE_PAYLOAD, infinite: true }),
+            queryKey: recommendationQueryKeys.postFeed({ ...FEED_BASE_PAYLOAD, infinite: true }),
             queryFn: ({ pageParam = 0 }) =>
-                serverPost<PagedData<SelectPostDTO, string>>('/Posts/paging', {
+                serverPost<PagedData<SelectPostDTO, string>>('/Recommendations/posts/feed/paging', {
                     ...FEED_BASE_PAYLOAD,
                     size: INFINITE_PAGE_SIZE,
                     pageNumber: pageParam as number,
@@ -45,7 +45,7 @@ export default async function FeedPage() {
 
     return (
         <HydrationBoundary state={dehydrate(queryClient)}>
-            <InfinitePostList />
+            <InfiniteRecommendedPostList />
         </HydrationBoundary>
     );
 }

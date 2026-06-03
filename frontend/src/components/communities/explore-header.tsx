@@ -32,6 +32,7 @@ interface ExploreHeaderProps {
     currentSort: SortOption;
     setCurrentSort: (sort: SortOption) => void;
     onSearchSubmit: () => void;
+    showFilters?: boolean;
 }
 
 export function ExploreHeader({
@@ -39,7 +40,8 @@ export function ExploreHeader({
     setSearchQuery,
     currentSort,
     setCurrentSort,
-    onSearchSubmit
+    onSearchSubmit,
+    showFilters = true,
 }: ExploreHeaderProps) {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -51,40 +53,46 @@ export function ExploreHeader({
 
     return (
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between fade-in">
-            <div className="flex-1 flex gap-2 w-full max-w-md relative">
-                <Input
-                    placeholder="Search communities..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    className="pl-10"
-                />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Button variant="custom" className="btn-secondary" onClick={onSearchSubmit}>
-                    Search
-                </Button>
-            </div>
+            {showFilters ? (
+                <div className="flex-1 flex gap-2 w-full max-w-md relative">
+                    <Input
+                        placeholder="Search communities..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        className="pl-10"
+                    />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Button variant="custom" className="btn-secondary" onClick={onSearchSubmit}>
+                        Search
+                    </Button>
+                </div>
+            ) : (
+                <div className="flex-1" />
+            )}
 
             <div className="flex gap-2 w-full sm:w-auto">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="custom" className="btn-secondary gap-2">
-                            <Filter className="w-4 h-4" />
-                            {currentSort.label}
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        {SORT_OPTIONS.map((option, idx) => (
-                            <DropdownMenuItem
-                                key={idx}
-                                onClick={() => setCurrentSort(option)}
-                                className={currentSort.label === option.label ? "bg-muted" : ""}
-                            >
-                                {option.label}
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                {showFilters && (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="custom" className="btn-secondary gap-2">
+                                <Filter className="w-4 h-4" />
+                                {currentSort.label}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {SORT_OPTIONS.map((option, idx) => (
+                                <DropdownMenuItem
+                                    key={idx}
+                                    onClick={() => setCurrentSort(option)}
+                                    className={currentSort.label === option.label ? "bg-muted" : ""}
+                                >
+                                    {option.label}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                )}
 
                 <Button className="btn-ai text-white gap-2" onClick={() => setIsCreateModalOpen(true)}>
                     <Plus className="w-4 h-4" />
