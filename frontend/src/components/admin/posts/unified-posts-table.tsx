@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
+import { ProfileHoverCard } from '@/components/profile/profile-hover-card'
 import {
   MoreHorizontal,
   CheckCircle2,
@@ -74,14 +76,29 @@ function AuthorCell({ author }: { author?: { fullName: string; id: string } }) {
   if (!author) return <span className="text-xs text-muted-foreground">—</span>
   const initials = getInitials(author.fullName)
   return (
-    <div className="flex items-center gap-2.5 min-w-0">
-      <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center shrink-0 ring-1 ring-primary/20">
-        <span className="text-[10px] font-bold text-primary leading-none">{initials}</span>
-      </div>
-      <span className="text-xs text-muted-foreground truncate max-w-[110px] font-medium">
-        {author.fullName}
-      </span>
-    </div>
+    <ProfileHoverCard
+      profileId={author.id}
+      author={{
+        fullName: author.fullName,
+      }}
+      side="top"
+      variant="admin"
+      showMessageAction={false}
+      showBlockAction={false}
+      showProfileAction
+    >
+      <Link
+        href={`/profile/${author.id}`}
+        className="flex items-center gap-2.5 min-w-0 hover:text-primary transition-colors"
+      >
+        <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center shrink-0 ring-1 ring-primary/20">
+          <span className="text-[10px] font-bold text-primary leading-none">{initials}</span>
+        </div>
+        <span className="text-xs text-muted-foreground truncate max-w-[110px] font-medium group-hover:text-primary transition-colors">
+          {author.fullName}
+        </span>
+      </Link>
+    </ProfileHoverCard>
   )
 }
 
