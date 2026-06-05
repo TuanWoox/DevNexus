@@ -119,10 +119,9 @@ export function BannedKeywordsEditor({ initialKeywords, onSave, isSaving }: Bann
           />
           <Button
             type="button"
-            variant="secondary"
             onClick={addKeyword}
             disabled={isSaving || !inputValue.trim()}
-            className="btn-ghost"
+            className="btn-secondary"
           >
             Add
           </Button>

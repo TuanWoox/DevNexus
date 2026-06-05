@@ -1,6 +1,7 @@
 'use client'
 
 import { useGetPostById } from '@/hooks/post-hooks/use-get-post-by-id'
+import { MarkdownViewer } from '@/components/editor/markdown-viewer'
 import { AdminPostDTO } from '@/types/admin/admin-post-dto'
 import {
   Sheet,
@@ -208,12 +209,12 @@ export function PostOverviewSheet({
                   <Skeleton className="h-32 w-full rounded-xl" />
                 </div>
               ) : fullPost ? (
-                <article className="prose prose-sm max-w-none dark:prose-invert prose-headings:text-heading prose-p:text-foreground/85 prose-a:text-primary prose-code:font-mono prose-pre:code-block">
-                  <div
-                    className="leading-relaxed text-foreground/85"
-                    dangerouslySetInnerHTML={{ __html: fullPost.content }}
-                  />
-                </article>
+                <MarkdownViewer
+                  source={fullPost.content}
+                  enableCodeTools
+                  context="post-detail"
+                  postId={post.id}
+                />
               ) : (
                 <div className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-10 text-center">
                   <FileText className="mx-auto h-8 w-8 text-muted-foreground/60" />
