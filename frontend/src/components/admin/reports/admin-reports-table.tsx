@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useSelector } from "react-redux";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -152,16 +151,6 @@ export function AdminReportsTable({ reports, isLoading, activeTab, onTabChange }
 
   return (
     <>
-      <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as TabValue)}>
-        <TabsList>
-          {(["open", "pending", "inreview", "escalated", "closed", "all"] as TabValue[]).map((tab) => (
-            <TabsTrigger key={tab} value={tab}>
-              {tab === "inreview" ? "In Review" : tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
       {reports.length === 0 ? (
         <div className="flex items-center justify-center rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
           No reports found.
@@ -170,21 +159,21 @@ export function AdminReportsTable({ reports, isLoading, activeTab, onTabChange }
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-muted/5">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Created</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Target</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Preview</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Reason</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Reporter</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Owner</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Assignee</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none">Actions</th>
+              <tr className="border-b border-border bg-muted/20">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground select-none">Created</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground select-none">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground select-none">Target</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground select-none">Preview</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground select-none">Reason</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground select-none">Reporter</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground select-none">Owner</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground select-none">Assignee</th>
+                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground select-none">Actions</th>
               </tr>
             </thead>
             <tbody>
               {reports.map((report) => (
-                <tr key={report.id} className="border-b border-border last:border-0 hover:bg-subtle transition-colors">
+                <tr key={report.id} className="border-b border-border last:border-0 hover:bg-muted/40 transition-colors">
                   <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-muted-foreground">{formatDate(report.dateCreated)}</td>
                   <td className="px-4 py-3"><ReportStatusBadge status={report.status} /></td>
                   <td className="px-4 py-3">
