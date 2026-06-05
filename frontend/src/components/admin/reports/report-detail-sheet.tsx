@@ -441,31 +441,32 @@ export function ReportDetailSheet({ open, onClose, report, onAction }: ReportDet
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-      <SheetContent side="right" className="!w-[min(92vw,980px)] !max-w-none overflow-y-auto p-0 bg-page sm:!max-w-none">
-        <SheetHeader className="border-b border-default bg-card px-6 py-5">
-          <div className="space-y-3 pr-8">
-            <div className="flex flex-wrap items-center gap-2">
-              {activeReport && <ReportStatusBadge status={activeReport.status} />}
-              <span className="badge-default font-mono">{targetTypeName}</span>
-              {activeReport?.isStaffSensitive && <span className="badge-red">Staff-owned target</span>}
+      <SheetContent side="right" className="flex !w-[min(92vw,980px)] !max-w-none flex-col overflow-hidden p-0 bg-page sm:!max-w-none">
+        <div className="min-h-0 flex-1 overflow-y-auto pb-4">
+          <SheetHeader className="border-b border-default bg-card px-6 py-5">
+            <div className="space-y-3 pr-8">
+              <div className="flex flex-wrap items-center gap-2">
+                {activeReport && <ReportStatusBadge status={activeReport.status} />}
+                <span className="badge-default font-mono">{targetTypeName}</span>
+                {activeReport?.isStaffSensitive && <span className="badge-red">Staff-owned target</span>}
+              </div>
+              <SheetTitle className="text-2xl font-bold text-heading">
+                {activeReport?.targetTitle || "Report detail"}
+              </SheetTitle>
+              <SheetDescription className="text-muted-foreground text-sm leading-relaxed">
+                {activeReport?.targetPreview || activeReport?.descriptionPreview || "Review reported content and active resolutions."}
+              </SheetDescription>
             </div>
-            <SheetTitle className="text-2xl font-bold text-heading">
-              {activeReport?.targetTitle || "Report detail"}
-            </SheetTitle>
-            <SheetDescription className="text-muted-foreground text-sm leading-relaxed">
-              {activeReport?.targetPreview || activeReport?.descriptionPreview || "Review reported content and active resolutions."}
-            </SheetDescription>
-          </div>
-        </SheetHeader>
+          </SheetHeader>
 
-        {isLoading ? (
-          <div className="space-y-4 p-6">
-            <Skeleton className="h-28 w-full" />
-            <Skeleton className="h-52 w-full" />
-            <Skeleton className="h-52 w-full" />
-          </div>
-        ) : (
-          <div className="space-y-5 p-6">
+          {isLoading ? (
+            <div className="space-y-4 p-6">
+              <Skeleton className="h-28 w-full" />
+              <Skeleton className="h-52 w-full" />
+              <Skeleton className="h-52 w-full" />
+            </div>
+          ) : (
+            <div className="space-y-5 p-6">
             {/* SECTION 1 — REPORT SUMMARY */}
             <section className="space-y-3">
               <div className="grid gap-3 md:grid-cols-3">
@@ -628,7 +629,8 @@ export function ReportDetailSheet({ open, onClose, report, onAction }: ReportDet
             </section>
           </div>
         )}
-        <SheetFooter className="border-t border-default bg-background/95 px-6 py-4">
+        </div>
+        <SheetFooter className="shrink-0 border-t border-default bg-background/95 px-6 py-4 backdrop-blur">
           <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="outline" onClick={onClose}>
               Close
