@@ -187,7 +187,9 @@ namespace platform_core_service.Business.Services
         private async Task ResolveOpenQueueEntryAsync(string postId, string resolution, string? moderatorNote)
         {
             var openEntries = await _context.ModerationQueueEntries
-                .Where(e => e.PostId == postId && e.ResolvedAt == null)
+                .Where(e => e.TargetType == ModerationTargetType.Post &&
+                            e.TargetId == postId &&
+                            e.ResolvedAt == null)
                 .ToListAsync();
 
             if (openEntries.Count == 0) return;

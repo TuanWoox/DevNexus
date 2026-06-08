@@ -1,5 +1,6 @@
 using platform_core_service.Common.Entities.BaseEntity;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Comment;
+using platform_core_service.Common.Utils.Enums;
 
 namespace platform_core_service.Common.Models.DTOs.EntityDTO.Answer
 {
@@ -8,6 +9,8 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Answer
         public string Id { get; set; } = null!;
         public string Content { get; set; } = null!;
         public bool IsAccepted { get; set; } = false;
+        public ModerationStatus ModerationStatus { get; set; }
+        public string? ModerationReason { get; set; }
         public int UpvoteCount { get; set; } = 0;
         public int DownvoteCount { get; set; } = 0;
         public string QAPostId { get; set; } = null!;

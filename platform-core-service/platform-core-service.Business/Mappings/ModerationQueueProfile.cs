@@ -10,15 +10,15 @@ namespace platform_core_service.Business.Mappings
         {
             CreateMap<ModerationQueueEntry, AdminQueueEntryDTO>()
                 .ForMember(dest => dest.PostTitle,
-                    opt => opt.MapFrom(src => src.Post.Title))
+                    opt => opt.MapFrom(src => src.TargetType.ToString()))
                 .ForMember(dest => dest.PostContent,
-                    opt => opt.MapFrom(src => src.Post.Content))
+                    opt => opt.MapFrom(src => src.Tier2Reasoning))
                 .ForMember(dest => dest.AuthorId,
-                    opt => opt.MapFrom(src => src.Post.AuthorId))
+                    opt => opt.MapFrom(src => string.Empty))
                 .ForMember(dest => dest.Author,
-                    opt => opt.MapFrom(src => src.Post.Author))
+                    opt => opt.MapFrom(src => null as platform_core_service.Common.Entities.DbEntities.Profile))
                 .ForMember(dest => dest.EntityType,
-                    opt => opt.MapFrom(src => src.Post is platform_core_service.Common.Entities.DbEntities.QAPost ? "QA Post" : "Post"))
+                    opt => opt.MapFrom(src => src.TargetType.ToString()))
                 .ForMember(dest => dest.CreatedAt,
                     opt => opt.MapFrom(src => src.DateCreated ?? DateTimeOffset.MinValue));
         }

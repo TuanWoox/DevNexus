@@ -7,7 +7,7 @@ import { useUpdateComment } from '@/hooks/comment-hooks/use-update-comment';
 import { UpdateCommentDTO } from '@/types/comment/update-comment-dto';
 import { BaseReplyItem } from './base-reply-item';
 import { ContentType } from '@/types/content-media/content-type';
-import { ModerationStatus } from '@/types/post/moderation-status';
+import { canInteractWithModeratedContent, ModerationStatus } from '@/types/post/moderation-status';
 import { useState } from 'react';
 import { CommentInput } from './comment-input';
 
@@ -16,6 +16,8 @@ export function CommentItem({ comment, currentUserId, currentUserAvatar, isDisab
     const { mutate: deleteComment, isPending: isDeletingComment } = useDeleteComment();
     const { mutate: updateComment, isPending: isUpdatingComment } = useUpdateComment();
     const [isReplying, setIsReplying] = useState(false);
+    const itemModerationStatus = comment.moderationStatus ?? moderationStatus;
+    const isItemDisabled = isDisabled || !canInteractWithModeratedContent(itemModerationStatus);
 
     return (
         <div className="flex flex-col gap-4">
@@ -39,8 +41,8 @@ export function CommentItem({ comment, currentUserId, currentUserAvatar, isDisab
                     updateComment(payload, { onSuccess });
                 }}
                 isUpdating={isUpdatingComment}
-                isDisabled={isDisabled}
-                moderationStatus={moderationStatus}
+                isDisabled={isItemDisabled}
+                moderationStatus={itemModerationStatus}
                 communityId={communityId}
                 canModerateCommunity={canModerateCommunity}
                 context={context}
@@ -67,8 +69,8 @@ export function CommentItem({ comment, currentUserId, currentUserAvatar, isDisab
                             comment={reply}
                             currentUserId={currentUserId}
                             currentUserAvatar={currentUserAvatar}
-                            isDisabled={isDisabled}
-                            moderationStatus={moderationStatus}
+                            isDisabled={isItemDisabled}
+                            moderationStatus={reply.moderationStatus ?? itemModerationStatus}
                             communityId={communityId}
                             canModerateCommunity={canModerateCommunity}
                             context={context}

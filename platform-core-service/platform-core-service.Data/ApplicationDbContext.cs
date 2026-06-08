@@ -130,12 +130,6 @@ namespace platform_core_service.Data
                 .WithMany(c => c.Replies)
                 .HasForeignKey(c => c.ReplyToCommentId)
                 .OnDelete(DeleteBehavior.Restrict);
-            builder.Entity<Post>()
-                .HasOne(p => p.ModerationResult)
-                .WithOne(m => m.Post)
-                .HasForeignKey<PostModerationResult>(m => m.PostId)
-                .OnDelete(DeleteBehavior.Cascade);
-
             builder.Entity<Post>(entity =>
             {
                 entity.Property(p => p.ModerationStatus).HasConversion<int>();

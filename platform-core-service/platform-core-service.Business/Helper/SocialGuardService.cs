@@ -326,7 +326,10 @@ namespace platform_core_service.Business.Helper
                         .ThenInclude(x => x.QAPost)
                 .FirstOrDefaultAsync(x => x.Id == commentId);
 
-            if (comment == null || comment.Deleted)
+            if (comment == null ||
+                comment.Deleted ||
+                (comment.ModerationStatus != ModerationStatus.Pending &&
+                 comment.ModerationStatus != ModerationStatus.Approved))
             {
                 return Denied(ResponseMessage.COMMENT_NOT_AVAILABLE);
             }
@@ -362,7 +365,10 @@ namespace platform_core_service.Business.Helper
                 .Include(x => x.QAPost)
                 .FirstOrDefaultAsync(x => x.Id == answerId);
 
-            if (answer == null || answer.Deleted)
+            if (answer == null ||
+                answer.Deleted ||
+                (answer.ModerationStatus != ModerationStatus.Pending &&
+                 answer.ModerationStatus != ModerationStatus.Approved))
             {
                 return Denied(ResponseMessage.ANSWER_NOT_AVAILABLE);
             }

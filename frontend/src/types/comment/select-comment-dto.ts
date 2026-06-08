@@ -1,3 +1,5 @@
+import { ModerationStatus } from '../post/moderation-status';
+
 export interface SelectCommentAuthorDTO {
     id: string;
     fullName: string;
@@ -12,6 +14,8 @@ export interface SelectCommentAuthorDTO {
 export interface SelectCommentDTO {
     id: string;
     content: string;
+    moderationStatus?: ModerationStatus;
+    moderationReason?: string | null;
     authorId: string;
     postId?: string;
     answerId?: string;

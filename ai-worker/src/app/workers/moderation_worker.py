@@ -6,7 +6,7 @@ BackgroundTask entry point that wraps ModerationService.process_post().
 Usage (from router):
     background_tasks.add_task(
         run_moderation,
-        post_id=..., text_content=...,
+        target_id=..., text_content=...,
         image_bytes=..., image_mime_type=...,
         db=..., gemini_client=...,
         platform_core_url=settings.platform_core_service_url,
@@ -27,10 +27,11 @@ logger = logging.getLogger(__name__)
 
 async def run_moderation(
     *,
-    post_id: str,
     moderation_version: int,
     content_hash: str,
     text_content: str,
+    target_id: str,
+    target_type: str = "Post",
     image_bytes: bytes | None,
     image_mime_type: str | None,
     db: AsyncSession,
@@ -54,7 +55,8 @@ async def run_moderation(
 
     try:
         result = await service.process_post(
-            post_id=post_id,
+            target_type=target_type,
+            target_id=target_id,
             moderation_version=moderation_version,
             content_hash=content_hash,
             text_content=text_content,
@@ -63,10 +65,16 @@ async def run_moderation(
         )
         logger.info(
             "[Worker] Moderation complete: post=%s status=%s tier=%d",
-            post_id, result.final_status.value, result.tier_reached,
+            target_id, result.final_status.value, result.tier_reached,
         )
 
     except Exception as exc:
-        logger.exception("[Worker] Unhandled error for post=%s: %s", post_id, exc)
+        logger.exception("[Worker] Unhandled error for %s=%s: %s", target_type, target_id, exc)
         # Best-effort: notify C# to escalate rather than leaving post stuck in PROCESSING
-        await service._notify_platform(post_id, moderation_version, content_hash, ModerationDecision.ESCALATE)
+        await service._notify_platform(
+            moderation_version,
+            content_hash,
+            ModerationDecision.ESCALATE,
+            target_type=target_type,
+            target_id=target_id,
+        )

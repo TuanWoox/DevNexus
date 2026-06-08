@@ -79,28 +79,29 @@ class ModerationService:
     async def process_post(
         self,
         *,
-        post_id: str,
         moderation_version: int,
         content_hash: str,
         text_content: str,
+        target_id: str,
+        target_type: str = "Post",
         image_bytes: bytes | None = None,
         image_mime_type: str | None = None,
     ) -> ModerationTaskResult:
         """Full 3-tier pipeline. Called from BackgroundTask."""
-        logger.info("[Moderation] Starting pipeline for post_id=%s", post_id)
+        logger.info("[Moderation] Starting pipeline for %s=%s", target_type, target_id)
 
         # ------- Tier 1 -------
         t1 = await self._run_tier_one(text_content, image_bytes)
         logger.info(
-            "[Moderation][T1] post=%s text=%.3f image=%.3f combined=%.3f",
-            post_id, t1.text_score, t1.image_score, t1.combined_score,
+            "[Moderation][T1] target=%s text=%.3f image=%.3f combined=%.3f",
+            target_id, t1.text_score, t1.image_score, t1.combined_score,
         )
 
         if t1.combined_score < _SAFE_THRESHOLD:
-            logger.info("[Moderation][T1] AUTO APPROVED — post=%s", post_id)
-            await self._notify_platform(post_id, moderation_version, content_hash, ModerationDecision.APPROVE, t1=t1)
+            logger.info("[Moderation][T1] AUTO APPROVED — target=%s", target_id)
+            await self._notify_platform(moderation_version, content_hash, ModerationDecision.APPROVE, t1=t1, target_type=target_type, target_id=target_id)
             return ModerationTaskResult(
-                post_id=post_id,
+                target_id=target_id,
                 moderation_version=moderation_version,
                 content_hash=content_hash,
                 final_status=ModerationStatus.APPROVED,
@@ -110,10 +111,10 @@ class ModerationService:
             )
 
         if t1.combined_score > _TOXIC_THRESHOLD:
-            logger.info("[Moderation][T1] AUTO FLAGGED — post=%s", post_id)
-            await self._notify_platform(post_id, moderation_version, content_hash, ModerationDecision.FLAG, t1=t1)
+            logger.info("[Moderation][T1] AUTO FLAGGED — target=%s", target_id)
+            await self._notify_platform(moderation_version, content_hash, ModerationDecision.FLAG, t1=t1, target_type=target_type, target_id=target_id)
             return ModerationTaskResult(
-                post_id=post_id,
+                target_id=target_id,
                 moderation_version=moderation_version,
                 content_hash=content_hash,
                 final_status=ModerationStatus.FLAGGED,
@@ -124,25 +125,25 @@ class ModerationService:
 
         # ------- Tier 2 (gray zone) -------
         logger.info(
-            "[Moderation][T2] Gray zone — escalating to Gemini. post=%s has_image=%s",
-            post_id, image_bytes is not None,
+            "[Moderation][T2] Gray zone — escalating to Gemini. target=%s has_image=%s",
+            target_id, image_bytes is not None,
         )
         try:
-            t2 = await self._run_tier_two(text_content, post_id, image_bytes, image_mime_type)
+            t2 = await self._run_tier_two(text_content, target_id, image_bytes, image_mime_type)
         except ServerError as exc:
             logger.warning(
-                "[Moderation][T2] Gemini unavailable — escalating to human queue. post=%s error=%s",
-                post_id, exc,
+                "[Moderation][T2] Gemini unavailable — escalating to human queue. target=%s error=%s",
+                target_id, exc,
             )
             t2 = TierTwoResult(
                 decision=ModerationDecision.ESCALATE,
                 confidence=0.0,
                 reasoning="Gemini moderation unavailable; local model result was inconclusive.",
             )
-            t3 = await self._run_tier_three(post_id, moderation_version, content_hash, t1, t2)
-            await self._notify_platform(post_id, moderation_version, content_hash, ModerationDecision.ESCALATE, t1=t1, t2=t2)
+            t3 = await self._run_tier_three(moderation_version, content_hash, t1, t2, target_type=target_type, target_id=target_id)
+            await self._notify_platform(moderation_version, content_hash, ModerationDecision.ESCALATE, t1=t1, t2=t2, target_type=target_type, target_id=target_id)
             return ModerationTaskResult(
-                post_id=post_id,
+                target_id=target_id,
                 moderation_version=moderation_version,
                 content_hash=content_hash,
                 final_status=ModerationStatus.IN_REVIEW,
@@ -154,15 +155,15 @@ class ModerationService:
                 error=str(exc),
             )
         logger.info(
-            "[Moderation][T2] decision=%s confidence=%.3f post=%s",
-            t2.decision, t2.confidence, post_id,
+            "[Moderation][T2] decision=%s confidence=%.3f target=%s",
+            t2.decision, t2.confidence, target_id,
         )
 
         if t2.confidence > _T2_CONFIDENCE_THRESHOLD:
             if t2.decision == ModerationDecision.APPROVE:
-                await self._notify_platform(post_id, moderation_version, content_hash, ModerationDecision.APPROVE, t1=t1, t2=t2)
+                await self._notify_platform(moderation_version, content_hash, ModerationDecision.APPROVE, t1=t1, t2=t2, target_type=target_type, target_id=target_id)
                 return ModerationTaskResult(
-                    post_id=post_id,
+                    target_id=target_id,
                     moderation_version=moderation_version,
                     content_hash=content_hash,
                     final_status=ModerationStatus.APPROVED,
@@ -173,9 +174,9 @@ class ModerationService:
                 )
 
             if t2.decision == ModerationDecision.FLAG:
-                await self._notify_platform(post_id, moderation_version, content_hash, ModerationDecision.FLAG, t1=t1, t2=t2)
+                await self._notify_platform(moderation_version, content_hash, ModerationDecision.FLAG, t1=t1, t2=t2, target_type=target_type, target_id=target_id)
                 return ModerationTaskResult(
-                    post_id=post_id,
+                    target_id=target_id,
                     moderation_version=moderation_version,
                     content_hash=content_hash,
                     final_status=ModerationStatus.FLAGGED,
@@ -185,11 +186,11 @@ class ModerationService:
                     tier_two=t2,
                 )
 
-            logger.info("[Moderation][T3] High-confidence escalation — human review required. post=%s", post_id)
-            t3 = await self._run_tier_three(post_id, moderation_version, content_hash, t1, t2)
-            await self._notify_platform(post_id, moderation_version, content_hash, ModerationDecision.ESCALATE, t1=t1, t2=t2)
+            logger.info("[Moderation][T3] High-confidence escalation — human review required. target=%s", target_id)
+            t3 = await self._run_tier_three(moderation_version, content_hash, t1, t2, target_type=target_type, target_id=target_id)
+            await self._notify_platform(moderation_version, content_hash, ModerationDecision.ESCALATE, t1=t1, t2=t2, target_type=target_type, target_id=target_id)
             return ModerationTaskResult(
-                post_id=post_id,
+                target_id=target_id,
                 moderation_version=moderation_version,
                 content_hash=content_hash,
                 final_status=ModerationStatus.IN_REVIEW,
@@ -201,11 +202,11 @@ class ModerationService:
             )
 
         # ------- Tier 3 (still uncertain) -------
-        logger.info("[Moderation][T3] Low confidence — escalating to human queue. post=%s", post_id)
-        t3 = await self._run_tier_three(post_id, moderation_version, content_hash, t1, t2)
-        await self._notify_platform(post_id, moderation_version, content_hash, ModerationDecision.ESCALATE, t1=t1, t2=t2)
+        logger.info("[Moderation][T3] Low confidence — escalating to human queue. target=%s", target_id)
+        t3 = await self._run_tier_three(moderation_version, content_hash, t1, t2, target_type=target_type, target_id=target_id)
+        await self._notify_platform(moderation_version, content_hash, ModerationDecision.ESCALATE, t1=t1, t2=t2, target_type=target_type, target_id=target_id)
         return ModerationTaskResult(
-            post_id=post_id,
+            target_id=target_id,
             moderation_version=moderation_version,
             content_hash=content_hash,
             final_status=ModerationStatus.IN_REVIEW,
@@ -250,7 +251,7 @@ class ModerationService:
     async def _run_tier_two(
         self,
         text_content: str,
-        post_id: str,
+        target_id: str,
         image_bytes: bytes | None,
         image_mime_type: str | None = None,
     ) -> TierTwoResult:
@@ -289,9 +290,9 @@ class ModerationService:
             mime = image_mime_type or "image/jpeg"
             user_parts.append(types.Part.from_text(text="Attached image to evaluate:"))
             user_parts.append(types.Part.from_bytes(data=image_bytes, mime_type=mime))
-            logger.info("[Moderation][T2] Sending multimodal request (text+image) for post=%s", post_id)
+            logger.info("[Moderation][T2] Sending multimodal request (text+image) for target=%s", target_id)
         else:
-            logger.info("[Moderation][T2] Sending text-only request for post=%s", post_id)
+            logger.info("[Moderation][T2] Sending text-only request for target=%s", target_id)
         user_content = types.Content(
             role="user",
             parts=user_parts
@@ -316,8 +317,8 @@ class ModerationService:
 
         if not response.text:
             logger.error(
-                "[Moderation][T2] Gemini returned empty response for post=%s — possibly blocked by safety filters.",
-                post_id,
+                "[Moderation][T2] Gemini returned empty response for target=%s — possibly blocked by safety filters.",
+                target_id,
             )
             raise AIWorkerException("Gemini returned empty response text.", status_code=502)
 
@@ -333,10 +334,17 @@ class ModerationService:
     # ------------------------------------------------------------------
 
     async def _run_tier_three(
-        self, post_id: str, moderation_version: int, content_hash: str, t1: TierOneResult, t2: TierTwoResult
+        self,
+        moderation_version: int,
+        content_hash: str,
+        t1: TierOneResult,
+        t2: TierTwoResult,
+        target_id: str,
+        target_type: str = "Post",
     ) -> TierThreeResult:
         payload = {
-            "postId": post_id,
+            "targetType": target_type,
+            "targetId": target_id,
             "moderationVersion": moderation_version,
             "contentHash": content_hash,
             "reason": "AI inconclusive — requires human review",
@@ -344,7 +352,7 @@ class ModerationService:
             "tier2Reasoning": t2.reasoning,
         }
 
-        queue_entry_id = f"manual-{post_id}"
+        queue_entry_id = f"manual-{target_id}"
         try:
             headers = {"X-Internal-Api-Key": self._internal_api_key}
             async with httpx.AsyncClient(timeout=10.0) as client:
@@ -368,15 +376,17 @@ class ModerationService:
 
     async def _notify_platform(
         self, 
-        post_id: str, 
         moderation_version: int,
         content_hash: str,
         decision: ModerationDecision,
+        target_id: str,
         t1: TierOneResult | None = None,
-        t2: TierTwoResult | None = None
+        t2: TierTwoResult | None = None,
+        target_type: str = "Post",
     ) -> None:
         payload = {
-            "postId": post_id,
+            "targetType": target_type,
+            "targetId": target_id,
             "moderationVersion": moderation_version,
             "contentHash": content_hash,
             "decision": decision.value,

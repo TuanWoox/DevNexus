@@ -7,17 +7,16 @@ using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using platform_core_service.Common.Utils.Enums;
 
 namespace platform_core_service.Common.Entities.DbEntities
 {
     public class ModerationQueueEntry : BaseEntity<string>
     {
-        [Required]
-        [ForeignKey(nameof(Post))]
-        public string PostId { get; set; }
+        public ModerationTargetType TargetType { get; set; } = ModerationTargetType.Post;
 
-        [JsonIgnore]
-        public Post Post { get; set; }
+        [Required]
+        public string TargetId { get; set; }
 
         [MaxLength(255)]
         public string Reason { get; set; }
