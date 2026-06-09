@@ -6,7 +6,7 @@ import { useSelector } from "react-redux";
 import { useQueryClient } from "@tanstack/react-query";
 import { RootState } from "@/store/store";
 import type { Notification } from "../types/contracts";
-import { getWsBaseUrl } from "../utils/notification-service.helper";
+import { getWsBaseUrl, getWsPath } from "../utils/notification-service.helper";
 import {
     prependNotificationToCache,
     setUnreadCountInCache,
@@ -41,8 +41,10 @@ export function useNotificationGateway() {
         if (!token || !currentProfileId) return;
 
         const wsUrl = getWsBaseUrl();
+        console.log(wsUrl);
         const socket = io(`${wsUrl}/notifications`, {
             auth: { token },
+            path: getWsPath(),
             transports: ["websocket"],
             reconnection: true,
             reconnectionDelay: 1000,

@@ -10,7 +10,7 @@ import Cookies from "js-cookie";
 import { RootState } from "@/store/store";
 import { clearToken } from "@/store/slices/auth-slice";
 import type { Notification } from "../../types/contracts";
-import { getWsBaseUrl } from "../../utils/notification-service.helper";
+import { getWsBaseUrl, getWsPath } from "../../utils/notification-service.helper";
 import {
     prependNotificationToCache,
     setUnreadCountInCache,
@@ -49,6 +49,7 @@ export function useNotificationGateway() {
         const wsUrl = getWsBaseUrl();
         const socket = io(`${wsUrl}/notifications`, {
             auth: { token },
+            path: getWsPath(),
             transports: ["websocket"],
             reconnection: true,
             reconnectionDelay: 1000,
