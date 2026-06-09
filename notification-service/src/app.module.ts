@@ -6,6 +6,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { SettingsModule } from './modules/settings/settings.module';
 import { RabbitMQModule } from './modules/rabbitmq/rabbitmq.module';
 import { NotificationGatewayModule } from './modules/websocket/notification-gateway.module';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -20,5 +22,7 @@ import { NotificationGatewayModule } from './modules/websocket/notification-gate
     SettingsModule,
     RabbitMQModule,
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

@@ -140,6 +140,8 @@ services:
     build:
       context: .
       dockerfile: ./background-job-worker/Dockerfile
+    environment:
+      AiWorker__BaseUrl: http://ai-worker:8000
     depends_on:
       postgres-init:
         condition: service_completed_successfully

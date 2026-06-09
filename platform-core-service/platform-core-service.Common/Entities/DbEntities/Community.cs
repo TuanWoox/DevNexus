@@ -22,7 +22,6 @@ namespace platform_core_service.Common.Entities.DbEntities
         public string? Description { get; set; }
 
         [StringLength(500, ErrorMessage = "Cover photo URL cannot exceed 500 characters")]
-        [Url(ErrorMessage = "CommunityCoverPhotoUrl must be a valid URL")]
         public string? CommunityCoverPhotoUrl { get; set; }
 
         [StringLength(200, ErrorMessage = "Slug cannot exceed 200 characters")]
