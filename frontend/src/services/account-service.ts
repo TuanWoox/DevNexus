@@ -61,8 +61,7 @@ export const accountService = {
         const { data } = await api.post<ReturnResult<TokenResponseDTO>>('/Accounts/google-login', payload);
         return data;
     },
-    githubLogin: async (accessToken: string) => {
-        const payload = { accessToken };
+    githubLogin: async (payload: { code: string; redirectUri: string }) => {
         const { data } = await api.post<ReturnResult<TokenResponseDTO>>('/Accounts/github-login', payload);
         return data;
     }

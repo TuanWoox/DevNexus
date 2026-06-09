@@ -7,6 +7,7 @@ import { useState, ReactNode } from 'react';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from 'sonner';
 import { AuthProvider } from './auth-provider';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -28,15 +29,17 @@ export function Providers({ children }: ProvidersProps) {
   );
 
   return (
-    <ThemeProvider>
-      <ReduxProvider store={store}>
-        <AuthProvider>
-          <QueryClientProvider client={queryClient}>
-            {children}
-            <Toaster richColors expand={false} position="top-right" closeButton />
-          </QueryClientProvider>
-        </AuthProvider>
-      </ReduxProvider>
-    </ThemeProvider>
+    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ""} locale='en'>
+      <ThemeProvider>
+        <ReduxProvider store={store}>
+          <AuthProvider>
+            <QueryClientProvider client={queryClient}>
+              {children}
+              <Toaster richColors expand={false} position="top-right" closeButton />
+            </QueryClientProvider>
+          </AuthProvider>
+        </ReduxProvider>
+      </ThemeProvider>
+    </GoogleOAuthProvider>
   );
 }
