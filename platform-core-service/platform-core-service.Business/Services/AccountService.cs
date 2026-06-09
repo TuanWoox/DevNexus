@@ -10,6 +10,7 @@ using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Account;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Profile;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
@@ -577,6 +578,11 @@ namespace platform_core_service.Business.Services
                     returnResult.Message = "Invalid Google ID token.";
                     return returnResult;
                 }
+                if (!payload.EmailVerified)
+                {
+                    returnResult.Message = "Google account email is not verified.";
+                    return returnResult;
+                }
 
                 var user = await _userManager.FindByEmailAsync(payload.Email);
                 if (user != null)
@@ -594,7 +600,7 @@ namespace platform_core_service.Business.Services
                 }
                 else
                 {
-                    returnResult = await CreateOAuthUser(payload.Email);
+                    returnResult = await CreateOAuthUser(payload.Email, payload.Name);
                 }
             }
             catch (Exception ex)
@@ -610,14 +616,22 @@ namespace platform_core_service.Business.Services
             ReturnResult<TokenResponseDTO> returnResult = new();
             try
             {
+                var accessToken = await ExchangeGitHubCodeForAccessToken(dto);
+                if (string.IsNullOrEmpty(accessToken))
+                {
+                    returnResult.Message = "Failed to exchange GitHub authorization code.";
+                    return returnResult;
+                }
+
                 using var http = new HttpClient();
-                http.DefaultRequestHeaders.Add("Authorization", $"Bearer {dto.AccessToken}");
+                http.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
                 http.DefaultRequestHeaders.Add("User-Agent", "DevNexus");
+                http.DefaultRequestHeaders.Add("Accept", "application/vnd.github+json");
 
                 var response = await http.GetAsync("https://api.github.com/user");
                 if (!response.IsSuccessStatusCode)
                 {
-                    returnResult.Message = "Invalid GitHub access token.";
+                    returnResult.Message = "Invalid GitHub authorization code.";
                     return returnResult;
                 }
 
@@ -652,7 +666,7 @@ namespace platform_core_service.Business.Services
                 }
                 else
                 {
-                    returnResult = await CreateOAuthUser(email);
+                    returnResult = await CreateOAuthUser(email, profile.Name ?? profile.Login);
                 }
             }
             catch (Exception ex)
@@ -699,7 +713,7 @@ namespace platform_core_service.Business.Services
             }
         }
 
-        private async Task<ReturnResult<TokenResponseDTO>> CreateOAuthUser(string email)
+        private async Task<ReturnResult<TokenResponseDTO>> CreateOAuthUser(string email, string? displayName = null)
         {
             ReturnResult<TokenResponseDTO> returnResult = new();
 
@@ -725,6 +739,19 @@ namespace platform_core_service.Business.Services
             {
                 returnResult.Message = "Account created but failed to assign role: " +
                     string.Join(", ", roleResult.Errors.Select(e => e.Description));
+                return returnResult;
+            }
+
+            var profileResult = await _profileService.CreateAsync(new CreateProfileDTO
+            {
+                FullName = string.IsNullOrWhiteSpace(displayName) ? email.Split('@')[0] : displayName,
+                Bio = string.Empty,
+                TechStacks = []
+            }, newUser);
+
+            if (!profileResult.Result)
+            {
+                returnResult.Message = $"Account created but failed to create profile: {profileResult.Message}";
                 return returnResult;
             }
 
@@ -760,6 +787,36 @@ namespace platform_core_service.Business.Services
 
             var emails = await response.Content.ReadFromJsonAsync<List<GitHubEmailDTO>>();
             return emails?.FirstOrDefault(e => e.Primary && e.Verified)?.Email;
+        }
+
+        private async Task<string?> ExchangeGitHubCodeForAccessToken(GitHubAuthenticationDTO dto)
+        {
+            var clientId = _configuration["GitHub:ClientId"];
+            var clientSecret = _configuration["GitHub:ClientSecret"];
+
+            if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
+            {
+                return null;
+            }
+
+            using var http = new HttpClient();
+            http.DefaultRequestHeaders.Add("Accept", "application/json");
+            http.DefaultRequestHeaders.Add("User-Agent", "DevNexus");
+
+            var response = await http.PostAsJsonAsync("https://github.com/login/oauth/access_token", new
+            {
+                client_id = clientId,
+                client_secret = clientSecret,
+                code = dto.Code,
+                redirect_uri = dto.RedirectUri
+            });
+
+            if (!response.IsSuccessStatusCode) return null;
+
+            var tokenResponse = await response.Content.ReadFromJsonAsync<GitHubAccessTokenResponseDTO>();
+            if (!string.IsNullOrEmpty(tokenResponse?.Error)) return null;
+
+            return tokenResponse?.AccessToken;
         }
     }
 }
