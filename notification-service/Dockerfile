@@ -6,7 +6,7 @@ WORKDIR /app
 # Development stage
 # -------------------
 FROM base AS development
-COPY package*.json ./
+COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 USER node
@@ -16,7 +16,7 @@ USER node
 # -------------------
 FROM base AS build
 
-COPY package*.json ./
+COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 RUN npx prisma generate
@@ -28,7 +28,7 @@ RUN npm run build
 FROM node:22-alpine AS production
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=build /app/dist ./dist

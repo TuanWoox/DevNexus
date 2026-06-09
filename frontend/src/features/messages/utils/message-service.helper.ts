@@ -82,20 +82,34 @@ export function getWsBaseUrl(): string {
         process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTP ||
         "/message-service/api";
 
-    // Absolute URL (production, docker, etc.)
     if (/^https?:\/\//.test(raw)) {
         const url = new URL(raw);
-        if (process.env.NODE_ENV == "development") return url.origin;
-        // Keep service name, drop /api 
-        return `${url.origin}/message-service`;
+        return url.origin;
     }
 
-    // Relative URL (Next.js rewrite)
     if (typeof window !== "undefined") {
-        return `${window.location.origin}/message-service`;
+        return window.location.origin;
     }
 
     return "";
+}
+
+export function getWsPath(): string {
+    const raw =
+        process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTPS ||
+        process.env.NEXT_PUBLIC_MESSAGE_API_URL_HTTP ||
+        "/message-service/api";
+
+    if (/^https?:\/\//.test(raw)) {
+        const url = new URL(raw);
+        return url.pathname.startsWith("/message-service")
+            ? "/message-service/socket.io"
+            : "/socket.io";
+    }
+
+    return raw.startsWith("/message-service")
+        ? "/message-service/socket.io"
+        : "/socket.io";
 }
 
 export function getMediaUrl(mediaName: string): string {

@@ -4,18 +4,32 @@ export function getWsBaseUrl(): string {
         process.env.NEXT_PUBLIC_NOTIFICATION_API_URL_HTTP ||
         "/notification-service/api";
 
-    // If absolute URL
     if (/^https?:\/\//.test(raw)) {
         const url = new URL(raw);
-        if (process.env.NODE_ENV == "development") return url.origin;
-        // remove trailing /api for websocket base
-        return `${url.origin}/notification-service`;
+        return url.origin;
     }
 
-    // If relative → use browser origin
     if (typeof window !== "undefined") {
-        return `${window.location.origin}/notification-service`;
+        return window.location.origin;
     }
 
     return "";
+}
+
+export function getWsPath(): string {
+    const raw =
+        process.env.NEXT_PUBLIC_NOTIFICATION_API_URL_HTTPS ||
+        process.env.NEXT_PUBLIC_NOTIFICATION_API_URL_HTTP ||
+        "/notification-service/api";
+
+    if (/^https?:\/\//.test(raw)) {
+        const url = new URL(raw);
+        return url.pathname.startsWith("/notification-service")
+            ? "/notification-service/socket.io"
+            : "/socket.io";
+    }
+
+    return raw.startsWith("/notification-service")
+        ? "/notification-service/socket.io"
+        : "/socket.io";
 }

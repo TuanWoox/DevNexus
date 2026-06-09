@@ -5,6 +5,11 @@ import { cookies } from 'next/headers';
 import { ReturnResult } from '@/types/common/return-result';
 
 function getBaseUrl(): string {
+    const internalUrl = process.env.INTERNAL_PLATFORM_CORE_SERVICE_API_URL;
+    if (internalUrl) {
+        return `${internalUrl.replace(/\/$/, '')}/api`;
+    }
+
     const url =
         process.env.NEXT_PUBLIC_API_URL_HTTPS ||
         process.env.NEXT_PUBLIC_API_URL_HTTP;

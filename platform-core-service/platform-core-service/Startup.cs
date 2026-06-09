@@ -35,12 +35,14 @@ namespace platform_core_service
             services.RegisterStudyNestService(Configuration);
             services.ConfigureRedis(Configuration);
             services.ConfigureRateLimiter();
+            services.AddHealthChecks();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             // Add global exception middleware
             app.UseMiddleware<GlobalExceptionMiddleware>();
+            app.UseHealthChecks("/health");
             
             #region  Development Configuration
             if (env.IsDevelopment())
