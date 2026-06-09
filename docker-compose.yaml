@@ -11,7 +11,7 @@ services:
       - "80:3000"
     depends_on:
       platform-core-service:
-        condition: service_started
+        condition: service_healthy
       background_job_worker:
         condition: service_started
 
@@ -20,7 +20,7 @@ services:
     build:
       context: .
       dockerfile: ./platform-core-service/Dockerfile
-    ports: 
+    ports:
       - "8080:8080"
     volumes:
       - platform_core_upload:/var/www/uploads
@@ -31,10 +31,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      background_job_worker:
-        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
-  message-service: 
+  message-service:
     container_name: message-service
     build:
       context: ./message-service
@@ -45,15 +49,21 @@ services:
       - message_service_upload:/var/www/Message-Upload
     depends_on:
       platform-core-service:
-        condition: service_started   # ✅ only wait for start
+        condition: service_healthy
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
-  notification-service: 
+  notification-service:
     container_name: notification-service
     build:
       context: ./notification-service
@@ -62,13 +72,19 @@ services:
       - ./notification-service/.env.production
     depends_on:
       platform-core-service:
-        condition: service_started   # ✅ only wait for start
+        condition: service_healthy
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3002/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   ai-worker:
     container_name: ai-worker
@@ -81,8 +97,18 @@ services:
       - "D:/ai-worker-store/model/my-final-toxic-model:/app/models/my-final-toxic-model"
       - "D:/ai-worker-store/cache:/app/.hf_cache"
     depends_on:
+      platform-core-service:
+        condition: service_healthy
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
 
   background_job_worker:
     container_name: background_job_worker

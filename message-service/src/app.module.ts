@@ -19,6 +19,7 @@ import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { InitialSyncModule } from './modules/initial-sync/initial-sync.module';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -62,7 +63,7 @@ import { InitialSyncModule } from './modules/initial-sync/initial-sync.module';
     }),
 
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: []
 })
 export class AppModule { }
