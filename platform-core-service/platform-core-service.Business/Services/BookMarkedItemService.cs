@@ -10,6 +10,7 @@ using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.BookMarkedItem;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 
@@ -216,7 +217,10 @@ namespace platform_core_service.Business.Services
             var postIds = dtos.Select(s => s.Id).ToList();
 
             var comments = await _dbContext.Comments
-                .Where(c => c.PostId != null && postIds.Contains(c.PostId))
+                .Where(c => c.PostId != null &&
+                            postIds.Contains(c.PostId) &&
+                            !c.Deleted &&
+                            c.ModerationStatus != ModerationStatus.Flagged)
                 .GroupBy(c => c.PostId)
                 .Select(g => new { PostId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.PostId!, x => x.Count);

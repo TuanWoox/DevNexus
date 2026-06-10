@@ -9,6 +9,7 @@ using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.EntityDTO.QAPost;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 using PostEntity = platform_core_service.Common.Entities.DbEntities.Post;
@@ -402,7 +403,10 @@ namespace platform_core_service.Business.Recommendations
                 .ToDictionary(g => g.Key, g => g.First().Id);
 
             var commentCounts = await _context.Comments
-                .Where(c => c.PostId != null && postIds.Contains(c.PostId))
+                .Where(c => c.PostId != null &&
+                            postIds.Contains(c.PostId) &&
+                            !c.Deleted &&
+                            c.ModerationStatus != ModerationStatus.Flagged)
                 .GroupBy(c => c.PostId!)
                 .Select(g => new { PostId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.PostId, x => x.Count);
