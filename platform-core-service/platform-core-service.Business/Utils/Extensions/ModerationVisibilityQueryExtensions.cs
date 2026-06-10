@@ -12,7 +12,8 @@ namespace platform_core_service.Business.Utils.Extensions
             return query.Where(p =>
                 !p.Deleted &&
                 (p.ModerationStatus == ModerationStatus.Pending ||
-                 p.ModerationStatus == ModerationStatus.Approved));
+                 p.ModerationStatus == ModerationStatus.Approved ||
+                 p.ModerationStatus == ModerationStatus.InReview));
         }
 
         public static IQueryable<QAPost> ApplyPublicModerationVisibility(
@@ -21,7 +22,8 @@ namespace platform_core_service.Business.Utils.Extensions
             return query.Where(p =>
                 !p.Deleted &&
                 (p.ModerationStatus == ModerationStatus.Pending ||
-                 p.ModerationStatus == ModerationStatus.Approved));
+                 p.ModerationStatus == ModerationStatus.Approved ||
+                 p.ModerationStatus == ModerationStatus.InReview));
         }
 
         public static IQueryable<PostEntity> ApplyPostCommunityApprovalVisibility(

@@ -51,6 +51,7 @@ export function PostCard({ post, canModerateCommunity, isRecommendation }: PostC
     const isQaPost = 'answerCount' in post;
     const detailHref = isQaPost ? getQAPostDetailHref(post) : getPostDetailHref(post);
     const moderationStatus = normalizeModerationStatus(post.moderationStatus);
+    const isFlagged = moderationStatus === "Flagged";
     const isModerationApproved = canInteractWithModeratedContent(moderationStatus);
     const communityApprovalStatus = normalizeCommunityApprovalStatus(post.communityApprovalStatus);
     const isCommunityApproved = !post.communityId ||
@@ -225,6 +226,7 @@ export function PostCard({ post, canModerateCommunity, isRecommendation }: PostC
                         isAuthor={isAuthor}
                         canModerateCommunity={canModerateContent}
                         isRecommendation={isRecommendation}
+                        isFlagged={isFlagged}
                         dropdownClassName="relative z-10"
                     />
                 </div>

@@ -16,7 +16,7 @@ const config = {
         desc: 'text-amber-600/90 dark:text-amber-400/90',
         icon: <Clock className="h-4 w-4 text-amber-500 animate-pulse shrink-0" />,
         label: 'Pending Admin Review',
-        description: 'This post is in the manual moderation queue.',
+        description: 'This content is in the manual moderation queue.',
     },
     Flagged: {
         wrapper: 'bg-rose-50/80 border-rose-200 dark:bg-rose-950/30 dark:border-rose-800',
@@ -29,7 +29,7 @@ const config = {
 } as const;
 
 export function ModerationBanner({ status, reason, className }: ModerationBannerProps) {
-    if (status === 'Approved' || status === 'Pending') return null;
+    if (status === 'Approved' || status === 'Pending' || status === 'InReview') return null;
 
     const { wrapper, title, desc, icon, label, description } = config[status as 'InReview' | 'Flagged'];
 

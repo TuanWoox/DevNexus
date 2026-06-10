@@ -332,9 +332,7 @@ namespace platform_core_service.Business.Helper
             }
 
             var isOwner = comment.AuthorId == _userContext.ProfileId;
-            if (!isOwner &&
-                comment.ModerationStatus != ModerationStatus.Pending &&
-                comment.ModerationStatus != ModerationStatus.Approved)
+            if (!isOwner && !comment.ModerationStatus.IsPubliclyVisible())
             {
                 return Denied(ResponseMessage.COMMENT_NOT_AVAILABLE);
             }
@@ -372,8 +370,7 @@ namespace platform_core_service.Business.Helper
 
             if (answer == null ||
                 answer.Deleted ||
-                (answer.ModerationStatus != ModerationStatus.Pending &&
-                 answer.ModerationStatus != ModerationStatus.Approved))
+                !answer.ModerationStatus.IsPubliclyVisible())
             {
                 return Denied(ResponseMessage.ANSWER_NOT_AVAILABLE);
             }

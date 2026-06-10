@@ -149,7 +149,8 @@ namespace platform_core_service.Business.Utils.Extensions
                 .Where(c => !c.Deleted)
                 .Where(c => c.AuthorId == currentProfileId ||
                             c.ModerationStatus == ModerationStatus.Pending ||
-                            c.ModerationStatus == ModerationStatus.Approved)
+                            c.ModerationStatus == ModerationStatus.Approved ||
+                            c.ModerationStatus == ModerationStatus.InReview)
                 .Where(c => !context.ProfileBlocks.Any(b =>
                     (b.OwnerId == currentProfileId && b.BlockedProfileId == c.AuthorId) ||
                     (b.OwnerId == c.AuthorId && b.BlockedProfileId == currentProfileId)))
@@ -158,7 +159,8 @@ namespace platform_core_service.Business.Utils.Extensions
                     (!c.ReplyToComment!.Deleted &&
                      (c.ReplyToComment.AuthorId == currentProfileId ||
                       c.ReplyToComment.ModerationStatus == ModerationStatus.Pending ||
-                      c.ReplyToComment.ModerationStatus == ModerationStatus.Approved) &&
+                      c.ReplyToComment.ModerationStatus == ModerationStatus.Approved ||
+                      c.ReplyToComment.ModerationStatus == ModerationStatus.InReview) &&
                      !context.ProfileBlocks.Any(b =>
                          (b.OwnerId == currentProfileId && b.BlockedProfileId == c.ReplyToComment.AuthorId) ||
                          (b.OwnerId == c.ReplyToComment.AuthorId && b.BlockedProfileId == currentProfileId))))
@@ -166,7 +168,8 @@ namespace platform_core_service.Business.Utils.Extensions
                     (c.PostId != null &&
                         !c.Post!.Deleted &&
                         (c.Post.ModerationStatus == ModerationStatus.Pending ||
-                         c.Post.ModerationStatus == ModerationStatus.Approved) &&
+                         c.Post.ModerationStatus == ModerationStatus.Approved ||
+                         c.Post.ModerationStatus == ModerationStatus.InReview) &&
                         (c.Post.CommunityApprovalStatus == null ||
                          c.Post.CommunityApprovalStatus == CommunityApprovalStatus.Approved) &&
                         !context.ProfileBlocks.Any(b =>
@@ -194,13 +197,15 @@ namespace platform_core_service.Business.Utils.Extensions
                     (c.AnswerId != null &&
                         !c.Answer!.Deleted &&
                         (c.Answer.ModerationStatus == ModerationStatus.Pending ||
-                         c.Answer.ModerationStatus == ModerationStatus.Approved) &&
+                         c.Answer.ModerationStatus == ModerationStatus.Approved ||
+                         c.Answer.ModerationStatus == ModerationStatus.InReview) &&
                         !context.ProfileBlocks.Any(b =>
                             (b.OwnerId == currentProfileId && b.BlockedProfileId == c.Answer.AuthorId) ||
                             (b.OwnerId == c.Answer.AuthorId && b.BlockedProfileId == currentProfileId)) &&
                         !c.Answer.QAPost.Deleted &&
                         (c.Answer.QAPost.ModerationStatus == ModerationStatus.Pending ||
-                         c.Answer.QAPost.ModerationStatus == ModerationStatus.Approved) &&
+                         c.Answer.QAPost.ModerationStatus == ModerationStatus.Approved ||
+                         c.Answer.QAPost.ModerationStatus == ModerationStatus.InReview) &&
                         (c.Answer.QAPost.CommunityApprovalStatus == null ||
                          c.Answer.QAPost.CommunityApprovalStatus == CommunityApprovalStatus.Approved) &&
                         !context.ProfileBlocks.Any(b =>
@@ -229,7 +234,8 @@ namespace platform_core_service.Business.Utils.Extensions
                         c.ReplyToComment!.PostId != null &&
                         !c.ReplyToComment.Post!.Deleted &&
                         (c.ReplyToComment.Post.ModerationStatus == ModerationStatus.Pending ||
-                         c.ReplyToComment.Post.ModerationStatus == ModerationStatus.Approved) &&
+                         c.ReplyToComment.Post.ModerationStatus == ModerationStatus.Approved ||
+                         c.ReplyToComment.Post.ModerationStatus == ModerationStatus.InReview) &&
                         (c.ReplyToComment.Post.CommunityApprovalStatus == null ||
                          c.ReplyToComment.Post.CommunityApprovalStatus == CommunityApprovalStatus.Approved) &&
                         !context.ProfileBlocks.Any(b =>
@@ -266,13 +272,15 @@ namespace platform_core_service.Business.Utils.Extensions
                 .Where(a =>
                             a.AuthorId == currentProfileId ||
                             a.ModerationStatus == ModerationStatus.Pending ||
-                            a.ModerationStatus == ModerationStatus.Approved)
+                            a.ModerationStatus == ModerationStatus.Approved ||
+                            a.ModerationStatus == ModerationStatus.InReview)
                 .Where(a => !context.ProfileBlocks.Any(b =>
                     (b.OwnerId == currentProfileId && b.BlockedProfileId == a.AuthorId) ||
                     (b.OwnerId == a.AuthorId && b.BlockedProfileId == currentProfileId)))
                 .Where(a => !a.QAPost.Deleted)
                 .Where(a => a.QAPost.ModerationStatus == ModerationStatus.Pending ||
-                            a.QAPost.ModerationStatus == ModerationStatus.Approved)
+                            a.QAPost.ModerationStatus == ModerationStatus.Approved ||
+                            a.QAPost.ModerationStatus == ModerationStatus.InReview)
                 .Where(a => a.QAPost.CommunityApprovalStatus == null ||
                             a.QAPost.CommunityApprovalStatus == CommunityApprovalStatus.Approved)
                 .Where(a => !context.ProfileBlocks.Any(b =>
