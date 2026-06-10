@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using platform_core_service.Data;
@@ -12,9 +13,11 @@ using platform_core_service.Data;
 namespace platform_core_service.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260610083507_AddProfileIsSystemProfile")]
+    partial class AddProfileIsSystemProfile
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -226,20 +229,6 @@ namespace platform_core_service.Migrations
 
                     b.Property<bool>("IsAccepted")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("ModerationContentHash")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.Property<string>("ModerationReason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<int>("ModerationStatus")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("ModerationVersion")
-                        .HasColumnType("integer");
 
                     b.Property<string>("QAPostId")
                         .IsRequired()
@@ -496,20 +485,6 @@ namespace platform_core_service.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<int>("DownvoteCount")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ModerationContentHash")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.Property<string>("ModerationReason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<int>("ModerationStatus")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("ModerationVersion")
                         .HasColumnType("integer");
 
                     b.Property<string>("PostId")
@@ -943,6 +918,10 @@ namespace platform_core_service.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("PostId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Reason")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -955,13 +934,6 @@ namespace platform_core_service.Migrations
                     b.Property<DateTimeOffset?>("ResolvedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("TargetId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("TargetType")
-                        .HasColumnType("integer");
-
                     b.Property<float>("Tier1Score")
                         .HasColumnType("real");
 
@@ -973,6 +945,8 @@ namespace platform_core_service.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Deleted");
+
+                    b.HasIndex("PostId");
 
                     b.ToTable("ModerationQueueEntries");
                 });
@@ -1075,58 +1049,6 @@ namespace platform_core_service.Migrations
                     b.HasIndex("ReporterId", "TargetType", "TargetId", "Status");
 
                     b.ToTable("ModerationReports");
-                });
-
-            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ModerationResult", b =>
-                {
-                    b.Property<string>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text");
-
-                    b.Property<float?>("CombinedScore")
-                        .HasColumnType("real");
-
-                    b.Property<DateTimeOffset?>("DateCreated")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset?>("DateDeleted")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset?>("DateModified")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Decision")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<bool>("Deleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<float?>("ImageScore")
-                        .HasColumnType("real");
-
-                    b.Property<string>("Reasoning")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<DateTimeOffset>("ReviewedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("TargetId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("TargetType")
-                        .HasColumnType("integer");
-
-                    b.Property<float?>("TextScore")
-                        .HasColumnType("real");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Deleted");
-
-                    b.ToTable("ModerationResults");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
@@ -1302,6 +1224,58 @@ namespace platform_core_service.Migrations
                     b.HasIndex("PostId");
 
                     b.ToTable("PostMedias");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostModerationResult", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<float?>("CombinedScore")
+                        .HasColumnType("real");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Decision")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<float?>("ImageScore")
+                        .HasColumnType("real");
+
+                    b.Property<string>("PostId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reasoning")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<float?>("TextScore")
+                        .HasColumnType("real");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.HasIndex("PostId")
+                        .IsUnique();
+
+                    b.ToTable("PostModerationResults");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostTag", b =>
@@ -2422,6 +2396,17 @@ namespace platform_core_service.Migrations
                     b.Navigation("TargetProfile");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ModerationQueueEntry", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Post", "Post")
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
                 {
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.Profile", "Author")
@@ -2462,6 +2447,17 @@ namespace platform_core_service.Migrations
                     b.HasOne("platform_core_service.Common.Entities.DbEntities.Post", "Post")
                         .WithMany("PostMedias")
                         .HasForeignKey("PostId");
+
+                    b.Navigation("Post");
+                });
+
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostModerationResult", b =>
+                {
+                    b.HasOne("platform_core_service.Common.Entities.DbEntities.Post", "Post")
+                        .WithOne("ModerationResult")
+                        .HasForeignKey("platform_core_service.Common.Entities.DbEntities.PostModerationResult", "PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Post");
                 });
@@ -2882,6 +2878,8 @@ namespace platform_core_service.Migrations
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
                 {
                     b.Navigation("BookMarkedStores");
+
+                    b.Navigation("ModerationResult");
 
                     b.Navigation("PostMedias");
 

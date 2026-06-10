@@ -52,8 +52,9 @@ export function AnswerItem({ answer, currentUserId, currentUserAvatar, isDisable
                 canModerateCommunity={canModerateCommunity}
                 context={context}
                 isAccepted={answer.isAccepted}
+                isSystemAnswer={answer.isSystemAnswer}
                 onAccept={() => acceptAnswer(answer.id)}
-                canAccept={canAcceptAnswer}
+                canAccept={canAcceptAnswer && !answer.isSystemAnswer}
                 isAccepting={isAcceptingAnswer}
                 isReplying={isReplying}
                 onToggleReply={() => setIsReplying(!isReplying)}

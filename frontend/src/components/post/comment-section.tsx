@@ -12,6 +12,7 @@ import { useGetProfileById } from '@/hooks/profile-hooks/use-get-profile-by-id';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 import { AnswerItem } from './answer-item';
+import { AIAnswerSection } from './ai-answer-section';
 import { CommentItem } from './comment-item';
 import { useGetPostById } from '@/hooks/post-hooks';
 import { useGetQAPostById } from '@/hooks/qa-post-hooks/use-get-qa-post-by-id';
@@ -124,6 +125,12 @@ export default function CommentSection({ postId, isQAPost, context = "personal",
     const items = isQAPost
         ? answerData?.pages?.flatMap(p => p?.data ?? []) || []
         : commentData?.pages?.flatMap(p => p?.data ?? []) || [];
+    const aiAnswers = isQAPost
+        ? (items as SelectAnswerDTO[]).filter(answer => answer.isSystemAnswer)
+        : [];
+    const communityAnswers = isQAPost
+        ? (items as SelectAnswerDTO[]).filter(answer => !answer.isSystemAnswer)
+        : [];
 
     const totalElements = isQAPost
         ? (post as SelectQAPostDTO)?.answerCount ?? 0
@@ -183,21 +190,41 @@ export default function CommentSection({ postId, isQAPost, context = "personal",
                 </div>
             ) : (
                 <div className="space-y-6">
-                    {items.map((comment) => (
-                        isQAPost ? (
-                            <AnswerItem
-                                key={comment.id}
-                                answer={comment as SelectAnswerDTO}
+                    {isQAPost ? (
+                        <>
+                            {communityAnswers.length > 0 && aiAnswers.length > 0 && (
+                                <h4 className="text-sm font-bold text-heading">Community Answers</h4>
+                            )}
+
+                            {communityAnswers.map((answer) => (
+                                <AnswerItem
+                                    key={answer.id}
+                                    answer={answer}
+                                    currentUserId={user?.profileId as string}
+                                    currentUserAvatar={userProfile?.avatarUrl}
+                                    isDisabled={!isApproved}
+                                    moderationStatus={moderationStatus}
+                                    isQuestionAuthor={post?.authorId === user?.profileId}
+                                    communityId={effectiveCommunityId}
+                                    canModerateCommunity={isCommunityContext ? canModerateCommunity : false}
+                                    context={context}
+                                />
+                            ))}
+
+                            <AIAnswerSection
+                                answers={aiAnswers}
                                 currentUserId={user?.profileId as string}
                                 currentUserAvatar={userProfile?.avatarUrl}
                                 isDisabled={!isApproved}
-                                moderationStatus={(comment as SelectAnswerDTO).moderationStatus ?? moderationStatus}
+                                moderationStatus={moderationStatus}
                                 isQuestionAuthor={post?.authorId === user?.profileId}
                                 communityId={effectiveCommunityId}
                                 canModerateCommunity={isCommunityContext ? canModerateCommunity : false}
                                 context={context}
                             />
-                        ) : (
+                        </>
+                    ) : (
+                        items.map((comment) => (
                             <CommentItem
                                 key={comment.id}
                                 comment={comment as SelectCommentDTO}
@@ -209,8 +236,8 @@ export default function CommentSection({ postId, isQAPost, context = "personal",
                                 canModerateCommunity={isCommunityContext ? canModerateCommunity : false}
                                 context={context}
                             />
-                        )
-                    ))}
+                        ))
+                    )}
 
                     {/* Infinite Scroll Sentinel */}
                     <div ref={loadMoreRef} className="h-4 w-full flex justify-center items-center py-4">

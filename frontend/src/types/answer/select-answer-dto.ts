@@ -22,6 +22,7 @@ export interface SelectAnswerDTO {
     downvoteCount: number;
     qaPostId: string;
     authorId: string;
+    isSystemAnswer: boolean;
     author?: SelectAnswerAuthorDTO;
     dateCreated: string;
     dateModified?: string;

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using platform_core_service.Common.Entities.Identities;
+using platform_core_service.Common.Entities.DbEntities;
 using platform_core_service.Common.Helper;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
@@ -21,6 +22,11 @@ namespace platform_core_service.Business.Services
 {
     public class AccountService : IAccountService
     {
+        private const string SystemAiUserName = "devnexus-ai";
+        private const string SystemAiEmail = "devnexus-ai@devnexus.local";
+        private const string SystemAiDisplayName = "DevNexus AI";
+        private const string SystemAiAvatarUrl = "/images/devnexus-logo.svg";
+
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IConfiguration _configuration;
@@ -679,14 +685,16 @@ namespace platform_core_service.Business.Services
 
         public async Task InitUser()
         {
-            // Only run in development mode
-            if (!_env.IsDevelopment())
-            {
-                return;
-            }
-
             try
             {
+                await EnsureSystemAiProfileAsync();
+
+                // Only auto-confirm local users in development mode
+                if (!_env.IsDevelopment())
+                {
+                    return;
+                }
+
                 // Get all users with unconfirmed emails
                 var unconfirmedUsers = await _context.Users
                     .Where(u => !u.EmailConfirmed && !u.Deleted)
@@ -711,6 +719,113 @@ namespace platform_core_service.Business.Services
                 // Log error but don't throw to prevent application startup failure
                 Console.WriteLine($"An error occurred during InitUser: {ex.Message}");
             }
+        }
+
+        private async Task EnsureSystemAiProfileAsync()
+        {
+            var user = await _userManager.FindByNameAsync(SystemAiUserName);
+            if (user == null)
+            {
+                user = new ApplicationUser
+                {
+                    UserName = SystemAiUserName,
+                    Email = SystemAiEmail,
+                    EmailConfirmed = true,
+                    DateCreated = DateTimeOffset.UtcNow,
+                    Deleted = false
+                };
+
+                var createResult = await _userManager.CreateAsync(user);
+                if (!createResult.Succeeded)
+                {
+                    var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
+                    throw new InvalidOperationException($"Failed to create system AI user: {errors}");
+                }
+
+                if (await _context.Roles.AnyAsync(r => r.Name == "Developer"))
+                {
+                    var roleResult = await _userManager.AddToRoleAsync(user, "Developer");
+                    if (!roleResult.Succeeded)
+                    {
+                        var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
+                        throw new InvalidOperationException($"Failed to assign system AI user role: {errors}");
+                    }
+                }
+            }
+            else
+            {
+                var changed = false;
+                if (user.Email != SystemAiEmail)
+                {
+                    user.Email = SystemAiEmail;
+                    changed = true;
+                }
+                if (!user.EmailConfirmed)
+                {
+                    user.EmailConfirmed = true;
+                    changed = true;
+                }
+                if (user.Deleted)
+                {
+                    user.Deleted = false;
+                    user.DateDeleted = null;
+                    changed = true;
+                }
+
+                if (changed)
+                {
+                    user.DateModified = DateTimeOffset.UtcNow;
+                    var updateResult = await _userManager.UpdateAsync(user);
+                    if (!updateResult.Succeeded)
+                    {
+                        var errors = string.Join(", ", updateResult.Errors.Select(e => e.Description));
+                        throw new InvalidOperationException($"Failed to update system AI user: {errors}");
+                    }
+                }
+            }
+
+            var profile = await _context.Profiles
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(p => p.ApplicationUserId == user.Id);
+
+            if (profile == null)
+            {
+                profile = new Profile
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    ApplicationUserId = user.Id,
+                    FullName = SystemAiDisplayName,
+                    AvatarUrl = SystemAiAvatarUrl,
+                    Bio = "AI-generated first responder for DevNexus Q&A.",
+                    TechStacks = [],
+                    IsSystemProfile = true,
+                    IsPrivate = false,
+                    IsSuspended = false,
+                    DateCreated = DateTimeOffset.UtcNow,
+                    Deleted = false
+                };
+
+                _context.Profiles.Add(profile);
+                await _context.SaveChangesAsync();
+                return;
+            }
+
+            profile.FullName = SystemAiDisplayName;
+            profile.AvatarUrl = SystemAiAvatarUrl;
+            profile.IsSystemProfile = true;
+            profile.IsPrivate = false;
+            profile.IsSuspended = false;
+            profile.SuspendedUntil = null;
+            profile.SuspensionReason = null;
+            profile.Deleted = false;
+            profile.DateDeleted = null;
+            profile.DateModified = DateTimeOffset.UtcNow;
+            profile.Bio = string.IsNullOrWhiteSpace(profile.Bio)
+                ? "AI-generated first responder for DevNexus Q&A."
+                : profile.Bio;
+            profile.TechStacks ??= [];
+
+            await _context.SaveChangesAsync();
         }
 
         private async Task<ReturnResult<TokenResponseDTO>> CreateOAuthUser(string email, string? displayName = null)
