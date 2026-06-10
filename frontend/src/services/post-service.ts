@@ -71,6 +71,9 @@ export const postService = {
 
     updatePost: async (updatePostDTO: UpdatePostDTO): Promise<SelectPostDTO> => {
         const { data } = await api.put<ReturnResult<SelectPostDTO>>('/Posts', updatePostDTO);
+        if (!data.result) {
+            throw new Error(data.message || 'Failed to update post');
+        }
         return data.result;
     },
 
