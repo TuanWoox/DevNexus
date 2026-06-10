@@ -331,6 +331,14 @@ namespace platform_core_service.Business.Helper
                 return Denied(ResponseMessage.COMMENT_NOT_AVAILABLE);
             }
 
+            var isOwner = comment.AuthorId == _userContext.ProfileId;
+            if (!isOwner &&
+                comment.ModerationStatus != ModerationStatus.Pending &&
+                comment.ModerationStatus != ModerationStatus.Approved)
+            {
+                return Denied(ResponseMessage.COMMENT_NOT_AVAILABLE);
+            }
+
             if (await IsBlockedRelation(_userContext.ProfileId, comment.AuthorId))
             {
                 return Denied(ResponseMessage.BLOCKED_OR_NOT_AVAILABLE);
@@ -362,7 +370,10 @@ namespace platform_core_service.Business.Helper
                 .Include(x => x.QAPost)
                 .FirstOrDefaultAsync(x => x.Id == answerId);
 
-            if (answer == null || answer.Deleted)
+            if (answer == null ||
+                answer.Deleted ||
+                (answer.ModerationStatus != ModerationStatus.Pending &&
+                 answer.ModerationStatus != ModerationStatus.Approved))
             {
                 return Denied(ResponseMessage.ANSWER_NOT_AVAILABLE);
             }

@@ -2,7 +2,9 @@ import { SelectPostAuthorDTO } from './admin-post-dto';
 
 export interface AdminQueueEntryDTO {
   id: string;
-  postId: string;
+  targetType: 'Post' | 'Answer' | 'Comment' | 0 | 1 | 2;
+  targetId: string;
+  postId?: string;
   postTitle: string;
   postContent: string;
   authorId: string;

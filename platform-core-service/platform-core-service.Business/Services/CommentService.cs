@@ -10,9 +10,12 @@ using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Answer;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Comment;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Moderation;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Models.Paging;
+using platform_core_service.Common.Utils;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Business.Utils.Extensions;
 using platform_core_service.Data;
@@ -30,6 +33,8 @@ namespace platform_core_service.Business.Services
         private readonly IContentMediaLinkService _contentMediaLinkService;
         private readonly ICommentHistoryService _commentHistoryService;
         private readonly ISocialGuardService _socialGuardService;
+        private readonly IContentRiskPrecheckService _contentRiskPrecheckService;
+        private readonly IModerationService _moderationService;
 
         public CommentService(
             ApplicationDbContext context,
@@ -39,7 +44,9 @@ namespace platform_core_service.Business.Services
             IBackgroundJobClient backgroundJobClient,
             IContentMediaLinkService contentMediaLinkService,
             ICommentHistoryService commentHistoryService,
-            ISocialGuardService socialGuardService)
+            ISocialGuardService socialGuardService,
+            IContentRiskPrecheckService contentRiskPrecheckService,
+            IModerationService moderationService)
         {
             _context = context;
             _mapper = mapper;
@@ -49,6 +56,8 @@ namespace platform_core_service.Business.Services
             _contentMediaLinkService = contentMediaLinkService;
             _commentHistoryService = commentHistoryService;
             _socialGuardService = socialGuardService;
+            _contentRiskPrecheckService = contentRiskPrecheckService;
+            _moderationService = moderationService;
         }
 
         public async Task<ReturnResult<SelectCommentDTO>> CreateAsync(CreateCommentDTO createDTO)
@@ -157,9 +166,22 @@ namespace platform_core_service.Business.Services
                 }
 
                 // Step 5: Map DTO to entity
+                var precheck = await _contentRiskPrecheckService.CheckAsync(null, createDTO.Content);
                 var comment = _mapper.Map<CommentEntity>(createDTO);
                 comment.AuthorId = profileId;
                 comment.Id = Guid.NewGuid().ToString();
+                comment.ModerationVersion = 1;
+                comment.ModerationContentHash = ModerationContentHashHelper.Compute(null, comment.Content);
+                if (precheck.HasBannedKeywords)
+                {
+                    comment.ModerationStatus = ModerationStatus.InReview;
+                    comment.ModerationReason = precheck.ModerationReason;
+                }
+                else
+                {
+                    comment.ModerationStatus = ModerationStatus.Pending;
+                    comment.ModerationReason = null;
+                }
 
                 // Step 6: Save comment
                 _context.Comments.Add(comment);
@@ -177,9 +199,21 @@ namespace platform_core_service.Business.Services
                     .Include(c => c.Replies)
                     .FirstOrDefaultAsync(c => c.Id == comment.Id);
 
-                if (savedComment != null)
+                if (precheck.HasBannedKeywords)
                 {
-                    await PublishCommentNotificationsAsync(comment.Id, profileId, savedComment);
+                    await _moderationService.EnqueueBannedKeywordReviewAsync(
+                        ModerationTargetType.Comment,
+                        comment.Id,
+                        precheck.MatchedBannedKeywords);
+                }
+                else
+                {
+                    _backgroundJobClient.Enqueue<IModerationBackgroundJobs>(
+                        x => x.SubmitContentModerationAsync(
+                            ModerationTargetType.Comment,
+                            comment.Id,
+                            comment.ModerationVersion,
+                            comment.ModerationContentHash));
                 }
 
                 result.Result = _mapper.Map<SelectCommentDTO>(savedComment);
@@ -373,8 +407,30 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var oldContent = comment.Content;
+
                 // Step 4: Update comment (only Content can be updated)
                 _mapper.Map(updateDTO, comment);
+                var shouldModerate = updateDTO.Content != null &&
+                    !string.Equals(updateDTO.Content, oldContent, StringComparison.Ordinal);
+
+                var precheck = ContentRiskPrecheckResult.Clean;
+                if (shouldModerate)
+                {
+                    comment.ModerationVersion += 1;
+                    comment.ModerationContentHash = ModerationContentHashHelper.Compute(null, comment.Content);
+                    precheck = await _contentRiskPrecheckService.CheckAsync(null, comment.Content);
+                    if (precheck.HasBannedKeywords)
+                    {
+                        comment.ModerationStatus = ModerationStatus.InReview;
+                        comment.ModerationReason = precheck.ModerationReason;
+                    }
+                    else
+                    {
+                        comment.ModerationStatus = ModerationStatus.Pending;
+                        comment.ModerationReason = null;
+                    }
+                }
 
                 // Step 5: Save changes
                 _context.Comments.Update(comment);
@@ -382,6 +438,26 @@ namespace platform_core_service.Business.Services
 
                 await _contentMediaLinkService.LinkCommentMediaAsync(_userContext.UserId, commentId, updateDTO.MediaIds);
                 await _commentHistoryService.RecordHistoryAsync(commentId);
+
+                if (shouldModerate)
+                {
+                    if (precheck.HasBannedKeywords)
+                    {
+                        await _moderationService.EnqueueBannedKeywordReviewAsync(
+                            ModerationTargetType.Comment,
+                            comment.Id,
+                            precheck.MatchedBannedKeywords);
+                    }
+                    else
+                    {
+                        _backgroundJobClient.Enqueue<IModerationBackgroundJobs>(
+                            x => x.SubmitContentModerationAsync(
+                                ModerationTargetType.Comment,
+                                comment.Id,
+                                comment.ModerationVersion,
+                                comment.ModerationContentHash));
+                    }
+                }
 
                 // Step 6: Reload and return
                 var updatedComment = await _context.Comments

@@ -15,14 +15,14 @@ import {
 import { cn } from '@/lib/utils'
 import { AdminQueueEntryDTO } from '@/types/admin/admin-queue-entry-dto'
 import { AdminPostDTO, ModerationStatus } from '@/types/admin/admin-post-dto'
-import { ModerationResolveDialog } from '../moderation/moderation-resolve-dialog'
-import { PostDetailSheet } from '../moderation/post-detail-sheet'
-import { PostOverviewSheet } from './post-overview-sheet'
-import { AdminPostActionDialog } from './admin-post-action-dialog'
+import { QueueResolveDialog } from './queue-resolve-dialog'
+import { QueueDetailSheet } from './queue-detail-sheet'
+import { ContentDetailSheet } from './content-detail-sheet'
+import { ModerationActionDialog } from './moderation-action-dialog'
 import { ModerationStatusBadge } from './moderation-status-badge'
-import { PostsRiskBadge, getRiskLevelForScore } from './posts-risk-badge'
-import { PostsTableSkeleton } from './posts-table-skeleton'
-import { PostsEmptyState } from './posts-empty-state'
+import { RiskBadge, getRiskLevelForScore } from './risk-badge'
+import { QueueTableSkeleton } from './queue-table-skeleton'
+import { QueueEmptyState } from './queue-empty-state'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +33,7 @@ import {
 
 type TabValue = 'needs-review' | 'published' | 'flagged' | 'all'
 
-interface UnifiedPostsTableProps {
+interface ReviewQueueTableProps {
   queueEntries: AdminQueueEntryDTO[]
   allPosts: AdminPostDTO[]
   tabCounts: Record<TabValue, number>
@@ -66,8 +66,14 @@ function getInitials(name: string): string {
 
 function mapEntityTypeLabel(raw: string): string {
   if (!raw) return 'Post'
+  if (raw.toLowerCase().includes('answer')) return 'Answer'
+  if (raw.toLowerCase().includes('comment')) return 'Comment'
   if (raw.toLowerCase().includes('qa') || raw.toLowerCase().includes('question')) return 'Q&A'
   return 'Post'
+}
+
+function getQueueTargetId(entry: AdminQueueEntryDTO): string {
+  return entry.targetId ?? entry.postId ?? ''
 }
 
 // ─── Author Cell ─────────────────────────────────────────────────────────────
@@ -124,7 +130,7 @@ function ContentCell({
         title={title}
         className="text-left text-sm font-semibold text-heading hover:text-primary transition-colors truncate block"
       >
-        {title || 'Untitled Post'}
+        {title || 'Untitled'}
       </button>
       {excerpt && (
         <p className="text-xs text-muted-foreground line-clamp-1 leading-relaxed">{excerpt}</p>
@@ -176,7 +182,7 @@ function buildUnifiedRows(
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function UnifiedPostsTable({
+export function ReviewQueueTable({
   queueEntries,
   allPosts,
   isLoading,
@@ -187,7 +193,7 @@ export function UnifiedPostsTable({
   onRejectQueue,
   onApprovePost,
   onRejectPost,
-}: UnifiedPostsTableProps) {
+}: ReviewQueueTableProps) {
   // Sheet states
   const [queueSheetState, setQueueSheetState] = useState<{
     open: boolean
@@ -217,12 +223,12 @@ export function UnifiedPostsTable({
   const showVotes = activeTab === 'published' || activeTab === 'all'
 
   if (isLoading) {
-    return <PostsTableSkeleton rows={6} showRisk={showRisk} />
+    return <QueueTableSkeleton rows={6} showRisk={showRisk} />
   }
 
   if (rows.length === 0) {
     return (
-      <PostsEmptyState hasFilters={hasActiveFilters} onClearFilters={onClearFilters} />
+      <QueueEmptyState hasFilters={hasActiveFilters} onClearFilters={onClearFilters} />
     )
   }
 
@@ -266,7 +272,7 @@ export function UnifiedPostsTable({
                 const entry = row.queueEntry
                 const post = row.post
 
-                const title = isQueue ? entry!.postTitle : post!.title
+                const title = isQueue ? entry!.postTitle || entry!.entityType || 'Content' : post!.title
                 const excerpt = isQueue
                   ? entry!.postContent?.slice(0, 120)
                   : post!.contentPreview ?? undefined
@@ -275,8 +281,8 @@ export function UnifiedPostsTable({
                     ? { fullName: entry!.author.fullName, id: entry!.author.id }
                     : undefined
                   : post!.author
-                  ? { fullName: post!.author.fullName, id: post!.author.id }
-                  : undefined
+                    ? { fullName: post!.author.fullName, id: post!.author.id }
+                    : undefined
                 const entityType = isQueue ? entry!.entityType : post!.entityType
                 const aiScore = isQueue ? entry!.tier1Score : undefined
                 const votes = !isQueue ? { up: post!.upvoteCount, down: post!.downvoteCount } : undefined
@@ -334,7 +340,7 @@ export function UnifiedPostsTable({
                     {showRisk && (
                       <td className="px-4 py-3.5 w-24">
                         {aiScore !== undefined ? (
-                          <PostsRiskBadge score={aiScore} />
+                          <RiskBadge score={aiScore} />
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
@@ -455,12 +461,12 @@ export function UnifiedPostsTable({
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => {
-                                const id = isQueue ? entry!.postId : post!.id
-                                navigator.clipboard.writeText(id).catch(() => {})
+                                const id = isQueue ? getQueueTargetId(entry!) : post!.id
+                                navigator.clipboard.writeText(id).catch(() => { })
                               }}
                             >
                               <Copy className="w-4 h-4" />
-                              Copy Post ID
+                              {isQueue ? 'Copy Target ID' : 'Copy ID'}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -476,7 +482,7 @@ export function UnifiedPostsTable({
 
       {/* Queue Entry Sheet */}
       {queueSheetState.entry && (
-        <PostDetailSheet
+        <QueueDetailSheet
           open={queueSheetState.open}
           onClose={() => setQueueSheetState((s) => ({ ...s, open: false }))}
           entry={queueSheetState.entry}
@@ -487,7 +493,7 @@ export function UnifiedPostsTable({
 
       {/* Post Sheet */}
       {postSheetState.post && (
-        <PostOverviewSheet
+        <ContentDetailSheet
           open={postSheetState.open}
           onClose={() => setPostSheetState((s) => ({ ...s, open: false }))}
           post={postSheetState.post}
@@ -498,7 +504,7 @@ export function UnifiedPostsTable({
 
       {/* Queue Dialog */}
       {queueDialogState.entry && (
-        <ModerationResolveDialog
+        <QueueResolveDialog
           open={queueDialogState.open}
           onClose={() => setQueueDialogState((s) => ({ ...s, open: false }))}
           entry={queueDialogState.entry}
@@ -516,7 +522,7 @@ export function UnifiedPostsTable({
 
       {/* Post Dialog */}
       {postDialogState.post && (
-        <AdminPostActionDialog
+        <ModerationActionDialog
           open={postDialogState.open}
           onClose={() => setPostDialogState((s) => ({ ...s, open: false }))}
           post={postDialogState.post}

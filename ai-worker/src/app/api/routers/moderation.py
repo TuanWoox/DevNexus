@@ -28,7 +28,8 @@ router = APIRouter(prefix="/ai/moderation", tags=["Moderation AI"])
 )
 async def submit_content(
     background_tasks: BackgroundTasks,
-    post_id: str = Form(..., description="UUID of the post being submitted."),
+    target_type: str = Form("Post", description="Moderation target type: Post, Answer, or Comment."),
+    target_id: str = Form(..., description="UUID of the target content being submitted."),
     title: str | None = Form(None, description="Optional post title."),
     text_content: str = Form(..., min_length=1, max_length=50000),
     moderation_version: int = Form(..., description="Platform moderation content version."),
@@ -56,7 +57,8 @@ async def submit_content(
 
     background_tasks.add_task(
         run_moderation,
-        post_id=post_id,
+        target_type=target_type,
+        target_id=target_id,
         moderation_version=moderation_version,
         content_hash=content_hash,
         text_content=text_content,

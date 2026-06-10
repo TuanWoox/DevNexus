@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using platform_core_service.Common.Utils.Enums;
 
 namespace platform_core_service.Common.Models.DTOs.EntityDTO.Moderation
 {
@@ -9,7 +10,10 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Moderation
     public class ModerationQueueRequestDTO
     {
         [Required]
-        public string PostId { get; set; } = null!;
+        public ModerationTargetType TargetType { get; set; }
+
+        [Required]
+        public string? TargetId { get; set; }
 
         public int? ModerationVersion { get; set; }
 

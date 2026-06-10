@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
-  FileText,
+  ClipboardCheck,
   Users,
   Tag,
   BrainCircuit,
@@ -27,7 +27,7 @@ import useLogout from '@/hooks/auth-hooks/use-logout'
 
 const adminNavItems = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, roles: ['Admin'] },
-  { name: 'Posts', href: '/admin/posts', icon: FileText, roles: ['Admin', 'Moderator'] },
+  { name: 'Review Queue', href: '/admin/review-queue', icon: ClipboardCheck, roles: ['Admin', 'Moderator'] },
   { name: 'Reports', href: '/admin/reports', icon: Flag, roles: ['Admin', 'Moderator'] },
   { name: 'Users', href: '/admin/users', icon: Users, roles: ['Admin'] },
   { name: 'Tags', href: '/admin/tags', icon: Tag, roles: ['Admin', 'Moderator'] },

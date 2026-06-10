@@ -25,23 +25,17 @@ namespace platform_core_service.Business.Mappings
                 .ForMember(dest => dest.Author,
                     opt => opt.MapFrom(src => src.Author));
             
-            CreateMap<PostModerationResult, AdminQueueEntryDTO>()
+            CreateMap<ModerationResult, AdminQueueEntryDTO>()
                 .ForMember(dest => dest.PostTitle,
-                    opt => opt.MapFrom(src => src.Post.Title))
-
+                    opt => opt.MapFrom(src => src.TargetType.ToString()))
                 .ForMember(dest => dest.PostContent,
-                    opt => opt.MapFrom(src =>
-                        src.Post.Content.Length > 500
-                            ? src.Post.Content.Substring(0, 500)
-                            : src.Post.Content))
-
+                    opt => opt.MapFrom(src => src.Reasoning ?? string.Empty))
                 .ForMember(dest => dest.AuthorId,
-                    opt => opt.MapFrom(src => src.Post.AuthorId))
+                    opt => opt.MapFrom(src => string.Empty))
                 .ForMember(dest => dest.Author,
-                    opt => opt.MapFrom(src => src.Post.Author))
-
+                    opt => opt.MapFrom(src => null as platform_core_service.Common.Entities.DbEntities.Profile))
                 .ForMember(dest => dest.EntityType,
-                    opt => opt.MapFrom(src => src.Post is QaPostEntity ? "QA Post" : "Post"));
+                    opt => opt.MapFrom(src => src.TargetType.ToString()));
         }
     }
 }

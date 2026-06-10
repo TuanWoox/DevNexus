@@ -11,10 +11,13 @@ using platform_core_service.Common.Interfaces.Helper;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Answer;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Comment;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Moderation;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Models.Paging;
+using platform_core_service.Common.Utils;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 
@@ -30,6 +33,8 @@ namespace platform_core_service.Business.Services
         private readonly IContentMediaLinkService _contentMediaLinkService;
         private readonly IAnswerHistoryService _answerHistoryService;
         private readonly ISocialGuardService _socialGuardService;
+        private readonly IContentRiskPrecheckService _contentRiskPrecheckService;
+        private readonly IModerationService _moderationService;
 
         public AnswerService(
             ApplicationDbContext dbContext,
@@ -39,7 +44,9 @@ namespace platform_core_service.Business.Services
             IBackgroundJobClient backgroundJobClient,
             IContentMediaLinkService contentMediaLinkService,
             IAnswerHistoryService answerHistoryService,
-            ISocialGuardService socialGuardService)
+            ISocialGuardService socialGuardService,
+            IContentRiskPrecheckService contentRiskPrecheckService,
+            IModerationService moderationService)
         {
             _dbContext = dbContext;
             _userContext = userContext;
@@ -49,6 +56,8 @@ namespace platform_core_service.Business.Services
             _contentMediaLinkService = contentMediaLinkService;
             _answerHistoryService = answerHistoryService;
             _socialGuardService = socialGuardService;
+            _contentRiskPrecheckService = contentRiskPrecheckService;
+            _moderationService = moderationService;
         }
 
         public async Task<ReturnResult<SelectAnswerDTO>> CreateAsync(CreateAnswerDTO answerDTO)
@@ -101,10 +110,23 @@ namespace platform_core_service.Business.Services
                 }
 
                 // Step 4: Map and set server-side fields
+                var precheck = await _contentRiskPrecheckService.CheckAsync(null, answerDTO.Content);
                 var answer = _mapper.Map<Answer>(answerDTO);
                 answer.Id = Guid.NewGuid().ToString();
                 answer.AuthorId = profileId;
                 answer.QAPostId = answerDTO.QAPostId;
+                answer.ModerationVersion = 1;
+                answer.ModerationContentHash = ModerationContentHashHelper.Compute(null, answer.Content);
+                if (precheck.HasBannedKeywords)
+                {
+                    answer.ModerationStatus = ModerationStatus.InReview;
+                    answer.ModerationReason = precheck.ModerationReason;
+                }
+                else
+                {
+                    answer.ModerationStatus = ModerationStatus.Pending;
+                    answer.ModerationReason = null;
+                }
 
                 // Step 5: Save
                 _dbContext.Answers.Add(answer);
@@ -112,7 +134,23 @@ namespace platform_core_service.Business.Services
 
                 await _contentMediaLinkService.LinkAnswerMediaAsync(_userContext.UserId, answer.Id, answerDTO.MediaIds);
 
-                await PublishAnswerNotificationAsync(answer.Id, profileId);
+                if (precheck.HasBannedKeywords)
+                {
+                    await _moderationService.EnqueueBannedKeywordReviewAsync(
+                        ModerationTargetType.Answer,
+                        answer.Id,
+                        precheck.MatchedBannedKeywords);
+                }
+                else
+                {
+                    _backgroundJobClient.Enqueue<IModerationBackgroundJobs>(
+                        x => x.SubmitContentModerationAsync(
+                            ModerationTargetType.Answer,
+                            answer.Id,
+                            answer.ModerationVersion,
+                            answer.ModerationContentHash));
+                }
+
                 await _answerHistoryService.RecordHistoryAsync(answer.Id);
 
                 // Step 6: Reload with author and return
@@ -261,13 +299,56 @@ namespace platform_core_service.Business.Services
                     return result;
                 }
 
+                var oldContent = answer.Content;
+
                 // Step 4: Update and save
                 _mapper.Map(answerDTO, answer);
+                var shouldModerate = answerDTO.Content != null &&
+                    !string.Equals(answerDTO.Content, oldContent, StringComparison.Ordinal);
+
+                var precheck = ContentRiskPrecheckResult.Clean;
+                if (shouldModerate)
+                {
+                    answer.ModerationVersion += 1;
+                    answer.ModerationContentHash = ModerationContentHashHelper.Compute(null, answer.Content);
+                    precheck = await _contentRiskPrecheckService.CheckAsync(null, answer.Content);
+                    if (precheck.HasBannedKeywords)
+                    {
+                        answer.ModerationStatus = ModerationStatus.InReview;
+                        answer.ModerationReason = precheck.ModerationReason;
+                    }
+                    else
+                    {
+                        answer.ModerationStatus = ModerationStatus.Pending;
+                        answer.ModerationReason = null;
+                    }
+                }
+
                 _dbContext.Answers.Update(answer);
                 await _dbContext.SaveChangesAsync();
 
                 await _contentMediaLinkService.LinkAnswerMediaAsync(_userContext.UserId, answerDTO.Id, answerDTO.MediaIds);
                 await _answerHistoryService.RecordHistoryAsync(answerDTO.Id);
+
+                if (shouldModerate)
+                {
+                    if (precheck.HasBannedKeywords)
+                    {
+                        await _moderationService.EnqueueBannedKeywordReviewAsync(
+                            ModerationTargetType.Answer,
+                            answer.Id,
+                            precheck.MatchedBannedKeywords);
+                    }
+                    else
+                    {
+                        _backgroundJobClient.Enqueue<IModerationBackgroundJobs>(
+                            x => x.SubmitContentModerationAsync(
+                                ModerationTargetType.Answer,
+                                answer.Id,
+                                answer.ModerationVersion,
+                                answer.ModerationContentHash));
+                    }
+                }
 
                 var saved = await _dbContext.Answers
                     .Include(a => a.Author)
@@ -380,6 +461,12 @@ namespace platform_core_service.Business.Services
                 if (!accessCheck.Result)
                 {
                     result.Message = accessCheck.Message ?? ResponseMessage.ANSWER_NOT_AVAILABLE;
+                    return result;
+                }
+
+                if (answer.ModerationStatus != ModerationStatus.Approved)
+                {
+                    result.Message = ResponseMessage.ANSWER_NOT_AVAILABLE;
                     return result;
                 }
 

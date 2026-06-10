@@ -1,11 +1,11 @@
 import { Skeleton } from '@/components/ui/skeleton'
 
-interface PostsTableSkeletonProps {
+interface QueueTableSkeletonProps {
   rows?: number
   showRisk?: boolean
 }
 
-export function PostsTableSkeleton({ rows = 6, showRisk = false }: PostsTableSkeletonProps) {
+export function QueueTableSkeleton({ rows = 6, showRisk = false }: QueueTableSkeletonProps) {
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       {/* Fake header */}

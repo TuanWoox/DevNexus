@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 using platform_core_service.Common.Entities.BaseEntity;
 using platform_core_service.Common.Entities.DbEntities;
+using platform_core_service.Common.Utils.Enums;
 
 namespace platform_core_service.Common.Entities.DbEntities
 {
@@ -14,6 +15,17 @@ namespace platform_core_service.Common.Entities.DbEntities
         public string Content { get; set; }
 
         public bool IsAccepted { get; set; } = false;
+
+        [EnumDataType(typeof(ModerationStatus), ErrorMessage = "ModerationStatus must be a valid Moderation type")]
+        public ModerationStatus ModerationStatus { get; set; } = ModerationStatus.Pending;
+
+        [StringLength(1000)]
+        public string? ModerationReason { get; set; }
+
+        public int ModerationVersion { get; set; } = 0;
+
+        [StringLength(128)]
+        public string? ModerationContentHash { get; set; }
 
         [Required]
         public string QAPostId { get; set; }

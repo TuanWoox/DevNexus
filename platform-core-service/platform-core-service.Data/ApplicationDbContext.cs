@@ -36,7 +36,7 @@ namespace platform_core_service.Data
         public DbSet<QAMedia> QAMedias { get; set; }
         public DbSet<AnswerMedia> AnswerMedias { get; set; }
         public DbSet<CommentMedia> CommentMedias { get; set; }
-        public DbSet<PostModerationResult> PostModerationResults { get; set; }
+        public DbSet<ModerationResult> ModerationResults { get; set; }
         public DbSet<ModerationQueueEntry> ModerationQueueEntries { get; set; }
         public DbSet<ModerationReport> ModerationReports { get; set; }
         public DbSet<AdminAuditLog> AdminAuditLogs { get; set; }
@@ -130,12 +130,6 @@ namespace platform_core_service.Data
                 .WithMany(c => c.Replies)
                 .HasForeignKey(c => c.ReplyToCommentId)
                 .OnDelete(DeleteBehavior.Restrict);
-            builder.Entity<Post>()
-                .HasOne(p => p.ModerationResult)
-                .WithOne(m => m.Post)
-                .HasForeignKey<PostModerationResult>(m => m.PostId)
-                .OnDelete(DeleteBehavior.Cascade);
-
             builder.Entity<Post>(entity =>
             {
                 entity.Property(p => p.ModerationStatus).HasConversion<int>();

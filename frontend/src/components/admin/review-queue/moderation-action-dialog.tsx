@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { AdminPostDTO } from '@/types/admin/admin-post-dto';
 import { ModerationStatusBadge } from './moderation-status-badge';
 
-interface AdminPostActionDialogProps {
+interface ModerationActionDialogProps {
   open: boolean;
   onClose: () => void;
   post: AdminPostDTO;
@@ -24,22 +24,22 @@ interface AdminPostActionDialogProps {
   onConfirm: (reasonText?: string, moderatorNote?: string) => void;
 }
 
-export function AdminPostActionDialog({
+export function ModerationActionDialog({
   open,
   onClose,
   post,
   action,
   onConfirm,
-}: AdminPostActionDialogProps) {
+}: ModerationActionDialogProps) {
   const [reasonText, setReasonText] = useState('');
   const [moderatorNote, setModeratorNote] = useState('');
   const [showReasonError, setShowReasonError] = useState(false);
 
   const isApprove = action === 'approve';
-  const title = isApprove ? 'Force Approve Post' : 'Force Reject Post';
+  const title = isApprove ? 'Force Approve Content' : 'Force Reject Content';
   const description = isApprove
-    ? 'This post will be approved and made visible to all users.'
-    : 'This post will be rejected and hidden from public view.';
+    ? 'This content will be approved and made visible to all users.'
+    : 'This content will be rejected and hidden from public view.';
   const trimmedReason = reasonText.trim();
 
   function resetForm() {
@@ -80,7 +80,7 @@ export function AdminPostActionDialog({
 
         <div className="flex flex-col gap-3 py-2">
           <div className="flex flex-col gap-1">
-            <p className="text-sm font-semibold text-foreground">Post</p>
+            <p className="text-sm font-semibold text-foreground">Content</p>
             <p className="text-sm text-muted-foreground line-clamp-2">{post.title}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -101,7 +101,7 @@ export function AdminPostActionDialog({
                   maxLength={1000}
                   rows={4}
                   aria-invalid={showReasonError}
-                  placeholder="Explain why this post was rejected."
+                  placeholder="Explain why this content was rejected."
                   className="resize-none"
                 />
                 <div className="flex items-center justify-between gap-3">

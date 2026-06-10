@@ -147,12 +147,18 @@ namespace platform_core_service.Business.Utils.Extensions
         {
             return query
                 .Where(c => !c.Deleted)
+                .Where(c => c.AuthorId == currentProfileId ||
+                            c.ModerationStatus == ModerationStatus.Pending ||
+                            c.ModerationStatus == ModerationStatus.Approved)
                 .Where(c => !context.ProfileBlocks.Any(b =>
                     (b.OwnerId == currentProfileId && b.BlockedProfileId == c.AuthorId) ||
                     (b.OwnerId == c.AuthorId && b.BlockedProfileId == currentProfileId)))
                 .Where(c =>
                     c.ReplyToCommentId == null ||
                     (!c.ReplyToComment!.Deleted &&
+                     (c.ReplyToComment.AuthorId == currentProfileId ||
+                      c.ReplyToComment.ModerationStatus == ModerationStatus.Pending ||
+                      c.ReplyToComment.ModerationStatus == ModerationStatus.Approved) &&
                      !context.ProfileBlocks.Any(b =>
                          (b.OwnerId == currentProfileId && b.BlockedProfileId == c.ReplyToComment.AuthorId) ||
                          (b.OwnerId == c.ReplyToComment.AuthorId && b.BlockedProfileId == currentProfileId))))
@@ -187,6 +193,8 @@ namespace platform_core_service.Business.Utils.Extensions
                              b.ProfileId == currentProfileId))) ||
                     (c.AnswerId != null &&
                         !c.Answer!.Deleted &&
+                        (c.Answer.ModerationStatus == ModerationStatus.Pending ||
+                         c.Answer.ModerationStatus == ModerationStatus.Approved) &&
                         !context.ProfileBlocks.Any(b =>
                             (b.OwnerId == currentProfileId && b.BlockedProfileId == c.Answer.AuthorId) ||
                             (b.OwnerId == c.Answer.AuthorId && b.BlockedProfileId == currentProfileId)) &&
@@ -255,6 +263,10 @@ namespace platform_core_service.Business.Utils.Extensions
         {
             return query
                 .Where(a => !a.Deleted)
+                .Where(a =>
+                            a.AuthorId == currentProfileId ||
+                            a.ModerationStatus == ModerationStatus.Pending ||
+                            a.ModerationStatus == ModerationStatus.Approved)
                 .Where(a => !context.ProfileBlocks.Any(b =>
                     (b.OwnerId == currentProfileId && b.BlockedProfileId == a.AuthorId) ||
                     (b.OwnerId == a.AuthorId && b.BlockedProfileId == currentProfileId)))

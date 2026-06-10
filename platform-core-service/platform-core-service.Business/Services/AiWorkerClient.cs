@@ -36,10 +36,16 @@ namespace platform_core_service.Business.Services
 
         public async Task SubmitForModerationAsync(string postId, string title, string textContent, int moderationVersion, string contentHash)
         {
+            await SubmitForModerationAsync(ModerationTargetType.Post, postId, title, textContent, moderationVersion, contentHash);
+        }
+
+        public async Task SubmitForModerationAsync(ModerationTargetType targetType, string targetId, string? title, string textContent, int moderationVersion, string contentHash)
+        {
             var moderationText = BuildModerationText(title, textContent);
             using var form = new MultipartFormDataContent
             {
-                { new StringContent(postId),         "post_id"      },
+                { new StringContent(targetType.ToString()), "target_type" },
+                { new StringContent(targetId), "target_id" },
                 { new StringContent(title ?? string.Empty), "title" },
                 { new StringContent(moderationText), "text_content" },
                 { new StringContent(moderationVersion.ToString()), "moderation_version" },
@@ -53,11 +59,11 @@ namespace platform_core_service.Business.Services
                 var errorBody = await response.Content.ReadAsStringAsync();
                 var preview = errorBody.Length > 500 ? errorBody[..500] : errorBody;
                 throw new HttpRequestException(
-                    $"AI moderation submit failed for post {postId}. Status: {(int)response.StatusCode} {response.StatusCode}. Body: {preview}");
+                    $"AI moderation submit failed for {targetType} {targetId}. Status: {(int)response.StatusCode} {response.StatusCode}. Body: {preview}");
             }
 
             DevNexusLogger.Instance.Debug(
-                $"[AiWorkerClient] Moderation submit accepted for post {postId}.");
+                $"[AiWorkerClient] Moderation submit accepted for {targetType} {targetId}.");
         }
 
         private static string BuildModerationText(string? title, string? textContent)
