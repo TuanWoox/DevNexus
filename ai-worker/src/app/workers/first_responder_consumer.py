@@ -1,11 +1,8 @@
-import asyncio
-import json
 import logging
 from typing import Any
 
-from google import genai
-
 from src.app.infrastructure.database import AsyncSessionLocal
+from src.app.infrastructure.gemini import create_gemini_client
 from src.app.schemas.code_tools import FirstResponderRequest
 from src.app.services.code_tools_service import CodeToolsService
 from src.app.workers.base_consumer import BaseAITaskConsumer
@@ -39,8 +36,8 @@ class FirstResponderConsumer(BaseAITaskConsumer):
 
         request_obj = FirstResponderRequest(**entity_dict)
 
-        # Initialize Gemini Client
-        gemini_client = genai.Client(api_key=self.settings.gemini_api_key)
+        # Initialize Gemini Client from Redis runtime config, with env fallback.
+        gemini_client = await create_gemini_client(self.settings)
 
         # Execute LLM logic
         async with AsyncSessionLocal() as db_session:

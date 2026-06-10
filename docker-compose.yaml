@@ -113,6 +113,9 @@ services:
     container_name: ai-worker
     env_file:
       - ./ai-worker/.env.production
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      AI_RUNTIME_CONFIG_KEY: PlatformCachingAI_RUNTIME_CONFIG
     build:
       context: ./ai-worker
       dockerfile: Dockerfile
@@ -125,6 +128,8 @@ services:
       postgres-init:
         condition: service_completed_successfully
       rabbitmq:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5).read()"]

@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     platform_core_service_url: str = "http://localhost:5105"
     internal_api_key: str = ""
     rabbitmq_url: str = "amqp://guest:guest@localhost:5672/"
+    redis_url: str = "redis://localhost:6379/0"
+    ai_runtime_config_key: str = "PlatformCachingAI_RUNTIME_CONFIG"
+    ai_runtime_config_cache_seconds: int = 30
 
     model_config = SettingsConfigDict(
         env_file=get_env_file(),

@@ -23,6 +23,10 @@ namespace platform_core_service.Business.Services
         private readonly IRepository<Setting, string> _repo;
         private readonly IMapper _mapper;
         private const string CACHE_KEY = "ALL_SETTINGS_CACHE";
+        private const string AiRuntimeConfigCacheKey = "AI_RUNTIME_CONFIG";
+        private const string AiSettingsGroup = "AI";
+        private const string GeminiApiKeySettingKey = "GEMINI_API_KEY";
+        private const string SensitiveMaskValue = "*******";
 
         public ConfigurationService(ApplicationDbContext context, ICacheService cacheService, IRepository<Setting, string> repository, IMapper mapper)
         {
@@ -36,13 +40,18 @@ namespace platform_core_service.Business.Services
         {
             var cachedSettings = await _cacheService.GetCacheAsync<Dictionary<string, string>>(CACHE_KEY);
             if (cachedSettings != null)
+            {
+                await PublishAiRuntimeConfigAsync();
                 return cachedSettings;
+            }
 
             var dict = await _context.Settings.AsNoTracking()
                 .ToDictionaryAsync(x => $"{x.Group}:{x.Key}", x => x.Value);
 
             await _cacheService.SetCacheAsync(CACHE_KEY, dict,
                 new DistributedCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromDays(7)));
+
+            await PublishAiRuntimeConfigAsync();
 
             return dict;
         }
@@ -68,6 +77,7 @@ namespace platform_core_service.Business.Services
                 if (rs.Result)
                 {
                     await _cacheService.RemoveCacheAsync(CACHE_KEY);
+                    await PublishAiRuntimeConfigAsync();
                 }
             }
             catch (Exception ex)
@@ -92,11 +102,26 @@ namespace platform_core_service.Business.Services
                     rs.Message = string.Format(ResponseMessage.MESSAGE_ITEM_NOT_FOUND, "Setting", updateDto.Id);
                     return rs;
                 }
+                var preserveMaskedSensitiveValue =
+                    existingSetting.IsSensitive &&
+                    updateDto.IsSensitive &&
+                    updateDto.Value == SensitiveMaskValue;
+
                 _mapper.Map(updateDto, existingSetting);
+                if (preserveMaskedSensitiveValue)
+                {
+                    existingSetting.Value = (await _context.Settings
+                        .AsNoTracking()
+                        .Where(s => s.Id == updateDto.Id)
+                        .Select(s => s.Value)
+                        .FirstAsync()) ?? existingSetting.Value;
+                }
+
                 rs.Result = await _context.SaveChangesAsync() > 0;
                 if (rs.Result)
                 {
                     await _cacheService.RemoveCacheAsync(CACHE_KEY);
+                    await PublishAiRuntimeConfigAsync();
                 }
             }
             catch (Exception ex)
@@ -170,6 +195,7 @@ namespace platform_core_service.Business.Services
             _context.Settings.RemoveRange(entitiesToDelete);
             await _context.SaveChangesAsync();
             await _cacheService.RemoveCacheAsync(CACHE_KEY);
+            await PublishAiRuntimeConfigAsync();
             rs.Result = true;
             }
             catch (Exception ex)
@@ -192,6 +218,15 @@ namespace platform_core_service.Business.Services
         {
             List<Setting> defaultSettings = new List<Setting>
             {
+                new Setting
+                {
+                    Key = GeminiApiKeySettingKey,
+                    Group = AiSettingsGroup,
+                    Value = string.Empty,
+                    DataType = SettingDataType.String,
+                    IsSensitive = true,
+                    Description = "Active Gemini API key used by AI Worker runtime config"
+                },
                 new Setting
                 {
                     Key = "PASSWORD_RESET_URL",
@@ -1162,6 +1197,28 @@ namespace platform_core_service.Business.Services
             }
 
             await _context.SaveChangesAsync();
+            await PublishAiRuntimeConfigAsync();
+        }
+
+        private async Task PublishAiRuntimeConfigAsync()
+        {
+            var geminiApiKey = await _context.Settings
+                .AsNoTracking()
+                .Where(s =>
+                    s.Group == AiSettingsGroup &&
+                    s.Key == GeminiApiKeySettingKey &&
+                    !s.Deleted)
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync();
+
+            await _cacheService.SetCacheAsync(
+                AiRuntimeConfigCacheKey,
+                new
+                {
+                    geminiApiKey = geminiApiKey ?? string.Empty,
+                    updatedAt = DateTimeOffset.UtcNow
+                },
+                new DistributedCacheEntryOptions());
         }
     }
 }
