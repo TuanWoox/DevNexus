@@ -17,6 +17,10 @@ export const useUpdatePost = () => {
                 queryClient.invalidateQueries({ queryKey: postQueryKeys.detail(data.id) });
                 toast.success("Post updated successfully!");
             }
+        },
+        onError: (error) => {
+            const message = error instanceof Error ? error.message : "Failed to update post";
+            toast.error(message);
         }
     });
 };

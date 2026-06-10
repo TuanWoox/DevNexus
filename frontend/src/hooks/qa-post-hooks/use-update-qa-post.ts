@@ -20,6 +20,10 @@ export const useUpdateQAPost = () => {
                 queryClient.invalidateQueries({ queryKey: qaPostQueryKeys.detail(data.id) });
                 toast.success("QA post updated successfully!");
             }
+        },
+        onError: (error) => {
+            const message = error instanceof Error ? error.message : "Failed to update question";
+            toast.error(message);
         }
     });
 };

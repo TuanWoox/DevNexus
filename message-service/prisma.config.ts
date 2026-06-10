@@ -1,14 +1,21 @@
-import "dotenv/config";
-import type { PrismaConfig } from "prisma";
-import { env } from "prisma/config";
+import { existsSync } from "node:fs";
+import { config } from "dotenv";
+import { defineConfig } from "prisma/config";
 
-export default {
+const envFile = `.env.${process.env.NODE_ENV || "development"}`;
+if (existsSync(envFile)) {
+  config({ path: envFile });
+} else {
+  config();
+}
+
+export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: env("DATABASE_URL"),
+    url: process.env["DATABASE_URL"],
   },
-} satisfies PrismaConfig;
+});

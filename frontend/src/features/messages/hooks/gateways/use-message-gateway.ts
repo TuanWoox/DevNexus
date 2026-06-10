@@ -7,7 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { RootState } from "@/store/store";
 import type { ChatSetting, Message } from "../../types/contracts";
-import { getProfileId, getWsBaseUrl } from "../../utils/message-service.helper";
+import { getProfileId, getWsBaseUrl, getWsPath } from "../../utils/message-service.helper";
 import {
     appendMessageToChatCache,
     appendReadReceiptToChatListItem,
@@ -78,6 +78,7 @@ export function useMessageGateway() {
 
         const socket = io(`${wsUrl}/message-chat`, {
             auth: { token },
+            path: getWsPath(),
             transports: ["websocket"],
             reconnection: true,
             reconnectionDelay: 1000,

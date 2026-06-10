@@ -3,16 +3,23 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form';
-// Import thêm Eye và EyeOff để làm nút show/hide password
-import { Hexagon, Sparkles, Github, Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
+import { GoogleLogin } from '@react-oauth/google';
+import { Hexagon, Sparkles, Github, Lock, User, Eye, EyeOff } from 'lucide-react'
 import useLogin from '@/hooks/auth-hooks/use-login';
+import useGithubLogin from '@/hooks/auth-hooks/use-github-login';
+import useGoogleLogin from '@/hooks/auth-hooks/use-google-login';
 import { LoginAccountDTO } from '@/types/account/login-account-dto';
+import { toast } from 'sonner';
+import { useTheme } from 'next-themes';
 
 function LoginContent() {
-    // State quản lý ẩn/hiện mật khẩu
     const [showPassword, setShowPassword] = useState(false)
 
     const { login, isAuthenticating } = useLogin();
+    const { login: githubLogin } = useGithubLogin();
+    const { loginWithCredential, isPending: isGooglePending } = useGoogleLogin();
+    const { resolvedTheme } = useTheme();
+    const googleButtonTheme = resolvedTheme === "dark" ? "filled_black" : "outline";
 
     const {
         register,
@@ -27,7 +34,6 @@ function LoginContent() {
         },
     });
 
-    // Hàm xử lý khi submit form
     const onSubmit = (data: LoginAccountDTO) => {
         login(data);
     };
@@ -53,14 +59,30 @@ function LoginContent() {
 
             {/* OAuth Buttons */}
             <div className="flex flex-col gap-3 mb-6">
-                <button className="btn-ghost w-full">
-                    <Github className="h-4 w-4" />
-                    Continue with GitHub
+                <button
+                    type="button"
+                    className="relative flex h-10 w-full items-center justify-center rounded border border-[#dadce0] dark:border-none bg-white px-3 text-sm text-[#3c4043] shadow-none transition-colors hover:bg-[rgba(66,133,244,.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-70 dark:bg-[#202124] dark:text-[#e8eaed] dark:hover:bg-[rgba(255,255,255,.24)] cursor-pointer"
+                    onClick={githubLogin}
+                >
+                    <div className="absolute left-0.5 flex h-9 w-9 min-w-9 items-center justify-center rounded-l-[3px] dark:bg-white text-[#24292f]">
+                        <Github className="h-[18px] w-[18px]" />
+                    </div>
+                    <span className="ml-5 dark:ml-8">Continue with GitHub</span>
                 </button>
-                <button className="btn-ghost w-full">
-                    <Mail className="h-4 w-4" />
-                    Continue with Google
-                </button>
+                <div className={`h-10 w-full overflow-hidden rounded ${isGooglePending ? "pointer-events-none opacity-70" : ""}`}>
+                    <GoogleLogin
+                        key={googleButtonTheme}
+                        onSuccess={loginWithCredential}
+                        onError={() => toast.error("Google login failed.")}
+                        useOneTap={false}
+                        width="100%"
+                        text="continue_with"
+                        theme={googleButtonTheme}
+                        shape="rectangular"
+                        size="large"
+                        logo_alignment="left"
+                    />
+                </div>
             </div>
 
             {/* Divider */}
@@ -90,7 +112,6 @@ function LoginContent() {
                             id="username"
                             className="input pl-9"
                             placeholder="Username or Email"
-                            // Tích hợp register thay cho value/onChange
                             {...register("username", {
                                 required: "Username is required",
                                 minLength: {
@@ -104,7 +125,6 @@ function LoginContent() {
                             })}
                         />
                     </div>
-                    {/* Hiển thị lỗi nếu có */}
                     {errors.username && <span className="text-xs text-destructive font-medium">{errors.username.message}</span>}
                 </div>
 
@@ -124,8 +144,7 @@ function LoginContent() {
                             type={showPassword ? "text" : "password"}
                             id="password"
                             className="input pl-9 pr-10"
-                            placeholder="••••••••"
-                            // Tích hợp register
+                            placeholder="Password"
                             {...register("password", {
                                 required: "Password is required",
                                 minLength: {
@@ -139,7 +158,6 @@ function LoginContent() {
                             })}
                         />
 
-                        {/* NÚT SHOW/HIDE PASSWORD */}
                         <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
@@ -152,7 +170,6 @@ function LoginContent() {
                             )}
                         </button>
                     </div>
-                    {/* Hiển thị lỗi nếu có */}
                     {errors.password && <span className="text-xs text-destructive font-medium">{errors.password.message}</span>}
                 </div>
 
@@ -162,7 +179,6 @@ function LoginContent() {
                         type="checkbox"
                         id="rememberMe"
                         className="h-4 w-4 rounded border cursor-pointer focus-ring transition-colors"
-                        // Tích hợp register
                         {...register("rememberMe")}
                     />
                     <label
@@ -177,7 +193,6 @@ function LoginContent() {
                 <button
                     type="submit"
                     className="btn-ai w-full py-2.5 mt-2 text-base flex justify-center items-center gap-2"
-                    // Disable nút bấm khi đang gọi API
                     disabled={isAuthenticating}
                 >
                     <Sparkles className="h-4 w-4" />
