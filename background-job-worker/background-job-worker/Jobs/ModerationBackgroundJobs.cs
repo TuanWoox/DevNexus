@@ -24,68 +24,79 @@ namespace background_job_worker.Jobs
 
         public async Task SubmitPostModerationAsync(string postId, int moderationVersion, string contentHash)
         {
-            if (string.IsNullOrWhiteSpace(postId))
+            await SubmitContentModerationAsync(ModerationTargetType.Post, postId, moderationVersion, contentHash);
+        }
+
+        public async Task SubmitContentModerationAsync(ModerationTargetType targetType, string targetId, int moderationVersion, string contentHash)
+        {
+            if (string.IsNullOrWhiteSpace(targetId))
             {
-                _logger.LogInformation("Skipped AI moderation submission: post id is empty.");
+                _logger.LogInformation("Skipped AI moderation submission: target id is empty.");
                 return;
             }
 
-            _logger.LogInformation("Starting AI moderation submission for post {PostId}.", postId);
+            _logger.LogInformation("Starting AI moderation submission for {TargetType} {TargetId}.", targetType, targetId);
 
-            var post = await _dbContext.Posts
-                .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(p => p.Id == postId);
-
-            if (post == null)
+            var target = await ResolveModerationTargetAsync(targetType, targetId);
+            if (target == null)
             {
-                _logger.LogInformation("Skipped AI moderation submission for post {PostId}: post not found.", postId);
+                _logger.LogInformation("Skipped AI moderation submission for {TargetType} {TargetId}: target not found.", targetType, targetId);
                 return;
             }
 
-            if (post.Deleted)
+            if (target.Deleted)
             {
-                _logger.LogInformation("Skipped AI moderation submission for post {PostId}: post is deleted.", postId);
+                _logger.LogInformation("Skipped AI moderation submission for {TargetType} {TargetId}: target is deleted.", targetType, targetId);
                 return;
             }
 
-            if (post.ModerationStatus != ModerationStatus.Pending)
+            if (target.ModerationStatus != ModerationStatus.Pending)
             {
                 _logger.LogInformation(
-                    "Skipped AI moderation submission for post {PostId}: status is {ModerationStatus}.",
-                    postId,
-                    post.ModerationStatus);
+                    "Skipped AI moderation submission for {TargetType} {TargetId}: status is {ModerationStatus}.",
+                    targetType,
+                    targetId,
+                    target.ModerationStatus);
                 return;
             }
 
-            if (post.ModerationVersion != moderationVersion)
+            if (target.ModerationVersion != moderationVersion)
             {
                 _logger.LogInformation(
-                    "Skipped AI moderation submission for post {PostId}: job version {JobVersion} does not match current version {CurrentVersion}.",
-                    postId,
+                    "Skipped AI moderation submission for {TargetType} {TargetId}: job version {JobVersion} does not match current version {CurrentVersion}.",
+                    targetType,
+                    targetId,
                     moderationVersion,
-                    post.ModerationVersion);
+                    target.ModerationVersion);
                 return;
             }
 
-            if (!string.Equals(post.ModerationContentHash, contentHash, StringComparison.Ordinal))
+            if (!string.Equals(target.ModerationContentHash, contentHash, StringComparison.Ordinal))
             {
                 _logger.LogInformation(
-                    "Skipped AI moderation submission for post {PostId}: job content hash does not match current hash.",
-                    postId);
+                    "Skipped AI moderation submission for {TargetType} {TargetId}: job content hash does not match current hash.",
+                    targetType,
+                    targetId);
                 return;
             }
 
             try
             {
-                await _aiWorkerClient.SubmitForModerationAsync(post.Id, post.Title, post.Content, moderationVersion, contentHash);
+                await _aiWorkerClient.SubmitForModerationAsync(
+                    targetType,
+                    target.Id,
+                    target.Title,
+                    target.Content,
+                    moderationVersion,
+                    contentHash);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to submit post {PostId} to AI moderation.", postId);
+                _logger.LogError(ex, "Failed to submit {TargetType} {TargetId} to AI moderation.", targetType, targetId);
                 throw;
             }
 
-            _logger.LogInformation("Submitted post {PostId} to AI moderation.", postId);
+            _logger.LogInformation("Submitted {TargetType} {TargetId} to AI moderation.", targetType, targetId);
         }
 
         public async Task RequeueStuckPendingModerationAsync()
@@ -148,5 +159,58 @@ namespace background_job_worker.Jobs
                 StuckPendingThresholdMinutes,
                 stuckPosts.First().PendingSince);
         }
+
+        private async Task<ModerationTarget?> ResolveModerationTargetAsync(ModerationTargetType targetType, string targetId)
+        {
+            return targetType switch
+            {
+                ModerationTargetType.Post => await _dbContext.Posts
+                    .IgnoreQueryFilters()
+                    .Where(p => p.Id == targetId)
+                    .Select(p => new ModerationTarget(
+                        p.Id,
+                        p.Title,
+                        p.Content,
+                        p.Deleted,
+                        p.ModerationStatus,
+                        p.ModerationVersion,
+                        p.ModerationContentHash))
+                    .FirstOrDefaultAsync(),
+                ModerationTargetType.Answer => await _dbContext.Answers
+                    .IgnoreQueryFilters()
+                    .Where(a => a.Id == targetId)
+                    .Select(a => new ModerationTarget(
+                        a.Id,
+                        null,
+                        a.Content,
+                        a.Deleted,
+                        a.ModerationStatus,
+                        a.ModerationVersion,
+                        a.ModerationContentHash))
+                    .FirstOrDefaultAsync(),
+                ModerationTargetType.Comment => await _dbContext.Comments
+                    .IgnoreQueryFilters()
+                    .Where(c => c.Id == targetId)
+                    .Select(c => new ModerationTarget(
+                        c.Id,
+                        null,
+                        c.Content,
+                        c.Deleted,
+                        c.ModerationStatus,
+                        c.ModerationVersion,
+                        c.ModerationContentHash))
+                    .FirstOrDefaultAsync(),
+                _ => null
+            };
+        }
+
+        private sealed record ModerationTarget(
+            string Id,
+            string? Title,
+            string Content,
+            bool Deleted,
+            ModerationStatus ModerationStatus,
+            int ModerationVersion,
+            string? ModerationContentHash);
     }
 }

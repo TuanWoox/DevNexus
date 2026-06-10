@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Flame, Loader2, MessageSquare, TrendingUp, Users, Globe, Sparkles, ChevronRight } from "lucide-react";
 import { useGetTrendingPosts } from "@/hooks/recommendation-hooks/use-get-trending-posts";
 import { useGetTrendingCommunities } from "@/hooks/recommendation-hooks/use-get-trending-communities";
@@ -11,14 +10,11 @@ import { useHasMounted } from "@/hooks/use-has-mounted";
 import { formatDistanceToNow } from "date-fns";
 
 export function RightSidebar() {
-    const pathname = usePathname();
     const mounted = useHasMounted();
     const [activeTab, setActiveTab] = useState<"posts" | "communities">("posts");
 
     const { data: trendingPosts, isLoading: isLoadingPosts } = useGetTrendingPosts("7d", 5);
     const { data: trendingCommunities, isLoading: isLoadingCommunities } = useGetTrendingCommunities("7d", 5);
-
-    if (pathname?.startsWith("/messages")) return null;
 
     return (
         <aside className="hidden xl:block w-80 sticky top-0 h-screen py-6 px-6 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">

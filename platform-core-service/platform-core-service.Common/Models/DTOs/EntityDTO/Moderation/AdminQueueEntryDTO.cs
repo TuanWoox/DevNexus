@@ -1,12 +1,14 @@
 using platform_core_service.Common.Entities.BaseEntity;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
+using platform_core_service.Common.Utils.Enums;
 
 namespace platform_core_service.Common.Models.DTOs.EntityDTO.Moderation
 {
     public class AdminQueueEntryDTO : IBaseKey<string>
     {
         public string Id { get; set; } = null!;
-        public string PostId { get; set; } = null!;
+        public ModerationTargetType TargetType { get; set; }
+        public string TargetId { get; set; } = null!;
         public string PostTitle { get; set; } = null!;
         public string PostContent { get; set; } = null!;
         public string AuthorId { get; set; } = null!;

@@ -1,6 +1,5 @@
 'use client'
 
-import { useGetPostById } from '@/hooks/post-hooks/use-get-post-by-id'
 import { MarkdownViewer } from '@/components/editor/markdown-viewer'
 import { AdminQueueEntryDTO } from '@/types/admin/admin-queue-entry-dto'
 import {
@@ -24,7 +23,7 @@ import {
 } from 'lucide-react'
 import type { ComponentType, ReactNode } from 'react'
 
-interface PostDetailSheetProps {
+interface QueueDetailSheetProps {
   open: boolean
   onClose: () => void
   entry: AdminQueueEntryDTO
@@ -97,15 +96,27 @@ function InfoRow({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-export function PostDetailSheet({
+function getTargetId(entry: AdminQueueEntryDTO): string {
+  return entry.targetId ?? entry.postId ?? ''
+}
+
+function getEntityLabel(entry: AdminQueueEntryDTO): string {
+  if (entry.entityType) return entry.entityType
+  if (entry.targetType === 1 || entry.targetType === 'Answer') return 'Answer'
+  if (entry.targetType === 2 || entry.targetType === 'Comment') return 'Comment'
+  return 'Post'
+}
+
+export function QueueDetailSheet({
   open,
   onClose,
   entry,
   onApprove,
   onReject,
-}: PostDetailSheetProps) {
-  const { data: post, isLoading } = useGetPostById(entry.postId, open)
+}: QueueDetailSheetProps) {
   const authorName = entry.author?.fullName ?? entry.authorId
+  const entityLabel = getEntityLabel(entry)
+  const targetId = getTargetId(entry)
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
@@ -115,13 +126,13 @@ export function PostDetailSheet({
             <div className="space-y-4 pr-8">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="badge-cyan whitespace-nowrap">Needs Review</span>
-                <span className="badge-default whitespace-nowrap">{entry.entityType}</span>
+                <span className="badge-default whitespace-nowrap">{entityLabel}</span>
                 <Tier1ScoreBadge score={entry.tier1Score} />
               </div>
 
               <div className="space-y-2">
                 <SheetTitle className="text-balance text-2xl font-bold leading-tight text-heading">
-                  {entry.postTitle || 'Untitled Post'}
+                  {entry.postTitle || entityLabel}
                 </SheetTitle>
                 <SheetDescription asChild>
                   <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
@@ -148,8 +159,11 @@ export function PostDetailSheet({
                 <InfoRow label="Submitted">
                   <span>{formatDate(entry.createdAt)}</span>
                 </InfoRow>
-                <InfoRow label="Post type">
-                  <span className="badge-default whitespace-nowrap">{entry.entityType}</span>
+                <InfoRow label="Content type">
+                  <span className="badge-default whitespace-nowrap">{entityLabel}</span>
+                </InfoRow>
+                <InfoRow label="Target ID">
+                  <span className="block truncate font-mono text-xs">{targetId}</span>
                 </InfoRow>
                 <InfoRow label="Queue ID">
                   <span className="block truncate font-mono text-xs">{entry.id}</span>
@@ -177,17 +191,8 @@ export function PostDetailSheet({
               </div>
             </SectionCard>
 
-            <SectionCard title="Post Content" icon={FileText}>
-              {isLoading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-11/12" />
-                  <Skeleton className="h-4 w-4/5" />
-                  <Skeleton className="h-32 w-full rounded-xl" />
-                </div>
-              ) : post ? (
-                <MarkdownViewer source={post.content} />
-              ) : entry.postContent ? (
+            <SectionCard title="Content Preview" icon={FileText}>
+              {entry.postContent ? (
                 <MarkdownViewer source={entry.postContent} />
               ) : (
                 <div className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-10 text-center">

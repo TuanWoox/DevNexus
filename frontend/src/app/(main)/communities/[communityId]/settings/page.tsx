@@ -80,7 +80,7 @@ const CommunitySettingsPage = () => {
         <div className="min-h-dvh bg-page pb-16">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in-up">
                 {/* Header Section */}
-                <div className="flex items-center gap-4 border-b border-border/30 pb-6">
+                <div className="flex items-center gap-4 border-b border-border/30">
                     <Button
                         variant="outline"
                         size="icon"

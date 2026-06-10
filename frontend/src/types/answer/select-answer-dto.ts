@@ -1,4 +1,5 @@
 import { SelectCommentDTO } from '../comment/select-comment-dto';
+import { ModerationStatus } from '../post/moderation-status';
 
 export interface SelectAnswerAuthorDTO {
     id: string;
@@ -15,6 +16,8 @@ export interface SelectAnswerDTO {
     id: string;
     content: string;
     isAccepted: boolean;
+    moderationStatus?: ModerationStatus;
+    moderationReason?: string | null;
     upvoteCount: number;
     downvoteCount: number;
     qaPostId: string;

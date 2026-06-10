@@ -8,7 +8,7 @@ import { useAcceptAnswerById } from '@/hooks/answer-hooks/use-accept-answer-by-i
 import { UpdateAnswerDTO } from '@/types/answer/update-answer-dto';
 import { BaseReplyItem } from './base-reply-item';
 import { ContentType } from '@/types/content-media/content-type';
-import { ModerationStatus } from '@/types/post/moderation-status';
+import { canInteractWithModeratedContent, ModerationStatus, normalizeModerationStatus } from '@/types/post/moderation-status';
 import { useState } from 'react';
 import { CommentInput } from './comment-input';
 import { CommentItem } from './comment-item';
@@ -20,6 +20,9 @@ export function AnswerItem({ answer, currentUserId, currentUserAvatar, isDisable
     const { mutate: updateAnswer, isPending: isUpdatingAnswer } = useUpdateAnswer();
     const { mutate: acceptAnswer, isPending: isAcceptingAnswer } = useAcceptAnswerById();
     const [isReplying, setIsReplying] = useState(false);
+    const itemModerationStatus = answer.moderationStatus ?? moderationStatus;
+    const isItemDisabled = isDisabled || !canInteractWithModeratedContent(itemModerationStatus);
+    const canAcceptAnswer = isQuestionAuthor && !answer.isAccepted && normalizeModerationStatus(itemModerationStatus) === "Approved";
 
     return (
         <div className="flex flex-col gap-4">
@@ -43,15 +46,15 @@ export function AnswerItem({ answer, currentUserId, currentUserAvatar, isDisable
                     updateAnswer(payload, { onSuccess });
                 }}
                 isUpdating={isUpdatingAnswer}
-                isDisabled={isDisabled}
-                moderationStatus={moderationStatus}
+                isDisabled={isItemDisabled}
+                moderationStatus={itemModerationStatus}
                 communityId={communityId}
                 canModerateCommunity={canModerateCommunity}
                 context={context}
                 isAccepted={answer.isAccepted}
                 isSystemAnswer={answer.isSystemAnswer}
                 onAccept={() => acceptAnswer(answer.id)}
-                canAccept={isQuestionAuthor && !answer.isSystemAnswer && !answer.isAccepted}
+                canAccept={canAcceptAnswer && !answer.isSystemAnswer}
                 isAccepting={isAcceptingAnswer}
                 isReplying={isReplying}
                 onToggleReply={() => setIsReplying(!isReplying)}
@@ -75,8 +78,8 @@ export function AnswerItem({ answer, currentUserId, currentUserAvatar, isDisable
                             comment={comment as SelectCommentDTO}
                             currentUserId={currentUserId}
                             currentUserAvatar={currentUserAvatar}
-                            isDisabled={isDisabled}
-                            moderationStatus={moderationStatus}
+                            isDisabled={isItemDisabled}
+                            moderationStatus={comment.moderationStatus ?? itemModerationStatus}
                             communityId={communityId}
                             canModerateCommunity={canModerateCommunity}
                             context={context}

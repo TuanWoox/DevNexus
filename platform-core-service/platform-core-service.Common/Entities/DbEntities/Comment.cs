@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using platform_core_service.Common.Entities.BaseEntity;
+using platform_core_service.Common.Utils.Enums;
 
 namespace platform_core_service.Common.Entities.DbEntities
 {
@@ -10,6 +11,17 @@ namespace platform_core_service.Common.Entities.DbEntities
         [Required]
         [StringLength(5000, MinimumLength = 1, ErrorMessage = "Comment content cannot be empty.")]
         public string Content { get; set; } = null!;
+
+        [EnumDataType(typeof(ModerationStatus), ErrorMessage = "ModerationStatus must be a valid Moderation type")]
+        public ModerationStatus ModerationStatus { get; set; } = ModerationStatus.Pending;
+
+        [StringLength(1000)]
+        public string? ModerationReason { get; set; }
+
+        public int ModerationVersion { get; set; } = 0;
+
+        [StringLength(128)]
+        public string? ModerationContentHash { get; set; }
 
         [Required]
         public string AuthorId { get; set; } = null!;

@@ -216,7 +216,7 @@ export default function CommentSection({ postId, isQAPost, context = "personal",
                                 currentUserId={user?.profileId as string}
                                 currentUserAvatar={userProfile?.avatarUrl}
                                 isDisabled={!isApproved}
-                                moderationStatus={moderationStatus}
+                                moderationStatus={(comment as SelectAnswerDTO).moderationStatus ?? moderationStatus}
                                 isQuestionAuthor={post?.authorId === user?.profileId}
                                 communityId={effectiveCommunityId}
                                 canModerateCommunity={isCommunityContext ? canModerateCommunity : false}
@@ -231,7 +231,7 @@ export default function CommentSection({ postId, isQAPost, context = "personal",
                                 currentUserId={user?.profileId as string}
                                 currentUserAvatar={userProfile?.avatarUrl}
                                 isDisabled={!isApproved}
-                                moderationStatus={moderationStatus}
+                                moderationStatus={(comment as SelectCommentDTO).moderationStatus ?? moderationStatus}
                                 communityId={effectiveCommunityId}
                                 canModerateCommunity={isCommunityContext ? canModerateCommunity : false}
                                 context={context}

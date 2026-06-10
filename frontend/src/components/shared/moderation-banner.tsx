@@ -23,8 +23,8 @@ const config = {
         title: 'text-rose-700 dark:text-rose-300',
         desc: 'text-rose-600/90 dark:text-rose-400/90',
         icon: <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0" />,
-        label: 'Hidden Post',
-        description: 'This post requires changes. It is currently only visible to you.',
+        label: 'Hidden',
+        description: 'This content requires changes. It is currently only visible to you.',
     },
 } as const;
 

@@ -161,9 +161,12 @@ function ReportedContentView({
           <div className="flex flex-wrap gap-2">
             {isSuspended && <span className="badge-red font-mono">Suspended</span>}
             {isPrivate && <span className="badge-amber font-mono">Private Profile</span>}
-            {content.reputationPoints != null && (
-              <span className="badge-default font-mono">Reputation: {content.reputationPoints}</span>
-            )}
+            {/*
+              Reputation points are hidden until scoring rules are implemented.
+              {content.reputationPoints != null && (
+                <span className="badge-default font-mono">Reputation: {content.reputationPoints}</span>
+              )}
+            */}
             {content.role && <span className="badge-purple font-mono">{content.role}</span>}
           </div>
           {content.techStacks && content.techStacks.length > 0 && (

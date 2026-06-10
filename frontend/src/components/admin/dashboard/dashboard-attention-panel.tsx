@@ -81,14 +81,14 @@ export function DashboardAttentionPanel({
       label: 'In Review',
       value: inReviewPosts,
       icon: <AlertTriangle className="w-5 h-5" />,
-      href: '/admin/posts',
+      href: '/admin/review-queue',
       color: inReviewPosts > 0 ? 'blue' : 'default',
     },
     {
-      label: 'Flagged Posts',
+      label: 'Flagged Content',
       value: flaggedPosts,
       icon: <Zap className="w-5 h-5" />,
-      href: '/admin/posts',
+      href: '/admin/review-queue',
       color: flaggedPosts > 0 ? 'red' : 'default',
     },
     {

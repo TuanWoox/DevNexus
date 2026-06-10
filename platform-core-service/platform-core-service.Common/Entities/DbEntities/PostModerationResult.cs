@@ -7,14 +7,16 @@ using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using platform_core_service.Common.Utils.Enums;
 
 namespace platform_core_service.Common.Entities.DbEntities
 {
-    public class PostModerationResult : BaseEntity<string>
+    public class ModerationResult : BaseEntity<string>
     {
+        public ModerationTargetType TargetType { get; set; } = ModerationTargetType.Post;
+
         [Required]
-        [ForeignKey(nameof(Post))]
-        public string PostId { get; set; }
+        public string TargetId { get; set; }
 
         public float? TextScore { get; set; }
         public float? ImageScore { get; set; }
@@ -28,7 +30,5 @@ namespace platform_core_service.Common.Entities.DbEntities
 
         public DateTimeOffset ReviewedAt { get; set; }
 
-        [JsonIgnore]
-        public virtual Post Post { get; set; }
     }
 }

@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
-import { UnifiedPostsTable } from '@/components/admin/posts/unified-posts-table'
-import { PostsStatusTabs } from '@/components/admin/posts/posts-status-tabs'
-import { PostsToolbar } from '@/components/admin/posts/posts-toolbar'
-import { PostsPagination } from '@/components/admin/posts/posts-pagination'
+import { ReviewQueueTable } from '@/components/admin/review-queue/review-queue-table'
+import { QueueStatusTabs } from '@/components/admin/review-queue/queue-status-tabs'
+import { QueueToolbar } from '@/components/admin/review-queue/queue-toolbar'
+import { QueuePagination } from '@/components/admin/review-queue/queue-pagination'
 import { useGetModerationQueue } from '@/hooks/admin/use-get-moderation-queue'
 import { useGetAdminPosts } from '@/hooks/admin/use-get-admin-posts'
 import { useApproveQueueEntry } from '@/hooks/admin/use-approve-queue-entry'
@@ -23,7 +23,7 @@ import { AlertTriangle, RefreshCw } from 'lucide-react'
 
 type TabValue = 'needs-review' | 'published' | 'flagged' | 'all'
 type SortKey = 'newest' | 'oldest'
-type EntityTypeFilter = '' | 'Post' | 'QAPost'
+type EntityTypeFilter = '' | 'Post' | 'QAPost' | 'Answer' | 'Comment'
 
 const DEFAULT_PAGE_SIZE = 20
 
@@ -35,6 +35,7 @@ function buildEnhancedPage(
   searchQuery: string,
   entityTypeFilter: EntityTypeFilter,
   sortKey: SortKey,
+  activeTab: TabValue,
 ): Page<string> {
   const filters: FilterMapping[] = [...tabFilters]
 
@@ -49,7 +50,22 @@ function buildEnhancedPage(
     })
   }
 
-  if (entityTypeFilter) {
+  if (entityTypeFilter && activeTab === 'needs-review') {
+    const targetTypeMap: Record<Exclude<EntityTypeFilter, '' | 'QAPost'>, number> = {
+      Post: 0,
+      Answer: 1,
+      Comment: 2,
+    }
+    const mappedTargetType = entityTypeFilter === 'QAPost' ? 0 : targetTypeMap[entityTypeFilter]
+    filters.push({
+      prop: 'targetType',
+      value: mappedTargetType,
+      filterOperator: FilterOperator.Equal,
+      filterType: FilterType.Number,
+      dynamicProperty: '',
+      delimiter: '',
+    })
+  } else if (entityTypeFilter) {
     filters.push({
       prop: 'entityType',
       value: entityTypeFilter,
@@ -105,7 +121,7 @@ function buildModerationStatusFilter(tab: TabValue): FilterMapping[] {
 
 // ─── Page Component ───────────────────────────────────────────────────────────
 
-export default function PostsManagementPage() {
+export default function ReviewQueuePage() {
   // Tab + pagination state
   const [activeTab, setActiveTab] = useState<TabValue>('needs-review')
   const [pageByTab, setPageByTab] = useState<Record<TabValue, number>>({
@@ -162,19 +178,19 @@ export default function PostsManagementPage() {
 
   // Build pages per tab
   const queuePageParams = useMemo(
-    () => buildEnhancedPage(pageByTab['needs-review'], [], searchQuery, entityTypeFilter, sortKey),
+    () => buildEnhancedPage(pageByTab['needs-review'], [], searchQuery, entityTypeFilter, sortKey, 'needs-review'),
     [pageByTab, searchQuery, entityTypeFilter, sortKey],
   )
   const publishedPageParams = useMemo(
-    () => buildEnhancedPage(pageByTab.published, buildModerationStatusFilter('published'), searchQuery, entityTypeFilter, sortKey),
+    () => buildEnhancedPage(pageByTab.published, buildModerationStatusFilter('published'), searchQuery, entityTypeFilter, sortKey, 'published'),
     [pageByTab, searchQuery, entityTypeFilter, sortKey],
   )
   const flaggedPageParams = useMemo(
-    () => buildEnhancedPage(pageByTab.flagged, buildModerationStatusFilter('flagged'), searchQuery, entityTypeFilter, sortKey),
+    () => buildEnhancedPage(pageByTab.flagged, buildModerationStatusFilter('flagged'), searchQuery, entityTypeFilter, sortKey, 'flagged'),
     [pageByTab, searchQuery, entityTypeFilter, sortKey],
   )
   const allPageParams = useMemo(
-    () => buildEnhancedPage(pageByTab.all, [], searchQuery, entityTypeFilter, sortKey),
+    () => buildEnhancedPage(pageByTab.all, [], searchQuery, entityTypeFilter, sortKey, 'all'),
     [pageByTab, searchQuery, entityTypeFilter, sortKey],
   )
 
@@ -265,16 +281,16 @@ export default function PostsManagementPage() {
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-heading">Posts</h1>
+          <h1 className="text-2xl font-bold text-heading">Review Queue</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Content management and moderation workflow
+            Review, approve, and moderate content across all types
           </p>
         </div>
         <button
           type="button"
           onClick={handleRetry}
           disabled={isLoading}
-          aria-label="Refresh posts"
+          aria-label="Refresh queue"
           className="btn-ghost flex items-center gap-2 text-sm"
         >
           <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -283,7 +299,7 @@ export default function PostsManagementPage() {
       </div>
 
       {/* ── Status Tabs ── */}
-      <PostsStatusTabs
+      <QueueStatusTabs
         activeTab={activeTab}
         tabCounts={tabCounts}
         onTabChange={handleTabChange}
@@ -294,7 +310,7 @@ export default function PostsManagementPage() {
         <div className="card p-6 flex flex-col items-center gap-3 border-destructive/30">
           <AlertTriangle className="w-7 h-7 text-destructive" />
           <p className="text-sm text-muted-foreground">
-            Something went wrong loading posts.
+            Something went wrong loading the review queue.
           </p>
           <button onClick={handleRetry} className="btn-ghost text-sm">
             Retry
@@ -303,7 +319,7 @@ export default function PostsManagementPage() {
       )}
 
       {/* ── Toolbar ── */}
-      <PostsToolbar
+      <QueueToolbar
         searchQuery={searchQuery}
         onSearchChange={handleSearchChange}
         entityTypeFilter={entityTypeFilter}
@@ -315,7 +331,7 @@ export default function PostsManagementPage() {
       />
 
       {/* ── Table ── */}
-      <UnifiedPostsTable
+      <ReviewQueueTable
         queueEntries={queueEntries}
         allPosts={allPosts}
         tabCounts={tabCounts}
@@ -331,7 +347,7 @@ export default function PostsManagementPage() {
 
       {/* ── Pagination ── */}
       {!isLoading && !isError && (
-        <PostsPagination
+        <QueuePagination
           currentPage={pageNumber}
           totalPages={totalPages}
           totalElements={totalElements}

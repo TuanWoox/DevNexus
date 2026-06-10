@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using platform_core_service.Common.Entities.BaseEntity;
+using platform_core_service.Common.Utils.Enums;
 
 namespace platform_core_service.Common.Models.DTOs.EntityDTO.Comment
 {
@@ -9,6 +10,10 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Comment
         public string Id { get; set; } = null!;
 
         public string Content { get; set; } = null!;
+
+        public ModerationStatus ModerationStatus { get; set; }
+
+        public string? ModerationReason { get; set; }
 
         public string AuthorId { get; set; } = null!;
 

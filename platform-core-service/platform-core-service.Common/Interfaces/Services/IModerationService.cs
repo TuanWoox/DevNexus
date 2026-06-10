@@ -1,5 +1,6 @@
 using platform_core_service.Common.Models.DTOs.EntityDTO.Moderation;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Utils.Enums;
 
 namespace platform_core_service.Common.Interfaces.Services
 {
@@ -22,5 +23,6 @@ namespace platform_core_service.Common.Interfaces.Services
         /// Sends a locally detected banned-keyword post to human review without using the AI worker.
         /// </summary>
         Task<ReturnResult<ModerationQueueResponseDTO>> EnqueueBannedKeywordReviewAsync(string postId, IReadOnlyCollection<string> matchedKeywords);
+        Task<ReturnResult<ModerationQueueResponseDTO>> EnqueueBannedKeywordReviewAsync(ModerationTargetType targetType, string targetId, IReadOnlyCollection<string> matchedKeywords);
     }
 }
