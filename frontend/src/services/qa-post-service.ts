@@ -65,6 +65,9 @@ export const qaPostService = {
 
     updateQAPost: async (updateQAPostDTO: UpdateQAPostDTO): Promise<SelectQAPostDTO> => {
         const { data } = await api.put<ReturnResult<SelectQAPostDTO>>('/QAPosts', updateQAPostDTO);
+        if (!data.result) {
+            throw new Error(data.message || 'Failed to update question');
+        }
         return data.result;
     },
 

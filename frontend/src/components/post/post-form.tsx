@@ -26,6 +26,7 @@ import { useUploadContentMedia } from '@/hooks/media/useUploadContentMedia'
 import { useMuteGuard } from '@/hooks/community-mute-hooks/use-mute-guard'
 import { AlertTriangle } from 'lucide-react'
 import { getPostDetailHref, getQAPostDetailHref } from '@/utils/content-routes'
+import { toast } from 'sonner'
 
 export type PostFormData = {
     title: string;
@@ -146,7 +147,9 @@ export function PostForm({ initialData, isEditMode = false, fixedPostType }: Pos
                     finalContent = finalContent.replaceAll(blobUrl, serverUrl);
                     mediaIds.push(mediaId);
                 });
-            } catch {
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Failed to upload media';
+                toast.error(message);
                 return;
             }
         }
