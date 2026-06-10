@@ -30,7 +30,7 @@ import { useCreateCommunityContentReport } from '@/hooks/community-content-repor
 import { ReportDialog } from '@/components/report/report-dialog';
 import { ReportTargetType } from '@/types/report/report-target-type';
 import { useMuteGuard } from '@/hooks/community-mute-hooks/use-mute-guard';
-import { ModerationStatus, normalizeModerationStatus } from '@/types/post/moderation-status';
+import { ModerationStatus, isHiddenByModeration, normalizeModerationStatus } from '@/types/post/moderation-status';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 import { ModerationBanner } from '@/components/shared/moderation-banner';
@@ -134,7 +134,8 @@ export function BaseReplyItem({
     const canViewHiddenContent = isAuthor || isGlobalAdminOrMod || isCommunityMod;
 
     const status = normalizeModerationStatus(moderationStatus);
-    const isHidden = status === "InReview" || status === "Flagged";
+    const isHidden = isHiddenByModeration(status);
+    const isFlagged = status === "Flagged";
 
     if (isHidden && !canViewHiddenContent) {
         return null;
@@ -355,7 +356,7 @@ export function BaseReplyItem({
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-42 bg-card border rounded-xl shadow-elevated p-1 z-10">
-                                {!isAuthor && (
+                                {!isFlagged && !isAuthor && (
                                     <>
                                         <DropdownMenuItem
                                             onSelect={() => setIsReportOpen(true)}
@@ -377,7 +378,7 @@ export function BaseReplyItem({
                                         )}
                                     </>
                                 )}
-                                {!isDisabled && (
+                                {!isFlagged && !isDisabled && (
                                     <DropdownMenuItem
                                         onClick={() => setIsHistoryOpen(true)}
                                         className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium"
@@ -386,7 +387,7 @@ export function BaseReplyItem({
                                         <span>History</span>
                                     </DropdownMenuItem>
                                 )}
-                                {isAuthor && !isDisabled && (
+                                {!isFlagged && isAuthor && !isDisabled && (
                                     <>
                                         <DropdownMenuItem
                                             onClick={() => setIsEditing(true)}
@@ -397,7 +398,7 @@ export function BaseReplyItem({
                                         </DropdownMenuItem>
                                     </>
                                 )}
-                                {canDelete && !isDisabled && (
+                                {canDelete && (!isDisabled || isFlagged) && (
                                     <DropdownMenuItem
                                         onClick={onDelete}
                                         disabled={isDeleting}
@@ -408,7 +409,7 @@ export function BaseReplyItem({
                                         <span>Delete</span>
                                     </DropdownMenuItem>
                                 )}
-                                {isDisabled && (
+                                {isDisabled && !(isFlagged && canDelete) && (
                                     <DropdownMenuItem disabled className="text-xs text-muted-foreground p-2 text-center">
                                         {(() => {
                                             const status = normalizeModerationStatus(moderationStatus);

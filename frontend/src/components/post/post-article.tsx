@@ -100,6 +100,7 @@ export default function PostArticle({ postId, isQAPost, context = "personal", ro
     const isAdmin = user?.roles?.includes('Admin') || user?.roles?.includes('Moderator');
 
     const moderationStatus = normalizeModerationStatus(post?.moderationStatus);
+    const isFlagged = moderationStatus === "Flagged";
     const isModerationApproved = canInteractWithModeratedContent(moderationStatus);
     const communityApprovalStatus = normalizeCommunityApprovalStatus(post?.communityApprovalStatus) ?? (post?.communityId ? CommunityApprovalStatus.Pending : null);
     const isCommunityApproved = !post?.communityId ||
@@ -318,6 +319,7 @@ export default function PostArticle({ postId, isQAPost, context = "personal", ro
                                 isQAPost={isQAPost}
                                 isAuthor={isAuthor}
                                 canModerateCommunity={isCommunityContext ? canModerateCommunity : false}
+                                isFlagged={isFlagged}
                                 onDeleted={() => router.push('/feed')}
                             />
                         </div>

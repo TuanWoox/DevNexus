@@ -6,12 +6,12 @@ namespace platform_core_service.Common.Utils.Extensions
     {
         public static bool IsPubliclyVisible(this ModerationStatus status)
         {
-            return status is ModerationStatus.Pending or ModerationStatus.Approved;
+            return status is ModerationStatus.Pending or ModerationStatus.Approved or ModerationStatus.InReview;
         }
 
         public static bool IsHiddenByModeration(this ModerationStatus status)
         {
-            return status is ModerationStatus.InReview or ModerationStatus.Flagged;
+            return status is ModerationStatus.Flagged;
         }
 
     }

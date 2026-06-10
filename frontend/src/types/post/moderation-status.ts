@@ -10,15 +10,15 @@ export function normalizeModerationStatus(status: ModerationStatus | undefined):
 
 export function isPubliclyVisibleModerationStatus(status: ModerationStatus | undefined): boolean {
     const normalized = normalizeModerationStatus(status);
-    return normalized === "Approved" || normalized === "Pending";
+    return normalized === "Approved" || normalized === "Pending" || normalized === "InReview";
 }
 
 export function isHiddenByModeration(status: ModerationStatus | undefined): boolean {
     const normalized = normalizeModerationStatus(status);
-    return normalized === "InReview" || normalized === "Flagged";
+    return normalized === "Flagged";
 }
 
 export function canInteractWithModeratedContent(status: ModerationStatus | undefined): boolean {
     const normalized = normalizeModerationStatus(status);
-    return normalized === "Approved" || normalized === "Pending";
+    return normalized === "Approved" || normalized === "Pending" || normalized === "InReview";
 }

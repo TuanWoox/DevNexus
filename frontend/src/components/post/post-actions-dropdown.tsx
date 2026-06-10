@@ -10,6 +10,7 @@ interface PostActionsDropdownProps {
     isAuthor: boolean;
     canModerateCommunity?: boolean;
     isRecommendation?: boolean;
+    isFlagged?: boolean;
     onDeleted?: () => void;
     dropdownClassName?: string;
 }
@@ -21,6 +22,7 @@ export function PostActionsDropdown({
     isAuthor,
     canModerateCommunity = false,
     isRecommendation = false,
+    isFlagged = false,
     onDeleted,
     dropdownClassName = "",
 }: PostActionsDropdownProps) {
@@ -33,6 +35,7 @@ export function PostActionsDropdown({
                 isAuthor={isAuthor}
                 canModerateCommunity={canModerateCommunity}
                 isRecommendation={isRecommendation}
+                isFlagged={isFlagged}
                 onDeleted={onDeleted}
                 dropdownClassName={dropdownClassName}
             />
@@ -45,6 +48,7 @@ export function PostActionsDropdown({
             isQAPost={isQAPost}
             isAuthor={isAuthor}
             isRecommendation={isRecommendation}
+            isFlagged={isFlagged}
             onDeleted={onDeleted}
             dropdownClassName={dropdownClassName}
         />

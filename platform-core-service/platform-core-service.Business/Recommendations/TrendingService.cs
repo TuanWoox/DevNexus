@@ -7,6 +7,7 @@ using platform_core_service.Common.Interfaces.Recommendations;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Community;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
+using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using platform_core_service.Data;
 
@@ -40,7 +41,10 @@ namespace platform_core_service.Business.Recommendations
                 .ToListAsync();
 
             var commentCounts = await _context.Comments
-                .Where(c => c.PostId != null && ids.Contains(c.PostId))
+                .Where(c => c.PostId != null &&
+                            ids.Contains(c.PostId) &&
+                            !c.Deleted &&
+                            c.ModerationStatus != ModerationStatus.Flagged)
                 .GroupBy(c => c.PostId!)
                 .Select(g => new { Id = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.Id, x => x.Count);
@@ -68,7 +72,9 @@ namespace platform_core_service.Business.Recommendations
 
             var scores = await GetPostTrendingScoresAsync(ids);
             var answerCounts = await _context.Answers
-                .Where(a => ids.Contains(a.QAPostId))
+                .Where(a => ids.Contains(a.QAPostId) &&
+                            !a.Deleted &&
+                            a.ModerationStatus != ModerationStatus.Flagged)
                 .GroupBy(a => a.QAPostId)
                 .Select(g => new { Id = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.Id, x => x.Count);

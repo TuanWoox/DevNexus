@@ -283,7 +283,10 @@ namespace platform_core_service.Business.Services
                 },
                 UpvoteCount = p.UpvoteCount,
                 DownvoteCount = p.DownvoteCount,
-                CommentCount = _context.Comments.Count(c => c.PostId == p.Id),
+                CommentCount = _context.Comments.Count(c =>
+                    c.PostId == p.Id &&
+                    !c.Deleted &&
+                    c.ModerationStatus != ModerationStatus.Flagged),
                 HistoryCount = 0,
                 TagNames = p.PostTags.Select(pt => pt.Tag.Name).ToList(),
                 DateCreated = p.DateCreated.GetValueOrDefault(),
@@ -330,7 +333,10 @@ namespace platform_core_service.Business.Services
                 },
                 UpvoteCount = p.UpvoteCount,
                 DownvoteCount = p.DownvoteCount,
-                CommentCount = _context.Comments.Count(c => c.PostId == p.Id),
+                CommentCount = _context.Comments.Count(c =>
+                    c.PostId == p.Id &&
+                    !c.Deleted &&
+                    c.ModerationStatus != ModerationStatus.Flagged),
                 HistoryCount = 0,
                 TagNames = p.PostTags.Select(pt => pt.Tag.Name).ToList(),
                 DateCreated = p.DateCreated.GetValueOrDefault(),
@@ -347,7 +353,9 @@ namespace platform_core_service.Business.Services
                     Slug = p.Community.Slug,
                     CommunityCoverPhotoUrl = p.Community.CommunityCoverPhotoUrl
                 } : null,
-                AnswerCount = p.Answers.Count()
+                AnswerCount = p.Answers.Count(a =>
+                    !a.Deleted &&
+                    a.ModerationStatus != ModerationStatus.Flagged)
             };
         }
 

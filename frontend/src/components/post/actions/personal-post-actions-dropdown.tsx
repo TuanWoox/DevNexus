@@ -30,6 +30,7 @@ interface PersonalPostActionsDropdownProps {
     isQAPost: boolean;
     isAuthor: boolean;
     isRecommendation?: boolean;
+    isFlagged?: boolean;
     onDeleted?: () => void;
     dropdownClassName?: string;
 }
@@ -39,6 +40,7 @@ export function PersonalPostActionsDropdown({
     isQAPost,
     isAuthor,
     isRecommendation = false,
+    isFlagged = false,
     onDeleted,
     dropdownClassName = "",
 }: PersonalPostActionsDropdownProps) {
@@ -78,7 +80,7 @@ export function PersonalPostActionsDropdown({
                     </div>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-42 bg-card border rounded-xl shadow-elevated p-1 z-10">
-                    {isAuthor ? (
+                    {!isFlagged && isAuthor ? (
                         <DropdownMenuItem
                             onClick={() => router.push(`${basePath}/edit/${postId}`)}
                             className="w-full flex items-center gap-2 p-2.5 text-sm text-body hover:bg-subtle hover:text-heading cursor-pointer rounded-lg transition-colors font-medium"
@@ -86,7 +88,7 @@ export function PersonalPostActionsDropdown({
                             <Edit className="w-4 h-4" />
                             <span>Edit Post</span>
                         </DropdownMenuItem>
-                    ) : (
+                    ) : !isFlagged ? (
                         <>
                             <DropdownMenuItem
                                 onSelect={() => setReportDialogOpen(true)}
@@ -97,7 +99,7 @@ export function PersonalPostActionsDropdown({
                                 <span>Report to Site</span>
                             </DropdownMenuItem>
                         </>
-                    )}
+                    ) : null}
                     {isAuthor && (
                         <DropdownMenuItem
                             onClick={() => setShowDeleteAlert(true)}
@@ -109,7 +111,7 @@ export function PersonalPostActionsDropdown({
                             <span>Delete Post</span>
                         </DropdownMenuItem>
                     )}
-                    {isRecommendation && (
+                    {!isFlagged && isRecommendation && (
                         <>
                             <div className="h-px bg-border my-1" />
                             <DropdownMenuItem
