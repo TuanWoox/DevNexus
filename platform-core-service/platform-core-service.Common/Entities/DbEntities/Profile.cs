@@ -64,6 +64,7 @@ namespace platform_core_service.Common.Entities.DbEntities
         public ICollection<ProfileCommunityBlock> BlockedCommunities { get; set; } = [];
 
         public bool IsPrivate { get; set; } = false;
+        public bool IsSystemProfile { get; set; } = false;
         public bool IsSuspended { get; set; } = false;
         public DateTimeOffset? SuspendedUntil { get; set; }
         [MaxLength(500)]
