@@ -12,6 +12,7 @@ namespace platform_core_service.Common.Models.DTOs.EntityDTO.Answer
         public int DownvoteCount { get; set; } = 0;
         public string QAPostId { get; set; } = null!;
         public string AuthorId { get; set; } = null!;
+        public bool IsSystemAnswer { get; set; } = false;
         public SelectAnswerAuthorDTO? Author { get; set; }
         public DateTimeOffset DateCreated { get; set; }
         public DateTimeOffset? DateModified { get; set; }

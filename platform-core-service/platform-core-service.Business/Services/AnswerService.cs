@@ -368,6 +368,7 @@ namespace platform_core_service.Business.Services
                 // Step 3: Load answer with its QAPost
                 var answer = await _dbContext.Answers
                     .Include(a => a.QAPost)
+                    .Include(a => a.Author)
                     .FirstOrDefaultAsync(a => a.Id == answerId);
 
                 if (answer == null)
@@ -387,6 +388,12 @@ namespace platform_core_service.Business.Services
                 if (answer.QAPost.AuthorId != profileId)
                 {
                     result.Message = "Access denied: Only the question author can accept answers";
+                    return result;
+                }
+
+                if (answer.Author.IsSystemProfile)
+                {
+                    result.Message = "AI-generated answers cannot be accepted";
                     return result;
                 }
 

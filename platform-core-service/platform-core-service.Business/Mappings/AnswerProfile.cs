@@ -13,6 +13,8 @@ namespace platform_core_service.Business.Mappings
             CreateMap<UpdateAnswerDTO, Answer>()
                  .ForMember(dest => dest.Id, opt => opt.Ignore());
             CreateMap<Answer, SelectAnswerDTO>()
+                .ForMember(dest => dest.IsSystemAnswer,
+                    opt => opt.MapFrom(src => src.Author != null && src.Author.IsSystemProfile))
                 .ForMember(dest => dest.Author,
                     opt => opt.MapFrom(src => src.Author));
 
