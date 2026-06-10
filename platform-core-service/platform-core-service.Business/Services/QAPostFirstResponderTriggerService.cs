@@ -67,7 +67,7 @@ namespace platform_core_service.Business.Services
                     return false;
                 }
 
-                if (await _context.Answers.HasExistingAiFirstResponderAnswerAsync(_context, qaPost.Id))
+                if (await _context.Answers.HasExistingAiFirstResponderAnswerAsync(qaPost.Id))
                 {
                     DevNexusLogger.Instance.Debug($"[{source}] Skipped AI First Responder for QA Post {qaPost.Id} because an AI answer already exists");
                     return false;

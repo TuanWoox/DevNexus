@@ -16,6 +16,8 @@ namespace background_job_worker.Consumers
 {
     public class AIUniversalResultConsumer : BackgroundService
     {
+        private const string SystemAiUserName = "devnexus-ai";
+
         private readonly IConfiguration _configuration;
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<AIUniversalResultConsumer> _logger;
@@ -128,20 +130,24 @@ namespace background_job_worker.Consumers
                 var post = await dbContext.Posts.FirstOrDefaultAsync(p => p.Id == aiResult.PostId);
                 if (post != null)
                 {
-                    // Use the admin profile as the AI answer actor. Answer.AuthorId and
-                    // notification ActorId both reference Profile.Id, not ApplicationUser.Id.
-                    var adminProfile = await dbContext.Profiles
-                        .Where(p =>
-                            p.ApplicationUser.UserName == "admin" ||
-                            p.ApplicationUser.UserRoles.Any(ur => ur.Role.Name == "Admin"))
+                    // Answer.AuthorId and notification ActorId both reference Profile.Id.
+                    var systemAiProfile = await dbContext.Profiles
+                        .Where(p => p.IsSystemProfile && p.ApplicationUser.UserName == SystemAiUserName)
                         .Select(p => new { p.Id, p.FullName, p.AvatarUrl })
                         .FirstOrDefaultAsync();
 
-                    var authorId = adminProfile?.Id ?? post.AuthorId; // Fallback nếu không có admin profile
+                    if (systemAiProfile == null)
+                    {
+                        _logger.LogError(
+                            "[AIFirstResponder] System AI profile '{SystemAiUserName}' could not be resolved. Skipping answer creation for post {PostId}.",
+                            SystemAiUserName,
+                            post.Id);
+                        return;
+                    }
 
                     var hasExistingAiAnswer = await dbContext.Answers
                         .IgnoreQueryFilters()
-                        .AnyAsync(a => a.QAPostId == post.Id && a.AuthorId == authorId && !a.Deleted);
+                        .AnyAsync(a => a.QAPostId == post.Id && a.Author.IsSystemProfile && !a.Deleted);
 
                     if (hasExistingAiAnswer)
                     {
@@ -155,7 +161,7 @@ namespace background_job_worker.Consumers
                     {
                         Id = Guid.NewGuid().ToString(),
                         Content = aiResult.GeneratedComment,
-                        AuthorId = authorId,
+                        AuthorId = systemAiProfile.Id,
                         QAPostId = post.Id,
                         DateCreated = DateTimeOffset.UtcNow,
                         DateModified = DateTimeOffset.UtcNow,
@@ -171,9 +177,9 @@ namespace background_job_worker.Consumers
                         {
                             EventType = NotificationEventType.NEW_ANSWER,
                             ActorType = ActorType.Profile,
-                            ActorId = adminProfile?.Id ?? authorId,
-                            ActorName = adminProfile?.FullName,
-                            ActorAvatarUrl = adminProfile?.AvatarUrl,
+                            ActorId = systemAiProfile.Id,
+                            ActorName = systemAiProfile.FullName,
+                            ActorAvatarUrl = systemAiProfile.AvatarUrl,
                             RecipientId = post.AuthorId,
                             EntityType = NotificationEntityType.POST,
                             EntityId = post.Id,
