@@ -7,6 +7,7 @@ using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Contexts;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.EntityDTO.Moderation;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Post;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.DTOs.MessageBusDTO;
 using platform_core_service.Common.Models.Paging;
@@ -57,7 +58,25 @@ namespace platform_core_service.Business.Services
                     .AsNoTracking()
                     .AsQueryable();
 
-                result.Result = await _queueRepository.GetPagingAsync<Page<string>, AdminQueueEntryDTO>(query, page);
+                page.FormatFilter(ref query);
+                page.FormatOrder(ref query);
+                var total = await query.CountAsync();
+                var entriesQuery = query;
+                if (page.Size != -1)
+                {
+                    entriesQuery = entriesQuery
+                        .Skip(page.PageNumber * page.Size)
+                        .Take(page.Size);
+                }
+
+                var entries = await entriesQuery.ToListAsync();
+                var data = await HydrateQueueEntriesAsync(entries);
+                page.TotalElements = total;
+
+                result.Result = new PagedData<AdminQueueEntryDTO, string>(page)
+                {
+                    Data = data
+                };
             }
             catch (Exception ex)
             {
@@ -178,6 +197,159 @@ namespace platform_core_service.Business.Services
                 default:
                     return null;
             }
+        }
+
+        private async Task<List<AdminQueueEntryDTO>> HydrateQueueEntriesAsync(List<ModerationQueueEntry> entries)
+        {
+            var snapshots = await LoadTargetSnapshotsAsync(entries);
+
+            return entries.Select(entry =>
+            {
+                snapshots.TryGetValue((entry.TargetType, entry.TargetId), out var snapshot);
+                var fallbackTitle = entry.TargetType switch
+                {
+                    ModerationTargetType.Answer => "Answer",
+                    ModerationTargetType.Comment => "Comment",
+                    _ => "Post"
+                };
+
+                return new AdminQueueEntryDTO
+                {
+                    Id = entry.Id,
+                    TargetType = entry.TargetType,
+                    TargetId = entry.TargetId,
+                    PostTitle = snapshot?.Title ?? fallbackTitle,
+                    PostContent = snapshot?.Content ?? entry.Tier2Reasoning ?? entry.Reason ?? string.Empty,
+                    AuthorId = snapshot?.AuthorId ?? string.Empty,
+                    Author = snapshot?.Author,
+                    EntityType = snapshot?.EntityType ?? entry.TargetType.ToString(),
+                    Reason = entry.Reason,
+                    Tier1Score = entry.Tier1Score,
+                    Tier2Reasoning = entry.Tier2Reasoning,
+                    AssignedModeratorId = entry.AssignedModeratorId,
+                    ResolvedAt = entry.ResolvedAt,
+                    Resolution = entry.Resolution,
+                    ModeratorNote = entry.ModeratorNote,
+                    CreatedAt = entry.DateCreated ?? DateTimeOffset.MinValue,
+                };
+            }).ToList();
+        }
+
+        private async Task<Dictionary<(ModerationTargetType TargetType, string TargetId), QueueTargetSnapshot>> LoadTargetSnapshotsAsync(
+            List<ModerationQueueEntry> entries)
+        {
+            var snapshots = new Dictionary<(ModerationTargetType, string), QueueTargetSnapshot>();
+
+            var postIds = entries
+                .Where(e => e.TargetType == ModerationTargetType.Post)
+                .Select(e => e.TargetId)
+                .Distinct()
+                .ToList();
+            if (postIds.Any())
+            {
+                var posts = await _context.Posts
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
+                    .Include(p => p.Author)
+                    .Where(p => postIds.Contains(p.Id))
+                    .ToListAsync();
+
+                foreach (var post in posts)
+                {
+                    snapshots[(ModerationTargetType.Post, post.Id)] = new QueueTargetSnapshot(
+                        post is QAPost ? "Question" : "Post",
+                        post.Title,
+                        post.Content,
+                        post.AuthorId,
+                        ToAuthorDto(post.Author));
+                }
+            }
+
+            var answerIds = entries
+                .Where(e => e.TargetType == ModerationTargetType.Answer)
+                .Select(e => e.TargetId)
+                .Distinct()
+                .ToList();
+            if (answerIds.Any())
+            {
+                var answers = await _context.Answers
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
+                    .Include(a => a.Author)
+                    .Include(a => a.QAPost)
+                    .Where(a => answerIds.Contains(a.Id))
+                    .ToListAsync();
+
+                foreach (var answer in answers)
+                {
+                    snapshots[(ModerationTargetType.Answer, answer.Id)] = new QueueTargetSnapshot(
+                        "Answer",
+                        answer.QAPost?.Title ?? "Answer",
+                        answer.Content,
+                        answer.AuthorId,
+                        ToAuthorDto(answer.Author));
+                }
+            }
+
+            var commentIds = entries
+                .Where(e => e.TargetType == ModerationTargetType.Comment)
+                .Select(e => e.TargetId)
+                .Distinct()
+                .ToList();
+            if (commentIds.Any())
+            {
+                var comments = await _context.Comments
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
+                    .Include(c => c.Author)
+                    .Include(c => c.Post)
+                    .Include(c => c.Answer)
+                        .ThenInclude(a => a!.QAPost)
+                    .Include(c => c.ReplyToComment)
+                        .ThenInclude(rc => rc!.Post)
+                    .Include(c => c.ReplyToComment)
+                        .ThenInclude(rc => rc!.Answer)
+                            .ThenInclude(a => a!.QAPost)
+                    .Where(c => commentIds.Contains(c.Id))
+                    .ToListAsync();
+
+                foreach (var comment in comments)
+                {
+                    var rootPost = comment.Post
+                        ?? comment.Answer?.QAPost
+                        ?? comment.ReplyToComment?.Post
+                        ?? comment.ReplyToComment?.Answer?.QAPost;
+
+                    snapshots[(ModerationTargetType.Comment, comment.Id)] = new QueueTargetSnapshot(
+                        "Comment",
+                        rootPost?.Title ?? "Comment",
+                        comment.Content,
+                        comment.AuthorId,
+                        ToAuthorDto(comment.Author));
+                }
+            }
+
+            return snapshots;
+        }
+
+        private static SelectPostAuthorDTO? ToAuthorDto(Profile? profile)
+        {
+            if (profile == null)
+            {
+                return null;
+            }
+
+            return new SelectPostAuthorDTO
+            {
+                Id = profile.Id,
+                FullName = profile.FullName,
+                AvatarUrl = profile.AvatarUrl,
+                BackgroundUrl = profile.BackgroundUrl,
+                Bio = profile.Bio,
+                ReputationPoints = profile.ReputationPoints,
+                TechStacks = profile.TechStacks,
+                IsPrivate = profile.IsPrivate
+            };
         }
 
         private Task EnqueueModerationNotification(ModerationTargetType targetType, object entity)
@@ -354,5 +526,12 @@ namespace platform_core_service.Business.Services
                 }
             }
         }
+
+        private sealed record QueueTargetSnapshot(
+            string EntityType,
+            string Title,
+            string Content,
+            string AuthorId,
+            SelectPostAuthorDTO? Author);
     }
 }

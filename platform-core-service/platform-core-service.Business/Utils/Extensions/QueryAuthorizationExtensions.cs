@@ -147,7 +147,8 @@ namespace platform_core_service.Business.Utils.Extensions
         {
             return query
                 .Where(c => !c.Deleted)
-                .Where(c => c.ModerationStatus == ModerationStatus.Pending ||
+                .Where(c => c.AuthorId == currentProfileId ||
+                            c.ModerationStatus == ModerationStatus.Pending ||
                             c.ModerationStatus == ModerationStatus.Approved)
                 .Where(c => !context.ProfileBlocks.Any(b =>
                     (b.OwnerId == currentProfileId && b.BlockedProfileId == c.AuthorId) ||
@@ -155,7 +156,8 @@ namespace platform_core_service.Business.Utils.Extensions
                 .Where(c =>
                     c.ReplyToCommentId == null ||
                     (!c.ReplyToComment!.Deleted &&
-                     (c.ReplyToComment.ModerationStatus == ModerationStatus.Pending ||
+                     (c.ReplyToComment.AuthorId == currentProfileId ||
+                      c.ReplyToComment.ModerationStatus == ModerationStatus.Pending ||
                       c.ReplyToComment.ModerationStatus == ModerationStatus.Approved) &&
                      !context.ProfileBlocks.Any(b =>
                          (b.OwnerId == currentProfileId && b.BlockedProfileId == c.ReplyToComment.AuthorId) ||
@@ -261,7 +263,9 @@ namespace platform_core_service.Business.Utils.Extensions
         {
             return query
                 .Where(a => !a.Deleted)
-                .Where(a => a.ModerationStatus == ModerationStatus.Pending ||
+                .Where(a =>
+                            a.AuthorId == currentProfileId ||
+                            a.ModerationStatus == ModerationStatus.Pending ||
                             a.ModerationStatus == ModerationStatus.Approved)
                 .Where(a => !context.ProfileBlocks.Any(b =>
                     (b.OwnerId == currentProfileId && b.BlockedProfileId == a.AuthorId) ||

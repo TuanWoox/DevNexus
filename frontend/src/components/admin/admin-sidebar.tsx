@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
-  FileText,
+  ClipboardCheck,
   Users,
   Tag,
   BrainCircuit,
@@ -37,7 +37,7 @@ import { UserAvatar } from '@/components/shared/user-avatar'
 
 const adminNavItems = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, roles: ['Admin'] },
-  { name: 'Posts', href: '/admin/posts', icon: FileText, roles: ['Admin', 'Moderator'] },
+  { name: 'Review Queue', href: '/admin/review-queue', icon: ClipboardCheck, roles: ['Admin', 'Moderator'] },
   { name: 'Reports', href: '/admin/reports', icon: Flag, roles: ['Admin', 'Moderator'] },
   { name: 'User Management', href: '/admin/users', icon: Users, roles: ['Admin'] },
   { name: 'Tag Management', href: '/admin/tags', icon: Tag, roles: ['Admin', 'Moderator'] },
@@ -57,7 +57,7 @@ export function AdminSidebar() {
 
   const userRoles = user?.roles ?? []
   const isAdmin = userRoles.includes('Admin')
-  const adminHomeHref = isAdmin ? '/admin/dashboard' : '/admin/posts'
+  const adminHomeHref = isAdmin ? '/admin/dashboard' : '/admin/review-queue'
   const visibleItems = adminNavItems.filter((item) =>
     item.roles.some((r) => userRoles.includes(r))
   )

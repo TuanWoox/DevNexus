@@ -25,7 +25,7 @@ namespace platform_core_service.Business.Mappings
                 .ForMember(dest => dest.Author,
                     opt => opt.MapFrom(src => src.Author));
             
-            CreateMap<PostModerationResult, AdminQueueEntryDTO>()
+            CreateMap<ModerationResult, AdminQueueEntryDTO>()
                 .ForMember(dest => dest.PostTitle,
                     opt => opt.MapFrom(src => src.TargetType.ToString()))
                 .ForMember(dest => dest.PostContent,

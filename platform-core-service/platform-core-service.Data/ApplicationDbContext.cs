@@ -36,7 +36,7 @@ namespace platform_core_service.Data
         public DbSet<QAMedia> QAMedias { get; set; }
         public DbSet<AnswerMedia> AnswerMedias { get; set; }
         public DbSet<CommentMedia> CommentMedias { get; set; }
-        public DbSet<PostModerationResult> PostModerationResults { get; set; }
+        public DbSet<ModerationResult> ModerationResults { get; set; }
         public DbSet<ModerationQueueEntry> ModerationQueueEntries { get; set; }
         public DbSet<ModerationReport> ModerationReports { get; set; }
         public DbSet<AdminAuditLog> AdminAuditLogs { get; set; }

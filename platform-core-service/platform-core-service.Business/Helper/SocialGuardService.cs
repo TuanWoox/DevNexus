@@ -326,10 +326,15 @@ namespace platform_core_service.Business.Helper
                         .ThenInclude(x => x.QAPost)
                 .FirstOrDefaultAsync(x => x.Id == commentId);
 
-            if (comment == null ||
-                comment.Deleted ||
-                (comment.ModerationStatus != ModerationStatus.Pending &&
-                 comment.ModerationStatus != ModerationStatus.Approved))
+            if (comment == null || comment.Deleted)
+            {
+                return Denied(ResponseMessage.COMMENT_NOT_AVAILABLE);
+            }
+
+            var isOwner = comment.AuthorId == _userContext.ProfileId;
+            if (!isOwner &&
+                comment.ModerationStatus != ModerationStatus.Pending &&
+                comment.ModerationStatus != ModerationStatus.Approved)
             {
                 return Denied(ResponseMessage.COMMENT_NOT_AVAILABLE);
             }

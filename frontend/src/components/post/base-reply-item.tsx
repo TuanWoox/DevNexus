@@ -31,6 +31,10 @@ import { ReportDialog } from '@/components/report/report-dialog';
 import { ReportTargetType } from '@/types/report/report-target-type';
 import { useMuteGuard } from '@/hooks/community-mute-hooks/use-mute-guard';
 import { ModerationStatus, normalizeModerationStatus } from '@/types/post/moderation-status';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store/store';
+import { ModerationBanner } from '@/components/shared/moderation-banner';
+import { cn } from '@/lib/utils';
 
 export interface ReplyAuthor {
     fullName: string;
@@ -121,6 +125,19 @@ export function BaseReplyItem({
     const canReportToCommunity = isCommunityContext && !isAuthor;
     const isReportReasonValid = reportReason.trim().length >= 5 && reportReason.trim().length <= 500;
     const { checkMuted } = useMuteGuard(effectiveCommunityId);
+    const { user } = useSelector((state: RootState) => state.auth);
+
+    const isGlobalAdminOrMod = user?.roles?.includes('Admin') || user?.roles?.includes('Moderator');
+    const isCommunityMod = isCommunityContext && canModerateCommunity;
+    const canViewHiddenContent = isAuthor || isGlobalAdminOrMod || isCommunityMod;
+
+    const status = normalizeModerationStatus(moderationStatus);
+    const isHidden = status === "InReview" || status === "Flagged";
+
+    if (isHidden && !canViewHiddenContent) {
+        return null;
+    }
+
 
     const handleSubmit = async () => {
         if (!editContent.trim() || editContent === '\n') return; // '\n' is newline char, not literal backslash-n
@@ -190,7 +207,11 @@ export function BaseReplyItem({
                 </ProfileHoverCard>
 
                 <div className="flex-1 min-w-0">
-                    <div className={`bg-card border rounded-2xl rounded-tl-none p-3 sm:p-4 inline-block max-w-full overflow-hidden ${isAccepted ? 'border-emerald-500 bg-emerald-500/5 shadow-sm' : 'border-default'}`}>
+                    <div className={cn(
+                        "bg-card border rounded-2xl rounded-tl-none p-3 sm:p-4 inline-block max-w-full overflow-hidden",
+                        isAccepted ? 'border-emerald-500 bg-emerald-500/5 shadow-sm' : 'border-default',
+                        isHidden && 'border-dashed'
+                    )}>
                         <div className="flex items-center gap-2 mb-1">
                             <ProfileHoverCard profileId={authorId} author={author} communityId={effectiveCommunityId} showCommunityStatus={Boolean(effectiveCommunityId)} canModerateCommunity={isCommunityContext ? canModerateCommunity : false}>
                                 <Link href={`/profile/${authorId}`} className="text-sm font-semibold text-heading hover:text-primary transition-colors">
@@ -209,7 +230,13 @@ export function BaseReplyItem({
                                 </span>
                             )}
                         </div>
-                        <div className="mt-2 min-w-0">
+                        {isHidden && (
+                            <ModerationBanner status={status} className="my-2 relative z-20" />
+                        )}
+                        <div className={cn(
+                            "mt-2 min-w-0",
+                            isHidden && "opacity-70 grayscale-[20%]"
+                        )}>
                             {isEditing ? (
                                 <>
                                     <MarkdownEditor

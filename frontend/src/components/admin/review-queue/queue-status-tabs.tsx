@@ -43,7 +43,7 @@ const TAB_CONFIGS: TabConfig[] = [
   },
   {
     value: 'all',
-    label: 'All Posts',
+    label: 'All Content',
     helperText: 'Complete content library',
     icon: <LayoutList className="w-4 h-4" />,
     borderColor: 'border-l-primary',
@@ -52,13 +52,13 @@ const TAB_CONFIGS: TabConfig[] = [
   },
 ]
 
-interface PostsStatusTabsProps {
+interface QueueStatusTabsProps {
   activeTab: TabValue
   tabCounts: Record<TabValue, number>
   onTabChange: (tab: TabValue) => void
 }
 
-export function PostsStatusTabs({ activeTab, tabCounts, onTabChange }: PostsStatusTabsProps) {
+export function QueueStatusTabs({ activeTab, tabCounts, onTabChange }: QueueStatusTabsProps) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       {TAB_CONFIGS.map((tab) => {

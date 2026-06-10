@@ -1077,6 +1077,58 @@ namespace platform_core_service.Migrations
                     b.ToTable("ModerationReports");
                 });
 
+            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.ModerationResult", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<float?>("CombinedScore")
+                        .HasColumnType("real");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateDeleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Decision")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<float?>("ImageScore")
+                        .HasColumnType("real");
+
+                    b.Property<string>("Reasoning")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TargetId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("integer");
+
+                    b.Property<float?>("TextScore")
+                        .HasColumnType("real");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Deleted");
+
+                    b.ToTable("ModerationResults");
+                });
+
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.Post", b =>
                 {
                     b.Property<string>("Id")
@@ -1250,58 +1302,6 @@ namespace platform_core_service.Migrations
                     b.HasIndex("PostId");
 
                     b.ToTable("PostMedias");
-                });
-
-            modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostModerationResult", b =>
-                {
-                    b.Property<string>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text");
-
-                    b.Property<float?>("CombinedScore")
-                        .HasColumnType("real");
-
-                    b.Property<DateTimeOffset?>("DateCreated")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset?>("DateDeleted")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset?>("DateModified")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Decision")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<bool>("Deleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<float?>("ImageScore")
-                        .HasColumnType("real");
-
-                    b.Property<string>("Reasoning")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<DateTimeOffset>("ReviewedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("TargetId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("TargetType")
-                        .HasColumnType("integer");
-
-                    b.Property<float?>("TextScore")
-                        .HasColumnType("real");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Deleted");
-
-                    b.ToTable("PostModerationResults");
                 });
 
             modelBuilder.Entity("platform_core_service.Common.Entities.DbEntities.PostTag", b =>

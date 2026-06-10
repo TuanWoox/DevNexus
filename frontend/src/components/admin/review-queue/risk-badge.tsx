@@ -36,12 +36,12 @@ function getRiskLevel(score: number): RiskLevel {
   return 'low'
 }
 
-interface PostsRiskBadgeProps {
+interface RiskBadgeProps {
   score: number
   className?: string
 }
 
-export function PostsRiskBadge({ score, className }: PostsRiskBadgeProps) {
+export function RiskBadge({ score, className }: RiskBadgeProps) {
   const level = getRiskLevel(score)
   const config = RISK_CONFIGS[level]
 

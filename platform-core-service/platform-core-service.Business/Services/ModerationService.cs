@@ -234,19 +234,19 @@ namespace platform_core_service.Business.Services
             string targetId,
             string? moderationReason)
         {
-            var moderationResult = await _context.PostModerationResults
+            var moderationResult = await _context.ModerationResults
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(r => r.TargetType == targetType && r.TargetId == targetId);
 
             if (moderationResult == null)
             {
-                moderationResult = new PostModerationResult
+                moderationResult = new ModerationResult
                 {
                     Id = Guid.NewGuid().ToString(),
                     TargetType = targetType,
                     TargetId = targetId,
                 };
-                _context.PostModerationResults.Add(moderationResult);
+                _context.ModerationResults.Add(moderationResult);
             }
 
             moderationResult.TextScore = dto.TextScore;

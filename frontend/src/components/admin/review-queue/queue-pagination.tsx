@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-interface PostsPaginationProps {
+interface QueuePaginationProps {
   currentPage: number  // 0-indexed
   totalPages: number
   totalElements: number
@@ -9,13 +9,13 @@ interface PostsPaginationProps {
   onPageChange: (page: number) => void
 }
 
-export function PostsPagination({
+export function QueuePagination({
   currentPage,
   totalPages,
   totalElements,
   pageSize,
   onPageChange,
-}: PostsPaginationProps) {
+}: QueuePaginationProps) {
   if (totalPages <= 1) return null
 
   const startItem = currentPage * pageSize + 1
@@ -42,7 +42,7 @@ export function PostsPagination({
     <div className="flex items-center justify-between gap-4 px-1 flex-wrap">
       <p className="text-xs text-muted-foreground">
         Showing <span className="font-medium text-foreground tabular-nums">{startItem.toLocaleString()}–{endItem.toLocaleString()}</span>{' '}
-        of <span className="font-medium text-foreground tabular-nums">{totalElements.toLocaleString()}</span> posts
+        of <span className="font-medium text-foreground tabular-nums">{totalElements.toLocaleString()}</span> items
       </p>
 
       <div className="flex items-center gap-1">

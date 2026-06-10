@@ -30,7 +30,7 @@ import {
 import type { ComponentType, ReactNode } from 'react'
 import { ModerationStatusBadge } from './moderation-status-badge'
 
-interface PostOverviewSheetProps {
+interface ContentDetailSheetProps {
   open: boolean
   onClose: () => void
   post: AdminPostDTO
@@ -94,13 +94,13 @@ function InfoRow({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-export function PostOverviewSheet({
+export function ContentDetailSheet({
   open,
   onClose,
   post,
   onApprove,
   onReject,
-}: PostOverviewSheetProps) {
+}: ContentDetailSheetProps) {
   const { data: fullPost, isLoading } = useGetPostById(post.id, open)
   const authorName = post.author?.fullName ?? post.authorId
   const score = post.upvoteCount - post.downvoteCount
@@ -119,7 +119,7 @@ export function PostOverviewSheet({
 
               <div className="space-y-2">
                 <SheetTitle className="text-balance text-2xl font-bold leading-tight text-heading">
-                  {post.title || 'Untitled Post'}
+                  {post.title || 'Untitled'}
                 </SheetTitle>
                 <SheetDescription asChild>
                   <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
@@ -138,7 +138,7 @@ export function PostOverviewSheet({
           </SheetHeader>
 
           <div className="space-y-5 px-6 py-5">
-            <SectionCard title="Post Identity" icon={FileCode2}>
+            <SectionCard title="Identity" icon={FileCode2}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <InfoRow label="Author">
                   <span className="block truncate font-mono">{authorName}</span>
@@ -146,13 +146,13 @@ export function PostOverviewSheet({
                 <InfoRow label="Created">
                   <span>{formatDate(post.dateCreated)}</span>
                 </InfoRow>
-                <InfoRow label="Post type">
+                <InfoRow label="Content type">
                   <div className="flex flex-wrap gap-2">
                     <span className="badge-default whitespace-nowrap">{post.entityType}</span>
                     <span className="badge-purple whitespace-nowrap font-mono">{mapPostType(post.postType)}</span>
                   </div>
                 </InfoRow>
-                <InfoRow label="Post ID">
+                <InfoRow label="ID">
                   <button
                     type="button"
                     onClick={() => copyToClipboard(post.id)}
@@ -192,7 +192,7 @@ export function PostOverviewSheet({
             </SectionCard>
 
             <SectionCard
-              title="Post Content"
+              title="Content Body"
               icon={FileText}
               action={
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">

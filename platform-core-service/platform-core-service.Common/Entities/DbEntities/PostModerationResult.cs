@@ -11,7 +11,7 @@ using platform_core_service.Common.Utils.Enums;
 
 namespace platform_core_service.Common.Entities.DbEntities
 {
-    public class PostModerationResult : BaseEntity<string>
+    public class ModerationResult : BaseEntity<string>
     {
         public ModerationTargetType TargetType { get; set; } = ModerationTargetType.Post;
 
