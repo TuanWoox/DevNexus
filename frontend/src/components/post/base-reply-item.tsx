@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { ArrowBigUp, ArrowBigDown, MoreHorizontal, Flag, Edit, Trash, CheckCircle, Check, History } from 'lucide-react';
+import { ArrowBigUp, ArrowBigDown, MoreHorizontal, Flag, Edit, Trash, CheckCircle, Check, History, Sparkles } from 'lucide-react';
 import { UserAvatar } from '@/components/shared/user-avatar';
 import { MarkdownViewer } from '../editor/markdown-viewer';
 import { MarkdownEditor, MarkdownEditorHandle } from '../editor/markdown-editor';
@@ -64,6 +64,7 @@ export interface BaseReplyItemProps {
     communityId?: string | null;
     canModerateCommunity?: boolean;
     isAccepted?: boolean;
+    isSystemAnswer?: boolean;
     onAccept?: () => void;
     canAccept?: boolean;
     isAccepting?: boolean;
@@ -96,6 +97,7 @@ export function BaseReplyItem({
     communityId,
     canModerateCommunity = false,
     isAccepted,
+    isSystemAnswer = false,
     onAccept,
     canAccept,
     isAccepting,
@@ -184,19 +186,38 @@ export function BaseReplyItem({
         <>
             <div className="flex gap-3 sm:gap-4 group">
                 <ProfileHoverCard profileId={authorId} author={author} communityId={effectiveCommunityId} showCommunityStatus={Boolean(effectiveCommunityId)} canModerateCommunity={isCommunityContext ? canModerateCommunity : false}>
-                    <Link href={`/profile/${authorId}`} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-secondary shrink-0 overflow-hidden border border-default relative">
+                    <Link
+                        href={`/profile/${authorId}`}
+                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-secondary shrink-0 overflow-hidden relative border transition-all ${
+                            isSystemAnswer
+                                ? 'ring-2 ring-emerald-400/50 ring-offset-2 ring-offset-background dark:ring-offset-background animate-pulse border-emerald-500/30'
+                                : 'border-default'
+                        }`}
+                    >
                         <UserAvatar avatarUrl={author?.avatarUrl} fullName={author?.fullName} className="h-full w-full border-0" />
                     </Link>
                 </ProfileHoverCard>
 
                 <div className="flex-1 min-w-0">
-                    <div className={`bg-card border rounded-2xl rounded-tl-none p-3 sm:p-4 inline-block max-w-full overflow-hidden ${isAccepted ? 'border-emerald-500 bg-emerald-500/5 shadow-sm' : 'border-default'}`}>
+                    <div className={`inline-block max-w-full overflow-hidden transition-all ${
+                        isSystemAnswer
+                            ? 'bg-emerald-500/[0.02] dark:bg-emerald-500/[0.03] border border-emerald-500/30 dark:border-emerald-500/40 shadow-ai-md rounded-2xl rounded-tl-none p-4 sm:p-5 relative'
+                            : isAccepted
+                                ? 'bg-card border border-emerald-500 bg-emerald-500/5 shadow-sm rounded-2xl rounded-tl-none p-3 sm:p-4'
+                                : 'bg-card border border-default rounded-2xl rounded-tl-none p-3 sm:p-4'
+                    }`}>
                         <div className="flex items-center gap-2 mb-1">
                             <ProfileHoverCard profileId={authorId} author={author} communityId={effectiveCommunityId} showCommunityStatus={Boolean(effectiveCommunityId)} canModerateCommunity={isCommunityContext ? canModerateCommunity : false}>
                                 <Link href={`/profile/${authorId}`} className="text-sm font-semibold text-heading hover:text-primary transition-colors">
                                     {author?.fullName || 'Unknown'}
                                 </Link>
                             </ProfileHoverCard>
+                            {isSystemAnswer && (
+                                <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20">
+                                    <Sparkles className="w-2.5 h-2.5" />
+                                    AI
+                                </span>
+                            )}
                             {dateModified && (
                                 <span className="text-xs font-semibold text-muted-foreground">
                                     {new Date(dateModified).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
