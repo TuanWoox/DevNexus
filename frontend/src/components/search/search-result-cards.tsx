@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowBigUp, FileText, HelpCircle, Lock, MessageSquare, Star, Users } from "lucide-react";
+import { ArrowBigUp, FileText, HelpCircle, Lock, MessageSquare, Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { Badge } from "@/components/ui/badge";
@@ -154,10 +154,13 @@ export function SearchProfileCard({ profile }: { profile: SearchProfileResult })
             </div>
             <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{profile.bio || "No bio yet"}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
-                <Star className="size-3.5 fill-current" />
-                {profile.reputationPoints} reputation
-              </span>
+              {/*
+                Reputation points are hidden until scoring rules are implemented.
+                <span className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                  <Star className="size-3.5 fill-current" />
+                  {profile.reputationPoints} reputation
+                </span>
+              */}
               {profile.techStacks?.slice(0, 3).map((stack) => (
                 <Badge key={stack} variant="secondary" className="max-w-28 truncate">
                   {stack}

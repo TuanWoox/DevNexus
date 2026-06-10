@@ -97,7 +97,7 @@ export function CommunityHeader({ community, activeTab }: CommunityHeaderProps) 
         <div className="relative w-full">
             {/* Cover Photo */}
             <div
-                className={`relative h-48 md:h-64 w-full bg-linear-to-r from-primary/20 to-primary/5 transition-opacity ${hasManageAccess ? 'group cursor-pointer' : ''}`}
+                className={`relative h-48 md:h-64 w-full bg-linear-to-r from-primary/20 to-primary/5 transition-opacity ${isOwner ? 'group cursor-pointer' : ''}`}
                 onClick={() => { if (isOwner) setIsUploadModalOpen(true) }}
             >
                 {community.communityCoverPhotoUrl ? (

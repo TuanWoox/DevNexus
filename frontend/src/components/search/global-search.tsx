@@ -118,7 +118,10 @@ export function GlobalSearch({ trigger, compact = false }: GlobalSearchProps) {
         <UserAvatar avatarUrl={profile.avatarUrl} fullName={profile.fullName} size="lg" />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium text-heading">{profile.fullName}</div>
-          <div className="truncate text-xs text-muted-foreground">{profile.reputationPoints} reputation</div>
+          {/*
+            Reputation points are hidden until scoring rules are implemented.
+            <div className="truncate text-xs text-muted-foreground">{profile.reputationPoints} reputation</div>
+          */}
         </div>
       </ResultButton>
     );

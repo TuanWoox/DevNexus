@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useSelector } from 'react-redux';
-import { Ban, Calendar, Loader2, MessageSquare, Star, User, Volume2, VolumeX, X } from 'lucide-react';
+import { Ban, Calendar, Loader2, MessageSquare, User, Volume2, VolumeX, X } from 'lucide-react';
 import { UserAvatar } from '@/components/shared/user-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -113,7 +113,7 @@ export function ProfileHoverCardContent({
     const { user } = useSelector((state: RootState) => state.auth);
     const fullName = author?.fullName || 'Unknown';
     const techStacks = author?.techStacks ?? [];
-    const reputationPoints = author?.reputationPoints ?? 0;
+    // const reputationPoints = author?.reputationPoints ?? 0;
     const avatarUrl = author?.avatarUrl || '/images/default-avatar.webp';
     const backgroundUrl = author?.backgroundUrl || '/images/default-background.webp';
     const isOwnProfile = user?.profileId === profileId;
@@ -237,12 +237,15 @@ export function ProfileHoverCardContent({
                     <UserAvatar avatarUrl={avatarUrl} fullName={fullName} className="h-14 w-14 border-2 border-popover ring-2 ring-border" />
                     <div className="min-w-0 flex-1 pb-1">
                         <h3 className="truncate text-base font-semibold text-foreground">{fullName}</h3>
-                        {reputationPoints > 0 ? (
-                            <div className="mt-0.5 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
-                                <Star className="h-3 w-3 fill-current" />
-                                <span>{reputationPoints.toLocaleString()} reputation</span>
-                            </div>
-                        ) : null}
+                        {/*
+                          Reputation points are hidden until scoring rules are implemented.
+                          {reputationPoints > 0 ? (
+                              <div className="mt-0.5 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
+                                  <Star className="h-3 w-3 fill-current" />
+                                  <span>{reputationPoints.toLocaleString()} reputation</span>
+                              </div>
+                          ) : null}
+                        */}
                     </div>
                 </div>
 
