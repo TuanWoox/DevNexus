@@ -154,6 +154,31 @@ class ModerationService:
                 tier_three=t3,
                 error=str(exc),
             )
+        except Exception as exc:
+            logger.warning(
+                "[Moderation][T2] Gemini moderation failed; escalating to human queue. target=%s error=%s",
+                target_id, exc,
+                exc_info=True,
+            )
+            t2 = TierTwoResult(
+                decision=ModerationDecision.ESCALATE,
+                confidence=0.0,
+                reasoning="Gemini moderation failed; local model result was inconclusive.",
+            )
+            t3 = await self._run_tier_three(moderation_version, content_hash, t1, t2, target_type=target_type, target_id=target_id)
+            await self._notify_platform(moderation_version, content_hash, ModerationDecision.ESCALATE, t1=t1, t2=t2, target_type=target_type, target_id=target_id)
+            return ModerationTaskResult(
+                target_id=target_id,
+                moderation_version=moderation_version,
+                content_hash=content_hash,
+                final_status=ModerationStatus.IN_REVIEW,
+                decision=ModerationDecision.ESCALATE,
+                tier_reached=3,
+                tier_one=t1,
+                tier_two=t2,
+                tier_three=t3,
+                error=str(exc),
+            )
         logger.info(
             "[Moderation][T2] decision=%s confidence=%.3f target=%s",
             t2.decision, t2.confidence, target_id,
