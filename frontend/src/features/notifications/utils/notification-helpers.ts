@@ -57,7 +57,8 @@ export const getNotificationTypeName = (type: NotificationEventEnum): string => 
     
     // System
     [NotificationEventEnum.MODERATION_RESULT]: "Moderation Results",
-    [NotificationEventEnum.REPUTATION_MILESTONE]: "Reputation Milestones",
+    // Reputation-specific wording is hidden until scoring rules are implemented.
+    [NotificationEventEnum.REPUTATION_MILESTONE]: "Milestones",
     [NotificationEventEnum.SYSTEM_ANNOUNCEMENT]: "System Announcements",
   };
   return names[type] || `Type ${type}`;

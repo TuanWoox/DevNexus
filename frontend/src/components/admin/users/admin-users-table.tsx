@@ -113,7 +113,10 @@ export function AdminUsersTable({ users }: AdminUsersTableProps) {
               <th className="px-4 py-3 text-left text-xs font-semibold text-heading uppercase tracking-wide">User</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-heading uppercase tracking-wide">Role</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-heading uppercase tracking-wide">Status</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-heading uppercase tracking-wide">Reputation</th>
+              {/*
+                Reputation points are hidden until scoring rules are implemented.
+                <th className="px-4 py-3 text-right text-xs font-semibold text-heading uppercase tracking-wide">Reputation</th>
+              */}
               <th className="px-4 py-3 text-right text-xs font-semibold text-heading uppercase tracking-wide">Posts</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-heading uppercase tracking-wide">Created</th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-heading uppercase tracking-wide">Actions</th>
@@ -122,7 +125,7 @@ export function AdminUsersTable({ users }: AdminUsersTableProps) {
           <tbody>
             {users.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                   No users found.
                 </td>
               </tr>
@@ -139,9 +142,12 @@ export function AdminUsersTable({ users }: AdminUsersTableProps) {
                   <td className="px-4 py-2"><UserCell user={user} /></td>
                   <td className="px-4 py-2"><RoleBadge role={user.role} /></td>
                   <td className="px-4 py-2"><StatusBadge isSuspended={user.isSuspended} /></td>
-                  <td className="px-4 py-2 text-right font-mono text-foreground/85">
-                    {(user.reputationPoints ?? 0).toLocaleString()}
-                  </td>
+                  {/*
+                    Reputation points are hidden until scoring rules are implemented.
+                    <td className="px-4 py-2 text-right font-mono text-foreground/85">
+                      {(user.reputationPoints ?? 0).toLocaleString()}
+                    </td>
+                  */}
                   <td className="px-4 py-2 text-right font-mono text-muted-foreground">{(user.postCount ?? 0).toLocaleString()}</td>
                   <td className="px-4 py-2 text-muted-foreground">
                     <span className="font-mono">{formatDate(user.createdAt)}</span>

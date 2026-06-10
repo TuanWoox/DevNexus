@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form';
 import { GoogleLogin } from '@react-oauth/google';
@@ -14,6 +14,8 @@ import { useTheme } from 'next-themes';
 
 function LoginContent() {
     const [showPassword, setShowPassword] = useState(false)
+    const [googleButtonWidth, setGoogleButtonWidth] = useState<number>()
+    const googleButtonContainerRef = useRef<HTMLDivElement>(null)
 
     const { login, isAuthenticating } = useLogin();
     const { login: githubLogin } = useGithubLogin();
@@ -37,6 +39,29 @@ function LoginContent() {
     const onSubmit = (data: LoginAccountDTO) => {
         login(data);
     };
+
+    useEffect(() => {
+        const container = googleButtonContainerRef.current;
+        if (!container) return;
+
+        const updateGoogleButtonWidth = () => {
+            const width = Math.floor(container.getBoundingClientRect().width);
+            if (width > 0) {
+                setGoogleButtonWidth(width);
+            }
+        };
+
+        updateGoogleButtonWidth();
+
+        const resizeObserver = new ResizeObserver(updateGoogleButtonWidth);
+        resizeObserver.observe(container);
+        window.addEventListener("resize", updateGoogleButtonWidth);
+
+        return () => {
+            resizeObserver.disconnect();
+            window.removeEventListener("resize", updateGoogleButtonWidth);
+        };
+    }, []);
 
     return (
         <div className="card p-8 sm:p-10 max-w-md w-full shadow-elevated z-10 relative">
@@ -69,18 +94,19 @@ function LoginContent() {
                     </div>
                     <span className="ml-5 dark:ml-8">Continue with GitHub</span>
                 </button>
-                <div className={`h-10 w-full overflow-hidden rounded ${isGooglePending ? "pointer-events-none opacity-70" : ""}`}>
+                <div ref={googleButtonContainerRef} className={`h-10 w-full overflow-hidden rounded ${isGooglePending ? "pointer-events-none opacity-70" : ""}`}>
                     <GoogleLogin
-                        key={googleButtonTheme}
+                        key={`${googleButtonTheme}-${googleButtonWidth ?? "pending"}`}
                         onSuccess={loginWithCredential}
                         onError={() => toast.error("Google login failed.")}
                         useOneTap={false}
-                        width="100%"
+                        width={googleButtonWidth}
                         text="continue_with"
                         theme={googleButtonTheme}
                         shape="rectangular"
                         size="large"
                         logo_alignment="left"
+                        containerProps={{ style: { width: "100%" } }}
                     />
                 </div>
             </div>

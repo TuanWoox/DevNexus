@@ -21,7 +21,7 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Lock, Star, UserPlus, UserCheck, Clock, MessageSquare, MoreHorizontal, Share2, ShieldAlert, UserX, Edit3, Loader2, Users } from "lucide-react";
+import { Lock, UserPlus, UserCheck, Clock, MessageSquare, MoreHorizontal, Share2, ShieldAlert, UserX, Edit3, Loader2, Users } from "lucide-react";
 import { useOpenChatByProfile } from "@/features/messages/hooks/chats/use-open-chat-by-profile";
 import { useCreateUserFollow } from "@/hooks/user-follow-hooks/use-create-user-follow";
 import { useDeleteFollowById } from "@/hooks/user-follow-hooks/use-delete-follow-by-id";
@@ -175,11 +175,14 @@ export function ProfileInfo({ profile, isOwnProfile, onEdit }: ProfileInfoProps)
 
             {/* Stats row */}
             <div className="flex items-center gap-5 mt-3 text-sm flex-wrap">
-                <div className="flex items-center gap-1.5">
-                    <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                    <span className="font-bold text-heading">{profile.reputationPoints || 0}</span>
-                    <span className="text-muted-foreground">reputation</span>
-                </div>
+                {/*
+                  Reputation points are hidden until scoring rules are implemented.
+                  <div className="flex items-center gap-1.5">
+                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                      <span className="font-bold text-heading">{profile.reputationPoints || 0}</span>
+                      <span className="text-muted-foreground">reputation</span>
+                  </div>
+                */}
 
                 {/* Follower count */}
                 <button
