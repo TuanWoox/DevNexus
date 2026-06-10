@@ -11,3 +11,4 @@ gsd-file-manifest.json
 .vscode
 .claude
 dump.rdb
+.build-check/
