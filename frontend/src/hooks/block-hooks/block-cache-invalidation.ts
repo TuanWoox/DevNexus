@@ -6,6 +6,7 @@ import { commentQueryKeys } from "@/hooks/comment-hooks/use-comment-query-keys";
 import { followRequestQueryKeys } from "@/hooks/follow-request-hooks/follow-request-query-keys";
 import { postQueryKeys } from "@/hooks/post-hooks/use-post-query-keys";
 import { qaPostQueryKeys } from "@/hooks/qa-post-hooks/use-qa-post-query-key";
+import { recommendationQueryKeys } from "@/hooks/recommendation-hooks/use-recommendation-query-keys";
 import { searchQueryKeys } from "@/hooks/search-hooks/use-global-search";
 import { userFollowQueryKeys } from "@/hooks/user-follow-hooks/use-user-follow-query-key";
 import { notificationQueryKeys } from "@/features/notifications/hooks/notification-query-keys";
@@ -23,6 +24,7 @@ export function invalidateAfterBlockChange(queryClient: QueryClient, otherProfil
 
     queryClient.invalidateQueries({ queryKey: postQueryKeys.all });
     queryClient.invalidateQueries({ queryKey: qaPostQueryKeys.all });
+    queryClient.invalidateQueries({ queryKey: recommendationQueryKeys.all });
     queryClient.invalidateQueries({ queryKey: searchQueryKeys.all });
     queryClient.invalidateQueries({ queryKey: commentQueryKeys.all });
     queryClient.invalidateQueries({ queryKey: answerQueryKeys.all });

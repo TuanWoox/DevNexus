@@ -3,6 +3,7 @@ import { Page } from "@/types/common/page";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { postQueryKeys } from "./use-post-query-keys";
+import { recommendationQueryKeys } from "../recommendation-hooks/use-recommendation-query-keys";
 
 export const useDeletePosts = () => {
     const queryClient = useQueryClient();
@@ -11,6 +12,7 @@ export const useDeletePosts = () => {
         mutationFn: (payload: Page<string>) => postService.deletePosts(payload),
         onSuccess: (data) => {
             if (data) {
+                queryClient.invalidateQueries({ queryKey: recommendationQueryKeys.all });
                 queryClient.invalidateQueries({ queryKey: postQueryKeys.lists() });
                 toast.success(`Deleted ${data} posts successfully!`);
             }
