@@ -1,7 +1,7 @@
 """
 moderation_worker.py
 --------------------
-BackgroundTask entry point that wraps ModerationService.process_post().
+BackgroundTask entry point that wraps ModerationService.proceed_content().
 
 Usage (from router):
     background_tasks.add_task(
@@ -19,7 +19,7 @@ import logging
 from google import genai
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.app.schemas.moderation import ModerationDecision
+from src.app.schemas.moderation import ModerationDecision, ModerationMediaManifestItem
 from src.app.services.moderation_service import ModerationService
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ async def run_moderation(
     text_content: str,
     target_id: str,
     target_type: str = "Post",
+    media_manifest: list[ModerationMediaManifestItem] | None = None,
     image_bytes: bytes | None,
     image_mime_type: str | None,
     db: AsyncSession,
@@ -54,18 +55,19 @@ async def run_moderation(
     )
 
     try:
-        result = await service.process_post(
+        result = await service.proceed_content(
             target_type=target_type,
             target_id=target_id,
             moderation_version=moderation_version,
             content_hash=content_hash,
             text_content=text_content,
+            media_manifest=media_manifest or [],
             image_bytes=image_bytes,
             image_mime_type=image_mime_type,
         )
         logger.info(
-            "[Worker] Moderation complete: post=%s status=%s tier=%d",
-            target_id, result.final_status.value, result.tier_reached,
+            "[Worker] Moderation complete: target=%s/%s status=%s tier=%d",
+            target_type, target_id, result.final_status.value, result.tier_reached,
         )
 
     except Exception as exc:

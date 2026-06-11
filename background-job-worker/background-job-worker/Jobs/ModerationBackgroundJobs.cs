@@ -2,6 +2,7 @@ using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using platform_core_service.Common.Interfaces.BackgroundJobs;
 using platform_core_service.Common.Interfaces.Services;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Moderation;
 using platform_core_service.Common.Utils;
 using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Data;
@@ -82,13 +83,15 @@ namespace background_job_worker.Jobs
 
             try
             {
+                var mediaManifest = await BuildMediaManifestAsync(target.Content);
                 await _aiWorkerClient.SubmitForModerationAsync(
                     targetType,
                     target.Id,
                     target.Title,
                     target.Content,
                     moderationVersion,
-                    contentHash);
+                    contentHash,
+                    mediaManifest);
             }
             catch (Exception ex)
             {
@@ -201,6 +204,98 @@ namespace background_job_worker.Jobs
                         c.ModerationContentHash))
                     .FirstOrDefaultAsync(),
                 _ => null
+            };
+        }
+
+        private async Task<IReadOnlyCollection<ModerationMediaManifestItemDTO>> BuildMediaManifestAsync(string content)
+        {
+            var references = ModerationContentHashHelper.ExtractContentMediaReferences(content);
+            if (references.Count == 0)
+            {
+                return [];
+            }
+
+            var manifest = new List<ModerationMediaManifestItemDTO>();
+            foreach (var reference in references)
+            {
+                var item = await ResolveMediaManifestItemAsync(reference);
+                if (item == null)
+                {
+                    _logger.LogInformation(
+                        "Skipped moderation media manifest item: {ContentType} media {MediaId} not found.",
+                        reference.ContentType,
+                        reference.MediaId);
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(item.StoreDestination) || !File.Exists(item.StoreDestination))
+                {
+                    _logger.LogInformation(
+                        "Skipped moderation media manifest item: {ContentType} media {MediaId} file not found.",
+                        item.ContentType,
+                        item.Id);
+                    continue;
+                }
+
+                manifest.Add(item);
+            }
+
+            return manifest;
+        }
+
+        private async Task<ModerationMediaManifestItemDTO?> ResolveMediaManifestItemAsync(ContentMediaReference reference)
+        {
+            return reference.ContentType switch
+            {
+                ContentType.Post => await _dbContext.PostMedias
+                    .IgnoreQueryFilters()
+                    .Where(media => media.Id == reference.MediaId && !media.Deleted)
+                    .Select(media => new ModerationMediaManifestItemDTO
+                    {
+                        Id = media.Id,
+                        ContentType = ContentType.Post,
+                        MediaType = media.PostMediaType,
+                        StoreDestination = media.StoreDestination,
+                        Sha256Hash = media.SHA256Hash,
+                    })
+                    .FirstOrDefaultAsync(),
+                ContentType.QA => await _dbContext.QAMedias
+                    .IgnoreQueryFilters()
+                    .Where(media => media.Id == reference.MediaId && !media.Deleted)
+                    .Select(media => new ModerationMediaManifestItemDTO
+                    {
+                        Id = media.Id,
+                        ContentType = ContentType.QA,
+                        MediaType = media.QAMediaType,
+                        StoreDestination = media.StoreDestination,
+                        Sha256Hash = media.SHA256Hash,
+                    })
+                    .FirstOrDefaultAsync(),
+                ContentType.Answer => await _dbContext.AnswerMedias
+                    .IgnoreQueryFilters()
+                    .Where(media => media.Id == reference.MediaId && !media.Deleted)
+                    .Select(media => new ModerationMediaManifestItemDTO
+                    {
+                        Id = media.Id,
+                        ContentType = ContentType.Answer,
+                        MediaType = media.AnswerMediaType,
+                        StoreDestination = media.StoreDestination,
+                        Sha256Hash = media.SHA256Hash,
+                    })
+                    .FirstOrDefaultAsync(),
+                ContentType.Comment => await _dbContext.CommentMedias
+                    .IgnoreQueryFilters()
+                    .Where(media => media.Id == reference.MediaId && !media.Deleted)
+                    .Select(media => new ModerationMediaManifestItemDTO
+                    {
+                        Id = media.Id,
+                        ContentType = ContentType.Comment,
+                        MediaType = media.CommentMediaType,
+                        StoreDestination = media.StoreDestination,
+                        Sha256Hash = media.SHA256Hash,
+                    })
+                    .FirstOrDefaultAsync(),
+                _ => null,
             };
         }
 

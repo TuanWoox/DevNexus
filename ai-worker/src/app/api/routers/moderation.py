@@ -1,15 +1,17 @@
+import json
 import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile
 from fastapi import status as http_status
 from google import genai
+from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.core.config import get_settings
 from src.app.core.security import verify_internal_api_key
 from src.app.infrastructure.database import get_db_session
 from src.app.infrastructure.gemini import get_gemini_client
-from src.app.schemas.moderation import ModerationSubmitResponse
+from src.app.schemas.moderation import ModerationMediaManifestItem, ModerationSubmitResponse
 from src.app.workers.moderation_worker import run_moderation
 
 router = APIRouter(prefix="/ai/moderation", tags=["Moderation AI"])
@@ -34,6 +36,7 @@ async def submit_content(
     text_content: str = Form(..., min_length=1, max_length=50000),
     moderation_version: int = Form(..., description="Platform moderation content version."),
     content_hash: str = Form(..., description="SHA-256 hash of normalized moderated content."),
+    media_manifest_json: str | None = Form(None, description="Embedded media manifest resolved by platform-core."),
     image: UploadFile | None = File(None, description="Optional image file to moderate."),
     db: AsyncSession = Depends(get_db_session),
     gemini_client: genai.Client = Depends(get_gemini_client),
@@ -52,6 +55,15 @@ async def submit_content(
         image_bytes = await image.read()
         image_mime_type = image.content_type  # e.g. "image/jpeg", "image/png"
 
+    media_manifest: list[ModerationMediaManifestItem] = []
+    if media_manifest_json:
+        try:
+            media_manifest = TypeAdapter(list[ModerationMediaManifestItem]).validate_python(
+                json.loads(media_manifest_json)
+            )
+        except (json.JSONDecodeError, ValidationError):
+            media_manifest = []
+
     settings = get_settings()
     task_id = str(uuid.uuid4())
 
@@ -62,6 +74,7 @@ async def submit_content(
         moderation_version=moderation_version,
         content_hash=content_hash,
         text_content=text_content,
+        media_manifest=media_manifest,
         image_bytes=image_bytes,
         image_mime_type=image_mime_type,
         db=db,

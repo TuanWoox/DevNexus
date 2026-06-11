@@ -69,6 +69,27 @@ _UNSAFE_PROMPTS = [
 ]
 _ALL_PROMPTS = _SAFE_PROMPTS + _UNSAFE_PROMPTS
 
+_DEEP_SAFE_PROMPTS = [
+    "a normal programming screenshot",
+    "a normal terminal screenshot",
+    "a normal user interface screenshot",
+    "a normal software architecture diagram",
+    "a normal classroom or study image",
+    "a normal technical illustration",
+]
+
+_DEEP_UNSAFE_PROMPTS = [
+    "pornography or explicit nudity",
+    "a sexually suggestive image",
+    "graphic injury, blood, or gore",
+    "a firearm, knife, or weapon threat",
+    "a hate symbol, racist symbol, or extremist propaganda",
+    "self-harm imagery",
+    "a harassment or humiliating meme",
+    "a phishing, scam, fake login, or credential theft screenshot",
+    "a malware, ransomware, or dangerous hacking instruction screenshot",
+]
+
 
 class AIModelManager:
     """
@@ -211,14 +232,27 @@ class AIModelManager:
         Run CLIP zero-shot classification on raw image bytes.
         Returns a score from 0.0 (safe) to 1.0 (inappropriate).
         """
+        return self._analyze_image_with_prompts(image_bytes, _SAFE_PROMPTS, _UNSAFE_PROMPTS)
+
+    def analyze_image_deep(self, image_bytes: bytes) -> ImageAnalysisResult:
+        """Run the deeper Tier 2 CLIP prompt set on raw image bytes."""
+        return self._analyze_image_with_prompts(image_bytes, _DEEP_SAFE_PROMPTS, _DEEP_UNSAFE_PROMPTS)
+
+    def _analyze_image_with_prompts(
+        self,
+        image_bytes: bytes,
+        safe_prompts: list[str],
+        unsafe_prompts: list[str],
+    ) -> ImageAnalysisResult:
         if not self._loaded:
             raise RuntimeError("Models are not loaded. Call load_models() first.")
 
         import io
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        all_prompts = safe_prompts + unsafe_prompts
 
         inputs = self._clip_processor(
-            text=_ALL_PROMPTS,
+            text=all_prompts,
             images=image,
             return_tensors="pt",
             padding=True,
@@ -231,12 +265,12 @@ class AIModelManager:
         probs = torch.softmax(logits, dim=0)
 
         # Unsafe prompts start after the safe prompts block
-        unsafe_start = len(_SAFE_PROMPTS)
+        unsafe_start = len(safe_prompts)
         unsafe_probs = probs[unsafe_start:]
         unsafe_score = float(unsafe_probs.max().item())
 
         flagged = [
-            _UNSAFE_PROMPTS[i]
+            unsafe_prompts[i]
             for i, p in enumerate(unsafe_probs.tolist())
             if p > 0.25
         ]
