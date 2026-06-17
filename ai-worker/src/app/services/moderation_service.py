@@ -29,8 +29,8 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------
 # Tier boundaries
 # -----------------------------------------------------------------------
-_SAFE_THRESHOLD = 0.2
-_TOXIC_THRESHOLD = 0.6
+_SAFE_THRESHOLD = 0.4
+_TOXIC_THRESHOLD = 0.7
 _T2_CONFIDENCE_THRESHOLD = 0.8
 _MEDIA_T2_SAFE_THRESHOLD = 0.25
 _MEDIA_T2_FLAG_THRESHOLD = 0.8

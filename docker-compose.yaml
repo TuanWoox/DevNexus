@@ -122,6 +122,7 @@ services:
     volumes:
       - "D:/ai-worker-store/model/my-final-toxic-model:/app/models/my-final-toxic-model"
       - "D:/ai-worker-store/cache:/app/.hf_cache"
+      - platform_core_upload:/var/www/uploads
     depends_on:
       platform-core-service:
         condition: service_healthy
@@ -147,6 +148,8 @@ services:
       dockerfile: ./background-job-worker/Dockerfile
     environment:
       AiWorker__BaseUrl: http://ai-worker:8000
+    volumes:
+      - platform_core_upload:/var/www/uploads
     depends_on:
       postgres-init:
         condition: service_completed_successfully
