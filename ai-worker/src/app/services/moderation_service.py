@@ -290,8 +290,11 @@ class ModerationService:
         flagged_concepts: list[str] = []
         if image_bytes:
             image_result = await asyncio.to_thread(model_manager.analyze_image, image_bytes)
-            image_score = image_result.score
-            flagged_concepts = image_result.flagged_concepts
+            if not image_result.analysis_failed:
+                image_score = image_result.score
+                flagged_concepts = image_result.flagged_concepts
+            else:
+                logger.warning("[T1] CLIP analysis failed for direct image_bytes — skipping image score")
 
         manifest_score, manifest_concepts = await self._score_media_manifest(
             media_manifest,
@@ -338,6 +341,9 @@ class ModerationService:
                 )
                 result = await asyncio.to_thread(analyzer, image)
 
+                if result.analysis_failed:
+                    logger.warning("_score_media_manifest: CLIP failed for item id=%s — skipping score", item.id)
+                    continue
                 if result.score > best_score:
                     best_score = result.score
                 flagged_concepts.extend(
@@ -362,6 +368,9 @@ class ModerationService:
                 )
                 for timestamp, frame_bytes in frames:
                     result = await asyncio.to_thread(analyzer, frame_bytes)
+                    if result.analysis_failed:
+                        logger.warning("_score_media_manifest: CLIP failed for video frame ts=%s id=%s — skipping", timestamp, item.id)
+                        continue
                     if result.score > best_score:
                         best_score = result.score
                     timestamp_text = _format_timestamp(timestamp)

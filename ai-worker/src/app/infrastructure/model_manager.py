@@ -1,4 +1,5 @@
 import os
+import io
 
 # Configure Hugging Face cache directory
 # In Docker: uses /app/.hf_cache (mounted from D:\Ai-Worker-Model\cache\huggingface)
@@ -68,6 +69,7 @@ _UNSAFE_PROMPTS = [
     "hate speech imagery, offensive symbols, or racism", 
     "self-harm or disturbing scary content"
 ]
+
 _ALL_PROMPTS = _SAFE_PROMPTS + _UNSAFE_PROMPTS
 
 _DEEP_SAFE_PROMPTS = [
@@ -252,7 +254,6 @@ class AIModelManager:
         if not self._loaded:
             raise RuntimeError("Models are not loaded. Call load_models() first.")
 
-        import io
         raw_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         all_prompts = safe_prompts + unsafe_prompts
 
@@ -271,13 +272,13 @@ class AIModelManager:
 
         if torch.isnan(probs).any() or torch.isinf(probs).any():
             logger.warning(
-                "CLIP produced invalid probabilities; image mode=%s size=%s",
-                raw_image.mode, raw_image.size,
+                "CLIP produced invalid probabilities even after nan_to_num; image size=%s — falling back to gray-zone score",
+                raw_image.size,
             )
             return ImageAnalysisResult(
-                score=1.0,           # fail toward review, not toward "safe"
+                score=0.4,
                 flagged_concepts=[],
-                analysis_failed=True,  # add this field to ImageAnalysisResult
+                analysis_failed=True,
             )
 
         unsafe_start = len(safe_prompts)
