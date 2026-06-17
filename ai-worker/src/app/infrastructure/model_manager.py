@@ -51,6 +51,7 @@ class TextAnalysisResult:
 class ImageAnalysisResult:
     score: float          # 0.0 (safe) → 1.0 (inappropriate)
     flagged_concepts: list[str]
+    analysis_failed: bool = False
 
 
 _SAFE_PROMPTS = [
@@ -151,10 +152,14 @@ class AIModelManager:
         try:
             logger.info("Loading CLIP model …")
             self._clip_processor = CLIPProcessor.from_pretrained(_CLIP_MODEL_ID)
+            # CLIP always loads in float32: fp16 on CPU produces NaN embeddings
+            # because PyTorch CPU kernels don't fully support fp16 matmul.
             self._clip_model = CLIPModel.from_pretrained(
                 _CLIP_MODEL_ID,
                 torch_dtype=torch.float16 if self._device == "cuda" else torch.float32,
             ).to(self._device)
+            if self._device == "cpu":
+                self._clip_model = self._clip_model.float()
             self._clip_model.eval()
             logger.info("CLIP loaded ✓")
         except Exception as e:
@@ -248,23 +253,33 @@ class AIModelManager:
             raise RuntimeError("Models are not loaded. Call load_models() first.")
 
         import io
-        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        raw_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         all_prompts = safe_prompts + unsafe_prompts
 
         inputs = self._clip_processor(
             text=all_prompts,
-            images=image,
+            images=raw_image,
             return_tensors="pt",
             padding=True,
         ).to(self._device)
 
         with torch.no_grad():
-            outputs = self._clip_model(**inputs)
+            outputs = self._clip_model(**inputs, output_hidden_states=False)
 
         logits = outputs.logits_per_image[0]
         probs = torch.softmax(logits, dim=0)
 
-        # Unsafe prompts start after the safe prompts block
+        if torch.isnan(probs).any() or torch.isinf(probs).any():
+            logger.warning(
+                "CLIP produced invalid probabilities; image mode=%s size=%s",
+                raw_image.mode, raw_image.size,
+            )
+            return ImageAnalysisResult(
+                score=1.0,           # fail toward review, not toward "safe"
+                flagged_concepts=[],
+                analysis_failed=True,  # add this field to ImageAnalysisResult
+            )
+
         unsafe_start = len(safe_prompts)
         unsafe_probs = probs[unsafe_start:]
         unsafe_score = float(unsafe_probs.max().item())

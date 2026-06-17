@@ -297,11 +297,13 @@ class ModerationService:
             media_manifest,
             deep_scan=False,
         )
+
         if manifest_score > image_score:
             image_score = manifest_score
         flagged_concepts = _dedupe_concepts(flagged_concepts + manifest_concepts)
 
         combined_score = max(text_score, image_score)
+
         return TierOneResult(
             text_score=round(text_score, 4),
             image_score=round(image_score, 4),
@@ -326,28 +328,38 @@ class ModerationService:
             if item.media_type == "Image":
                 image = await asyncio.to_thread(read_image_bytes, item)
                 if not image:
+                    logger.warning("_score_media_manifest: empty bytes for item id=%s", item.id)
                     continue
 
-                analyzer = model_manager.analyze_image_deep if deep_scan else model_manager.analyze_image
+                analyzer = (
+                    model_manager.analyze_image_deep
+                    if deep_scan
+                    else model_manager.analyze_image
+                )
                 result = await asyncio.to_thread(analyzer, image)
+
                 if result.score > best_score:
                     best_score = result.score
                 flagged_concepts.extend(
                     f"{item.content_type} media {item.id}: {concept}"
                     for concept in result.flagged_concepts
                 )
-                continue
 
-            if item.media_type == "Video":
+            elif item.media_type == "Video":
                 fps = _T2_VIDEO_FPS if deep_scan else _T1_VIDEO_FPS
                 max_frames = _T2_VIDEO_MAX_FRAMES if deep_scan else _T1_VIDEO_MAX_FRAMES
+
                 frames = await asyncio.to_thread(
                     extract_video_frame_bytes,
                     item,
                     fps=fps,
                     max_frames=max_frames,
                 )
-                analyzer = model_manager.analyze_image_deep if deep_scan else model_manager.analyze_image
+                analyzer = (
+                    model_manager.analyze_image_deep
+                    if deep_scan
+                    else model_manager.analyze_image
+                )
                 for timestamp, frame_bytes in frames:
                     result = await asyncio.to_thread(analyzer, frame_bytes)
                     if result.score > best_score:
@@ -357,6 +369,9 @@ class ModerationService:
                         f"{item.content_type} video {item.id}{timestamp_text}: {concept}"
                         for concept in result.flagged_concepts
                     )
+
+            else:
+                logger.warning("_score_media_manifest: unrecognized media_type=%r for item id=%s", item.media_type, item.id)
 
         return best_score, _dedupe_concepts(flagged_concepts)
 
