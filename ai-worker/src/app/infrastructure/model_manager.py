@@ -1,4 +1,5 @@
 import os
+import io
 
 # Configure Hugging Face cache directory
 # In Docker: uses /app/.hf_cache (mounted from D:\Ai-Worker-Model\cache\huggingface)
@@ -51,6 +52,7 @@ class TextAnalysisResult:
 class ImageAnalysisResult:
     score: float          # 0.0 (safe) → 1.0 (inappropriate)
     flagged_concepts: list[str]
+    analysis_failed: bool = False
 
 
 _SAFE_PROMPTS = [
@@ -67,7 +69,29 @@ _UNSAFE_PROMPTS = [
     "hate speech imagery, offensive symbols, or racism", 
     "self-harm or disturbing scary content"
 ]
+
 _ALL_PROMPTS = _SAFE_PROMPTS + _UNSAFE_PROMPTS
+
+_DEEP_SAFE_PROMPTS = [
+    "a normal programming screenshot",
+    "a normal terminal screenshot",
+    "a normal user interface screenshot",
+    "a normal software architecture diagram",
+    "a normal classroom or study image",
+    "a normal technical illustration",
+]
+
+_DEEP_UNSAFE_PROMPTS = [
+    "pornography or explicit nudity",
+    "a sexually suggestive image",
+    "graphic injury, blood, or gore",
+    "a firearm, knife, or weapon threat",
+    "a hate symbol, racist symbol, or extremist propaganda",
+    "self-harm imagery",
+    "a harassment or humiliating meme",
+    "a phishing, scam, fake login, or credential theft screenshot",
+    "a malware, ransomware, or dangerous hacking instruction screenshot",
+]
 
 
 class AIModelManager:
@@ -130,10 +154,14 @@ class AIModelManager:
         try:
             logger.info("Loading CLIP model …")
             self._clip_processor = CLIPProcessor.from_pretrained(_CLIP_MODEL_ID)
+            # CLIP always loads in float32: fp16 on CPU produces NaN embeddings
+            # because PyTorch CPU kernels don't fully support fp16 matmul.
             self._clip_model = CLIPModel.from_pretrained(
                 _CLIP_MODEL_ID,
                 torch_dtype=torch.float16 if self._device == "cuda" else torch.float32,
             ).to(self._device)
+            if self._device == "cpu":
+                self._clip_model = self._clip_model.float()
             self._clip_model.eval()
             logger.info("CLIP loaded ✓")
         except Exception as e:
@@ -211,32 +239,54 @@ class AIModelManager:
         Run CLIP zero-shot classification on raw image bytes.
         Returns a score from 0.0 (safe) to 1.0 (inappropriate).
         """
+        return self._analyze_image_with_prompts(image_bytes, _SAFE_PROMPTS, _UNSAFE_PROMPTS)
+
+    def analyze_image_deep(self, image_bytes: bytes) -> ImageAnalysisResult:
+        """Run the deeper Tier 2 CLIP prompt set on raw image bytes."""
+        return self._analyze_image_with_prompts(image_bytes, _DEEP_SAFE_PROMPTS, _DEEP_UNSAFE_PROMPTS)
+
+    def _analyze_image_with_prompts(
+        self,
+        image_bytes: bytes,
+        safe_prompts: list[str],
+        unsafe_prompts: list[str],
+    ) -> ImageAnalysisResult:
         if not self._loaded:
             raise RuntimeError("Models are not loaded. Call load_models() first.")
 
-        import io
-        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        raw_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        all_prompts = safe_prompts + unsafe_prompts
 
         inputs = self._clip_processor(
-            text=_ALL_PROMPTS,
-            images=image,
+            text=all_prompts,
+            images=raw_image,
             return_tensors="pt",
             padding=True,
         ).to(self._device)
 
         with torch.no_grad():
-            outputs = self._clip_model(**inputs)
+            outputs = self._clip_model(**inputs, output_hidden_states=False)
 
         logits = outputs.logits_per_image[0]
         probs = torch.softmax(logits, dim=0)
 
-        # Unsafe prompts start after the safe prompts block
-        unsafe_start = len(_SAFE_PROMPTS)
+        if torch.isnan(probs).any() or torch.isinf(probs).any():
+            logger.warning(
+                "CLIP produced invalid probabilities even after nan_to_num; image size=%s — falling back to gray-zone score",
+                raw_image.size,
+            )
+            return ImageAnalysisResult(
+                score=0.4,
+                flagged_concepts=[],
+                analysis_failed=True,
+            )
+
+        unsafe_start = len(safe_prompts)
         unsafe_probs = probs[unsafe_start:]
         unsafe_score = float(unsafe_probs.max().item())
 
         flagged = [
-            _UNSAFE_PROMPTS[i]
+            unsafe_prompts[i]
             for i, p in enumerate(unsafe_probs.tolist())
             if p > 0.25
         ]

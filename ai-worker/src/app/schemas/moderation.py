@@ -2,7 +2,7 @@ from enum import Enum
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ---------------------------------------------------------------------------
@@ -36,6 +36,16 @@ class ModerationSubmitRequest(BaseModel):
     image_url: str | None = Field(None, description="Optional URL of the post image.")
 
 
+class ModerationMediaManifestItem(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: str
+    content_type: str = Field(alias="contentType")
+    media_type: Literal["Image", "Video"] = Field(alias="mediaType")
+    store_destination: str = Field(alias="storeDestination")
+    sha256_hash: str = Field(alias="sha256Hash")
+
+
 # ---------------------------------------------------------------------------
 # Tier result schemas
 # ---------------------------------------------------------------------------
@@ -52,6 +62,7 @@ class TierTwoResult(BaseModel):
     decision: ModerationDecision
     confidence: float = Field(..., ge=0.0, le=1.0)
     reasoning: str = Field(..., description="One-sentence rationale from the LLM.")
+    media_score: float | None = Field(None, ge=0.0, le=1.0)
     tier: Literal[2] = 2
 
 

@@ -3,12 +3,15 @@ using Microsoft.AspNetCore.Http;
 using platform_core_service.Common.Interfaces.Services;
 using platform_core_service.Common.Models.DTOs.AIDTO;
 using platform_core_service.Common.Models.DTOs.EntityDTO.AiUsageLog;
+using platform_core_service.Common.Models.DTOs.EntityDTO.Moderation;
 using platform_core_service.Common.Models.DTOs.HelperDTO;
 using platform_core_service.Common.Models.Paging;
 using platform_core_service.Common.Utils.Enums;
 using platform_core_service.Common.Utils.Extensions;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace platform_core_service.Business.Services
 {
@@ -17,6 +20,11 @@ namespace platform_core_service.Business.Services
         private readonly HttpClient _httpClient;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly string _baseUrl;
+        private static readonly JsonSerializerOptions ModerationManifestJsonOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters = { new JsonStringEnumConverter() },
+        };
 
         public AiWorkerClient(
             HttpClient httpClient,
@@ -34,12 +42,14 @@ namespace platform_core_service.Business.Services
             _httpClient.DefaultRequestHeaders.Add("X-Internal-Api-Key", internalKey);
         }
 
-        public async Task SubmitForModerationAsync(string postId, string title, string textContent, int moderationVersion, string contentHash)
-        {
-            await SubmitForModerationAsync(ModerationTargetType.Post, postId, title, textContent, moderationVersion, contentHash);
-        }
-
-        public async Task SubmitForModerationAsync(ModerationTargetType targetType, string targetId, string? title, string textContent, int moderationVersion, string contentHash)
+        public async Task SubmitForModerationAsync(
+            ModerationTargetType targetType,
+            string targetId,
+            string? title,
+            string textContent,
+            int moderationVersion,
+            string contentHash,
+            IReadOnlyCollection<ModerationMediaManifestItemDTO> mediaManifest)
         {
             var moderationText = BuildModerationText(title, textContent);
             using var form = new MultipartFormDataContent
@@ -50,6 +60,7 @@ namespace platform_core_service.Business.Services
                 { new StringContent(moderationText), "text_content" },
                 { new StringContent(moderationVersion.ToString()), "moderation_version" },
                 { new StringContent(contentHash), "content_hash" },
+                { new StringContent(JsonSerializer.Serialize(mediaManifest, ModerationManifestJsonOptions)), "media_manifest_json" },
             };
 
             var response = await _httpClient.PostAsync($"{_baseUrl}/ai/moderation/submit", form);

@@ -9,10 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.core.ai_config import DEFAULT_GEMINI_MODEL
 from src.app.core.exceptions import AIWorkerException
+from src.app.infrastructure.moderation_media_file_helper import extract_video_frame_bytes, read_image_bytes
 from src.app.infrastructure.model_manager import AIModelManager
 from pydantic import BaseModel, Field
 
 from src.app.schemas.moderation import (
+    ModerationMediaManifestItem,
     ModerationDecision,
     ModerationStatus,
     ModerationTaskResult,
@@ -27,9 +29,15 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------
 # Tier boundaries
 # -----------------------------------------------------------------------
-_SAFE_THRESHOLD = 0.2
-_TOXIC_THRESHOLD = 0.6
+_SAFE_THRESHOLD = 0.4
+_TOXIC_THRESHOLD = 0.7
 _T2_CONFIDENCE_THRESHOLD = 0.8
+_MEDIA_T2_SAFE_THRESHOLD = 0.25
+_MEDIA_T2_FLAG_THRESHOLD = 0.8
+_T1_VIDEO_FPS = 0.1
+_T1_VIDEO_MAX_FRAMES = 6
+_T2_VIDEO_FPS = 0.25
+_T2_VIDEO_MAX_FRAMES = 30
 
 _MODEL = DEFAULT_GEMINI_MODEL
 _MAX_INPUT_CHARS = 15_000
@@ -48,6 +56,25 @@ def _truncate_input(text: str, max_chars: int = _MAX_INPUT_CHARS) -> str:
         return text
     half = max_chars // 2
     return text[:half] + "\n\n...[TRUNCATED FOR LENGTH]...\n\n" + text[-half:]
+
+
+def _dedupe_concepts(concepts: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for concept in concepts:
+        normalized = concept.strip()
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            result.append(normalized)
+    return result
+
+
+def _format_timestamp(timestamp: float | None) -> str:
+    if timestamp is None:
+        return ""
+    total_seconds = max(0, int(round(timestamp)))
+    minutes, seconds = divmod(total_seconds, 60)
+    return f" at {minutes:02d}:{seconds:02d}"
 
 
 class ModerationService:
@@ -76,7 +103,7 @@ class ModerationService:
     # Public entry point
     # ------------------------------------------------------------------
 
-    async def process_post(
+    async def proceed_content(
         self,
         *,
         moderation_version: int,
@@ -84,6 +111,7 @@ class ModerationService:
         text_content: str,
         target_id: str,
         target_type: str = "Post",
+        media_manifest: list[ModerationMediaManifestItem] | None = None,
         image_bytes: bytes | None = None,
         image_mime_type: str | None = None,
     ) -> ModerationTaskResult:
@@ -91,7 +119,8 @@ class ModerationService:
         logger.info("[Moderation] Starting pipeline for %s=%s", target_type, target_id)
 
         # ------- Tier 1 -------
-        t1 = await self._run_tier_one(text_content, image_bytes)
+        media_manifest = media_manifest or []
+        t1 = await self._run_tier_one(text_content, image_bytes, media_manifest)
         logger.info(
             "[Moderation][T1] target=%s text=%.3f image=%.3f combined=%.3f",
             target_id, t1.text_score, t1.image_score, t1.combined_score,
@@ -126,10 +155,10 @@ class ModerationService:
         # ------- Tier 2 (gray zone) -------
         logger.info(
             "[Moderation][T2] Gray zone — escalating to Gemini. target=%s has_image=%s",
-            target_id, image_bytes is not None,
+            target_id, image_bytes is not None or len(media_manifest) > 0,
         )
         try:
-            t2 = await self._run_tier_two(text_content, target_id, image_bytes, image_mime_type)
+            t2 = await self._run_tier_two(text_content, target_id, image_bytes, image_mime_type, media_manifest)
         except ServerError as exc:
             logger.warning(
                 "[Moderation][T2] Gemini unavailable — escalating to human queue. target=%s error=%s",
@@ -247,7 +276,10 @@ class ModerationService:
     # ------------------------------------------------------------------
 
     async def _run_tier_one(
-        self, text_content: str, image_bytes: bytes | None
+        self,
+        text_content: str,
+        image_bytes: bytes | None,
+        media_manifest: list[ModerationMediaManifestItem],
     ) -> TierOneResult:
         model_manager = AIModelManager.get_instance()
 
@@ -258,16 +290,99 @@ class ModerationService:
         flagged_concepts: list[str] = []
         if image_bytes:
             image_result = await asyncio.to_thread(model_manager.analyze_image, image_bytes)
-            image_score = image_result.score
-            flagged_concepts = image_result.flagged_concepts
+            if not image_result.analysis_failed:
+                image_score = image_result.score
+                flagged_concepts = image_result.flagged_concepts
+            else:
+                logger.warning("[T1] CLIP analysis failed for direct image_bytes — skipping image score")
+
+        manifest_score, manifest_concepts = await self._score_media_manifest(
+            media_manifest,
+            deep_scan=False,
+        )
+
+        if manifest_score > image_score:
+            image_score = manifest_score
+        flagged_concepts = _dedupe_concepts(flagged_concepts + manifest_concepts)
 
         combined_score = max(text_score, image_score)
+
         return TierOneResult(
             text_score=round(text_score, 4),
             image_score=round(image_score, 4),
             combined_score=round(combined_score, 4),
             flagged_concepts=flagged_concepts,
         )
+
+    async def _score_media_manifest(
+        self,
+        media_manifest: list[ModerationMediaManifestItem],
+        *,
+        deep_scan: bool,
+    ) -> tuple[float, list[str]]:
+        if not media_manifest:
+            return 0.0, []
+
+        model_manager = AIModelManager.get_instance()
+        best_score = 0.0
+        flagged_concepts: list[str] = []
+
+        for item in media_manifest:
+            if item.media_type == "Image":
+                image = await asyncio.to_thread(read_image_bytes, item)
+                if not image:
+                    logger.warning("_score_media_manifest: empty bytes for item id=%s", item.id)
+                    continue
+
+                analyzer = (
+                    model_manager.analyze_image_deep
+                    if deep_scan
+                    else model_manager.analyze_image
+                )
+                result = await asyncio.to_thread(analyzer, image)
+
+                if result.analysis_failed:
+                    logger.warning("_score_media_manifest: CLIP failed for item id=%s — skipping score", item.id)
+                    continue
+                if result.score > best_score:
+                    best_score = result.score
+                flagged_concepts.extend(
+                    f"{item.content_type} media {item.id}: {concept}"
+                    for concept in result.flagged_concepts
+                )
+
+            elif item.media_type == "Video":
+                fps = _T2_VIDEO_FPS if deep_scan else _T1_VIDEO_FPS
+                max_frames = _T2_VIDEO_MAX_FRAMES if deep_scan else _T1_VIDEO_MAX_FRAMES
+
+                frames = await asyncio.to_thread(
+                    extract_video_frame_bytes,
+                    item,
+                    fps=fps,
+                    max_frames=max_frames,
+                )
+                analyzer = (
+                    model_manager.analyze_image_deep
+                    if deep_scan
+                    else model_manager.analyze_image
+                )
+                for timestamp, frame_bytes in frames:
+                    result = await asyncio.to_thread(analyzer, frame_bytes)
+                    if result.analysis_failed:
+                        logger.warning("_score_media_manifest: CLIP failed for video frame ts=%s id=%s — skipping", timestamp, item.id)
+                        continue
+                    if result.score > best_score:
+                        best_score = result.score
+                    timestamp_text = _format_timestamp(timestamp)
+                    flagged_concepts.extend(
+                        f"{item.content_type} video {item.id}{timestamp_text}: {concept}"
+                        for concept in result.flagged_concepts
+                    )
+
+            else:
+                logger.warning("_score_media_manifest: unrecognized media_type=%r for item id=%s", item.media_type, item.id)
+
+        return best_score, _dedupe_concepts(flagged_concepts)
 
     # ------------------------------------------------------------------
     # Tier 2 — Gemini LLM
@@ -279,12 +394,44 @@ class ModerationService:
         target_id: str,
         image_bytes: bytes | None,
         image_mime_type: str | None = None,
+        media_manifest: list[ModerationMediaManifestItem] | None = None,
     ) -> TierTwoResult:
         """
         Send a multimodal request to Gemini when image is present.
         This prevents the gray-zone bypass where clean text hides an
         inappropriate image: Gemini evaluates BOTH signals independently.
         """
+        media_manifest = media_manifest or []
+        deep_media_score = 0.0
+        deep_media_concepts: list[str] = []
+        if image_bytes:
+            image_result = await asyncio.to_thread(AIModelManager.get_instance().analyze_image_deep, image_bytes)
+            deep_media_score = image_result.score
+            deep_media_concepts = image_result.flagged_concepts
+
+        manifest_score, manifest_concepts = await self._score_media_manifest(media_manifest, deep_scan=True)
+        if manifest_score > deep_media_score:
+            deep_media_score = manifest_score
+        deep_media_concepts = _dedupe_concepts(deep_media_concepts + manifest_concepts)
+
+        if deep_media_score >= _MEDIA_T2_FLAG_THRESHOLD:
+            concept_text = ", ".join(deep_media_concepts[:3]) if deep_media_concepts else "clear unsafe visual media"
+            return TierTwoResult(
+                decision=ModerationDecision.FLAG,
+                confidence=round(deep_media_score, 4),
+                reasoning=f"CLIP detected a clear embedded media violation: {concept_text}.",
+                media_score=round(deep_media_score, 4),
+            )
+
+        if deep_media_score > _MEDIA_T2_SAFE_THRESHOLD:
+            concept_text = ", ".join(deep_media_concepts[:3]) if deep_media_concepts else "borderline unsafe visual media"
+            return TierTwoResult(
+                decision=ModerationDecision.ESCALATE,
+                confidence=round(deep_media_score, 4),
+                reasoning=f"CLIP found borderline embedded media risk: {concept_text}.",
+                media_score=round(deep_media_score, 4),
+            )
+
         system_prompt = (
             "You are a content moderation AI for a software engineering social and learning platform.\n\n"
             "Decision rules:\n"
@@ -417,9 +564,11 @@ class ModerationService:
             "decision": decision.value,
         }
         if t1:
-            payload["textScore"] = t1.text_score
-            payload["imageScore"] = t1.image_score
-            payload["combinedScore"] = t1.combined_score
+            text_score = t1.text_score
+            image_score = max(t1.image_score, t2.media_score or 0.0) if t2 else t1.image_score
+            payload["textScore"] = text_score
+            payload["imageScore"] = image_score
+            payload["combinedScore"] = max(text_score, image_score)
         if t2:
             payload["reasoning"] = t2.reasoning
 
